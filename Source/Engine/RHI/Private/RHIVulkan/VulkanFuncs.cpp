@@ -1,0 +1,25 @@
+#include "VulkanFuncs.h"
+// function pointers
+PFN_vkWaitForFences              _vkWaitForFences              {nullptr};
+PFN_vkResetFences                _vkResetFences                {nullptr};
+PFN_vkResetCommandPool           _vkResetCommandPool           {nullptr};
+PFN_vkBeginCommandBuffer         _vkBeginCommandBuffer         {nullptr};
+PFN_vkEndCommandBuffer           _vkEndCommandBuffer           {nullptr};
+PFN_vkCmdBeginRenderPass         _vkCmdBeginRenderPass         {nullptr};
+PFN_vkCmdCopyBufferToImage       _vkCmdCopyBufferToImage       {nullptr};
+PFN_vkCmdBlitImage               _vkCmdBlitImage               {nullptr};
+PFN_vkCmdNextSubpass             _vkCmdNextSubpass             {nullptr};
+PFN_vkCmdEndRenderPass           _vkCmdEndRenderPass           {nullptr};
+PFN_vkCmdBindPipeline            _vkCmdBindPipeline            {nullptr};
+PFN_vkCmdSetViewport             _vkCmdSetViewport             {nullptr};
+PFN_vkCmdSetScissor              _vkCmdSetScissor              {nullptr};
+PFN_vkCmdBindVertexBuffers       _vkCmdBindVertexBuffers       {nullptr};
+PFN_vkCmdBindIndexBuffer         _vkCmdBindIndexBuffer         {nullptr};
+PFN_vkCmdBindDescriptorSets      _vkCmdBindDescriptorSets      {nullptr};
+PFN_vkCmdDrawIndexed             _vkCmdDrawIndexed             {nullptr};
+PFN_vkCmdClearAttachments        _vkCmdClearAttachments        {nullptr};
+PFN_vkCmdDraw                    _vkCmdDraw                    {nullptr};
+PFN_vkCmdDispatch                _vkCmdDispatch                {nullptr};
+PFN_vkCmdCopyBuffer              _vkCmdCopyBuffer              {nullptr};
+PFN_vkCmdBeginDebugUtilsLabelEXT _vkCmdBeginDebugUtilsLabelEXT {nullptr};
+PFN_vkCmdEndDebugUtilsLabelEXT   _vkCmdEndDebugUtilsLabelEXT   {nullptr};
