@@ -9,8 +9,8 @@
 #include "RHIVKResources.h"
 #include "Core/Public/Container.h"
 
-namespace RHI{
-	class RHIVulkan final: public RHIInstance {
+namespace Engine{
+	class RHIVulkan final: public RHI {
 #pragma region rhi initialize
 	private:
 		uint8 m_MaxFramesInFlight{ 3 };
@@ -34,7 +34,8 @@ namespace RHI{
 		uint32 m_PresentIndex;
 		uint32 m_ComputeIndex;
 		uint32 m_ImageCount;
-		VkSurfaceFormatKHR m_SwapchainFormat;
+		RFormat m_SwapchainFormat{FORMAT_UNDEFINED};
+		VkColorSpaceKHR m_SwapchainColorSpace;
 		VkPresentModeKHR m_SwapchainPresentMode;
 		VkSurfaceTransformFlagBitsKHR m_SwapchainTransform;
 		VkPhysicalDeviceProperties m_PhysicalDeviceProperties;
@@ -44,7 +45,7 @@ namespace RHI{
 		RQueueVk m_PresentQueue;
 
 		VkDevice m_Device{ nullptr };
-		VkFormat m_DepthFormat;
+		RFormat m_DepthFormat{FORMAT_UNDEFINED};
 
 		VkCommandPool m_RHICommandPool;
 		TVector<VkCommandPool> m_CommandPools;
@@ -90,7 +91,7 @@ namespace RHI{
 		void Release() override;
 		RSVkImGuiInitInfo GetImGuiInitInfo();
 		uint8 GetMaxFramesInFlight() override { return m_MaxFramesInFlight; }
-		RFormat GetSwapchainImageFormat() override { return (RFormat)m_SwapchainFormat.format; }
+		RFormat GetSwapchainImageFormat() override { return (RFormat)m_SwapchainFormat; }
 		const USize2D& GetSwapchainExtent() override { return m_SwapchainExtent; }
 		RImageView* GetSwapchainImageView(uint8 i) override;
 		uint32 GetSwapchainMaxImageCount() override;
@@ -162,5 +163,7 @@ namespace RHI{
 		void DestroySampler(RSampler* sampler) override;
 
 		void FreeMemory(RMemory* memory)override;
+		VkDevice GetDevice();
+		static RHIVulkan* InstanceVulkan();
 	};
 }

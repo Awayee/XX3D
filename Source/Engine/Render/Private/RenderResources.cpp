@@ -24,7 +24,7 @@ namespace Engine {
 			
 			BufferCommon indexStaging;
 			indexStaging.CreateForTransfer(bufferSize, (void*)indices.data());
-			rhi->ImmediateCommit([this, &vertexStaging, &indexStaging](RHI::RCommandBuffer* cmd) {
+			rhi->ImmediateCommit([this, &vertexStaging, &indexStaging](Engine::RCommandBuffer* cmd) {
 				cmd->CopyBuffer(vertexStaging.Buffer, m_Vertex->Buffer, 0, 0, vertexStaging.Size);
 				cmd->CopyBuffer(indexStaging.Buffer, m_Index->Buffer, 0, 0, indexStaging.Size);
 			});
@@ -32,7 +32,7 @@ namespace Engine {
 			vertexStaging.Release();
 		}
 		else {
-			rhi->ImmediateCommit([this, &vertexStaging](RHI::RCommandBuffer* cmd) {
+			rhi->ImmediateCommit([this, &vertexStaging](Engine::RCommandBuffer* cmd) {
 				cmd->CopyBuffer(vertexStaging.Buffer, m_Vertex->Buffer, 0, 0, vertexStaging.Size);
 			});
 			vertexStaging.Release();
@@ -45,28 +45,28 @@ namespace Engine {
 		if (m_Vertex)m_Vertex->Release();
 	}
 
-	void FillVectorInput(TVector<RHI::RVertexInputBinding>& bindings, TVector<RHI::RVertexInputAttribute>& attributes)
+	void FillVectorInput(TVector<Engine::RVertexInputBinding>& bindings, TVector<Engine::RVertexInputAttribute>& attributes)
 	{
 		bindings.resize(1);
-		bindings[0] = { 0, sizeof(Math::FVector3), RHI::VERTEX_INPUT_RATE_VERTEX };
+		bindings[0] = { 0, sizeof(Math::FVector3), Engine::VERTEX_INPUT_RATE_VERTEX };
 		attributes.resize(1);
-		attributes[0] = { 0, RHI::FORMAT_R32G32B32_SFLOAT, 0 };
+		attributes[0] = { 0, Engine::FORMAT_R32G32B32_SFLOAT, 0 };
 	}
 
 
-	void FillVertexInput(TVector<RHI::RVertexInputBinding>& bindings, TVector<RHI::RVertexInputAttribute>& attributes)
+	void FillVertexInput(TVector<Engine::RVertexInputBinding>& bindings, TVector<Engine::RVertexInputAttribute>& attributes)
 	{
 		bindings.resize(1);
-		bindings[0] = { 0, sizeof(Math::FVector3) + sizeof(Math::FVector2) + sizeof(Math::FVector3) + sizeof(Math::FVector3)};
+		bindings[0] = { 0, sizeof(FVertex)};
 		attributes.resize(4);
-		attributes[0] = { 0, RHI::FORMAT_R32G32B32_SFLOAT, 0 };//position
-		attributes[1] = { 0, RHI::FORMAT_R32G32_SFLOAT,    sizeof(Math::FVector3)};//uv
-		attributes[2] = { 0, RHI::FORMAT_R32G32B32_SFLOAT, sizeof(Math::FVector2) + sizeof(Math::FVector3) };//normal
-		attributes[3] = { 0, RHI::FORMAT_R32G32B32_SFLOAT, sizeof(Math::FVector2)};// tangent
+		attributes[0] = { 0, Engine::FORMAT_R32G32B32_SFLOAT, 0 };//position
+		attributes[1] = { 0, Engine::FORMAT_R32G32B32_SFLOAT, offsetof(FVertex, Normal)};//normal
+		attributes[2] = { 0, Engine::FORMAT_R32G32B32_SFLOAT, offsetof(FVertex, Tangent)};// tangent
+		attributes[3] = { 0, Engine::FORMAT_R32G32_SFLOAT,    offsetof(FVertex, UV)};//uv
 	}
 
 
-	void DrawPrimitive(RHI::RCommandBuffer* cmd, const Primitive* primitive)
+	void DrawPrimitive(Engine::RCommandBuffer* cmd, const Primitive* primitive)
 	{
 		uint32 vertexCount = primitive->GetVertexCount();
 		if (0 == vertexCount) {
@@ -74,10 +74,10 @@ namespace Engine {
 		}
 		uint32 indexCount = primitive->GetIndexCount();
 		if (0 == indexCount) {
-			cmd->DrawVertices(primitive->GetVertexBuffer(), vertexCount, 1);
+			cmd->DrawPrimitive(primitive->GetVertexBuffer(), vertexCount, 1);
 		}
 		else {
-			cmd->DrawVerticesIndexed(primitive->GetVertexBuffer(), primitive->GetIndexBuffer(), indexCount, 1);
+			cmd->DrawPrimitiveIndexed(primitive->GetVertexBuffer(), primitive->GetIndexBuffer(), indexCount, 1);
 		}
 	}
 	Quad::Quad()
@@ -90,7 +90,7 @@ namespace Engine {
 		m_VertexBuffer.CreateForVertex(bufferSize);
 		BufferCommon staging;
 		staging.CreateForTransfer(bufferSize, (void*)vertices.data());
-		RHI_INSTANCE->ImmediateCommit([&staging, this, bufferSize](RHI::RCommandBuffer* cmd) {
+		RHI::Instance()->ImmediateCommit([&staging, this, bufferSize](Engine::RCommandBuffer* cmd) {
 			cmd->CopyBuffer(staging.Buffer, m_VertexBuffer.Buffer, 0, 0, bufferSize);
 		});
 		staging.Release();
@@ -101,8 +101,8 @@ namespace Engine {
 	}
 
 
-	void DrawQuad(RHI::RCommandBuffer* cmd, const Quad* quad)
+	void DrawQuad(Engine::RCommandBuffer* cmd, const Quad* quad)
 	{
-		cmd->DrawVertices(quad->GetVertexBuffer(), 6, 1);
+		cmd->DrawPrimitive(quad->GetVertexBuffer(), 6, 1);
 	}
 }

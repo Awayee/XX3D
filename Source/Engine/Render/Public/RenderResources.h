@@ -1,10 +1,10 @@
 #pragma once
 #include "Core/Public/Container.h"
-#include "Core/Public/Math/Math.h"
+#include "Math/Public/Math.h"
 #include "RHI/Public/RHI.h"
 #include "RenderCommon.h"
 #include "Core/Public/SmartPointer.h"
-#include "Resource/Public/AssetData.h"
+#include "Asset/Public/AssetCommon.h"
 
 namespace Engine {
 
@@ -16,8 +16,8 @@ namespace Engine {
 		TUniquePtr<BufferCommon> m_Index;
 	public:
 		Primitive(const TVector<FVertex>& vertices, const TVector<IndexType>& indices);
-		RHI::RBuffer* GetVertexBuffer() const { return m_Vertex ? m_Vertex->Buffer : nullptr; }
-		RHI::RBuffer* GetIndexBuffer()  const { return m_Index  ? m_Index->Buffer  : nullptr; }
+		Engine::RBuffer* GetVertexBuffer() const { return m_Vertex ? m_Vertex->Buffer : nullptr; }
+		Engine::RBuffer* GetIndexBuffer()  const { return m_Index  ? m_Index->Buffer  : nullptr; }
 		uint32 GetVertexCount()const { return m_VertexCount; }
 		uint32 GetIndexCount()const { return m_IndexCount; }
 		~Primitive();
@@ -28,14 +28,14 @@ namespace Engine {
 	public:
 		Quad();
 		~Quad();
-		RHI::RBuffer* GetVertexBuffer() const { return m_VertexBuffer.Buffer; }
+		Engine::RBuffer* GetVertexBuffer() const { return m_VertexBuffer.Buffer; }
 	};
 
-	void FillVectorInput(TVector<RHI::RVertexInputBinding>& bindings, TVector<RHI::RVertexInputAttribute>& attributes);
+	void FillVectorInput(TVector<Engine::RVertexInputBinding>& bindings, TVector<Engine::RVertexInputAttribute>& attributes);
 
-	void FillVertexInput(TVector<RHI::RVertexInputBinding>& bindings, TVector<RHI::RVertexInputAttribute>& attributes);
+	void FillVertexInput(TVector<Engine::RVertexInputBinding>& bindings, TVector<Engine::RVertexInputAttribute>& attributes);
 
-	void DrawPrimitive(RHI::RCommandBuffer* cmd, const Primitive* primitive);
+	void DrawPrimitive(Engine::RCommandBuffer* cmd, const Primitive* primitive);
 
-	void DrawQuad(RHI::RCommandBuffer* cmd, const Quad* quad);
+	void DrawQuad(Engine::RCommandBuffer* cmd, const Quad* quad);
 }

@@ -1,17 +1,21 @@
 #pragma once
 #include "Core/Public/SmartPointer.h"
+
+namespace Engine {
+	class Wnd;
+}
+
 namespace Engine {
 
-	class WindowSystemBase;
 	class RenderSystem;
 
 	class EngineContext {
 	private:
 		friend class XXEngine;
-		TUniquePtr<WindowSystemBase> m_Window;
+		Engine::Wnd* m_Window;
 		TUniquePtr<RenderSystem> m_Renderer;
 	public:
-		WindowSystemBase* Window() { return m_Window.get(); }
+		Engine::Wnd* Window() { return m_Window; }
 		RenderSystem* Renderer() { return m_Renderer.get(); }
 	};
 

@@ -3,11 +3,11 @@
 
 namespace Engine {
 	Material::Material() {
-		m_DescriptorSet = RHI_INSTANCE->AllocateDescriptorSet(DescsMgr::Get(DESCS_MATERIAL));
+		m_DescriptorSet = RHI::Instance()->AllocateDescriptorSet(DescsMgr::Get(DESCS_MATERIAL));
 	}
 
 	Material::~Material(){
-		//RHI_INSTANCE->FreeDescriptorSet(m_DescriptorSet);
+		//RHI::Instance()->FreeDescriptorSet(m_DescriptorSet);
 		//m_DescriptorSet = nullptr;
 	}
 

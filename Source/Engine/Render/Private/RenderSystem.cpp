@@ -1,38 +1,18 @@
 #include "Render/Public/RenderSystem.h"
 #include "Resource/Public/Config.h"
 #include "RenderMacro.h"
-#include "Render/Public/ImGuiImpl.h"
-#include "Render/Public/WindowSystem.h"
+#include "Window/Public/ImGuiImpl.h"
+#include "Window/Public/Wnd.h"
 #include "Render/Public/RenderScene.h"
 #include "Render/Public/Camera.h"
 #include "Render/Public/Material.h"
 
 namespace Engine {
-	RenderSystem::RenderSystem(WindowSystemBase* window){
-		int windowWidth, windowHeight;
-		window->GetWindowSize(&windowWidth, &windowHeight);
-		// init rhi
-		{
-			RHI::RSInitInfo initInfo;
-			initInfo.applicationName = PROJECT_NAME;
-			initInfo.enableDebug =
-#ifdef _DEBUG
-				true
-#else
-				false
-#endif
-			;
-			initInfo.enableGeometryShader = true;
-			initInfo.windowWidth = windowWidth;
-			initInfo.windowHeight = windowHeight;
-			initInfo.windowHandle = window->GetWindowHandle();
-			initInfo.maxFramesInFlight = MAX_FRAMES_IN_FLIGHT;
-			RHI::GetInstance()->Initialize(&initInfo);
-		}
-
+	RenderSystem::RenderSystem(Engine::Wnd* window){
+		auto& size = window->GetWindowSize();
 		DescsMgr::Initialize();
 		SamplerMgr::Initialize();
-		SetRenderArea({ 0, 0, static_cast<uint32>(windowWidth), static_cast<uint32>(windowHeight) });
+		SetRenderArea({ 0, 0, size.w, size.h });
 		CreateRenderResources();
 		// register window func
 		window->RegisterOnWindowSizeFunc([this](int w, int h) {
@@ -55,8 +35,6 @@ namespace Engine {
 		for(auto& cmd: m_CommandBuffers) {
 			rhi->FreeCommandBuffer(cmd);
 		}
-
-		rhi->Release();
 	}
 
 	void RenderSystem::SetEnable(bool enable)
@@ -64,7 +42,7 @@ namespace Engine {
 		m_Enable = enable;
 		if(!enable) {
 			// wait queue before disabled
-			RHI_INSTANCE->WaitGraphicsQueue();
+			RHI::Instance()->WaitGraphicsQueue();
 		}
 	}
 
@@ -94,14 +72,14 @@ namespace Engine {
 			OnWindowSizeChanged(0, 0);
 			return;
 		}
-		RHI::RCommandBuffer* cmd = m_CommandBuffers[m_CurrentFrameIndex];
+		Engine::RCommandBuffer* cmd = m_CommandBuffers[m_CurrentFrameIndex];
 		cmd->Begin(0);
 
 		m_PresentPass->SetImageIndex(swapchainImageIndex);
 		m_PresentPass->Begin(cmd);
 
 		// 1. render main viewport
-		if(RENDER_DEFERRED == GetConfig()->GetRenderPath()) {
+		if(RENDER_DEFERRED == GetConfig().RenderPath) {
 			// render g buffer pass
 			if(m_GBufferPipeline) {
 				m_GBufferPipeline->Bind(cmd);
@@ -111,7 +89,7 @@ namespace Engine {
 			// render deferred pass
 			if(m_DeferredLightingPipeline) {
 				m_DeferredLightingPipeline->Bind(cmd);
-				cmd->BindDescriptorSet(m_DeferredLightingPipeline->GetLayout(), m_DeferredLightingDescs, 0, RHI::PIPELINE_GRAPHICS);
+				cmd->BindDescriptorSet(m_DeferredLightingPipeline->GetLayout(), m_DeferredLightingDescs, 0, Engine::PIPELINE_GRAPHICS);
 				cmd->Draw(6, 1, 0, 0);
 			}
 
@@ -136,10 +114,10 @@ namespace Engine {
 		Engine::ImGuiInitialize(m_PresentPass->GetRHIPass(), 1);
 		GET_RHI(rhi);
 		// upload font
-		rhi->ImmediateCommit([](RHI::RCommandBuffer* cmd) {
-			ImGuiCreateFontsTexture(cmd);
+		rhi->ImmediateCommit([](Engine::RCommandBuffer* cmd) {
+			Engine::ImGuiCreateFontsTexture(cmd);
 			});
-		ImGuiDestroyFontUploadObjects();
+		Engine::ImGuiDestroyFontUploadObjects();
 	}
 
 	void RenderSystem::SetRenderArea(const URect& area){
@@ -153,11 +131,11 @@ namespace Engine {
 		// create command buffers
 		m_CommandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 		for (uint8 i = 0; i < m_CommandBuffers.size(); ++i) {
-			m_CommandBuffers[i] = RHI_INSTANCE->AllocateCommandBuffer(RHI::COMMAND_BUFFER_LEVEL_PRIMARY);
+			m_CommandBuffers[i] = RHI::Instance()->AllocateCommandBuffer(Engine::COMMAND_BUFFER_LEVEL_PRIMARY);
 		}
 		m_PresentPass.reset(new DeferredLightingPass());
 		// create descriptor set
-		m_DeferredLightingDescs = RHI_INSTANCE->AllocateDescriptorSet(DescsMgr::Get(DESCS_DEFERRED_LIGHTING));
+		m_DeferredLightingDescs = RHI::Instance()->AllocateDescriptorSet(DescsMgr::Get(DESCS_DEFERRED_LIGHTING));
 		m_DeferredLightingDescs->UpdateUniformBuffer(0, RenderScene::GetDefaultScene()->m_CameraUniform.Buffer);
 		m_DeferredLightingDescs->UpdateUniformBuffer(1, RenderScene::GetDefaultScene()->m_LightUniform.Buffer);
 		m_DeferredLightingDescs->UpdateInputAttachment(2, m_PresentPass->GetAttachment(DeferredLightingPass::ATTACHMENT_NORMAL));
@@ -184,8 +162,8 @@ namespace Engine {
 		if(!m_WindowAvailable) {
 			return;
 		}
-		RHI_INSTANCE->WaitGraphicsQueue();
-		RHI_INSTANCE->ResizeSwapchain(w, h);
+		RHI::Instance()->WaitGraphicsQueue();
+		RHI::Instance()->ResizeSwapchain(w, h);
 		CreateRenderResources();
 		m_RenderAreaDirty = true;
 	}

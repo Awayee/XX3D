@@ -1,8 +1,8 @@
 #pragma once
-#include "Core/Public/Math/Math.h"
+#include "Math/Public/Math.h"
 #include "Core/Public/SmartPointer.h"
-#include "Core/Public/String.h"
-#include "Resource/Public/AssetData.h"
+#include "Asset/Public/AssetCommon.h"
+#include "Asset/Public/MeshAsset.h"
 #include "RenderResources.h"
 #include "RenderCommon.h"
 #include "RenderScene.h"
@@ -15,14 +15,12 @@ namespace Engine {
 		TVector<Material*> m_Materials;
 		Math::FMatrix4x4 m_TransformMat{ Math::FMatrix4x4::IDENTITY };
 		BufferCommon m_TransformUniform;
-		RHI::RDescriptorSet* m_TransformDescs{nullptr};
+		Engine::RDescriptorSet* m_TransformDescs{nullptr};
 		//RHI::RDescriptorSet* m_DescriptorSet;
-	private:
-		void LoadPrimitives(const TVector<SPrimitiveData>& primitives);
 	public:
-		RenderMesh(const TVector<SPrimitiveData>& primitives, RenderScene* scene);
-		void DrawCall(RHI::RCommandBuffer* cmd, RHI::RPipelineLayout* layout) override;
-		RHI::RDescriptorSet* GetDescriptorSet()const { return m_TransformDescs; }
+		RenderMesh(const AMeshAsset* meshAsset, RenderScene* scene);
+		void DrawCall(Engine::RCommandBuffer* cmd, Engine::RPipelineLayout* layout) override;
+		Engine::RDescriptorSet* GetDescriptorSet()const { return m_TransformDescs; }
 		~RenderMesh();
 	};
 }

@@ -5,12 +5,6 @@
 #include "Render/Public/Camera.h"
 #include "Render/Public/Light/DirectionalLight.h"
 
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_LEFT_HANDED
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
 namespace Engine {
     RenderObject::RenderObject(RenderScene* scene)
     {
@@ -53,8 +47,8 @@ namespace Engine {
     void RenderScene::CreateResources() {
         m_DirectionalLight.reset(new DirectionalLight);
         m_DirectionalLight->SetDir({-1, -1, -1});
-        auto& ext = RHI_INSTANCE->GetSwapchainExtent();
-        m_Camera.reset(new Camera(CAMERA_PERSPECTIVE, (float)ext.w / ext.h, 0.1f, 1000.0f, Math::PI * 0.49f));
+        auto& ext = RHI::Instance()->GetSwapchainExtent();
+        m_Camera.reset(new Camera(CAMERA_PERSPECTIVE, (float)ext.w / ext.h, 0.1f, 1000.0f, Math::Deg2Rad * 75.0f));
         m_Camera->SetView({ 0, 4, -4 }, { 0, 2, 0}, { 0, 1, 0 });
     }
 
@@ -91,7 +85,7 @@ namespace Engine {
     RenderScene::~RenderScene() {
         m_LightUniform.Release();
         m_CameraUniform.Release();
-        //RHI_INSTANCE->FreeDescriptorSet(m_SceneDescs);
+        //RHI::Instance()->FreeDescriptorSet(m_SceneDescs);
     }
 
     void RenderScene::AddRenderObject(RenderObject* obj) {
@@ -115,8 +109,8 @@ namespace Engine {
         UpdateUniform();
     }
 
-    void RenderScene::RenderGBuffer(RHI::RCommandBuffer* cmd, RHI::RPipelineLayout* layout) {
-        cmd->BindDescriptorSet(layout, m_SceneDescs, 0, RHI::PIPELINE_GRAPHICS);
+    void RenderScene::RenderGBuffer(Engine::RCommandBuffer* cmd, Engine::RPipelineLayout* layout) {
+        cmd->BindDescriptorSet(layout, m_SceneDescs, 0, Engine::PIPELINE_GRAPHICS);
         for(RenderObject* obj: m_RenderObjects) {
             obj->DrawCall(cmd, layout);
         }

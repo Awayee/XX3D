@@ -1,6 +1,5 @@
 #include "EditorUI/Public/EditorWindow.h"
 #include "Resource/Public/Config.h"
-#include "Resource/Public/Assets.h"
 #include "Render/Public/RenderScene.h"
 #include "Context/Public/EditorContext.h"
 #include "Objects/Public/EngineContext.h"
@@ -10,7 +9,7 @@ namespace Editor {
 
 
 	void FPSWindow::OnWindow() {
-		ImGui::Text("%.1f",Editor::Context()->FPSRec()->GetFPS());
+		ImGui::Text("%.1f",Editor::Context()->Timer()->GetFPS());
 	}
 
 	void ObjectsWindow::OnWindow() {

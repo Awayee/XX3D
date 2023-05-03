@@ -2,9 +2,11 @@
 #include "Core/Public/File.h"
 #include "Core/Public/String.h"
 #include "Core/Public/TSingleton.h"
-#include "Resource/Public/Assets.h"
 #include "Render/Public/RenderResources.h"
 #include "Resource/Public/Shaders.h"
+
+#include "Asset/Public/AssetMgr.h"
+#include "Asset/Public/ImageAsset.h"
 
 namespace Engine {
 
@@ -12,25 +14,25 @@ namespace Engine {
 		GET_RHI(rhi);
 		m_Layouts.resize(DESCS_COUNT);
 		// lighting, camera
-		TVector<RHI::RSDescriptorSetLayoutBinding> sceneDescBindings;
-		sceneDescBindings.push_back({ RHI::DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, RHI::SHADER_STAGE_FRAGMENT_BIT | RHI::SHADER_STAGE_VERTEX_BIT });
-		sceneDescBindings.push_back({ RHI::DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, RHI::SHADER_STAGE_FRAGMENT_BIT | RHI::SHADER_STAGE_VERTEX_BIT });
+		TVector<Engine::RSDescriptorSetLayoutBinding> sceneDescBindings;
+		sceneDescBindings.push_back({ Engine::DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, Engine::SHADER_STAGE_FRAGMENT_BIT | Engine::SHADER_STAGE_VERTEX_BIT });
+		sceneDescBindings.push_back({ Engine::DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, Engine::SHADER_STAGE_FRAGMENT_BIT | Engine::SHADER_STAGE_VERTEX_BIT });
 		m_Layouts[DESCS_SCENE] = rhi->CreateDescriptorSetLayout(sceneDescBindings.size(), sceneDescBindings.data());
 		// world transform
-		TVector<RHI::RSDescriptorSetLayoutBinding> modelDescBindings;
-		modelDescBindings.push_back({ RHI::DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, RHI::SHADER_STAGE_VERTEX_BIT });
+		TVector<Engine::RSDescriptorSetLayoutBinding> modelDescBindings;
+		modelDescBindings.push_back({ Engine::DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, Engine::SHADER_STAGE_VERTEX_BIT });
 		m_Layouts[DESCS_MODEL] = rhi->CreateDescriptorSetLayout(modelDescBindings.size(), modelDescBindings.data());
 		// material
-		TVector<RHI::RSDescriptorSetLayoutBinding> materialDescBindings;
-		materialDescBindings.push_back({ RHI::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, RHI::SHADER_STAGE_FRAGMENT_BIT });
+		TVector<Engine::RSDescriptorSetLayoutBinding> materialDescBindings;
+		materialDescBindings.push_back({ Engine::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, Engine::SHADER_STAGE_FRAGMENT_BIT });
 		m_Layouts[DESCS_MATERIAL] = rhi->CreateDescriptorSetLayout(materialDescBindings.size(), materialDescBindings.data());
 		// deferred lighting
-		TVector<RHI::RSDescriptorSetLayoutBinding> deferredLightingBindings;
-		deferredLightingBindings.push_back({ RHI::DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, RHI::SHADER_STAGE_VERTEX_BIT });// camera
-		deferredLightingBindings.push_back({ RHI::DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, RHI::SHADER_STAGE_FRAGMENT_BIT }); //light
-		deferredLightingBindings.push_back({ RHI::DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, RHI::SHADER_STAGE_FRAGMENT_BIT });//normal
-		deferredLightingBindings.push_back({ RHI::DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, RHI::SHADER_STAGE_FRAGMENT_BIT });//albedo
-		deferredLightingBindings.push_back({ RHI::DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, RHI::SHADER_STAGE_FRAGMENT_BIT });// depth
+		TVector<Engine::RSDescriptorSetLayoutBinding> deferredLightingBindings;
+		deferredLightingBindings.push_back({ Engine::DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, Engine::SHADER_STAGE_VERTEX_BIT });// camera
+		deferredLightingBindings.push_back({ Engine::DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, Engine::SHADER_STAGE_FRAGMENT_BIT }); //light
+		deferredLightingBindings.push_back({ Engine::DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, Engine::SHADER_STAGE_FRAGMENT_BIT });//normal
+		deferredLightingBindings.push_back({ Engine::DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, Engine::SHADER_STAGE_FRAGMENT_BIT });//albedo
+		deferredLightingBindings.push_back({ Engine::DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, Engine::SHADER_STAGE_FRAGMENT_BIT });// depth
 		m_Layouts[DESCS_DEFERRED_LIGHTING] = rhi->CreateDescriptorSetLayout(deferredLightingBindings.size(), deferredLightingBindings.data());
 	}
 
@@ -47,20 +49,20 @@ namespace Engine {
 	{
 		GET_RHI(rhi);
 		m_Samplers.resize(SAMPLER_COUNT);
-		RHI::RSSamplerInfo defaulIInfo{};
-		defaulIInfo.minFilter = RHI::FILTER_LINEAR;
-		defaulIInfo.magFilter = RHI::FILTER_LINEAR;
-		defaulIInfo.addressModeU = RHI::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		defaulIInfo.addressModeV = RHI::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		defaulIInfo.addressModeW = RHI::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		Engine::RSSamplerInfo defaulIInfo{};
+		defaulIInfo.minFilter = Engine::FILTER_LINEAR;
+		defaulIInfo.magFilter = Engine::FILTER_LINEAR;
+		defaulIInfo.addressModeU = Engine::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		defaulIInfo.addressModeV = Engine::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		defaulIInfo.addressModeW = Engine::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 		m_Samplers[SAMPLER_DEFAULT] = rhi->CreateSampler(defaulIInfo);
 
-		RHI::RSSamplerInfo deferredLightingInfo{};
-		deferredLightingInfo.minFilter = RHI::FILTER_LINEAR;
-		deferredLightingInfo.magFilter = RHI::FILTER_LINEAR;
-		deferredLightingInfo.addressModeU = RHI::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		deferredLightingInfo.addressModeV = RHI::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		deferredLightingInfo.addressModeW = RHI::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		Engine::RSSamplerInfo deferredLightingInfo{};
+		deferredLightingInfo.minFilter = Engine::FILTER_LINEAR;
+		deferredLightingInfo.magFilter = Engine::FILTER_LINEAR;
+		deferredLightingInfo.addressModeU = Engine::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		deferredLightingInfo.addressModeV = Engine::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		deferredLightingInfo.addressModeW = Engine::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 		m_Samplers[SAMPLER_DEFERRED_LIGHTING] = rhi->CreateSampler(deferredLightingInfo);
 	}
 
@@ -73,24 +75,24 @@ namespace Engine {
 		m_Samplers.clear();
 	}
 
-	void TextureCommon::Create(RHI::RFormat format, uint32 width, uint32 height, RHI::RImageUsageFlags usage)
+	void TextureCommon::Create(Engine::RFormat format, uint32 width, uint32 height, Engine::RImageUsageFlags usage)
 	{
 		Release();
 		GET_RHI(rhi);
-		Image = rhi->CreateImage2D(format, width, height, 1, RHI::SAMPLE_COUNT_1_BIT, RHI::IMAGE_TILING_OPTIMAL, usage);
-		Memory = rhi->CreateImageMemory(Image, RHI::MEMORY_PROPERTY_DEVICE_LOCAL_BIT, nullptr);
-		const bool bForDepth = usage & RHI::IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-		View = rhi->CreateImageView(Image, RHI::IMAGE_VIEW_TYPE_2D, bForDepth ? RHI::IMAGE_ASPECT_DEPTH_BIT: RHI::IMAGE_ASPECT_COLOR_BIT,
+		Image = rhi->CreateImage2D(format, width, height, 1, Engine::SAMPLE_COUNT_1_BIT, Engine::IMAGE_TILING_OPTIMAL, usage);
+		Memory = rhi->CreateImageMemory(Image, Engine::MEMORY_PROPERTY_DEVICE_LOCAL_BIT, nullptr);
+		const bool bForDepth = usage & Engine::IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		View = rhi->CreateImageView(Image, Engine::IMAGE_VIEW_TYPE_2D, bForDepth ? Engine::IMAGE_ASPECT_DEPTH_BIT: Engine::IMAGE_ASPECT_COLOR_BIT,
 			0, 1, 0, 1);
 	}
 
 	void TextureCommon::UpdatePixels(void* pixels, int channels) {
 		BufferCommon b;
 		b.CreateForTransfer(Image->GetExtent().w * Image->GetExtent().h * channels, pixels);
-		RHI_INSTANCE->ImmediateCommit([&b, this](RHI::RCommandBuffer* cmd) {
-			cmd->TransitionImageLayout(Image, RHI::IMAGE_LAYOUT_UNDEFINED, RHI::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, 1, 0, 1, RHI::IMAGE_ASPECT_COLOR_BIT);
-			cmd->CopyBufferToImage(b.Buffer, Image, RHI::IMAGE_ASPECT_COLOR_BIT, 0, 0, 1);
-			cmd->TransitionImageLayout(Image, RHI::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, RHI::IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, 1, 0, 1, RHI::IMAGE_ASPECT_COLOR_BIT);
+		RHI::Instance()->ImmediateCommit([&b, this](Engine::RCommandBuffer* cmd) {
+			cmd->TransitionImageLayout(Image, Engine::IMAGE_LAYOUT_UNDEFINED, Engine::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, 1, 0, 1, Engine::IMAGE_ASPECT_COLOR_BIT);
+			cmd->CopyBufferToImage(b.Buffer, Image, Engine::IMAGE_ASPECT_COLOR_BIT, 0, 0, 1);
+			cmd->TransitionImageLayout(Image, Engine::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, Engine::IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, 1, 0, 1, Engine::IMAGE_ASPECT_COLOR_BIT);
 		});
 	}
 
@@ -129,16 +131,16 @@ namespace Engine {
 			return &finded->second;
 		}
 		TextureCommon& tex = m_TextureMap.insert({ file, {} }).first->second;
-		AImageAsset imageAsset = Assets::LoadAsset<AImageAsset>(file);
+		AImageAsset imageAsset = AssetMgr::LoadAsset<AImageAsset>(file);
 		tex.Create(FORMAT, imageAsset.Width, imageAsset.Height, USAGE);
 		tex.UpdatePixels(imageAsset.Pixels, CHANNELS);
 		return &tex;
 
 	}
 
-	void BufferCommon::Create(uint64 size, RHI::RBufferUsageFlags usage, RHI::RMemoryPropertyFlags memoryFlags, void* pData) {
+	void BufferCommon::Create(uint64 size, Engine::RBufferUsageFlags usage, Engine::RMemoryPropertyFlags memoryFlags, void* pData) {
 		if (Size) Release();
-		RHI_INSTANCE->CreateBufferWithMemory(size, usage, memoryFlags, Buffer, Memory, size, pData);
+		RHI::Instance()->CreateBufferWithMemory(size, usage, memoryFlags, Buffer, Memory, size, pData);
 		Size = size;
 		Usage = usage;
 	}
@@ -160,7 +162,7 @@ namespace Engine {
 			rhi->FreeMemory(Memory);
 			Memory = nullptr;
 			Size = 0u;
-			Usage = RHI::BUFFER_USAGE_FLAG_BITS_MAX_ENUM;
+			Usage = Engine::BUFFER_USAGE_FLAG_BITS_MAX_ENUM;
 		}
 	}
 
@@ -172,12 +174,12 @@ namespace Engine {
 		if(nullptr != m_Framebuffer) rhi->DestroyFramebuffer(m_Framebuffer);
 		if(nullptr != m_RHIPass) rhi->DestroyRenderPass(m_RHIPass);
 	}
-	void RenderPassCommon::Begin(RHI::RCommandBuffer* cmd)
+	void RenderPassCommon::Begin(Engine::RCommandBuffer* cmd)
 	{
 		cmd->BeginRenderPass(m_RHIPass, m_Framebuffer, { 0, 0, m_Framebuffer->GetWidth(), m_Framebuffer->GetHeight() });
 	}
 
-	RHI::RImageView* RenderPassCommon::GetAttachment(uint32 attachmentIdx) const
+	Engine::RImageView* RenderPassCommon::GetAttachment(uint32 attachmentIdx) const
 	{
 		ASSERT(attachmentIdx < m_Attachments.size());
 		return m_Attachments[attachmentIdx].View;
@@ -190,27 +192,27 @@ namespace Engine {
 		uint32 height = rhi->GetSwapchainExtent().h;
 		// create attachments
 		m_Attachments.resize(ATTACHMENT_COLOR_KHR);
-		m_Attachments[ATTACHMENT_DEPTH].Create(rhi->GetDepthFormat(), width, height, RHI::IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT|RHI::IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
-		m_Attachments[ATTACHMENT_NORMAL].Create(RHI::FORMAT_R8G8B8A8_UNORM, width, height, RHI::IMAGE_USAGE_COLOR_ATTACHMENT_BIT|RHI::IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
-		m_Attachments[ATTACHMENT_ALBEDO].Create(RHI::FORMAT_R8G8B8A8_UNORM, width, height, RHI::IMAGE_USAGE_COLOR_ATTACHMENT_BIT|RHI::IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
+		m_Attachments[ATTACHMENT_DEPTH].Create(rhi->GetDepthFormat(), width, height, Engine::IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT|Engine::IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
+		m_Attachments[ATTACHMENT_NORMAL].Create(Engine::FORMAT_R8G8B8A8_UNORM, width, height, Engine::IMAGE_USAGE_COLOR_ATTACHMENT_BIT|Engine::IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
+		m_Attachments[ATTACHMENT_ALBEDO].Create(Engine::FORMAT_R8G8B8A8_UNORM, width, height, Engine::IMAGE_USAGE_COLOR_ATTACHMENT_BIT|Engine::IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
 		
-		TVector<RHI::RSAttachment> attachments(ATTACHMENT_COUNT);
+		TVector<Engine::RSAttachment> attachments(ATTACHMENT_COUNT);
 		// depth
 		attachments[ATTACHMENT_DEPTH].Format = rhi->GetDepthFormat();
-		attachments[ATTACHMENT_DEPTH].InitialLayout = RHI::IMAGE_LAYOUT_UNDEFINED;
-		attachments[ATTACHMENT_DEPTH].FinalLayout = RHI::IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		attachments[ATTACHMENT_DEPTH].InitialLayout = Engine::IMAGE_LAYOUT_UNDEFINED;
+		attachments[ATTACHMENT_DEPTH].FinalLayout = Engine::IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 		attachments[ATTACHMENT_DEPTH].Clear = { 1.0, 0 };
 		// g buffer normal
-		attachments[ATTACHMENT_NORMAL].Format = RHI::FORMAT_R8G8B8A8_UNORM;
-		attachments[ATTACHMENT_NORMAL].InitialLayout = RHI::IMAGE_LAYOUT_UNDEFINED;
-		attachments[ATTACHMENT_NORMAL].FinalLayout = RHI::IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		attachments[ATTACHMENT_NORMAL].Format = Engine::FORMAT_R8G8B8A8_UNORM;
+		attachments[ATTACHMENT_NORMAL].InitialLayout = Engine::IMAGE_LAYOUT_UNDEFINED;
+		attachments[ATTACHMENT_NORMAL].FinalLayout = Engine::IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		attachments[ATTACHMENT_NORMAL].Clear = { 0.0f, 0.0f, 0.0f, 0.0f };
 		// g buffer albedo
 		attachments[ATTACHMENT_ALBEDO] = attachments[ATTACHMENT_NORMAL];
 		// swapchain
 		attachments[ATTACHMENT_COLOR_KHR].Format = rhi->GetSwapchainImageFormat();
-		attachments[ATTACHMENT_COLOR_KHR].InitialLayout = RHI::IMAGE_LAYOUT_UNDEFINED;
-		attachments[ATTACHMENT_COLOR_KHR].FinalLayout = RHI::IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		attachments[ATTACHMENT_COLOR_KHR].InitialLayout = Engine::IMAGE_LAYOUT_UNDEFINED;
+		attachments[ATTACHMENT_COLOR_KHR].FinalLayout = Engine::IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		attachments[ATTACHMENT_COLOR_KHR].Clear = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 		// subpass
@@ -218,41 +220,41 @@ namespace Engine {
 		m_ColorAttachments[SUBPASS_BASE] = { &m_Attachments[ATTACHMENT_NORMAL], &m_Attachments[ATTACHMENT_ALBEDO] };
 		m_DepthAttachments.resize(1);
 		m_DepthAttachments[SUBPASS_BASE] = &m_Attachments[ATTACHMENT_DEPTH];
-		TVector<RHI::RSubPassInfo> subpasses(SUBPASS_COUNT);
+		TVector<Engine::RSubPassInfo> subpasses(SUBPASS_COUNT);
 		// base pass
 		subpasses[SUBPASS_BASE].ColorAttachments = {
-			{ATTACHMENT_NORMAL, RHI::IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
-			{ATTACHMENT_ALBEDO, RHI::IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}
+			{ATTACHMENT_NORMAL, Engine::IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
+			{ATTACHMENT_ALBEDO, Engine::IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}
 		};
-		subpasses[SUBPASS_BASE].DepthStencilAttachment = { ATTACHMENT_DEPTH, RHI::IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+		subpasses[SUBPASS_BASE].DepthStencilAttachment = { ATTACHMENT_DEPTH, Engine::IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
 		// lighting pass
 		subpasses[SUBPASS_DEFERRED_LIGHTING].ColorAttachments = {
-			{(uint32)attachments.size() - 1, RHI::IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}
+			{(uint32)attachments.size() - 1, Engine::IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}
 		};
 		subpasses[SUBPASS_DEFERRED_LIGHTING].InputAttachments = {
-			{ATTACHMENT_NORMAL, RHI::IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
-			{ATTACHMENT_ALBEDO, RHI::IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
-			{ATTACHMENT_DEPTH,  RHI::IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
+			{ATTACHMENT_NORMAL, Engine::IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+			{ATTACHMENT_ALBEDO, Engine::IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+			{ATTACHMENT_DEPTH,  Engine::IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
 		};
-		subpasses[SUBPASS_DEFERRED_LIGHTING].DepthStencilAttachment = { 0, RHI::IMAGE_LAYOUT_UNDEFINED };
+		subpasses[SUBPASS_DEFERRED_LIGHTING].DepthStencilAttachment = { 0, Engine::IMAGE_LAYOUT_UNDEFINED };
 
 		// dependencies
-		TVector<RHI::RSubpassDependency> dependencies(2);
+		TVector<Engine::RSubpassDependency> dependencies(2);
 		dependencies[0].SrcSubPass = SUBPASS_INTERNAL;
 		dependencies[0].DstSubPass = SUBPASS_BASE;
-		dependencies[0].SrcStage = RHI::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | RHI::PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-		dependencies[0].DstStage = RHI::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | RHI::PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+		dependencies[0].SrcStage = Engine::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | Engine::PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+		dependencies[0].DstStage = Engine::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | Engine::PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 		dependencies[0].SrcAccess = 0;
-		dependencies[0].DstAccess = RHI::ACCESS_COLOR_ATTACHMENT_WRITE_BIT | RHI::ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		dependencies[0].DstAccess = Engine::ACCESS_COLOR_ATTACHMENT_WRITE_BIT | Engine::ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 		// lighting pass depends on base pass
 		dependencies[1].SrcSubPass = SUBPASS_BASE;
 		dependencies[1].DstSubPass = SUBPASS_DEFERRED_LIGHTING;
-		dependencies[1].SrcStage = RHI::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | RHI::PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		dependencies[1].DstStage = RHI::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | RHI::PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		dependencies[1].SrcAccess = RHI::ACCESS_SHADER_WRITE_BIT | RHI::ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		dependencies[1].DstAccess = RHI::ACCESS_SHADER_READ_BIT | RHI::ACCESS_COLOR_ATTACHMENT_READ_BIT;
-		dependencies[1].DependencyFlags = RHI::DEPENDENCY_BY_REGION_BIT;
+		dependencies[1].SrcStage = Engine::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | Engine::PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		dependencies[1].DstStage = Engine::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | Engine::PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		dependencies[1].SrcAccess = Engine::ACCESS_SHADER_WRITE_BIT | Engine::ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		dependencies[1].DstAccess = Engine::ACCESS_SHADER_READ_BIT | Engine::ACCESS_COLOR_ATTACHMENT_READ_BIT;
+		dependencies[1].DependencyFlags = Engine::DEPENDENCY_BY_REGION_BIT;
 
 		m_RHIPass = rhi->CreateRenderPass(attachments.size(), attachments.data(),
 			subpasses.size(), subpasses.data(),
@@ -262,7 +264,7 @@ namespace Engine {
 		uint32 maxImageCount = rhi->GetSwapchainMaxImageCount();
 		m_SwapchainFramebuffers.resize(maxImageCount);
 		for(uint32 i=0; i<maxImageCount;++i) {
-			TVector<RHI::RImageView*> attachments;
+			TVector<Engine::RImageView*> attachments;
 			for (auto& img : m_Attachments) {
 				attachments.push_back(img.View);
 			}
@@ -294,7 +296,7 @@ namespace Engine {
 		rhi->DestroyPipeline(m_Pipeline);
 	}
 
-	void GraphicsPipelineCommon::Bind(RHI::RCommandBuffer* cmd) {
+	void GraphicsPipelineCommon::Bind(Engine::RCommandBuffer* cmd) {
 		cmd->BindPipeline(m_Pipeline);
 	}
 
@@ -303,7 +305,7 @@ namespace Engine {
 	{
 		GET_RHI(rhi);
 		// layout
-		TVector<RHI::RDescriptorSetLayout*> setLayouts;
+		TVector<Engine::RDescriptorSetLayout*> setLayouts;
 		setLayouts.push_back(DescsMgr::Get(DESCS_SCENE));
 		setLayouts.push_back(DescsMgr::Get(DESCS_MODEL));
 		setLayouts.push_back(DescsMgr::Get(DESCS_MATERIAL));
@@ -315,9 +317,9 @@ namespace Engine {
 		LoadShaderFile("GBuffer.vert.spv", vertShaderCode);
 		TVector<int8> fragShaderCode;
 		LoadShaderFile("GBuffer.frag.spv", fragShaderCode);
-		RHI::RGraphicsPipelineCreateInfo info{};
-		info.Shaders.push_back({ RHI::SHADER_STAGE_VERTEX_BIT, vertShaderCode, "main" });
-		info.Shaders.push_back({ RHI::SHADER_STAGE_FRAGMENT_BIT, fragShaderCode, "main" });
+		Engine::RGraphicsPipelineCreateInfo info{};
+		info.Shaders.push_back({ Engine::SHADER_STAGE_VERTEX_BIT, vertShaderCode, "main" });
+		info.Shaders.push_back({ Engine::SHADER_STAGE_FRAGMENT_BIT, fragShaderCode, "main" });
 		// input
 		FillVertexInput(info.Bindings, info.Attributes);
 		// viewport
@@ -326,13 +328,13 @@ namespace Engine {
 		// rasterization
 		info.DepthClampEnable = false;
 		info.RasterizerDiscardEnable = false;
-		info.PolygonMode = RHI::POLYGON_MODE_FILL;
-		info.CullMode = RHI::CULL_MODE_BACK_BIT;
+		info.PolygonMode = Engine::POLYGON_MODE_FILL;
+		info.CullMode = Engine::CULL_MODE_BACK_BIT;
 		info.Clockwise = true;
 		// depth
 		info.DepthTestEnable = true;
 		info.DepthWriteEnable = true;
-		info.DepthCompareOp = RHI::COMPARE_OP_LESS;
+		info.DepthCompareOp = Engine::COMPARE_OP_LESS;
 		// blend
 		info.LogicOpEnable = false;
 		info.AttachmentStates.resize(pass->GetColorAttachmentCount(subpass), {false});
@@ -343,16 +345,16 @@ namespace Engine {
 	DeferredLightingPipeline::DeferredLightingPipeline(const RenderPassCommon* pass, uint32 subpass, const URect& area)
 	{
 		GET_RHI(rhi);
-		TVector<RHI::RDescriptorSetLayout*> setLayouts{ DescsMgr::Get(DESCS_DEFERRED_LIGHTING) };
+		TVector<Engine::RDescriptorSetLayout*> setLayouts{ DescsMgr::Get(DESCS_DEFERRED_LIGHTING) };
 		m_Layout = rhi->CreatePipelineLayout(setLayouts.size(), setLayouts.data(), 0, nullptr);
 		// shader
 		TVector<int8> vertShaderCode;
 		LoadShaderFile("DeferredLighting.vert.spv", vertShaderCode);
 		TVector<int8> fragShaderCode;
-		LoadShaderFile("DeferredLighting.frag.spv", fragShaderCode);
-		RHI::RGraphicsPipelineCreateInfo info{};
-		info.Shaders.push_back({ RHI::SHADER_STAGE_VERTEX_BIT, vertShaderCode, "main" });
-		info.Shaders.push_back({ RHI::SHADER_STAGE_FRAGMENT_BIT, fragShaderCode, "main" });
+		LoadShaderFile("DeferredLightingPBR.frag.spv", fragShaderCode);
+		Engine::RGraphicsPipelineCreateInfo info{};
+		info.Shaders.push_back({ Engine::SHADER_STAGE_VERTEX_BIT, vertShaderCode, "main" });
+		info.Shaders.push_back({ Engine::SHADER_STAGE_FRAGMENT_BIT, fragShaderCode, "main" });
 		// no vertex input
 		// viewport
 		info.Viewport = {(float)area.x, (float)area.y, (float)area.w, (float)area.h, 0.0f, 1.0f};
@@ -360,8 +362,8 @@ namespace Engine {
 		// rasterization
 		info.DepthClampEnable = false;
 		info.RasterizerDiscardEnable = false;
-		info.PolygonMode = RHI::POLYGON_MODE_FILL;
-		info.CullMode = RHI::CULL_MODE_BACK_BIT;
+		info.PolygonMode = Engine::POLYGON_MODE_FILL;
+		info.CullMode = Engine::CULL_MODE_BACK_BIT;
 		// depth
 		info.DepthTestEnable = false;
 		info.DepthWriteEnable = false;

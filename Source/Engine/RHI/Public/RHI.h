@@ -2,12 +2,12 @@
 #include "RHIClasses.h"
 #include <functional>
 
-namespace RHI{
+namespace Engine{
 	typedef void(*DebugFunc)(const char*);
 	//typedef void(*CommandBufferFunc)(RCommandBuffer*);
 	typedef  std::function<void(RCommandBuffer*)> CommandBufferFunc;
 
-	class RHIInstance
+	class RHI
 	{
 	public:
 		virtual void Initialize(const RSInitInfo* initInfo)=0;
@@ -93,12 +93,9 @@ namespace RHI{
 		virtual void DestroyImageView(RImageView* imageView) = 0;
 		virtual RSampler* CreateSampler(const RSSamplerInfo& samplerInfo) = 0;
 		virtual void DestroySampler(RSampler* sampler) = 0;
-
+		static RHI* Instance();
 	};
 
-	RHIInstance* GetInstance();
 }
 
-#define RHI_INSTANCE RHI::GetInstance()
-
-#define GET_RHI(x) RHI::RHIInstance* x = RHI::GetInstance()
+#define GET_RHI(x) Engine::RHI* x = Engine::RHI::Instance()

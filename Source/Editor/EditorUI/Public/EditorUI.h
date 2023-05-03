@@ -1,6 +1,6 @@
 #pragma once
-#include "Render/Public/ImGuiImpl.h"
-#include "Render/Public/InputEnum.h"
+#include "Window/Public/ImGuiImpl.h"
+#include "Window/Public/InputEnum.h"
 #include "Objects/Public/Engine.h"
 
 namespace Editor {

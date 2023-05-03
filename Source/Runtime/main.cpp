@@ -8,7 +8,7 @@ int main() {
 	{
 		LOG("Runtime");
 		Engine::XXEngine engine;
-		Engine::Context()->Renderer()->SetRenderArea({ 0, 0, Engine::GetConfig()->GetWindowSize().w, Engine::GetConfig()->GetWindowSize().h });
+		Engine::Context()->Renderer()->SetRenderArea({ 0, 0, Engine::GetConfig().WindowSize.w, Engine::GetConfig().WindowSize.h });
 		while (engine.Tick());
 	}
 	return 0;

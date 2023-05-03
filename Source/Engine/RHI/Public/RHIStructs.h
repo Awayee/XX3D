@@ -4,15 +4,14 @@
 #include "Core/Public/TypeDefine.h"
 #include "Core/Public/BaseStructs.h"
 
-namespace RHI {
+namespace Engine {
 	struct RSInitInfo {
-		bool enableDebug;
-		bool enableGeometryShader;
-		int windowWidth;
-		int windowHeight;
-		void* windowHandle;
-		const char* applicationName;
-		uint8 maxFramesInFlight;
+		bool EnableDebug;
+		bool EnableGeometryShader;
+		USize2D WindowSize;
+		void* WindowHandle;
+		const char* ApplicationName;
+		uint8 MaxFramesInFlight;
 	};
 
 	struct RSViewport {

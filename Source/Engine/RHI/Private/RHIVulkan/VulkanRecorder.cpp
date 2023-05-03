@@ -1,5 +1,5 @@
 #include "VulkanRecorder.h"
-namespace RHI {
+namespace Engine {
 
 	void RHIRecorder::AddAllocateDescriptorSetInfo(RDescriptorSetVk** descPtr, VkDescriptorSetLayout layoutHandle)
 	{

@@ -6,7 +6,7 @@
 #else
 #include <vulkan/vulkan.h>
 #endif
-namespace RHI {
+namespace Engine {
 #define RESOURCE_VK_HANDLE(cls, vkHandle)\
 	class cls##Vk{\
 	public:\
@@ -119,7 +119,6 @@ namespace RHI {
 	class RDescriptorSetVk: public RDescriptorSet {
 		friend RHIVulkan;
 	private:
-		VkDevice m_Device;
 		void InnerUpdate(uint32 binding, uint32 arrayElement, uint32 count, VkDescriptorType type, const VkDescriptorImageInfo* imageInfo, const VkDescriptorBufferInfo* bufferInfo, const VkBufferView* texelBufferView);
 	public:
 		VkDescriptorSet handle;
@@ -147,8 +146,8 @@ namespace RHI {
 		void BindIndexBuffer(RBuffer* buffer, uint64 offset) override;
 		void Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance) override;
 		void DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance) override;
-		void DrawVertices(RBuffer* buffer, uint32 vertexCount, uint32 instanceCount) override;
-		void DrawVerticesIndexed(RBuffer* vertexBuffer, RBuffer* indexBuffer, uint32 indexCount, uint32 instanceCount) override;
+		void DrawPrimitive(RBuffer* buffer, uint32 vertexCount, uint32 instanceCount) override;
+		void DrawPrimitiveIndexed(RBuffer* vertexBuffer, RBuffer* indexBuffer, uint32 indexCount, uint32 instanceCount) override;
 		void Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ) override;
 		void ClearAttachment(RImageAspectFlags aspect, const float* color, const URect& rect) override;
 		void CopyBuffer(RBuffer* srcBuffer, RBuffer* dstBuffer, uint64 srcOffset, uint64 dstOffset, uint64 size) override;

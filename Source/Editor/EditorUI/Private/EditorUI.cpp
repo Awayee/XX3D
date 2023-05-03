@@ -1,10 +1,9 @@
 #include "EditorUI/Public/EditorUI.h"
-#include "Context/Public/EditorContext.h"
 #include "Core/Public/macro.h"
 #include "Resource/Public/Config.h"
-#include "Resource/Public/Assets.h"
 #include "EditorUI/Public/EditorWindow.h"
 #include "Objects/Public/EngineContext.h"
+#include "Asset/Public/AssetMgr.h"
 
 namespace Editor {
 	void EWindowBase::Run() {
@@ -41,8 +40,11 @@ namespace Editor {
 		ImGuiIO& io = ImGui::GetIO();
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 		io.ConfigWindowsMoveFromTitleBarOnly = true;
-		auto fontAsset = Engine::Assets::LoadAsset<Engine::AFontAsset>(Engine::GetConfig()->GetDefaultFontPath());
-		io.Fonts->AddFontFromFileTTF(fontAsset.Path.c_str(), contentScale * 16, nullptr, nullptr);
+
+		String fontPath = Engine::GetConfig().DefaultFontPath;
+		AssetMgr::ConvertProjectPath(fontPath);
+
+		io.Fonts->AddFontFromFileTTF(fontPath.c_str(), contentScale * 16, nullptr, nullptr);
 		ASSERT(io.Fonts->Build(), "Failed to build fonts");
 		//io.IniFilename = nullptr; // Do not save settings
 
@@ -60,8 +62,7 @@ namespace Editor {
 		// title bar
 		const ImGuiViewport* mainViewport = ImGui::GetMainViewport();
 		ImGui::SetNextWindowPos(mainViewport->WorkPos, ImGuiCond_Always);
-		ISize2D windowSize;
-		Engine::Context()->Window()->GetWindowSize(&windowSize.w, &windowSize.h);
+		USize2D windowSize = Engine::Context()->Window()->GetWindowSize();
 		ImGui::SetNextWindowSize(ImVec2((float)windowSize.w, (float)windowSize.h), ImGuiCond_Always);
 		ImGuiWindowFlags   window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |

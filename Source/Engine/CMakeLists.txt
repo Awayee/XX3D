@@ -14,6 +14,18 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${H_FILES} ${CPP_FILES} ${
 add_library(${TARGET_NAME} STATIC ${H_FILES} ${CPP_FILES} ${HPP_FILES})
 target_include_directories(${TARGET_NAME} PUBLIC ${SOURCE_PATH}/Engine)
 
+#dx
+target_link_libraries(${TARGET_NAME} PRIVATE
+d3d12.lib
+d3d11.lib
+dxgi.lib
+dxguid.lib
+D3DCompiler.lib
+winmm.lib
+)
+target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/DirectX/include)
+
+
 #glfw
 target_link_libraries(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/glfwWin64/lib-vc2019/glfw3.lib)
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/glfwWin64/include)
@@ -36,9 +48,14 @@ target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/stb_image)
 #imgui
 target_link_libraries(${TARGET_NAME} PRIVATE "imgui")
 
+#lz4
+
 #tiny gltf
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/tinygltf)
 
 #assimp
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/assimpWin64/include)
 target_link_libraries(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/assimpWin64/lib/assimp-vc140-mt.lib)
+
+#lz4
+target_link_libraries(${TARGET_NAME} PRIVATE "lz4")

@@ -1,6 +1,7 @@
 #include "RHIVKResources.h"
 #include "VulkanUtil.h"
-namespace RHI {
+#include "RHIVulkan.h"
+namespace Engine {
     void RRenderPassVk::SetAttachment(uint32 idx, RImageView* imageView){
         if(!(idx < m_Attachments.size())) {
 	        for(int i= m_Attachments.size()-1; i<idx; ++i) {
@@ -28,7 +29,7 @@ namespace RHI {
 		write.pImageInfo = imageInfo;
 		write.pBufferInfo = bufferInfo;
 		write.pTexelBufferView = texelBufferView;
-		vkUpdateDescriptorSets(m_Device, 1, &write, 0, nullptr);
+		vkUpdateDescriptorSets(RHIVulkan::InstanceVulkan()->GetDevice(), 1, &write, 0, nullptr);
 	}
 
 	void RDescriptorSetVk::Update(uint32 binding, RDescriptorType type, const RDescriptorInfo& info,  uint32 arrayElement, uint32 count){
@@ -100,7 +101,7 @@ namespace RHI {
 
 	void RCommandBufferVk::BeginRenderPass(RRenderPass* pass, RFramebuffer* framebuffer, const URect& area){
 		RRenderPassVk* passVk = reinterpret_cast<RRenderPassVk*>(pass);
-		VkRect2D vkRenderArea{ {area.x, area.y}, {area.w, area.h} };
+		VkRect2D vkRenderArea{ {(int32)area.x, (int32)area.y}, {area.w, area.h} };
 		VkRenderPassBeginInfo passInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
 		passInfo.pNext = nullptr;
 		passInfo.renderPass = passVk->handle;
@@ -173,13 +174,13 @@ namespace RHI {
 		_vkCmdDrawIndexed(handle, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	}
 
-	void RCommandBufferVk::DrawVertices(RBuffer* buffer, uint32 vertexCount, uint32 instanceCount){
+	void RCommandBufferVk::DrawPrimitive(RBuffer* buffer, uint32 vertexCount, uint32 instanceCount){
 		constexpr VkDeviceSize offset = 0;
 		_vkCmdBindVertexBuffers(handle, 0, 1, &((RBufferVk*)buffer)->handle, &offset);
 		_vkCmdDraw(handle, vertexCount, instanceCount, 0, 0);
 	}
 
-	void RCommandBufferVk::DrawVerticesIndexed(RBuffer* vertexBuffer, RBuffer* indexBuffer, uint32 indexCount, uint32 instanceCount){
+	void RCommandBufferVk::DrawPrimitiveIndexed(RBuffer* vertexBuffer, RBuffer* indexBuffer, uint32 indexCount, uint32 instanceCount){
 		constexpr VkDeviceSize offset = 0;
 		_vkCmdBindVertexBuffers(handle, 0, 1, &((RBufferVk*)vertexBuffer)->handle, &offset);
 		_vkCmdBindIndexBuffer(handle, ((RBufferVk*)indexBuffer)->handle, 0, VK_INDEX_TYPE_UINT32);

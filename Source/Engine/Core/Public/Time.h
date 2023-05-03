@@ -15,7 +15,7 @@ inline TimePoint NowTimePoint() {
 }
 
 template<typename T> T NowTimeMs() {
-	return (T)NowTimePoint().time_since_epoch().count();
+	return static_cast<T>(NowTimePoint().time_since_epoch().count());
 }
 
 template<typename T> T GetDurationMill(const TimePoint& start, const TimePoint& end) {

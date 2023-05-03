@@ -6,12 +6,12 @@
 namespace Engine {
 	class Material {
 	private:
-		RHI::RDescriptorSet* m_DescriptorSet{nullptr};
+		Engine::RDescriptorSet* m_DescriptorSet{nullptr};
 	public:
 		Material();
 		~Material();
 		void SetTexture(TextureCommon* tex);
-		RHI::RDescriptorSet* GetDescs() { return m_DescriptorSet; }
+		Engine::RDescriptorSet* GetDescs() { return m_DescriptorSet; }
 	};
 
 	class MaterialMgr: public TSingleton<MaterialMgr> {

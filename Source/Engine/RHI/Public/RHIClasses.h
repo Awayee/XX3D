@@ -4,7 +4,7 @@
 #include "Core/Public/TypeDefine.h"
 #include "Core/Public/BaseStructs.h"
 
-namespace RHI{
+namespace Engine{
 	class RWindowHandle {
 	};
 
@@ -109,8 +109,8 @@ namespace RHI{
 		virtual void BindIndexBuffer(RBuffer* buffer, uint64 offset) = 0;
 		virtual void Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance) = 0;
 		virtual void DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance) = 0;
-		virtual void DrawVertices(RBuffer* buffer, uint32 vertexCount, uint32 instanceCount) = 0;
-		virtual void DrawVerticesIndexed(RBuffer* vertexBuffer, RBuffer* indexBuffer, uint32 indexCount, uint32 instanceCount) = 0;
+		virtual void DrawPrimitive(RBuffer* buffer, uint32 vertexCount, uint32 instanceCount) = 0;
+		virtual void DrawPrimitiveIndexed(RBuffer* vertexBuffer, RBuffer* indexBuffer, uint32 indexCount, uint32 instanceCount) = 0;
 		virtual void Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ) = 0;
 		virtual void ClearAttachment(RImageAspectFlags aspect, const float* color, const URect& rect) = 0;
 		virtual void CopyBuffer(RBuffer* srcBuffer, RBuffer* dstBuffer, uint64 srcOffset, uint64 dstOffset, uint64 size) = 0;

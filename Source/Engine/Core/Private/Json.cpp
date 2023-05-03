@@ -16,9 +16,10 @@ namespace Json {
 	}
 
 	bool WriteFile(const char* file, const Document& doc, bool pretty) {
-		std::ofstream out(file);
+		std::ofstream out;
+		out.open(file, std::ios::out);
 
-		if (out.fail()) {
+		if (!out.good()) {
 			LOG("Failed to write json file: %s", file);
 			return false;
 		}
@@ -40,9 +41,16 @@ namespace Json {
 		return true;
 	}
 
+	void AddStringMember(Document& doc, const char* name, const std::string& str, Document::AllocatorType& a) {
+		Value v;
+		v.SetString(str.c_str(), str.size(), a);
+		Document::StringRefType nameStr(name);
+		doc.AddMember(nameStr, v, a);
+	}
+
 	void AddString(Value& obj, const char* name, const std::string& str, Document::AllocatorType& a) {
 		Value v;
-		v.SetString(str.c_str(), str.size());
+		v.SetString(str.c_str(), str.size(), a);
 		Document::StringRefType nameStr(name);
 		obj.AddMember(nameStr, v, a);
 	}

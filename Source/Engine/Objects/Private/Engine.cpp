@@ -1,6 +1,5 @@
 #include "Objects/Public/Engine.h"
 #include "Objects/Public/EngineContext.h"
-#include "Render/Public/WindowSystemGLFW.h"
 #include "Core/Public/macro.h"
 #include "Resource/Public/Config.h"
 
@@ -8,22 +7,39 @@ namespace Engine {
 	XXEngine::XXEngine() {
 		auto* context = Context();
 		// init window
-		WindowInitInfo initInfo;
-		initInfo.width = GetConfig()->GetWindowSize().w;
-		initInfo.height = GetConfig()->GetWindowSize().h;
-		initInfo.title = PROJECT_NAME;
-		initInfo.resizeable = true;
-		context->m_Window.reset(new WindowSystemGLFW);
-		context->m_Window->Initialize(initInfo);
-
+		{
+			WindowInitInfo windowInfo;
+			windowInfo.width = GetConfig().WindowSize.w;
+			windowInfo.height = GetConfig().WindowSize.h;
+			windowInfo.title = PROJECT_NAME;
+			windowInfo.resizeable = true;
+			Wnd::Instance()->Initialize(windowInfo);
+			context->m_Window = Engine::Wnd::Instance();
+		}
+		// init rhi
+		{
+			Engine::RSInitInfo rhiInfo;
+			rhiInfo.ApplicationName = PROJECT_NAME;
+#ifdef _DEBUG
+			rhiInfo.EnableDebug = true;
+#else
+			rhiInfo.EnableDebug = false
+#endif
+			rhiInfo.EnableGeometryShader = true;
+			rhiInfo.WindowSize = context->m_Window->GetWindowSize();
+			rhiInfo.WindowHandle = context->m_Window->GetWindowHandle();
+			rhiInfo.MaxFramesInFlight = 3;
+			RHI::Instance()->Initialize(&rhiInfo);
+		}
 		// init renderer
 		context->m_Renderer.reset(new RenderSystem(context->Window()));
 		context->m_Renderer->SetEnable(true);
 	}
 	XXEngine::~XXEngine() {
 		auto* context = Context();
-		context->m_Window.reset();
 		context->m_Renderer.reset();
+		RHI::Instance()->Release();
+		Wnd::Instance()->Release();
 	}
 
 	bool XXEngine::Tick() {
@@ -32,7 +48,7 @@ namespace Engine {
 			return false;
 		}
 
-		Context()->Window()->PollEvents();
+		Context()->Window()->Tick();
 		Context()->Renderer()->Tick();
 		return true;
 	}

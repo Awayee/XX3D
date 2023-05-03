@@ -3,8 +3,9 @@
 #include "Core/Public/macro.h"
 #include "Core/Public/Container.h"
 #include "RHIVKResources.h"
+#include "VulkanEnum.h"
 
-namespace RHI {
+namespace Engine {
 
 #define VK_CHECK(x, s)\
 	if(VK_SUCCESS != x) throw s
@@ -120,14 +121,14 @@ namespace RHI {
 	inline VkAttachmentDescription ResolveAttachmentDesc(const RSAttachment& attachment) {
 		VkAttachmentDescription desc;
 		desc.flags = 0;
-		desc.format =                      (VkFormat)attachment.Format;
+		desc.format =                ConvertVkFormat(attachment.Format);
 		desc.samples =        (VkSampleCountFlagBits)attachment.SampleCount;
 		desc.loadOp =            (VkAttachmentLoadOp)attachment.LoadOp;
 		desc.storeOp =          (VkAttachmentStoreOp)attachment.StoreOp;
 		desc.stencilLoadOp =     (VkAttachmentLoadOp)attachment.StencilLoadOp;
 		desc.stencilStoreOp =   (VkAttachmentStoreOp)attachment.StencilStoreOp;
-		desc.initialLayout =          (VkImageLayout)attachment.InitialLayout;
-		desc.finalLayout =            (VkImageLayout)attachment.FinalLayout;
+		desc.initialLayout =    ConvertVkImageLayout(attachment.InitialLayout);
+		desc.finalLayout =      ConvertVkImageLayout(attachment.FinalLayout);
 		return desc;
 	}
 

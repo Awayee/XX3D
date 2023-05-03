@@ -6,6 +6,9 @@
 #include "String.h"
 
 namespace File {
+	typedef std::ofstream Write;
+	typedef std::ifstream Read;
+	typedef std::fstream  FStream;
 	typedef std::filesystem::path FPath;
 	typedef std::filesystem::directory_entry FPathEntry;
 	typedef std::filesystem::directory_iterator FPathIterator;

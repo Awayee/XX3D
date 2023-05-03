@@ -1,7 +1,7 @@
 #pragma once
 #include "VulkanUtil.h"
 
-namespace RHI {
+namespace Engine {
 	class RHIRecorder {
 	private:
 		// VkAllocateDescriptorSets

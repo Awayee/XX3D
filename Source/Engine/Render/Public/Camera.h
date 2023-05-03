@@ -1,5 +1,5 @@
 #pragma once
-#include "Core/Public/Math/Math.h"
+#include "Math/Public/Math.h"
 
 namespace Engine {
 	enum EProjectiveType {

@@ -2,9 +2,6 @@
 #include "Core/Public/macro.h"
 #include "Core/Public/TypeDefine.h"
 
-#define PARSE_ASSETS_FILE(f)\
-	char __s[128]; strcpy(__s, PROJECT_ASSETS); strcat(__s, f); f=__s
-
 namespace File {
 
 	void LoadFileCode(const char* file, TVector<char>& code) {

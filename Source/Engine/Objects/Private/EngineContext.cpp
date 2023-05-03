@@ -1,5 +1,5 @@
 #include "Objects/Public/EngineContext.h"
-#include "Render/Public/WindowSystem.h"
+#include "Window/Public/Wnd.h"
 #include "Render/Public/RenderSystem.h"
 
 namespace Engine {

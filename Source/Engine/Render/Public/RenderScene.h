@@ -11,14 +11,14 @@ namespace Engine {
 
 	class RenderObject {
 		friend RenderScene;
-	private:
+	protected:
 		RenderScene* m_Scene;
 		uint32 m_Index;
 		String m_Name{"Unnamed object"};
 	public:
 		RenderObject(RenderScene* scene);
 		virtual ~RenderObject();
-		virtual void DrawCall(RHI::RCommandBuffer* cmd, RHI::RPipelineLayout* layout) = 0;
+		virtual void DrawCall(Engine::RCommandBuffer* cmd, Engine::RPipelineLayout* layout) = 0;
 		virtual const char* Name() { return m_Name.c_str(); }
 	};
 
@@ -34,7 +34,7 @@ namespace Engine {
 		TVector<RenderObject*> m_RenderObjects; // all render objects
 		TUniquePtr<DirectionalLight> m_DirectionalLight;
 		TUniquePtr<Camera> m_Camera;
-		RHI::RDescriptorSet* m_SceneDescs;
+		Engine::RDescriptorSet* m_SceneDescs;
 		BufferCommon m_LightUniform;
 		BufferCommon m_CameraUniform;
 
@@ -43,7 +43,7 @@ namespace Engine {
 		void CreateResources();
 		void CreateDescriptorSets();
 		void Update();
-		void RenderGBuffer(RHI::RCommandBuffer* cmd, RHI::RPipelineLayout* layout);
+		void RenderGBuffer(Engine::RCommandBuffer* cmd, Engine::RPipelineLayout* layout);
 	public:
 		static TUniquePtr<RenderScene> s_Default;
 		static RenderScene* GetDefaultScene(); // TODO TEST
