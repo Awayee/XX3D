@@ -120,8 +120,6 @@ void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TVec
 				}
 			}
 			++index;
-			auto& info = primitives[index - 1];
-			auto& verts = info.Vertices;
 		}
 	}
 
@@ -207,22 +205,22 @@ void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TVector<AMeshAsset::SPrim
 	}
 }
 
-AMeshImporter::AMeshImporter(AMeshAsset* asset) {
+MeshImporter::MeshImporter(AMeshAsset* asset, const char* saveFile) {
 	m_Asset = asset;
-	m_Path = asset->File;
+	m_SaveFile = saveFile;
 }
 
-bool AMeshImporter::Import(const char* file) {
-	if(EndsWith(file, ".glb")) {
-		return ImportGLB(file);
+bool MeshImporter::Import(const char* fullPath) {
+	if(EndsWith(fullPath, ".glb")) {
+		return ImportGLB(fullPath);
 	}
-	else if (EndsWith(file, ".fbx")) {
-		return ImportFBX(file);
+	else if (EndsWith(fullPath, ".fbx")) {
+		return ImportFBX(fullPath);
 	}
 	return false;
 }
 
-bool AMeshImporter::ImportGLB(const char* file) {
+bool MeshImporter::ImportGLB(const char* file) {
 	tinygltf::Model gltfModel;
 	tinygltf::TinyGLTF gltfContext;
 	String error;
@@ -247,7 +245,7 @@ bool AMeshImporter::ImportGLB(const char* file) {
 	return true;
 }
 
-bool AMeshImporter::ImportFBX(const char* file) {
+bool MeshImporter::ImportFBX(const char* file) {
 	File::FPath fullPath(file);
 	Assimp::Importer importer;
 	const aiScene* aScene = importer.ReadFile(fullPath.string().c_str(), aiProcess_Triangulate | aiProcess_FlipUVs);
@@ -263,26 +261,28 @@ bool AMeshImporter::ImportFBX(const char* file) {
 	return true;
 }
 
-bool AMeshImporter::SavePrimitives() {
+bool MeshImporter::Save() {
 	//write primitives
 	bool r = true;
-	TUnorderedSet<String> usedNames;
+	const File::FPath FullPath(m_SaveFile.c_str());
 
+	TUnorderedSet<String> usedNames;
 	for (uint32 i = 0; i < m_Asset->Primitives.size(); ++i) {
 		auto& primitive = m_Asset->Primitives[i];
-		//check name
+		//generate name if empty
 		if (primitive.Name.empty() || usedNames.find(primitive.Name) != usedNames.end()) {
-			primitive.Name = m_Path.stem().filename().string() + ToString<uint32>(i);
+			primitive.Name = FullPath.stem().filename().string() + ToString<uint32>(i);
 		}
 
-		File::FPath parentPath = m_Path.parent_path();
+		File::FPath parentPath = FullPath.parent_path();
 		parentPath.append(primitive.Name);
 		parentPath.replace_extension(".primitive");
 		String binaryFile = parentPath.string();
 		std::replace(binaryFile.begin(), binaryFile.end(), '\\', '/');
 
-		r |= AMeshAsset::ExportPrimitiveFile(binaryFile.c_str(), primitive.Vertices, primitive.Indices);
+		r |= AMeshAsset::ExportPrimitiveFile(binaryFile.c_str(), primitive.Vertices, primitive.Indices, EMeshCompressMode::NONE);
 		primitive.BinaryFile.swap(binaryFile);
 	}
+	r |= m_Asset->Save(m_SaveFile.c_str());
 	return r;
 }

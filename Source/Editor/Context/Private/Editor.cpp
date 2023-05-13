@@ -12,23 +12,34 @@ namespace Editor {
 		Editor::Context()->m_Scene = Engine::RenderScene::GetDefaultScene();
 
 		// TODO for test
+		// ------------------mesh-------------------------------
 		const char* meshFile = "keqingImported/keqing.mesh";
-		m_MeshAsset.reset(new AMeshAsset(meshFile));
+		m_MeshAsset.reset(new AMeshAsset());
 
 		//import glb
 		const char* file = "keqing/keqing.glb";
 		PARSE_PROJECT_ASSET(file);
-		AMeshImporter importer(m_MeshAsset.get());
-		importer.Import(file);
-		importer.SavePrimitives();
-		m_MeshAsset->Save();
+		MeshImporter importer(m_MeshAsset.get(), meshFile);
+		if(importer.Import(file) &&
+			importer.Save()) {
+			PRINT("Save Mesh Successfully!");
+		}
 
 		//load asset
-		//m_MeshAsset->Load("KeqingImported/keqing.mesh");
-		//m_RenderMesh.reset(new Engine::RenderMesh(m_MeshAsset.get(), Editor::Context()->m_Scene));
-
+		//m_MeshAsset->Load(meshFile);
 		m_RenderMesh.reset(new Engine::RenderMesh(m_MeshAsset.get(), Editor::Context()->m_Scene));
 
+		// ---------------------texture---------------------------------
+		//const char* textureFile = "keqingImported/tex/cloth.texture";
+		//m_TextureAsset.reset(new ATextureAsset);
+		//// import png
+		//const char* externalTex = "keqing/tex/cloth.png";
+		//PARSE_PROJECT_ASSET(externalTex);
+		//TextureImporter texImporter(m_TextureAsset.get(), textureFile);
+		//if(texImporter.Import(externalTex) &&
+		//	texImporter.Save()) {
+		//	PRINT("Save Texture Successfully!");
+		//}
 	}
 
 	XXEditor::XXEditor(Engine::XXEngine* engine){

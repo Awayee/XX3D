@@ -1,6 +1,6 @@
 #pragma once
 #include "AssetCommon.h"
-#include "Math/Public/Vector.h"
+#include "Core/Public/Math/Vector.h"
 #include "Core/Public/Macro.h"
 
 struct ASceneAsset : AAssetBase {
@@ -19,6 +19,6 @@ struct ASceneAsset : AAssetBase {
 		Math::FVector3 Up;
 		float Near, Far, Fov;
 	}CameraParam;
-	void Load(const char* file) override;
-	void Save(const char* file) override;
+	bool Load(const char* file) override;
+	bool Save(const char* file) override;
 };

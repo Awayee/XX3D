@@ -34,6 +34,7 @@ namespace Engine {
 		// init renderer
 		context->m_Renderer.reset(new RenderSystem(context->Window()));
 		context->m_Renderer->SetEnable(true);
+		PRINT("Engine Initialized.");
 	}
 	XXEngine::~XXEngine() {
 		auto* context = Context();

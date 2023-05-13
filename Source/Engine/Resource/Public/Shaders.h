@@ -7,5 +7,5 @@ namespace Engine {
 		strcpy(shaderPath, SHADER_PATH);
 		strcat(shaderPath, file);
 		File::LoadFileCode(shaderPath, code);
-	}	
+	}
 }

@@ -3,6 +3,11 @@
 
 namespace Engine {
 
+	struct SModelUBO {
+		Math::FMatrix4x4 ModelMat;
+		Math::FMatrix4x4 InvModelMat;
+	};
+
 	RenderMesh::RenderMesh(const AMeshAsset* meshAsset, RenderScene* scene): RenderObject(scene) {
 		m_Name = meshAsset->Name;
 		m_Primitives.resize(meshAsset->Primitives.size());
@@ -13,7 +18,7 @@ namespace Engine {
 			m_Materials[i] = primitiveData.MaterialFile.empty()? MaterialMgr::GetDefault() : MaterialMgr::Get(primitiveData.MaterialFile.c_str());
 		}
 
-		m_TransformUniform.CreateForUniform(sizeof(Math::FMatrix4x4), &m_TransformMat);
+		m_TransformUniform.CreateForUniform(sizeof(SModelUBO), &m_TransformMat);
 		// descriptor set
 		m_TransformDescs = RHI::Instance()->AllocateDescriptorSet(DescsMgr::Get(DESCS_MODEL));
 		m_TransformDescs->UpdateUniformBuffer(0, m_TransformUniform.Buffer);

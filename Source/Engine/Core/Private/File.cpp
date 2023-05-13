@@ -15,29 +15,6 @@ namespace File {
 		f.close();
 	}
 
-	// lod .ini file
-
-	bool LoadIniFile(const char* file, TUnorderedMap<String, String>& configMap) {
-		std::ifstream configFile(file);
-		if (!configFile.is_open()) {
-			return false;
-		}
-		String fileLine;
-		configMap.clear();
-		while (std::getline(configFile, fileLine)) {
-			if (fileLine.empty() || fileLine[0] == '#') {
-				continue;
-			}
-			uint32 separate = fileLine.find_first_of('=');
-			if (separate > 0 && separate < fileLine.length() - 1) {
-				String name = fileLine.substr(0, separate);
-				String value = fileLine.substr(separate + 1, fileLine.length() - separate - 1);
-				configMap.insert({ std::move(name), std::move(value) });
-			}
-		}
-		return true;
-	}
-
 	void ForeachPath(const char* folder, FForEachPathFunc&& func, bool recursively) {
 		if(recursively) {
 			FPathRecursiveIterator iter{ folder };

@@ -90,6 +90,8 @@ namespace Engine{
 		virtual void Update(uint32 binding, RDescriptorType type, const RDescriptorInfo& info, uint32 arrayElement, uint32 count) = 0;
 		virtual void UpdateUniformBuffer(uint32 binding, RBuffer* buffer) = 0;
 		virtual void UpdateImageSampler(uint32 binding, RSampler* sampler, RImageView* image) = 0;
+		virtual void UpdateImage(uint32 binding, RImageView* image) = 0;
+		virtual void UpdateSampler(uint32 binding, RSampler* sampler) = 0;
 		virtual void UpdateInputAttachment(uint32 binding, RImageView* image) = 0;
 	};
 

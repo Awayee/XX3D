@@ -3,12 +3,6 @@
 #include "Core/Public/Container.h"
 #include "Core/Public/File.h"
 
-#define PARSE_PROJECT_ASSET(f)\
-	char __s[128]; strcpy(__s, PROJECT_ASSETS); strcat(__s, f); f=__s
-
-#define PARSE_ENGINE_ASSET(f)\
-	char __s[128]; strcpy(__s, ENGINE_ASSETS); strcat(__s, f); f=__s
-
 enum EAssetType : uint8 {
 	ASSET_TYPE_MESH = 0,
 	ASSET_TYPE_IMAGE,

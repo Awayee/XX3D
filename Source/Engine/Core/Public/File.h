@@ -15,7 +15,6 @@ namespace File {
 	typedef std::filesystem::recursive_directory_iterator FPathRecursiveIterator;
 
 	void LoadFileCode(const char* file, TVector<char>& code);
-	bool LoadIniFile(const char* file, TUnorderedMap<String, String>& configMap);
 
 	typedef std::function<void(const FPathEntry&)> FForEachPathFunc;
 	void ForeachPath(const char* folder, FForEachPathFunc&& func, bool recursively = false);

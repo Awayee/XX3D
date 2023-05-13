@@ -1,6 +1,6 @@
 #include "Asset/Public/AssetMgr.h"
 #include "Asset/Public/AssetCommon.h"
-#include "Asset/Public/ImageAsset.h"
+#include "Asset/Public/TextureAsset.h"
 #include "Asset/Public/MeshAsset.h"
 #include "Asset/Public/SceneAsset.h"
 #include "Core/Public/File.h"
@@ -25,7 +25,7 @@ template <typename T> T AssetMgr::LoadEngineAsset(const String& file) {
 }
 
 
-REGISTER_ASSET_TYPE(AImageAsset);
+REGISTER_ASSET_TYPE(ATextureAsset);
 
 void AssetMgr::ConvertProjectPath(String& file) {
 	String assetPath(PROJECT_ASSETS);

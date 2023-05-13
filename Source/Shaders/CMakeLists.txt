@@ -1,0 +1,7 @@
+cmake_minimum_required (VERSION 3.8)
+file(GLOB_RECURSE HLSLI_FILES "*.hlsli")
+file(GLOB_RECURSE HLSL_FILES "*.hlsl")
+set(TARGET_NAME "Shaders")
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HLSLI_FILES} ${HLSL_FILES})
+add_library(${TARGET_NAME} ${HLSLI_FILES} ${HLSL_FILES})
+set_target_properties(${TARGET_NAME} PROPERTIES LINKER_LANGUAGE CXX)

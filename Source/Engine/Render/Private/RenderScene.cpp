@@ -29,7 +29,8 @@ namespace Engine {
         Math::FMatrix4x4 View;
         Math::FMatrix4x4 Proj;
         Math::FMatrix4x4 VP;
-        Math::FVector3 Pos; float _padding;
+        Math::FMatrix4x4 InvVP;
+        Math::FVector3 CamPos;
     };
     void RenderScene::UpdateUniform() {
         SceneUBO sceneUbo;
@@ -40,7 +41,8 @@ namespace Engine {
         cameraUbo.View = m_Camera->GetViewMatrix();
         cameraUbo.Proj = m_Camera->GetProjectMatrix();
         cameraUbo.VP = m_Camera->GetViewProjectMatrix();
-        cameraUbo.Pos = m_Camera->GetView().Eye;
+        cameraUbo.InvVP = m_Camera->GetInvViewProjectMatrix();
+        cameraUbo.CamPos = m_Camera->GetView().Eye;
         m_CameraUniform.UpdateData(&cameraUbo);
     }
 
@@ -57,13 +59,13 @@ namespace Engine {
 
         m_SceneDescs = rhi->AllocateDescriptorSet(DescsMgr::Get(DESCS_SCENE));
 
-        uint32 bufferSize = sizeof(SceneUBO);
-        m_LightUniform.CreateForUniform(bufferSize, nullptr);
-        m_SceneDescs->UpdateUniformBuffer(0, m_LightUniform.Buffer);
-
-        bufferSize = sizeof(CameraUBO);
+        uint32 bufferSize = sizeof(CameraUBO);
         m_CameraUniform.CreateForUniform(bufferSize, nullptr);
-        m_SceneDescs->UpdateUniformBuffer(1, m_CameraUniform.Buffer);
+        m_SceneDescs->UpdateUniformBuffer(0, m_CameraUniform.Buffer);
+
+        bufferSize = sizeof(SceneUBO);
+        m_LightUniform.CreateForUniform(bufferSize, nullptr);
+        m_SceneDescs->UpdateUniformBuffer(1, m_LightUniform.Buffer);
     }
 
     RenderScene* RenderScene::GetDefaultScene() {

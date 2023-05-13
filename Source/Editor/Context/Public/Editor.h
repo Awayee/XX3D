@@ -3,6 +3,8 @@
 #include "Objects/Public/Engine.h"
 #include "Core/Public/SmartPointer.h"
 #include "Render/Public/RenderMesh.h"
+
+#include "EditorAsset/Public/TextureImporter.h"
 #include "EditorAsset/Public/MeshImporter.h"
 
 namespace Editor {
@@ -15,6 +17,8 @@ namespace Editor {
 		TUniquePtr<UIMgr> m_EditorUI;
 		TUniquePtr<AMeshAsset> m_MeshAsset;
 		TUniquePtr<Engine::RenderMesh> m_RenderMesh;
+
+		TUniquePtr<ATextureAsset> m_TextureAsset;
 
 	private:
 		void InitResources();

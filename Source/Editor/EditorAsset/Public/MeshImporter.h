@@ -1,15 +1,15 @@
 #pragma once
 #include "Asset/Public/MeshAsset.h"
 
-class AMeshImporter {
+class MeshImporter {
 private:
 	AMeshAsset* m_Asset;
-	File::FPath m_Path;
+	String m_SaveFile;
 public:
-	AMeshImporter(AMeshAsset* asset);
+	MeshImporter(AMeshAsset* asset, const char* saveFile);
 	//import from external files
-	bool Import(const char* file);
+	bool Import(const char* fullPath);
 	bool ImportGLB(const char* file);
 	bool ImportFBX(const char* file);
-	bool SavePrimitives();
+	bool Save();
 };

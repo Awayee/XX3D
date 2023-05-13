@@ -1,6 +1,6 @@
 #include "Asset/Public/MeshAsset.h"
 #include "Core/Public/Json.h"
-#include "Math/Public/MathBase.h"
+#include "Core/Public/Math/MathBase.h"
 #include "Core/Public/macro.h"
 #include <lz4.h>
 
@@ -52,12 +52,10 @@ bool AMeshAsset::Load(const char* file) {
 			AMeshAsset::LoadPrimitiveFile(Primitives[i].BinaryFile.c_str(), Primitives[i].Vertices, Primitives[i].Indices);
 		}
 	}
-	File = file;
 	return true;
 }
 
 bool AMeshAsset::Save(const char* file) {
-
 	PARSE_PROJECT_ASSET(file);
 
 	Json::Document doc;
@@ -90,28 +88,28 @@ bool AMeshAsset::LoadPrimitiveFile(const char* file, TVector<FVertex>& vertices,
 	f.seekg(0);
 
 	uint32 vertexCount, indexCount;
-	uint32 packedByteSize;
 	//header
-	f.read(reinterpret_cast<char*>(&vertexCount), sizeof(uint32));
-	f.read(reinterpret_cast<char*>(&indexCount), sizeof(uint32));
-	f.read(reinterpret_cast<char*>(&packedByteSize), sizeof(uint32));
+	f.read(BYTE_PTR(&vertexCount), sizeof(uint32));
+	f.read(BYTE_PTR(&indexCount), sizeof(uint32));
 	//vertices
 	if(vertexCount == 0) {
 		f.close();
 		return false;
 	}
 
-	EPackMode packMode;
-	f.read(reinterpret_cast<char*>(&packMode), sizeof(EPackMode));
+	EMeshCompressMode compressMode;
+	f.read(BYTE_PTR(&compressMode), sizeof(EMeshCompressMode));
 	uint32 dataByteSize = vertexCount * sizeof(FVertexPack) + indexCount * sizeof(IndexType);
 	TVector<char> data(dataByteSize);
-	if(packMode == EPackMode::NONE) {
+	if(compressMode == EMeshCompressMode::NONE) {
 		f.read(data.data(), dataByteSize);
 	}
-	else if(packMode == EPackMode::LZ4) {
-		TVector<char> packedData(packedByteSize);
-		f.read(packedData.data(), packedByteSize);
-		LZ4_decompress_safe(packedData.data(), data.data(), (int)packedByteSize, (int)dataByteSize);
+	else if(compressMode == EMeshCompressMode::LZ4) {
+		uint32 compressedByteSize;
+		f.read(BYTE_PTR(&compressedByteSize), sizeof(uint32));
+		TVector<char> compressedData(compressedByteSize);
+		f.read(compressedData.data(), compressedByteSize);
+		LZ4_decompress_safe(compressedData.data(), data.data(), (int)compressedByteSize, (int)dataByteSize);
 	}
 
 	// vertices
@@ -133,7 +131,7 @@ bool AMeshAsset::LoadPrimitiveFile(const char* file, TVector<FVertex>& vertices,
 	return true;
 }
 
-bool AMeshAsset::ExportPrimitiveFile(const char* file, const TVector<FVertex>& vertices, const TVector<IndexType>& indices, EPackMode packMode) {
+bool AMeshAsset::ExportPrimitiveFile(const char* file, const TVector<FVertex>& vertices, const TVector<IndexType>& indices, EMeshCompressMode packMode) {
 	if(vertices.size() == 0) {
 		LOG("null primitive!");
 		return false;
@@ -149,9 +147,8 @@ bool AMeshAsset::ExportPrimitiveFile(const char* file, const TVector<FVertex>& v
 	uint32 indexCount = indices.size();
 	uint32 dataByteSize = sizeof(FVertexPack) * vertexCount + sizeof(IndexType) * indexCount;
 	//header
-	f.write(reinterpret_cast<char*>(&vertexCount), sizeof(uint32));
-	f.write(reinterpret_cast<char*>(&indexCount), sizeof(uint32));
-	f.write(reinterpret_cast<char*>(&dataByteSize), sizeof(uint32));
+	f.write(CBYTE_PTR(&vertexCount), sizeof(uint32));
+	f.write(CBYTE_PTR(&indexCount), sizeof(uint32));
 
 	//cpy vertices and indices;
 	TVector<char> data(dataByteSize);
@@ -165,19 +162,20 @@ bool AMeshAsset::ExportPrimitiveFile(const char* file, const TVector<FVertex>& v
 			indexPtr[i] = indices[i];
 		}
 	}
-	f.write(reinterpret_cast<char*>(&packMode), sizeof(EPackMode));
+	f.write(CBYTE_PTR(&packMode), sizeof(EMeshCompressMode));
 
 	// no pack
-	if(packMode == EPackMode::NONE) {
+	if(packMode == EMeshCompressMode::NONE) {
 		f.write(data.data(), data.size());
 	}
 	//lz4 pack
-	else if(packMode == EPackMode::LZ4) {
+	else if(packMode == EMeshCompressMode::LZ4) {
 		uint64 compressBound = LZ4_compressBound(dataByteSize);
-		TVector<char> packedData(compressBound);
-		int compressedSize = LZ4_compress_default(data.data(), packedData.data(), (int)data.size(), (int)compressBound);
-		packedData.resize(compressedSize);
-		f.write(packedData.data(), packedData.size());
+		TVector<char> compressedData(compressBound);
+		uint32 compressedSize = LZ4_compress_default(data.data(), compressedData.data(), (int)data.size(), (int)compressBound);
+		compressedData.resize(compressedSize);
+		f.write(CBYTE_PTR(&compressedSize), sizeof(uint32));
+		f.write(compressedData.data(), compressedData.size());
 	}
 
 	f.close();

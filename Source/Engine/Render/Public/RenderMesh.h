@@ -1,7 +1,6 @@
 #pragma once
-#include "Math/Public/Math.h"
+#include "Core/Public/Math/Math.h"
 #include "Core/Public/SmartPointer.h"
-#include "Asset/Public/AssetCommon.h"
 #include "Asset/Public/MeshAsset.h"
 #include "RenderResources.h"
 #include "RenderCommon.h"
@@ -14,6 +13,7 @@ namespace Engine {
 		TVector<TUniquePtr<Primitive>> m_Primitives;
 		TVector<Material*> m_Materials;
 		Math::FMatrix4x4 m_TransformMat{ Math::FMatrix4x4::IDENTITY };
+		Math::FMatrix4x4 m_InvTransformMat{ Math::FMatrix4x4::IDENTITY };
 		BufferCommon m_TransformUniform;
 		Engine::RDescriptorSet* m_TransformDescs{nullptr};
 		//RHI::RDescriptorSet* m_DescriptorSet;

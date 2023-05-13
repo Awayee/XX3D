@@ -1,6 +1,6 @@
 #pragma once
 #include "Core/Public/Container.h"
-#include "Math/Public/Math.h"
+#include "Core/Public/Math/Math.h"
 #include "RHI/Public/RHI.h"
 #include "RenderCommon.h"
 #include "Core/Public/SmartPointer.h"

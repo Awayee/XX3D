@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include "Core/Public/TypeDefine.h"
 
 namespace Math {
 
@@ -60,5 +61,22 @@ namespace Math {
 	//data pack
 	inline unsigned char PackFloat01(float x) { return (x * 0.5f + 0.5f) * 255; }
 	inline float UnpackFloat01(unsigned char x) { return x / 255.0f * 2.0f - 1.0f; }
+
+	template<typename T> T UpperExp2(T x) {
+		if (!(x & (x - 1))) {
+			return x;
+		}
+		x |= x >> 1;
+		x |= x >> 2;
+		x |= x >> 4;
+		x |= x >> 8;
+		x |= x >> 16;
+		return x + 1;
+	}
+
+	template<typename T> T LowerExp2(T x) {
+		return UpperExp2<T>(x >> 1);
+		
+	}
 
 }

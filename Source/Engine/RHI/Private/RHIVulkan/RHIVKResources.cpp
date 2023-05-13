@@ -82,6 +82,16 @@ namespace Engine {
 		InnerUpdate(binding, 0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, &imageInfo, nullptr, nullptr);
     }
 
+    void RDescriptorSetVk::UpdateImage(uint32 binding, RImageView* image) {
+		VkDescriptorImageInfo imageInfo{ nullptr, ((RImageViewVk*)image)->handle, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+		InnerUpdate(binding, 0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, &imageInfo, nullptr, nullptr);
+    }
+
+    void RDescriptorSetVk::UpdateSampler(uint32 binding, RSampler* sampler) {
+		VkDescriptorImageInfo imageInfo{ ((RSamplerVk*)sampler)->handle, nullptr, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+		InnerUpdate(binding, 0, 1, VK_DESCRIPTOR_TYPE_SAMPLER, &imageInfo, nullptr, nullptr);
+    }
+
     void RDescriptorSetVk::UpdateInputAttachment(uint32 binding, RImageView* image){
 		VkDescriptorImageInfo imageInfo{ VK_NULL_HANDLE, ((RImageViewVk*)image)->handle, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 		InnerUpdate(binding, 0, 1, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, &imageInfo, nullptr, nullptr);

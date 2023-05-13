@@ -1,5 +1,5 @@
 #pragma once
-#include "Math/Public/Math.h"
+#include "Core/Public/Math/Math.h"
 
 namespace Engine {
 	enum EProjectiveType {
@@ -30,6 +30,7 @@ namespace Engine {
 
 		Math::FMatrix4x4 m_ProjectMatrix;
 		Math::FMatrix4x4 m_ViewProjectMatrix;
+		Math::FMatrix4x4 m_InvViewProjectMatrix;
 		void UpdateProjectMatrix();
 
 	public:
@@ -52,6 +53,7 @@ namespace Engine {
 		const Math::FMatrix4x4& GetViewMatrix() { return m_ViewMatrix; }
 		const Math::FMatrix4x4& GetProjectMatrix() { return m_ProjectMatrix; }
 		const Math::FMatrix4x4& GetViewProjectMatrix() { return m_ViewProjectMatrix; }
+		const Math::FMatrix4x4& GetInvViewProjectMatrix() { return m_InvViewProjectMatrix; }
 		~Camera();
 	};
 }

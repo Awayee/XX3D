@@ -1,9 +1,11 @@
 #include "Asset/Public/SceneAsset.h"
 #include "Core/Public/Json.h"
 
-void ASceneAsset::Load(const char* file) {
+bool ASceneAsset::Load(const char* file) {
 	Json::Document doc;
-	Json::ReadFile(file, doc);
+	if(!Json::ReadFile(file, doc)) {
+		return false;
+	}
 	if (doc.HasMember("Camera")) {
 		const rapidjson::Value& cameraParam = doc["Camera"].GetObject();
 		Json::LoadVector3(cameraParam["Eye"], CameraParam.Eye);
@@ -25,9 +27,10 @@ void ASceneAsset::Load(const char* file) {
 			Json::LoadVector3(meshVal["Rotation"], Objects[i].Euler);
 		}
 	}
+	return true;
 }
 
-void ASceneAsset::Save(const char* file) {
+bool ASceneAsset::Save(const char* file) {
 	Json::Document doc;
 	doc.SetObject();
 	// camera
@@ -53,5 +56,5 @@ void ASceneAsset::Save(const char* file) {
 		objectsVal.PushBack(meshVal, a);
 	}
 	doc.AddMember("Objects", objectsVal, a);
-	Json::WriteFile(file, doc);
+	return Json::WriteFile(file, doc);
 }

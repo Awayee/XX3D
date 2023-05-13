@@ -1,5 +1,5 @@
-#include "Math/Public/Quaternion.h"
-#include "Math/Public/MathBase.h"
+#include "Core/Public/Math/Quaternion.h"
+#include "Core/Public/Math/MathBase.h"
 namespace Math {
     MATH_GENERIC Quaternion<T> Quaternion<T>::AngleAxis(T a, const Vector3<T>& axis){
         Quaternion<T> q;

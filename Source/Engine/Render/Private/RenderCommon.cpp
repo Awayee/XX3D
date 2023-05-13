@@ -6,7 +6,7 @@
 #include "Resource/Public/Shaders.h"
 
 #include "Asset/Public/AssetMgr.h"
-#include "Asset/Public/ImageAsset.h"
+#include "Asset/Public/TextureAsset.h"
 
 namespace Engine {
 
@@ -24,11 +24,12 @@ namespace Engine {
 		m_Layouts[DESCS_MODEL] = rhi->CreateDescriptorSetLayout(modelDescBindings.size(), modelDescBindings.data());
 		// material
 		TVector<Engine::RSDescriptorSetLayoutBinding> materialDescBindings;
-		materialDescBindings.push_back({ Engine::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, Engine::SHADER_STAGE_FRAGMENT_BIT });
+		materialDescBindings.push_back({ Engine::DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1, Engine::SHADER_STAGE_FRAGMENT_BIT });
+		materialDescBindings.push_back({ Engine::DESCRIPTOR_TYPE_SAMPLER, 1, Engine::SHADER_STAGE_FRAGMENT_BIT });
 		m_Layouts[DESCS_MATERIAL] = rhi->CreateDescriptorSetLayout(materialDescBindings.size(), materialDescBindings.data());
 		// deferred lighting
 		TVector<Engine::RSDescriptorSetLayoutBinding> deferredLightingBindings;
-		deferredLightingBindings.push_back({ Engine::DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, Engine::SHADER_STAGE_VERTEX_BIT });// camera
+		deferredLightingBindings.push_back({ Engine::DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, Engine::SHADER_STAGE_FRAGMENT_BIT });// camera
 		deferredLightingBindings.push_back({ Engine::DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, Engine::SHADER_STAGE_FRAGMENT_BIT }); //light
 		deferredLightingBindings.push_back({ Engine::DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, Engine::SHADER_STAGE_FRAGMENT_BIT });//normal
 		deferredLightingBindings.push_back({ Engine::DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, Engine::SHADER_STAGE_FRAGMENT_BIT });//albedo
@@ -131,9 +132,12 @@ namespace Engine {
 			return &finded->second;
 		}
 		TextureCommon& tex = m_TextureMap.insert({ file, {} }).first->second;
-		AImageAsset imageAsset = AssetMgr::LoadAsset<AImageAsset>(file);
+		ATextureAsset imageAsset;
+		if(!imageAsset.Load(file)) {
+			return &m_DefaultTextures[GRAY];
+		}
 		tex.Create(FORMAT, imageAsset.Width, imageAsset.Height, USAGE);
-		tex.UpdatePixels(imageAsset.Pixels, CHANNELS);
+		tex.UpdatePixels(imageAsset.Pixels.data(), CHANNELS);
 		return &tex;
 
 	}
@@ -314,12 +318,12 @@ namespace Engine {
 		// pipeline
 		// shader
 		TVector<int8> vertShaderCode;
-		LoadShaderFile("GBuffer.vert.spv", vertShaderCode);
+		LoadShaderFile("GBufferMainVS.spv", vertShaderCode);
 		TVector<int8> fragShaderCode;
-		LoadShaderFile("GBuffer.frag.spv", fragShaderCode);
+		LoadShaderFile("GBufferMainPS.spv", fragShaderCode);
 		Engine::RGraphicsPipelineCreateInfo info{};
-		info.Shaders.push_back({ Engine::SHADER_STAGE_VERTEX_BIT, vertShaderCode, "main" });
-		info.Shaders.push_back({ Engine::SHADER_STAGE_FRAGMENT_BIT, fragShaderCode, "main" });
+		info.Shaders.push_back({ Engine::SHADER_STAGE_VERTEX_BIT, vertShaderCode, "MainVS" });
+		info.Shaders.push_back({ Engine::SHADER_STAGE_FRAGMENT_BIT, fragShaderCode, "MainPS" });
 		// input
 		FillVertexInput(info.Bindings, info.Attributes);
 		// viewport
@@ -349,12 +353,12 @@ namespace Engine {
 		m_Layout = rhi->CreatePipelineLayout(setLayouts.size(), setLayouts.data(), 0, nullptr);
 		// shader
 		TVector<int8> vertShaderCode;
-		LoadShaderFile("DeferredLighting.vert.spv", vertShaderCode);
+		LoadShaderFile("DeferredLightingPBRMainVS.spv", vertShaderCode);
 		TVector<int8> fragShaderCode;
-		LoadShaderFile("DeferredLightingPBR.frag.spv", fragShaderCode);
+		LoadShaderFile("DeferredLightingPBRMainPS.spv", fragShaderCode);
 		Engine::RGraphicsPipelineCreateInfo info{};
-		info.Shaders.push_back({ Engine::SHADER_STAGE_VERTEX_BIT, vertShaderCode, "main" });
-		info.Shaders.push_back({ Engine::SHADER_STAGE_FRAGMENT_BIT, fragShaderCode, "main" });
+		info.Shaders.push_back({ Engine::SHADER_STAGE_VERTEX_BIT, vertShaderCode, "MainVS" });
+		info.Shaders.push_back({ Engine::SHADER_STAGE_FRAGMENT_BIT, fragShaderCode, "MainPS" });
 		// no vertex input
 		// viewport
 		info.Viewport = {(float)area.x, (float)area.y, (float)area.w, (float)area.h, 0.0f, 1.0f};

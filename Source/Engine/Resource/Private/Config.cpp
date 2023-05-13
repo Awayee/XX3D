@@ -48,9 +48,37 @@ namespace Engine {
 		return GPU_NONE;
 	}
 
+
+	// lod .ini file
+
+	bool LoadIniFile(const char* file, TUnorderedMap<String, String>& configMap) {
+		std::ifstream configFile(file);
+		if (!configFile.is_open()) {
+			LOG("Failed to load file: %s", file);
+			return false;
+		}
+		String fileLine;
+		configMap.clear();
+		while (std::getline(configFile, fileLine)) {
+			if (fileLine.empty() || fileLine[0] == '#') {
+				continue;
+			}
+			uint32 separate = fileLine.find_first_of('=');
+			if (separate > 0 && separate < fileLine.length() - 1) {
+				String name = fileLine.substr(0, separate);
+				String value = fileLine.substr(separate + 1, fileLine.length() - separate - 1);
+				configMap.insert({ std::move(name), std::move(value) });
+			}
+		}
+		return true;
+	}
+
 	ConfigManager::ConfigManager(const char* file) {
 		TUnorderedMap<String, String> configMap;
-		ASSERT(File::LoadIniFile(file, configMap), "");
+		if(!LoadIniFile(file,configMap)) {
+			LOG("Missing necessary ini file: %s", file);
+			return;
+		}
 		m_Data.DefaultFontPath = configMap["DefaultFont"];
 		m_Data.RHIType = ParseRHIType(configMap["RHIType"]);
 		m_Data.RenderPath = ParseRenderPath(configMap["RenderPath"]);

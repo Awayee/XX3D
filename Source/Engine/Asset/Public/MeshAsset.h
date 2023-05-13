@@ -7,15 +7,14 @@ enum class EVertexFormat: int8 {
 	UINT32,
 };
 
-enum class EPackMode: int8 {
+enum class EMeshCompressMode: int8 {
 	NONE=0,
 	LZ4,
 };
 
 
-struct AMeshAsset : public Asset {
+struct AMeshAsset : public AAssetBase {
 public:
-	String File;
 	String Name;
 	struct SPrimitive {
 		String BinaryFile;
@@ -29,19 +28,17 @@ public:
 
 public:
 	AMeshAsset() = default;
-	AMeshAsset(const char* file) : File(file) {}
 
 	//load with primitive binaries
-	bool Load(const char* file);
+	bool Load(const char* file) override;
 
 	//save without primitives
-	bool Save(const char* file);
-	bool Save() { return Save(File.c_str()); }
+	bool Save(const char* file) override;
 
 	//load a packed primitive file
 	static bool LoadPrimitiveFile(const char* file, TVector<FVertex>& vertices, TVector<IndexType>& indices);
 
 	//export with pack, only execute when import external files
-	static bool ExportPrimitiveFile(const char* file, const TVector<FVertex>& vertices, const TVector<IndexType>& indices, EPackMode packMode=EPackMode::NONE);
+	static bool ExportPrimitiveFile(const char* file, const TVector<FVertex>& vertices, const TVector<IndexType>& indices, EMeshCompressMode packMode=EMeshCompressMode::NONE);
 
 };

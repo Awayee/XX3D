@@ -12,6 +12,7 @@ namespace Engine {
 			m_ProjectMatrix = Math::FMatrix4x4::OrthographicMatrix(-offsetX, offsetX, -offsetY, offsetY, m_Near, m_Far);
 		}
 		m_ViewProjectMatrix = m_ProjectMatrix * m_ViewMatrix;
+		m_InvViewProjectMatrix = m_ViewProjectMatrix.Inverse();
 	}
 
 	Camera::Camera(EProjectiveType type, float aspect, float zNear, float zFar, float param): m_ProjType(type), m_Aspect(aspect), m_Near(zNear), m_Far(zFar), m_Fov(param) {
@@ -25,6 +26,7 @@ namespace Engine {
 		m_View.Up = up;
 		m_ViewMatrix = Math::FMatrix4x4::LookAtMatrix(eye, at, up);
 		m_ViewProjectMatrix = m_ProjectMatrix * m_ViewMatrix;
+		m_InvViewProjectMatrix = m_ViewProjectMatrix.Inverse();
 	}
 	Camera::~Camera(){}
 }

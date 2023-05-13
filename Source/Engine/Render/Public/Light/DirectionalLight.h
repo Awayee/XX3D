@@ -1,5 +1,5 @@
 #pragma once
-#include "Math/Public/Math.h"
+#include "Core/Public/Math/Math.h"
 
 namespace Engine {
 	class DirectionalLight {

@@ -1,4 +1,4 @@
-#include "Math/Public/MathStructs.h"
+#include "Core/Public/Math/MathStructs.h"
 
 namespace Math {
 	AxisAlignedBox::AxisAlignedBox(const FVector3& center, const FVector3& extent) : Center(center), Extent(extent) {}
