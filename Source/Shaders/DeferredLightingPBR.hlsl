@@ -3,6 +3,26 @@ struct VSOutput {
 	float2 UV: TEXCOORD0;
 };
 
+#ifdef _VS
+//vs
+static float2 g_Vertices[6] = {
+	float2(-1.0, -1.0), float2(-1.0,  1.0), float2(1.0, -1.0),
+	float2(-1.0,  1.0), float2(1.0,  1.0), float2(1.0, -1.0)
+};
+
+static float g_Depth = 0.5;
+
+struct VSInput {};
+
+VSOutput MainVS(VSInput vIn, uint vID: SV_VertexID) {
+	float2 v = g_Vertices[vID];
+	VSOutput vOut;
+	vOut.Position = float4(v.xy, g_Depth, 1.0);
+	vOut.UV = v * 0.5 + 0.5;
+	return vOut;
+}
+#endif
+
 #ifdef _PS
 //ps
 struct CameraUBO {
@@ -108,25 +128,5 @@ PSOutput MainPS(VSOutput pIn) {
 	PSOutput pOut;
 	pOut.OutColor = float4(color, 1.0);
 	return pOut;
-}
-#endif
-
-#ifdef _VS
-//vs
-static float2 g_Vertices[6] = {
-	float2(-1.0, -1.0), float2(-1.0,  1.0), float2(1.0, -1.0),
-	float2(-1.0,  1.0), float2(1.0,  1.0), float2(1.0, -1.0)
-};
-
-static float g_Depth = 0.5;
-
-struct VSInput {};
-
-VSOutput MainVS(VSInput vIn, uint vID: SV_VertexID) {
-	float2 v = g_Vertices[vID];
-	VSOutput vOut;
-	vOut.Position = float4(v.xy, g_Depth, 1.0);
-	vOut.UV = v * 0.5 + 0.5;
-	return vOut;
 }
 #endif

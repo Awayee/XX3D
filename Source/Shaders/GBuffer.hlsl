@@ -1,30 +1,9 @@
+//to avoid more macros, the common struct used by ps, vs and other stage is defined firstly
 struct VSOutput{
     float4 Position: SV_POSITION;
     [[vk::location(0)]] float3 worldNormal: NORMAL;
     [[vk::location(1)]] float2 UV: TEXCOORD0;
 };
-
-
-#ifdef _PS
-[[vk::binding(0, 2)]] Texture2D uAlbedoTex;
-[[vk::binding(1, 2)]] SamplerState uSampler;
-
-//SamplerState  uSampler: register(s0);
-//Texture2D uAlbedoTex: register(t0);
-
-struct PSOutput {
-    float4 OutNormal: SV_TARGET0;
-    float4 OutAlbedo: SV_TARGET1;
-};
-
-PSOutput MainPS(VSOutput pIn) {
-    float3 worldNormal01 = pIn.worldNormal * 0.5 + 0.5;
-    PSOutput psOut;
-    psOut.OutNormal = float4(worldNormal01, 1.0);
-    psOut.OutAlbedo = uAlbedoTex.Sample(uSampler, pIn.UV).rgba;
-    return psOut;
-}
-#endif
 
 #ifdef _VS
 //vs
@@ -60,5 +39,27 @@ VSOutput MainVS(VSInput vIn, uint vertexID: SV_VERTEXID) {
     output.worldNormal = mul(transpose((float3x3)uModel.ModelInvMat), vIn.inNormal);
     output.UV = vIn.inUV;
     return output;
+}
+#endif
+
+
+#ifdef _PS
+[[vk::binding(0, 2)]] Texture2D uAlbedoTex;
+[[vk::binding(1, 2)]] SamplerState uSampler;
+
+//SamplerState  uSampler: register(s0);
+//Texture2D uAlbedoTex: register(t0);
+
+struct PSOutput {
+    float4 OutNormal: SV_TARGET0;
+    float4 OutAlbedo: SV_TARGET1;
+};
+
+PSOutput MainPS(VSOutput pIn) {
+    float3 worldNormal01 = pIn.worldNormal * 0.5 + 0.5;
+    PSOutput psOut;
+    psOut.OutNormal = float4(worldNormal01, 1.0);
+    psOut.OutAlbedo = uAlbedoTex.Sample(uSampler, pIn.UV).rgba;
+    return psOut;
 }
 #endif
