@@ -45,5 +45,7 @@ add_subdirectory("ThirdParty")
 add_subdirectory("Source/Engine")
 add_subdirectory("Source/Editor")
 add_subdirectory("Source/Runtime")
+add_subdirectory("Source/ShaderCompiler")
+add_subdirectory("Source/Shaders")
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT "Editor")
