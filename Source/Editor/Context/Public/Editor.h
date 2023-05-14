@@ -2,6 +2,7 @@
 #include "EditorUI/Public/EditorUI.h"
 #include "Objects/Public/Engine.h"
 #include "Core/Public/SmartPointer.h"
+
 #include "Render/Public/RenderMesh.h"
 
 #include "EditorAsset/Public/TextureImporter.h"
@@ -10,11 +11,13 @@
 namespace Editor {
 	class XXEditor {
 	private:
+		Engine::XXEngine* m_Engine;
+		TUniquePtr<UIMgr> m_EditorUI;
+
 		// TODO TEST
 		Engine::RenderScene* m_MainScene;
 		Engine::Camera* m_MainCamera;
-		Engine::XXEngine* m_Engine;
-		TUniquePtr<UIMgr> m_EditorUI;
+
 		TUniquePtr<AMeshAsset> m_MeshAsset;
 		TUniquePtr<Engine::RenderMesh> m_RenderMesh;
 

@@ -5,8 +5,10 @@
 #include "Objects/Public/EngineContext.h"
 #include "Asset/Public/AssetMgr.h"
 
+#include "EditorWindows/AssetsWindow.h"
+
 namespace Editor {
-	void EWindowBase::Run() {
+	void EditorWindowBase::Run() {
 		Update();
 		if(m_Show) {
 			PreWindow();

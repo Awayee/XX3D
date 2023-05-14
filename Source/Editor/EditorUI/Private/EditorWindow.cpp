@@ -24,12 +24,6 @@ namespace Editor {
 		ImGui::Text("Details");
 	}
 
-	void AssetsWindow::OnWindow() {
-		ImGui::Text("Assets");
-	}
-
-
-
 	void MoveCamera(Engine::Camera* camera, float x, float y, float z, bool local) {
 		Math::FVector3 eye = camera->GetView().Eye;
 		Math::FVector3 at = camera->GetView().At;

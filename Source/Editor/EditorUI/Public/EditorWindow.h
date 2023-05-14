@@ -2,35 +2,28 @@
 #include "EditorUI.h"
 
 namespace Editor {
-	class FPSWindow :public EWindowBase {
+	class FPSWindow :public EditorWindowBase {
 	public:
-		FPSWindow() : EWindowBase("FPS") {};
+		FPSWindow() : EditorWindowBase("FPS") {};
 	private:
 		void OnWindow() override;
 	};
 
-	class ObjectsWindow : public EWindowBase {
+	class ObjectsWindow : public EditorWindowBase {
 	public:
-		ObjectsWindow() : EWindowBase("Objects") {}
+		ObjectsWindow() : EditorWindowBase("Objects") {}
 	private:
 		void OnWindow() override;
 	};
 
-	class DetailWindow : public EWindowBase {
+	class DetailWindow : public EditorWindowBase {
 	public:
-		DetailWindow() : EWindowBase("Details") {}
+		DetailWindow() : EditorWindowBase("Details") {}
 	private:
 		void OnWindow() override;
 	};
 
-	class AssetsWindow : public EWindowBase {
-	public:
-		AssetsWindow() : EWindowBase("Assets") {}
-	private:
-		void OnWindow() override;
-	};
-
-	class ViewportWindow : public EWindowBase {
+	class ViewportWindow : public EditorWindowBase {
 	private:
 		bool m_MouseDown{ false };
 		URect m_Viewport{ 0,0,0,0 };
@@ -38,7 +31,7 @@ namespace Editor {
 		float m_LastY = 0.0f;
 		bool  m_ViewportShow{ false };
 	public:
-		ViewportWindow() : EWindowBase("Viewport", ImGuiWindowFlags_NoBackground) {}
+		ViewportWindow() : EditorWindowBase("Viewport", ImGuiWindowFlags_NoBackground) {}
 	private:
 		void CameraControl();
 		void Update() override;

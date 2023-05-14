@@ -58,6 +58,32 @@ inline void Swap(T& left, T& right) {
 	std::swap(left, right);
 }
 
+template <class T>
+void SwapRemoveAt(TVector<T>& v, uint32 i) {
+	std::swap(v[i], v.back());
+	v.pop_back();
+}
+
+template <class T>
+void SwapRemove(TVector<T>& v, T ele) {
+	for(uint32 i=0; i< v.size(); ++i) {
+		if(v[i] == ele) {
+			std::swap(v[i], v.back());
+			v.pop_back();
+			break;
+		}
+	}
+}
+
+template <class T>
+void Replace(TVector<T>& v, T oldVal, T newVal) {
+	for(uint32 i=0; i< v.size(); ++i) {
+		if(v[i] == oldVal) {
+			v[i] = newVal;
+		}
+	}
+}
+
 template <class T, int L>
 constexpr int ArraySize(const T(&arr)[L]) { return L; }
 

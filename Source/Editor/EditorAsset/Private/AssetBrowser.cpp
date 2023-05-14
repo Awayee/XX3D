@@ -15,12 +15,15 @@ namespace Editor {
 		return EFileType::UNKNOWN;
 	}
 
-	AssetNode::AssetNode(const char* path, AssetNode* parent): m_Path(path) {
-		m_Parent = parent;
+	PathNode::PathNode(const File::FPath& path, NodeID id, NodeID parent): m_Path(path), m_ID(id), m_ParentID(parent) {
 		m_Name = m_Path.stem().string();
 	}
 
-	AssetFile::AssetFile(const char* path, AssetNode* parent): AssetNode(path, parent) {
+	bool FolderNode::Contains(const FolderNode* node) const {
+		return m_ID < node->m_ID;
+	}
+
+	FileNode::FileNode(const File::FPath& path, NodeID id, NodeID parent): PathNode(path, id, parent) {
 		m_FileType = ConvertFileType(m_Path.extension().string().c_str());
 
 		switch(m_FileType) {
@@ -37,9 +40,99 @@ namespace Editor {
 		}
 	}
 
-	void AssetBrowser::BuildAssetsTree() {
+	NodeID AssetBrowser::InsertFolder(const File::FPath& path, NodeID parent) {
+		const NodeID id = UINT32_CAST(m_Folders.size());
+		m_Folders.emplace_back(path, id, parent);
+		FolderNode* parentNode = GetFolder(parent);
+		if(parentNode){
+			parentNode->m_Folders.push_back(id);
+		}
+		return id;
 	}
 
-	AssetBrowser::AssetBrowser() {
+	NodeID AssetBrowser::InsertFile(const File::FPath& path, NodeID parent) {
+		const NodeID id = UINT32_CAST(m_Files.size());
+		m_Files.emplace_back(path, id, parent);
+		FolderNode* parentNode = GetFolder(parent);
+		if(parentNode){
+			parentNode->m_Files.push_back(id);
+		}
+		return id;
+	}
+
+
+	void AssetBrowser::RemoveFile(NodeID id) {
+		FileNode* node = GetFile(id);
+		if(!node) {
+			return;
+		}
+		FolderNode* parentFolder = GetFolder(node->m_ParentID);
+		if (parentFolder) {
+			SwapRemove(parentFolder->m_Files, id);
+		}
+		PathNode* swappedAsset = &m_Files.back();
+		SwapRemoveAt(m_Files, id);
+
+		if (swappedAsset->m_ParentID != INVALLID_NODE) {
+			FolderNode* backParent = GetFolder(swappedAsset->m_ParentID);
+			Replace(backParent->m_Files, swappedAsset->m_ID, id);
+			swappedAsset->m_ID = id;
+		}
+	}
+
+	void AssetBrowser::RemoveFolder(NodeID id) {
+		FolderNode* node = GetFolder(id);
+		if(!node) {
+			return;
+		}
+		FolderNode* parentFolder = GetFolder(node->m_ParentID);
+		if(parentFolder) {
+			SwapRemove(parentFolder->m_Folders, id);
+		}
+		PathNode* swappedAsset = &m_Folders.back();
+		SwapRemoveAt(m_Folders, id);
+
+		if(swappedAsset && swappedAsset->m_ParentID != INVALLID_NODE) {
+			FolderNode* backParent = GetFolder(swappedAsset->m_ParentID);
+			Replace(backParent->m_Folders, swappedAsset->m_ID, id);
+			swappedAsset->m_ID = id;
+		}
+	}
+
+	NodeID AssetBrowser::BuildFolder(const File::FPath& path, NodeID parent) {
+		using namespace File;
+		//the folder node
+		NodeID folder = InsertFolder(path, parent);
+		FPathIterator iter(path);
+		for(const FPathEntry& child: iter) {
+			if(child.is_directory()) {
+				BuildFolder(child, folder);
+			}
+			else {
+				InsertFile(child.path(), folder);
+			}
+		}
+		if(m_OnFolderRebuild) {
+			m_OnFolderRebuild(GetFolder(folder));
+		}
+		return folder;
+	}
+
+	void AssetBrowser::BuildTree() {
+		m_Folders.clear();
+		m_Files.clear();
+		m_Root = BuildFolder(s_AssetPath, INVALLID_NODE);
+	}
+
+	FileNode* AssetBrowser::GetFile(NodeID id) {
+		return id < m_Files.size() ? &m_Files[id] : nullptr;
+	}
+
+	FolderNode* AssetBrowser::GetFolder(NodeID id) {
+		return id < m_Folders.size() ? &m_Folders[id] : nullptr;
+	}
+
+	FolderNode* AssetBrowser::GetRoot() {
+		return GetFolder(m_Root);
 	}
 }

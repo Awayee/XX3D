@@ -44,6 +44,8 @@ namespace Editor {
 
 	XXEditor::XXEditor(Engine::XXEngine* engine){
 		m_Engine = engine;
+		Editor::Context()->m_AssetBrowser.reset(new AssetBrowser);
+		Editor::Context()->m_AssetBrowser->BuildTree();
 		m_EditorUI.reset(new UIMgr());
 		Engine::Context()->Renderer()->InitUIPass();
 		Engine::Context()->Renderer()->SetEnable(true);
