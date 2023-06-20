@@ -8,6 +8,7 @@
 #include "RHI/Public/RHI.h"
 #include "RHIVKResources.h"
 #include "Core/Public/Container.h"
+#include "Core/Public/TVector.h"
 
 namespace Engine{
 	class RHIVulkan final: public RHI {

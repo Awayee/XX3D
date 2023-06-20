@@ -19,13 +19,12 @@ namespace Engine {
 
 	TVector<const char*> RHIVulkan::GetRequiredExtensions() {
 		uint32     glfwExtensionCount = 0;
-		const char** glfwExtensions;
-		glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-		TVector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+		const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+		TVector<const char*> extensions(glfwExtensionCount);
+		memcpy(extensions.Data(), glfwExtensions, glfwExtensionCount * sizeof(const char*));
 		if (m_EnableValidationLayers || m_EnableDebugUtils)
 		{
-			extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+			extensions.PushBack(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 		}
 		return extensions;
 	}
@@ -47,13 +46,13 @@ namespace Engine {
 		createInfo.pApplicationInfo = &appInfo; // the appInfo is stored here
 
 		auto extensions = GetRequiredExtensions();
-		createInfo.enabledExtensionCount = static_cast<uint32>(extensions.size());
-		createInfo.ppEnabledExtensionNames = extensions.data();
+		createInfo.enabledExtensionCount = static_cast<uint32>(extensions.Size());
+		createInfo.ppEnabledExtensionNames = extensions.Data();
 
 		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
 		if(m_EnableValidationLayers) {
-			createInfo.enabledLayerCount = static_cast<uint32>(m_ValidationLayers.size());
-			createInfo.ppEnabledLayerNames = m_ValidationLayers.data();
+			createInfo.enabledLayerCount = static_cast<uint32>(m_ValidationLayers.Size());
+			createInfo.ppEnabledLayerNames = m_ValidationLayers.Data();
 			SetDebugInfo(debugCreateInfo);
 			debugCreateInfo.pUserData = (void*)this;
 			createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
@@ -82,20 +81,18 @@ namespace Engine {
 		uint32 deviceCount = 0;
 		VK_CHECK(vkEnumeratePhysicalDevices(m_Instance, &deviceCount, nullptr), "no avaliable physical device");
 		TVector<VkPhysicalDevice> devices(deviceCount);
-		VK_CHECK(vkEnumeratePhysicalDevices(m_Instance, &deviceCount, devices.data()), "no avaliable physical device");
+		VK_CHECK(vkEnumeratePhysicalDevices(m_Instance, &deviceCount, devices.Data()), "no avaliable physical device");
 		TVector<TPair<VkPhysicalDevice, SPhyicalDeviceInfo>> devicesInfo;
 		for (auto& device : devices) {
 			auto deviceInfo = GetPhysicalDeviceInfo(device, m_Surface, m_DeviceExtensions);
 			if(deviceInfo.score > 0) {
-				devicesInfo.push_back({device, std::move(deviceInfo)});
+				devicesInfo.PushBack({device, std::move(deviceInfo)});
 			}
 		}
 
-		ASSERT(!devicesInfo.empty(), "no avaliable GPU!");
+		ASSERT(!devicesInfo.Empty(), "no avaliable GPU!");
 
-		TSort(devicesInfo.begin(), devicesInfo.end(),
-			[](const TPair<VkPhysicalDevice, SPhyicalDeviceInfo> p1, const TPair<VkPhysicalDevice, SPhyicalDeviceInfo> p2) {return p1.second.score > p2.second.score; });
-
+		devicesInfo.Sort([](const TPair<VkPhysicalDevice, SPhyicalDeviceInfo> p1, const TPair<VkPhysicalDevice, SPhyicalDeviceInfo> p2) {return p1.second.score > p2.second.score; });
 		m_PhysicalDevice = devicesInfo[0].first;
 		auto& deviceInfo = devicesInfo[0].second;
 		vkGetPhysicalDeviceProperties(m_PhysicalDevice, &m_PhysicalDeviceProperties);
@@ -123,14 +120,13 @@ namespace Engine {
 	void RHIVulkan::CreateLogicalDevice() {
 		TUnorderedSet<uint32> queueFamilies{m_GraphicsIndex, m_PresentIndex, m_ComputeIndex};
 		TVector<VkDeviceQueueCreateInfo> queueCreateInfos;
-		queueCreateInfos.reserve(queueFamilies.size());
 		float queuePriority = 1.0f;
 		for(uint32 queueFamily: queueFamilies) {
 			VkDeviceQueueCreateInfo queueCreateInfo{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
 			queueCreateInfo.queueFamilyIndex = queueFamily;
 			queueCreateInfo.queueCount = 1;
 			queueCreateInfo.pQueuePriorities = &queuePriority;
-			queueCreateInfos.push_back(std::move(queueCreateInfo));
+			queueCreateInfos.PushBack(std::move(queueCreateInfo));
 		}
 
 		VkPhysicalDeviceFeatures features{};
@@ -140,11 +136,11 @@ namespace Engine {
 		features.geometryShader = m_EnableGeometryShader;
 
 		VkDeviceCreateInfo deviceCreateInfo{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
-		deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
-		deviceCreateInfo.queueCreateInfoCount = static_cast<uint32>(queueCreateInfos.size());
+		deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.Data();
+		deviceCreateInfo.queueCreateInfoCount = static_cast<uint32>(queueCreateInfos.Size());
 		deviceCreateInfo.pEnabledFeatures = &features;
-		deviceCreateInfo.enabledExtensionCount = static_cast<uint32>(m_DeviceExtensions.size());
-		deviceCreateInfo.ppEnabledExtensionNames = m_DeviceExtensions.data();
+		deviceCreateInfo.enabledExtensionCount = static_cast<uint32>(m_DeviceExtensions.Size());
+		deviceCreateInfo.ppEnabledExtensionNames = m_DeviceExtensions.Data();
 		deviceCreateInfo.enabledLayerCount = 0;
 
 		VK_CHECK(vkCreateDevice(m_PhysicalDevice, &deviceCreateInfo, nullptr, &m_Device), "vkCreateDevice");
@@ -217,7 +213,7 @@ namespace Engine {
 			commandPoolCreateInfo.pNext = NULL;
 			commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 			commandPoolCreateInfo.queueFamilyIndex = m_GraphicsIndex;
-			m_CommandPools.resize(m_MaxFramesInFlight);
+			m_CommandPools.Resize(m_MaxFramesInFlight);
 			for (uint32 i = 0; i < m_MaxFramesInFlight; ++i) {
 				VK_CHECK(vkCreateCommandPool(m_Device, &commandPoolCreateInfo, nullptr, &m_CommandPools[i]), "VkCreateCommandPool");
 			}
@@ -265,10 +261,10 @@ namespace Engine {
 		fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 		fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // the fence is initialized as signaled
 
-		m_ImageAvaliableSemaphores.resize(m_MaxFramesInFlight);
-		m_PresentationFinishSemaphores.resize(m_MaxFramesInFlight);
-		m_ImageAvaliableForTextureCopySemaphores.resize(m_MaxFramesInFlight);
-		m_IsFrameInFlightFences.resize(m_MaxFramesInFlight);
+		m_ImageAvaliableSemaphores.Resize(m_MaxFramesInFlight);
+		m_PresentationFinishSemaphores.Resize(m_MaxFramesInFlight);
+		m_ImageAvaliableForTextureCopySemaphores.Resize(m_MaxFramesInFlight);
+		m_IsFrameInFlightFences.Resize(m_MaxFramesInFlight);
 		for(uint32 i=0; i< m_MaxFramesInFlight; ++i) {
 			VK_CHECK(vkCreateSemaphore(m_Device, &semaphoreCreateInfo, nullptr, &m_ImageAvaliableSemaphores[i]), "ImageAvaliableSemaphore");
 			VK_CHECK(vkCreateSemaphore(m_Device, &semaphoreCreateInfo, nullptr, &m_PresentationFinishSemaphores[i]), "PresentationFinishSemaphore");
@@ -320,14 +316,14 @@ namespace Engine {
 		// swapchain images
 		uint32 image_count;
 		vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &image_count, nullptr);
-		m_SwapchainImages.resize(image_count);
-		vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &image_count, m_SwapchainImages.data());
+		m_SwapchainImages.Resize(image_count);
+		vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &image_count, m_SwapchainImages.Data());
 		m_Scissor = { {0, 0,}, {m_SwapchainExtent.w, m_SwapchainExtent.h} };
 		// Create image views
-		m_SwapchainImageViews.resize(m_SwapchainImages.size());
+		m_SwapchainImageViews.Resize(m_SwapchainImages.Size());
 
 		// create imageview (one for each this time) for all swapchain images
-		for (uint64 i = 0; i < m_SwapchainImages.size(); i++)
+		for (uint64 i = 0; i < m_SwapchainImages.Size(); i++)
 		{
 			VkImageViewCreateInfo imageViewCreateInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 			imageViewCreateInfo.image = m_SwapchainImages[i];
@@ -386,29 +382,29 @@ namespace Engine {
 		for (auto smp : m_ImageAvaliableSemaphores) {
 			vkDestroySemaphore(m_Device, smp, nullptr);
 		}
-		m_ImageAvaliableSemaphores.clear();
+		m_ImageAvaliableSemaphores.Clear();
 		for (auto smp : m_PresentationFinishSemaphores) {
 			vkDestroySemaphore(m_Device, smp, nullptr);
 		}
-		m_PresentationFinishSemaphores.clear();
+		m_PresentationFinishSemaphores.Clear();
 		for (auto smp : m_ImageAvaliableForTextureCopySemaphores) {
 			vkDestroySemaphore(m_Device, smp, nullptr);
 		}
-		m_ImageAvaliableForTextureCopySemaphores.clear();
+		m_ImageAvaliableForTextureCopySemaphores.Clear();
 		for (auto fence : m_IsFrameInFlightFences) {
 			vkDestroyFence(m_Device, fence, nullptr);
 		}
-		m_IsFrameInFlightFences.clear();
+		m_IsFrameInFlightFences.Clear();
 		for (auto pool : m_CommandPools) {
 			vkDestroyCommandPool(m_Device, pool, nullptr);
 		}
-		m_CommandPools.clear();
+		m_CommandPools.Clear();
 		vkDestroyCommandPool(m_Device, m_RHICommandPool, nullptr);
 		vkDestroyDescriptorPool(m_Device, m_DescriptorPool, nullptr);
 		for (auto imageView : m_SwapchainImageViews) {
 			vkDestroyImageView(m_Device, imageView.handle, nullptr);
 		}
-		m_SwapchainImageViews.clear();
+		m_SwapchainImageViews.Clear();
 		vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
 		m_Swapchain = nullptr;
 		vkDestroyDevice(m_Device, nullptr);
@@ -450,16 +446,16 @@ namespace Engine {
 			subpassesVk[i].flags = 0;
 			subpassesVk[i].pipelineBindPoint = (VkPipelineBindPoint)pSubpasses[i].Type;
 			uint32 j;
-			for (j = 0; j < pSubpasses[i].InputAttachments.size(); ++j) {
-				inputAttachments[i].push_back({ pSubpasses[i].InputAttachments[j].Index, ConvertVkImageLayout(pSubpasses[i].InputAttachments[j].Layout)});
+			for (j = 0; j < pSubpasses[i].InputAttachments.Size(); ++j) {
+				inputAttachments[i].PushBack({ pSubpasses[i].InputAttachments[j].Index, ConvertVkImageLayout(pSubpasses[i].InputAttachments[j].Layout)});
 			}
-			subpassesVk[i].inputAttachmentCount = inputAttachments[i].size();
-			subpassesVk[i].pInputAttachments = inputAttachments[i].data();
-			for (j = 0; j < pSubpasses[i].ColorAttachments.size(); ++j) {
-				colorAttachments[i].push_back({ pSubpasses[i].ColorAttachments[j].Index, ConvertVkImageLayout(pSubpasses[i].ColorAttachments[j].Layout)});
+			subpassesVk[i].inputAttachmentCount = inputAttachments[i].Size();
+			subpassesVk[i].pInputAttachments = inputAttachments[i].Data();
+			for (j = 0; j < pSubpasses[i].ColorAttachments.Size(); ++j) {
+				colorAttachments[i].PushBack({ pSubpasses[i].ColorAttachments[j].Index, ConvertVkImageLayout(pSubpasses[i].ColorAttachments[j].Layout)});
 			}
-			subpassesVk[i].colorAttachmentCount = colorAttachments[i].size();
-			subpassesVk[i].pColorAttachments = colorAttachments[i].data();
+			subpassesVk[i].colorAttachmentCount = colorAttachments[i].Size();
+			subpassesVk[i].pColorAttachments = colorAttachments[i].Data();
 			if(IMAGE_LAYOUT_UNDEFINED != pSubpasses[i].DepthStencilAttachment.Layout) {
 				depthAttachments[i] = { pSubpasses[i].DepthStencilAttachment.Index, ConvertVkImageLayout(pSubpasses[i].DepthStencilAttachment.Layout)};
 				subpassesVk[i].pDepthStencilAttachment = &depthAttachments[i];
@@ -491,7 +487,7 @@ namespace Engine {
 		}
 		RRenderPassVk* pass = new RRenderPassVk;
 		pass->handle = handle;
-		pass->m_Clears.resize(attachmentCount);
+		pass->m_Clears.Resize(attachmentCount);
 		for(i=0; i< attachmentCount; ++i) {
 			pass->m_Clears[i] = ResolveClearValue(pAttachments[i].Clear);
 		}
@@ -676,13 +672,13 @@ namespace Engine {
 	RPipeline* RHIVulkan::CreateGraphicsPipeline(const RGraphicsPipelineCreateInfo& info, RPipelineLayout* layout, RRenderPass* renderPass, uint32 subpass, RPipeline* basePipeline, int32_t basePipelineIndex) {
 		uint32 i; // iter
 		// shader stages
-		TArray<VkShaderModuleCreateInfo> shaderModuleInfos(info.Shaders.size());
-		TArray<VkShaderModule> shaderModules(info.Shaders.size());
-		TArray<VkPipelineShaderStageCreateInfo> shaderInfos(info.Shaders.size());
-		for (i = 0; i < info.Shaders.size(); ++i) {
+		TArray<VkShaderModuleCreateInfo> shaderModuleInfos(info.Shaders.Size());
+		TArray<VkShaderModule> shaderModules(info.Shaders.Size());
+		TArray<VkPipelineShaderStageCreateInfo> shaderInfos(info.Shaders.Size());
+		for (i = 0; i < info.Shaders.Size(); ++i) {
 			shaderModuleInfos[i] = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, nullptr, 0 };
-			shaderModuleInfos[i].codeSize = info.Shaders[i].code.size();
-			shaderModuleInfos[i].pCode = reinterpret_cast<const uint32*>(info.Shaders[i].code.data());
+			shaderModuleInfos[i].codeSize = info.Shaders[i].code.Size();
+			shaderModuleInfos[i].pCode = reinterpret_cast<const uint32*>(info.Shaders[i].code.Data());
 			vkCreateShaderModule(m_Device, &shaderModuleInfos[i], nullptr, &shaderModules[i]);
 
 			shaderInfos[i] = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0 };
@@ -693,22 +689,22 @@ namespace Engine {
 
 		// vertex input
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO, nullptr, 0 };
-		TArray<VkVertexInputBindingDescription> vertexInputBindings(info.Bindings.size());
-		for(i=0; i< info.Bindings.size(); ++i) {
+		TArray<VkVertexInputBindingDescription> vertexInputBindings(info.Bindings.Size());
+		for(i=0; i< info.Bindings.Size(); ++i) {
 			vertexInputBindings[i].binding = info.Bindings[i].binding;
 			vertexInputBindings[i].stride = info.Bindings[i].stride;
 			vertexInputBindings[i].inputRate = (VkVertexInputRate)info.Bindings[i].inputRate;
 		}
-		vertexInputInfo.vertexBindingDescriptionCount = info.Bindings.size();
+		vertexInputInfo.vertexBindingDescriptionCount = info.Bindings.Size();
 		vertexInputInfo.pVertexBindingDescriptions = vertexInputBindings.Data();
-		TArray<VkVertexInputAttributeDescription> vertexInputAttrs(info.Attributes.size());
-		for(i=0; i< info.Attributes.size(); ++i) {
+		TArray<VkVertexInputAttributeDescription> vertexInputAttrs(info.Attributes.Size());
+		for(i=0; i< info.Attributes.Size(); ++i) {
 			vertexInputAttrs[i].location = i;
 			vertexInputAttrs[i].binding = info.Attributes[i].binding;
 			vertexInputAttrs[i].format = ConvertVkFormat(info.Attributes[i].format);
 			vertexInputAttrs[i].offset = info.Attributes[i].offset;
 		}
-		vertexInputInfo.vertexAttributeDescriptionCount = info.Attributes.size();
+		vertexInputInfo.vertexAttributeDescriptionCount = info.Attributes.Size();
 		vertexInputInfo.pVertexAttributeDescriptions = vertexInputAttrs.Data();
 
 		// input assembly
@@ -739,14 +735,14 @@ namespace Engine {
 		VkPipelineDepthStencilStateCreateInfo depthStencilInfo = TranslatePipelineDepthStencil(info);
 
 		// color blend
-		TArray<VkPipelineColorBlendAttachmentState> attachments(info.AttachmentStates.size());
-		for(i=0; i<info.AttachmentStates.size(); ++i) {
+		TArray<VkPipelineColorBlendAttachmentState> attachments(info.AttachmentStates.Size());
+		for(i=0; i<info.AttachmentStates.Size(); ++i) {
 			TranslateColorBlendAttachmentState(attachments[i], info.AttachmentStates[i]);
 		}
 		VkPipelineColorBlendStateCreateInfo colorBlendInfo{ VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr, 0 };
 		colorBlendInfo.logicOpEnable = info.LogicOpEnable;
 		colorBlendInfo.logicOp = (VkLogicOp)info.LogicOp;
-		colorBlendInfo.attachmentCount = info.AttachmentStates.size();
+		colorBlendInfo.attachmentCount = info.AttachmentStates.Size();
 		colorBlendInfo.pAttachments = attachments.Data();
 		colorBlendInfo.blendConstants[0] = info.BlendConstants[0];
 		colorBlendInfo.blendConstants[1] = info.BlendConstants[1];
@@ -755,12 +751,12 @@ namespace Engine {
 
 		// dynamic
 		VkPipelineDynamicStateCreateInfo dynamicInfo{ VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO, nullptr, 0 };
-		dynamicInfo.dynamicStateCount = info.DynamicStates.size();
-		dynamicInfo.pDynamicStates = (const VkDynamicState*)info.DynamicStates.data();
+		dynamicInfo.dynamicStateCount = info.DynamicStates.Size();
+		dynamicInfo.pDynamicStates = (const VkDynamicState*)info.DynamicStates.Data();
 
 		// pipeline
 		VkGraphicsPipelineCreateInfo createInfo{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, nullptr, 0 };
-		createInfo.stageCount = info.Shaders.size();
+		createInfo.stageCount = info.Shaders.Size();
 		createInfo.pStages = shaderInfos.Data();
 		createInfo.pVertexInputState = &vertexInputInfo;
 		createInfo.pInputAssemblyState = &inputAssemblyInfo;
@@ -779,7 +775,7 @@ namespace Engine {
 
 		VkPipeline handle;
 		VkResult res = vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &createInfo, nullptr, &handle);
-		for(i=0; i< info.Shaders.size(); ++i) {
+		for(i=0; i< info.Shaders.Size(); ++i) {
 			vkDestroyShaderModule(m_Device, shaderModules[i], nullptr);
 		}
 		if(VK_SUCCESS != res) {
@@ -798,8 +794,8 @@ namespace Engine {
 		VkShaderModule shaderModule;
 		VkPipelineShaderStageCreateInfo& shaderInfo = createInfo.stage;
 		shaderModuleInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, nullptr, 0 };
-		shaderModuleInfo.codeSize = shader.code.size();
-		shaderModuleInfo.pCode = reinterpret_cast<const uint32*>(shader.code.data());
+		shaderModuleInfo.codeSize = shader.code.Size();
+		shaderModuleInfo.pCode = reinterpret_cast<const uint32*>(shader.code.Data());
 		vkCreateShaderModule(m_Device, &shaderModuleInfo, nullptr, &shaderModule);
 
 		shaderInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0 };
@@ -834,7 +830,7 @@ namespace Engine {
 	}
 
 	void RHIVulkan::ResizeSwapchain(uint32 width, uint32 height) {
-		if (VK_SUCCESS != _vkWaitForFences(m_Device, m_IsFrameInFlightFences.size(), m_IsFrameInFlightFences.data(), VK_TRUE, UINT64_MAX))
+		if (VK_SUCCESS != _vkWaitForFences(m_Device, m_IsFrameInFlightFences.Size(), m_IsFrameInFlightFences.Data(), VK_TRUE, UINT64_MAX))
 		{
 			ERROR("_vkWaitForFences failed");
 			return;
@@ -893,11 +889,11 @@ namespace Engine {
 	}
 
 	RImageView* RHIVulkan::GetSwapchainImageView(uint8 i) {
-		ASSERT(i < m_SwapchainImageViews.size(), "i < m_MaxFramesInFlight");
+		ASSERT(i < m_SwapchainImageViews.Size(), "i < m_MaxFramesInFlight");
 		return reinterpret_cast<RImageView*>(&m_SwapchainImageViews[i]);
 	}
 	uint32 RHIVulkan::GetSwapchainMaxImageCount() {
-		return (uint32)m_SwapchainImages.size();
+		return (uint32)m_SwapchainImages.Size();
 	}
 	RFramebuffer* RHIVulkan::CreateFrameBuffer(RRenderPass* pass, uint32 attachmentCount, const RImageView* const* pAttachments, uint32 width, uint32 height, uint32 layers) {
 		VkFramebufferCreateInfo framebufferInfo{ VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };

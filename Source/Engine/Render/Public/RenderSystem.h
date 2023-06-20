@@ -13,10 +13,6 @@ namespace Engine {
 		PASS_COUNT,
 	};
 
-	class RenderData {
-		TVector<Primitive> Primitives;
-	};
-
 	class RenderSystem {
 	private:
 		bool m_Enable{ false };

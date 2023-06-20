@@ -1,30 +1,18 @@
 #pragma once
 #include "EditorUI/Public/EditorWindow.h"
-#include "EditorAsset/Public/AssetBrowser.h"
+#include "EditorAsset/Public/AssetManager.h"
+#include "AssetView.h"
 
 namespace Editor {
+
 	class AssetsWindow : public EditorWindowBase {
-		enum class EDisplayType {
-			FOLDER,
-			MESH,
-			TEXTURE,
-			SCENE,
-			UNKNOWN
-		};
 		const NodeID MAX_FOLDER_NUM = 0xffff;
-		struct NodeItem {
-			NodeID ID;
-			EDisplayType Type;
-			const char* Name;
-			NodeItem(const FileNode* file);
-			NodeItem(const FolderNode* folder);
-		};
 
 	private:
 		static TVector<AssetsWindow*> s_Instances;
 
 		FolderNode* m_CurrentFolder{nullptr};
-		TVector<NodeItem> m_Contents;
+		TVector<TUniquePtr<AssetViewBase>> m_Contents;
 
 		uint32 m_SelectedItem{ INVALLID_NODE };
 	private:
@@ -34,7 +22,7 @@ namespace Editor {
 
 	public:
 		AssetsWindow();
-		~AssetsWindow();
+		~AssetsWindow() override;
 		void OnWindow() override;
 	};
 	

@@ -21,6 +21,13 @@ namespace Engine{
 		RPipelineType GetType() { return m_Type; }
 	};
 
+	class RTexture2D {
+	public:
+		virtual ~RTexture2D();
+		RFormat GetFormat();
+		const USize2D& Size();
+	};
+
 	class RImage {
 	protected:
 		RImageType m_Type;
@@ -88,11 +95,11 @@ namespace Engine{
 	class RDescriptorSet {
 	public:
 		virtual void Update(uint32 binding, RDescriptorType type, const RDescriptorInfo& info, uint32 arrayElement, uint32 count) = 0;
-		virtual void UpdateUniformBuffer(uint32 binding, RBuffer* buffer) = 0;
-		virtual void UpdateImageSampler(uint32 binding, RSampler* sampler, RImageView* image) = 0;
-		virtual void UpdateImage(uint32 binding, RImageView* image) = 0;
-		virtual void UpdateSampler(uint32 binding, RSampler* sampler) = 0;
-		virtual void UpdateInputAttachment(uint32 binding, RImageView* image) = 0;
+		virtual void SetUniformBuffer(uint32 binding, RBuffer* buffer) = 0;
+		virtual void SetImageSampler(uint32 binding, RSampler* sampler, RImageView* image) = 0;
+		virtual void SetImage(uint32 binding, RImageView* image) = 0;
+		virtual void SetSampler(uint32 binding, RSampler* sampler) = 0;
+		virtual void SetInputAttachment(uint32 binding, RImageView* image) = 0;
 	};
 
 	class RCommandBuffer {

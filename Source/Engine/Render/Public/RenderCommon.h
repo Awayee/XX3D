@@ -2,6 +2,7 @@
 #include "RHI/Public/RHI.h"
 #include "Core/Public/BaseStructs.h"
 #include "Core/Public/TSingleton.h"
+#include "Core/Public/Container.h"
 namespace Engine {
 	enum EDescsType {
 		DESCS_SCENE,
@@ -133,9 +134,9 @@ namespace Engine {
 		virtual ~RenderPassCommon();
 		Engine::RRenderPass* GetRHIPass() const { return m_RHIPass; }
 		Engine::RFramebuffer* GetFramebuffer() const { return m_Framebuffer; }
-		uint32 GetAttachmentCount() const { return m_Attachments.size(); }
+		uint32 GetAttachmentCount() const { return m_Attachments.Size(); }
 		Engine::RImageView* GetAttachment(uint32 attachmentIdx) const;
-		uint32 GetColorAttachmentCount(uint32 subpass) const { ASSERT(subpass < m_ColorAttachments.size()); return m_ColorAttachments[subpass].size(); }
+		uint32 GetColorAttachmentCount(uint32 subpass) const { ASSERT(subpass < m_ColorAttachments.Size()); return m_ColorAttachments[subpass].Size(); }
 		Engine::RImageView* GetColorAttachment(uint32 subpass, uint32 idx) const { return m_ColorAttachments[subpass][idx]->View; }
 		Engine::RImageView* GetDepthAttachment(uint32 subpass) const { return m_DepthAttachments[subpass]->View; }
 		virtual void Begin(Engine::RCommandBuffer* cmd);

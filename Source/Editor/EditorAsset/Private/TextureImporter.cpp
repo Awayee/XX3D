@@ -1,5 +1,6 @@
 #include "EditorAsset/Public/TextureImporter.h"
 #include "Core/Public/macro.h"
+#include "Asset/Public/AssetLoader.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
@@ -15,12 +16,12 @@ bool TextureImporter::Import(const char* fullPath) {
 	m_Asset->Height = height;
 	m_Asset->Channels = desiredChannels;
 	uint64 byteSize = width * height * desiredChannels;
-	m_Asset->Pixels.resize(byteSize);
-	memcpy(m_Asset->Pixels.data(), pixels, byteSize);
+	m_Asset->Pixels.Resize(byteSize);
+	memcpy(m_Asset->Pixels.Data(), pixels, byteSize);
 	stbi_image_free(pixels);
 	return true;
 }
 
 bool TextureImporter::Save() {
-	return m_Asset->Save(m_SaveFile.c_str());
+	return AssetLoader::SaveProjectAsset(m_SaveFile.c_str(), m_Asset);
 }

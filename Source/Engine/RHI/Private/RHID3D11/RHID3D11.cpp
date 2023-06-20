@@ -20,10 +20,10 @@ namespace Engine {
 		};
 		for(D3D_DRIVER_TYPE d3dDriverType: driverTypes) {
 			D3D_FEATURE_LEVEL featureLevel;
-			HRESULT hr = D3D11CreateDevice(nullptr, d3dDriverType, nullptr, createDeviceFlags, featureLevels.data(), featureLevels.size(), D3D11_SDK_VERSION, &m_Device, &featureLevel, &m_Context);
+			HRESULT hr = D3D11CreateDevice(nullptr, d3dDriverType, nullptr, createDeviceFlags, featureLevels.Data(), featureLevels.Size(), D3D11_SDK_VERSION, &m_Device, &featureLevel, &m_Context);
 			if (hr == E_INVALIDARG){
 				// Direct3D 11.0 的API不承认D3D_FEATURE_LEVEL_11_1，所以我们需要尝试特性等级11.0以及以下的版本
-				hr = D3D11CreateDevice(nullptr, d3dDriverType, nullptr, createDeviceFlags, &featureLevels[1], featureLevels.size() - 1,
+				hr = D3D11CreateDevice(nullptr, d3dDriverType, nullptr, createDeviceFlags, &featureLevels[1], featureLevels.Size() - 1,
 					D3D11_SDK_VERSION, &m_Device, &featureLevel, &m_Context);
 			}
 			if (SUCCEEDED(hr))

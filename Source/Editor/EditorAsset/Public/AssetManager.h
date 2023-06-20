@@ -2,70 +2,66 @@
 #include "Core/Public/String.h"
 #include "Core/Public/SmartPointer.h"
 #include "Core/Public/Typedefine.h"
-#include "Asset/Public/AssetCommon.h"
 #include "Core/Public/File.h"
+#include "Asset/Public/AssetLoader.h"
 #include <functional>
 
 namespace Editor {
 
 	typedef uint32 NodeID;
+	class AssetViewBase;
 
 	constexpr NodeID INVALLID_NODE = UINT32_MAX;
 
-	//template<typename T>struct NodeID { uint32 ID; };
-
-	//typedef NodeID<class FolderNode> NodeID;
-	//typedef NodeID<class FileNode> NodeID;
-
+	//Node Base
 	class PathNode {
 	protected:
 		NodeID m_ID{ 0 };
 		NodeID m_ParentID{ INVALLID_NODE };
-		String m_Name;
-		File::FPath m_Path;
-		friend class AssetBrowser;
+		File::FPath m_Path;//relative path
+		friend class AssetManager;
 	public:
 		PathNode(const File::FPath& path, NodeID id, NodeID parent);
 		const File::FPath& GetPath() const { return m_Path; }
 		NodeID GetID() const { return m_ID; }
 		NodeID ParentFolder() const { return m_ParentID; }
-		const String& GetName()const { return m_Name; }
 	};
 
+	//folder
 	class FolderNode : public PathNode {
 	private:
-		//TVector<NodeID> m_Children;
 		TVector<NodeID> m_Folders;
 		TVector<NodeID> m_Files;
-		friend class AssetBrowser;
+		friend class AssetManager;
 	public:
 		FolderNode(const File::FPath& path, NodeID id, NodeID parent) : PathNode(path, id, parent) {}
 		const TVector<NodeID>& GetChildFolders() const { return m_Folders; }
 		const TVector<NodeID>& GetChildFiles() const { return m_Files; }
-		bool Contains(const FolderNode* node)const;
+		bool Contains(NodeID node)const;
 	};
 
-	enum class EFileType : uint8 {
-		MESH,
-		SCENE,
-		TEXTURE,
-		UNKNOWN
-	};
+	//file
 	class FileNode: public PathNode {
 	private:
 		TUniquePtr<AAssetBase> m_Asset;
-		EFileType m_FileType;
-		friend class AssetBrowser;
+		friend class AssetManager;
 	public:
-		FileNode(const File::FPath& path, NodeID id, NodeID parent);
-		AAssetBase* GetAsset() const { return m_Asset.get(); }
-		EFileType GetType() const { return m_FileType; }
+		FileNode(const File::FPath& path, NodeID id, NodeID parent): PathNode(path, id, parent){}
+		//lazy load
+		template<typename T> T* GetAsset() {
+			T* asset = dynamic_cast<T*>(m_Asset.get());
+			if(!asset) {
+				m_Asset.reset(new T);
+				AssetLoader::LoadProjectAsset(m_Path.string().c_str(), m_Asset.get());
+				asset = dynamic_cast<T*>(m_Asset.get());
+			}
+			return asset;
+		}
 	};
 
-	class AssetBrowser {
+	class AssetManager {
 	private:
-		static File::FPath s_AssetPath;
-
+		File::FPath m_RootPath;
 		TVector<FolderNode> m_Folders;
 		TVector<FileNode> m_Files;
 		NodeID m_Root;
@@ -76,10 +72,9 @@ namespace Editor {
 		NodeID InsertFile(const File::FPath& path, NodeID parent);
 		void RemoveFile(NodeID id);
 		void RemoveFolder(NodeID id);
-
 		NodeID BuildFolder(const File::FPath& path, NodeID parent);
 	public:
-		AssetBrowser()=default;
+		AssetManager(const char* rootPath);
 		void BuildTree();
 		FileNode* GetFile(NodeID id);
 		FolderNode* GetFolder(NodeID id);

@@ -61,11 +61,11 @@ namespace Engine {
 
         uint32 bufferSize = sizeof(CameraUBO);
         m_CameraUniform.CreateForUniform(bufferSize, nullptr);
-        m_SceneDescs->UpdateUniformBuffer(0, m_CameraUniform.Buffer);
+        m_SceneDescs->SetUniformBuffer(0, m_CameraUniform.Buffer);
 
         bufferSize = sizeof(SceneUBO);
         m_LightUniform.CreateForUniform(bufferSize, nullptr);
-        m_SceneDescs->UpdateUniformBuffer(1, m_LightUniform.Buffer);
+        m_SceneDescs->SetUniformBuffer(1, m_LightUniform.Buffer);
     }
 
     RenderScene* RenderScene::GetDefaultScene() {
@@ -91,24 +91,25 @@ namespace Engine {
     }
 
     void RenderScene::AddRenderObject(RenderObject* obj) {
-        m_RenderObjects.push_back(obj);
+        m_RenderObjects.PushBack(obj);
         obj->m_Scene = this;
-        obj->m_Index = m_RenderObjects.size();
+        obj->m_Index = m_RenderObjects.Size();
     }
 
     void RenderScene::RemoveRenderObject(RenderObject* obj) {
         if (obj->m_Scene != this) return;
-        if (0 == obj->m_Index || m_RenderObjects.size() < obj->m_Index)return;
-
-        Swap(m_RenderObjects[obj->m_Index-1], m_RenderObjects.back());
-        m_RenderObjects.pop_back();
-        if(!m_RenderObjects.empty()) {
+        if (0 == obj->m_Index || m_RenderObjects.Size() < obj->m_Index)return;
+        m_RenderObjects.SwapRemoveAt(obj->m_Index - 1);
+        if(!m_RenderObjects.Empty()) {
             m_RenderObjects[obj->m_Index-1]->m_Index = obj->m_Index;
         }
     }
 
     void RenderScene::Update() {
         UpdateUniform();
+        for(RenderObject* obj: m_RenderObjects) {
+            obj->Update();
+        }
     }
 
     void RenderScene::RenderGBuffer(Engine::RCommandBuffer* cmd, Engine::RPipelineLayout* layout) {

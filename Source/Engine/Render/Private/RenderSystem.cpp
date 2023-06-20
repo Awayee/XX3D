@@ -129,18 +129,18 @@ namespace Engine {
 	void RenderSystem::CreateRenderResources()
 	{
 		// create command buffers
-		m_CommandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-		for (uint8 i = 0; i < m_CommandBuffers.size(); ++i) {
+		m_CommandBuffers.Resize(MAX_FRAMES_IN_FLIGHT);
+		for (uint8 i = 0; i < m_CommandBuffers.Size(); ++i) {
 			m_CommandBuffers[i] = RHI::Instance()->AllocateCommandBuffer(Engine::COMMAND_BUFFER_LEVEL_PRIMARY);
 		}
 		m_PresentPass.reset(new DeferredLightingPass());
 		// create descriptor set
 		m_DeferredLightingDescs = RHI::Instance()->AllocateDescriptorSet(DescsMgr::Get(DESCS_DEFERRED_LIGHTING));
-		m_DeferredLightingDescs->UpdateUniformBuffer(0, RenderScene::GetDefaultScene()->m_CameraUniform.Buffer);
-		m_DeferredLightingDescs->UpdateUniformBuffer(1, RenderScene::GetDefaultScene()->m_LightUniform.Buffer);
-		m_DeferredLightingDescs->UpdateInputAttachment(2, m_PresentPass->GetAttachment(DeferredLightingPass::ATTACHMENT_NORMAL));
-		m_DeferredLightingDescs->UpdateInputAttachment(3, m_PresentPass->GetAttachment(DeferredLightingPass::ATTACHMENT_ALBEDO));
-		m_DeferredLightingDescs->UpdateInputAttachment(4, m_PresentPass->GetAttachment(DeferredLightingPass::ATTACHMENT_DEPTH));
+		m_DeferredLightingDescs->SetUniformBuffer(0, RenderScene::GetDefaultScene()->m_CameraUniform.Buffer);
+		m_DeferredLightingDescs->SetUniformBuffer(1, RenderScene::GetDefaultScene()->m_LightUniform.Buffer);
+		m_DeferredLightingDescs->SetInputAttachment(2, m_PresentPass->GetAttachment(DeferredLightingPass::ATTACHMENT_NORMAL));
+		m_DeferredLightingDescs->SetInputAttachment(3, m_PresentPass->GetAttachment(DeferredLightingPass::ATTACHMENT_ALBEDO));
+		m_DeferredLightingDescs->SetInputAttachment(4, m_PresentPass->GetAttachment(DeferredLightingPass::ATTACHMENT_DEPTH));
 	}
 
 	void RenderSystem::ResizeRenderArea(){

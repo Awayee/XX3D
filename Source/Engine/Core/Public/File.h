@@ -2,7 +2,7 @@
 #include <fstream>
 #include <filesystem>
 #include <functional>
-#include "Container.h"
+#include "TVector.h"
 #include "String.h"
 
 namespace File {
@@ -13,8 +13,13 @@ namespace File {
 	typedef std::filesystem::directory_entry FPathEntry;
 	typedef std::filesystem::directory_iterator FPathIterator;
 	typedef std::filesystem::recursive_directory_iterator FPathRecursiveIterator;
+	typedef const char* CharPath;
 
 	void LoadFileCode(const char* file, TVector<char>& code);
+
+	inline FPath RelativePath(const FPath& path, const FPath& base) {
+		return std::filesystem::relative(path, base);
+	}
 
 	typedef std::function<void(const FPathEntry&)> FForEachPathFunc;
 	void ForeachPath(const char* folder, FForEachPathFunc&& func, bool recursively = false);

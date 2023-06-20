@@ -8,6 +8,8 @@
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+#include "Core/Public/Container.h"
+#include "Asset/Public/AssetLoader.h"
 
 
 uint32 GetPrimitiveCount(const tinygltf::Model& model, const tinygltf::Node& node) {
@@ -62,7 +64,7 @@ void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TVec
 			}
 
 			TVector<FVertex>& vertices = primitives[index].Vertices;
-			vertices.resize(vertexCount);
+			vertices.Resize(vertexCount);
 
 			for (uint32 v = 0; v < vertexCount; v++) {
 				vertices[v].Position.x = bufferPos[v * posByteStride];
@@ -81,7 +83,7 @@ void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TVec
 				const tinygltf::Accessor& indexAccessor = model.accessors[primitive.indices];
 				const tinygltf::BufferView& indexView = model.bufferViews[indexAccessor.bufferView];
 				const tinygltf::Buffer& bufferIndex = model.buffers[indexView.buffer];
-				indices.resize(indexAccessor.count);
+				indices.Resize(indexAccessor.count);
 				const void* dataPtr = &(bufferIndex.data[indexAccessor.byteOffset + indexView.byteOffset]);
 
 				if (indexAccessor.componentType == TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT) {
@@ -111,7 +113,7 @@ void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TVec
 				if (mat.pbrMetallicRoughness.baseColorTexture.index < model.textures.size()) {
 					const tinygltf::Texture& tex = model.textures[mat.pbrMetallicRoughness.baseColorTexture.index];
 					const tinygltf::Image& img = model.images[tex.source];
-					textureNames.resize(1);
+					textureNames.Resize(1);
 					uint32 typeIdx = img.mimeType.find('/');
 					const char* imgType = &img.mimeType[typeIdx + 1];
 					std::string imageFile = img.name + '.' + imgType;
@@ -146,7 +148,7 @@ void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TVector<AMeshAsset::SPrim
 		//TVector<std::string>& textures = meshInfos[i].textures;
 
 		// vertices
-		vertices.resize(aMesh->mNumVertices);
+		vertices.Resize(aMesh->mNumVertices);
 		for (uint32 i = 0; i < aMesh->mNumVertices; i++) {
 			vertices[i].Position.x = aMesh->mVertices[i].x;
 			vertices[i].Position.y = aMesh->mVertices[i].y;
@@ -169,7 +171,7 @@ void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TVector<AMeshAsset::SPrim
 				++count;
 			}
 		}
-		indices.resize(count);
+		indices.Resize(count);
 		count = 0;
 		for (uint32 i = 0; i < aMesh->mNumFaces; i++) {
 			aiFace aFace = aMesh->mFaces[i];
@@ -187,7 +189,7 @@ void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TVector<AMeshAsset::SPrim
 		//		for (uint32 i = 0; i < aMat->GetTextureCount(types[j]); i++) { ++idx; }
 		//	}
 		//	if (idx > 0) {
-		//		textures.resize(idx);
+		//		textures.Resize(idx);
 		//		idx = 0;
 		//		for (uint32 j = 0; j < 3; j++) {
 		//			for (uint32 i = 0; i < aMat->GetTextureCount(types[j]); i++) {
@@ -236,7 +238,7 @@ bool MeshImporter::ImportGLB(const char* file) {
 	for (auto& node : scene.nodes) {
 		primitiveCount += GetPrimitiveCount(gltfModel, gltfModel.nodes[node]);
 	}
-	m_Asset->Primitives.resize(primitiveCount);
+	m_Asset->Primitives.Resize(primitiveCount);
 	primitiveCount = 0;
 	for (uint32 i = 0; i < scene.nodes.size(); i++) {
 		LoadGLTFNode(gltfModel, gltfModel.nodes[scene.nodes[i]], m_Asset->Primitives, primitiveCount);
@@ -255,7 +257,7 @@ bool MeshImporter::ImportFBX(const char* file) {
 	}
 	// 先获取总面数
 	uint32 primitiveCount = GetPrimitiveCount(aScene, aScene->mRootNode);
-	m_Asset->Primitives.resize(primitiveCount);
+	m_Asset->Primitives.Resize(primitiveCount);
 	LoadFbxNode(aScene, aScene->mRootNode, m_Asset->Primitives);
 	m_Asset->Name = File::FPath(fullPath).stem().string();
 	return true;
@@ -267,7 +269,7 @@ bool MeshImporter::Save() {
 	const File::FPath FullPath(m_SaveFile.c_str());
 
 	TUnorderedSet<String> usedNames;
-	for (uint32 i = 0; i < m_Asset->Primitives.size(); ++i) {
+	for (uint32 i = 0; i < m_Asset->Primitives.Size(); ++i) {
 		auto& primitive = m_Asset->Primitives[i];
 		//generate name if empty
 		if (primitive.Name.empty() || usedNames.find(primitive.Name) != usedNames.end()) {
@@ -283,6 +285,6 @@ bool MeshImporter::Save() {
 		r |= AMeshAsset::ExportPrimitiveFile(binaryFile.c_str(), primitive.Vertices, primitive.Indices, EMeshCompressMode::NONE);
 		primitive.BinaryFile.swap(binaryFile);
 	}
-	r |= m_Asset->Save(m_SaveFile.c_str());
+	r |= AssetLoader::SaveProjectAsset(m_SaveFile.c_str(), m_Asset);
 	return r;
 }

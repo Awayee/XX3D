@@ -4,7 +4,7 @@
 class MeshImporter {
 private:
 	AMeshAsset* m_Asset;
-	String m_SaveFile;
+	String m_SaveFile;//relative path
 public:
 	MeshImporter(AMeshAsset* asset, const char* saveFile);
 	//import from external files

@@ -83,7 +83,7 @@ namespace Engine{
 		virtual void MapMemory(RMemory* memory, void** pData) = 0;
 		virtual void UnmapMemory(RMemory* memory) = 0;
 
-		// image
+		// image todo delete
 		virtual RImage* CreateImage2D(RFormat format, uint32 width, uint32 height, uint32 mipLevels,
 			RSampleCountFlagBits samples, RImageTiling tiling, RImageUsageFlags usage) = 0;
 		virtual RMemory* CreateImageMemory(RImage* image, RMemoryPropertyFlags memoryProperty, void* data) = 0;

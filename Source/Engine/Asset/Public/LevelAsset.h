@@ -3,7 +3,7 @@
 #include "Core/Public/Math/Vector.h"
 #include "Core/Public/Macro.h"
 
-struct ASceneAsset : AAssetBase {
+struct ALevelAsset : AAssetBase {
 	struct MeshData {
 		String Name;
 		String File;
@@ -11,7 +11,7 @@ struct ASceneAsset : AAssetBase {
 		Math::FVector3 Scale;
 		Math::FVector3 Euler;
 	};
-	TVector<MeshData> Objects;
+	TVector<MeshData> Meshes;
 
 	struct {
 		Math::FVector3 Eye;
@@ -19,6 +19,6 @@ struct ASceneAsset : AAssetBase {
 		Math::FVector3 Up;
 		float Near, Far, Fov;
 	}CameraParam;
-	bool Load(const char* file) override;
-	bool Save(const char* file) override;
+	bool Load(File::Read& in) override;
+	bool Save(File::Write& out) override;
 };

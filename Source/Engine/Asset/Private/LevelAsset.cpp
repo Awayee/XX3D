@@ -1,9 +1,9 @@
-#include "Asset/Public/SceneAsset.h"
+#include "Asset/Public/LevelAsset.h"
 #include "Core/Public/Json.h"
 
-bool ASceneAsset::Load(const char* file) {
+bool ALevelAsset::Load(File::Read& in) {
 	Json::Document doc;
-	if(!Json::ReadFile(file, doc)) {
+	if(!Json::ReadFile(in, doc)) {
 		return false;
 	}
 	if (doc.HasMember("Camera")) {
@@ -15,22 +15,22 @@ bool ASceneAsset::Load(const char* file) {
 		CameraParam.Far = cameraParam["Far"].GetFloat();
 		CameraParam.Fov = cameraParam["Fov"].GetFloat();
 	}
-	if (doc.HasMember("Objects")) {
+	if (doc.HasMember("Meshes")) {
 		const Json::Value& objects = doc["Objects"];
-		Objects.resize(objects.Size());
+		Meshes.Resize(objects.Size());
 		for (uint32 i = 0; i < objects.Size(); ++i) {
 			const Json::Value& meshVal = objects[i].GetObject();
-			Objects[i].Name = meshVal["Name"].GetString();
-			Objects[i].File = meshVal["File"].GetString();
-			Json::LoadVector3(meshVal["Position"], Objects[i].Position);
-			Json::LoadVector3(meshVal["Scale"], Objects[i].Scale);
-			Json::LoadVector3(meshVal["Rotation"], Objects[i].Euler);
+			Meshes[i].Name = meshVal["Name"].GetString();
+			Meshes[i].File = meshVal["File"].GetString();
+			Json::LoadVector3(meshVal["Position"], Meshes[i].Position);
+			Json::LoadVector3(meshVal["Scale"], Meshes[i].Scale);
+			Json::LoadVector3(meshVal["Rotation"], Meshes[i].Euler);
 		}
 	}
 	return true;
 }
 
-bool ASceneAsset::Save(const char* file) {
+bool ALevelAsset::Save(File::Write& out) {
 	Json::Document doc;
 	doc.SetObject();
 	// camera
@@ -46,7 +46,7 @@ bool ASceneAsset::Save(const char* file) {
 	// meshes
 	Json::Value objectsVal;
 	objectsVal.SetArray();
-	for (auto& mesh : Objects) {
+	for (auto& mesh : Meshes) {
 		Json::Value meshVal;
 		Json::AddString(meshVal, "Name", mesh.Name, a);
 		Json::AddString(meshVal, "File", mesh.File, a);
@@ -56,5 +56,5 @@ bool ASceneAsset::Save(const char* file) {
 		objectsVal.PushBack(meshVal, a);
 	}
 	doc.AddMember("Objects", objectsVal, a);
-	return Json::WriteFile(file, doc);
+	return Json::WriteFile(out, doc);
 }

@@ -9,9 +9,9 @@ namespace File {
 		ASSERT(f.is_open(), "file load failed!");
 
 		uint32 fileSize = (uint32)f.tellg();
-		code.resize(fileSize);
+		code.Resize(fileSize);
 		f.seekg(0);
-		f.read(code.data(), fileSize);
+		f.read(code.Data(), fileSize);
 		f.close();
 	}
 

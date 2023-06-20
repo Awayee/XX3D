@@ -3,7 +3,7 @@
 #include "Resource/Public/Config.h"
 #include "EditorUI/Public/EditorWindow.h"
 #include "Objects/Public/EngineContext.h"
-#include "Asset/Public/AssetMgr.h"
+#include "Asset/Public/AssetLoader.h"
 
 #include "EditorWindows/AssetsWindow.h"
 
@@ -22,11 +22,11 @@ namespace Editor {
 
 	void UIMgr::InitWindows()
 	{
-		m_Windows.push_back(MakeUniquePtr<ObjectsWindow>());
-		m_Windows.push_back(MakeUniquePtr<AssetsWindow>());
-		m_Windows.push_back(MakeUniquePtr<DetailWindow>());
-		m_Windows.push_back(MakeUniquePtr<ViewportWindow>());
-		m_Windows.push_back(MakeUniquePtr<FPSWindow>());
+		m_Windows.PushBack(MakeUniquePtr<ObjectsWindow>());
+		m_Windows.PushBack(MakeUniquePtr<AssetsWindow>());
+		m_Windows.PushBack(MakeUniquePtr<DetailWindow>());
+		m_Windows.PushBack(MakeUniquePtr<ViewportWindow>());
+		m_Windows.PushBack(MakeUniquePtr<FPSWindow>());
 	}
 
 	UIMgr::UIMgr() {
@@ -43,10 +43,10 @@ namespace Editor {
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 		io.ConfigWindowsMoveFromTitleBarOnly = true;
 
-		String fontPath = Engine::GetConfig().DefaultFontPath;
-		AssetMgr::ConvertProjectPath(fontPath);
+		File::FPath fontPath = AssetLoader::AssetPath();
+		fontPath.append(Engine::GetConfig().DefaultFontPath);
 
-		io.Fonts->AddFontFromFileTTF(fontPath.c_str(), contentScale * 16, nullptr, nullptr);
+		io.Fonts->AddFontFromFileTTF(fontPath.string().c_str(), contentScale * 16, nullptr, nullptr);
 		ASSERT(io.Fonts->Build(), "Failed to build fonts");
 		//io.IniFilename = nullptr; // Do not save settings
 

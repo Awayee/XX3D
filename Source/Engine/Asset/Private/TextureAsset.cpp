@@ -12,32 +12,25 @@ enum class ETexCompressMode : uint8 {
 
 const ETexCompressMode COMPRESS_MODE = ETexCompressMode::LZ4;
 
-bool ATextureAsset::Load(const char* file) {
-	PARSE_PROJECT_ASSET(file);
-
-	File::Read f(file, std::ios::binary);
-	if(!f.is_open()) {
-		LOG("[ATextureAsset::Load] Failed to open file: %s", file);
-		return false;
-	}
-	f.seekg(0);
-	f.read(BYTE_PTR(&Width), sizeof(uint32));
-	f.read(BYTE_PTR(&Height), sizeof(uint32));
-	f.read(BYTE_PTR(&Channels), sizeof(uint8));
+bool ATextureAsset::Load(File::Read& in) {
+	in.seekg(0);
+	in.read(BYTE_PTR(&Width), sizeof(uint32));
+	in.read(BYTE_PTR(&Height), sizeof(uint32));
+	in.read(BYTE_PTR(&Channels), sizeof(uint8));
 	const uint32 byteSize = Width * Height * Channels;
-	Pixels.resize(byteSize);
+	Pixels.Resize(byteSize);
 
 	ETexCompressMode compressMode;
-	f.read(BYTE_PTR(&compressMode), sizeof(ETexCompressMode));
+	in.read(BYTE_PTR(&compressMode), sizeof(ETexCompressMode));
 	if(ETexCompressMode::NONE == compressMode) {
-		f.read(BYTE_PTR(Pixels.data()), byteSize);
+		in.read(BYTE_PTR(Pixels.Data()), byteSize);
 	}
 	else if(ETexCompressMode::LZ4 == compressMode) {
 		uint32 compressedByteSize;
-		f.read(BYTE_PTR(&compressedByteSize), sizeof(uint32));
+		in.read(BYTE_PTR(&compressedByteSize), sizeof(uint32));
 		TVector<char> compressedData(compressedByteSize);
-		f.read(compressedData.data(), compressedByteSize);
-		LZ4_decompress_safe(compressedData.data(), BYTE_PTR(Pixels.data()), (int)compressedByteSize, (int)byteSize);
+		in.read(compressedData.Data(), compressedByteSize);
+		LZ4_decompress_safe(compressedData.Data(), BYTE_PTR(Pixels.Data()), (int)compressedByteSize, (int)byteSize);
 	}
 	else {
 		LOG("[ATextureAsset::Load] Unknown compress mode %u", compressMode);
@@ -46,30 +39,24 @@ bool ATextureAsset::Load(const char* file) {
 
 	return true;
 }
-bool ATextureAsset::Save(const char* file) {
-	PARSE_PROJECT_ASSET(file);
-	File::Write f(file, std::ios::binary | std::ios::out);
-	if (!f.is_open()) {
-		LOG("[ATextureAsset::Save] Failed to open file: %s", file);
-		return false;
-	}
+bool ATextureAsset::Save(File::Write& out) {
 	ETexCompressMode compressMode = COMPRESS_MODE;
 
-	f.write(CBYTE_PTR(&Width), sizeof(uint32));
-	f.write(CBYTE_PTR(&Height), sizeof(uint32));
-	f.write(CBYTE_PTR(&Channels), sizeof(uint8));
-	f.write(CBYTE_PTR(&compressMode), sizeof(ETexCompressMode));
+	out.write(CBYTE_PTR(&Width), sizeof(uint32));
+	out.write(CBYTE_PTR(&Height), sizeof(uint32));
+	out.write(CBYTE_PTR(&Channels), sizeof(uint8));
+	out.write(CBYTE_PTR(&compressMode), sizeof(ETexCompressMode));
 
 	if(ETexCompressMode::NONE == compressMode) {
-		f.write(CBYTE_PTR(Pixels.data()), Pixels.size());
+		out.write(CBYTE_PTR(Pixels.Data()), Pixels.Size());
 	}
 	else if (ETexCompressMode::LZ4 == compressMode) {
-		uint64 compressBound = LZ4_compressBound((int)Pixels.size());
+		uint64 compressBound = LZ4_compressBound((int)Pixels.Size());
 		TVector<char> compressedData(compressBound);
-		uint32 compressedSize = LZ4_compress_default(CBYTE_PTR(Pixels.data()), compressedData.data(), (int)Pixels.size(), (int)compressBound);
-		compressedData.resize(compressedSize);
-		f.write(CBYTE_PTR(&compressedSize), sizeof(uint32));
-		f.write(compressedData.data(), compressedSize);
+		uint32 compressedSize = LZ4_compress_default(CBYTE_PTR(Pixels.Data()), compressedData.Data(), (int)Pixels.Size(), (int)compressBound);
+		compressedData.Resize(compressedSize);
+		out.write(CBYTE_PTR(&compressedSize), sizeof(uint32));
+		out.write(compressedData.Data(), compressedSize);
 	}
 	else {
 		LOG("[ATextureAsset::Save] Unknown compress mode %u", compressMode);

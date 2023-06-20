@@ -1,31 +1,40 @@
 #include <writer.h>
 #include <prettywriter.h>
-#include <fstream>
 #include "Core/Public/macro.h"
 #include "Core/Public/Json.h"
 namespace Json {
 	bool ReadFile(const char* file, Document& doc) {
-		std::ifstream in(file);
-		if (!in.is_open()) {
-			LOG("Failed to load json file: %s", file);
+		File::Read in(file, std::ios::binary);
+		if(!in.is_open()) {
 			return false;
 		}
-		std::string fileContent{ std::istream_iterator<char>(in), std::istream_iterator<char>() };
+		bool ok = ReadFile(in, doc);
 		in.close();
-		return !doc.Parse(fileContent.c_str()).HasParseError();
+		return ok;
+	}
+
+	bool ReadFile( File::Read& in, Document& doc) {
+		const String content{ std::istream_iterator<char>(in), std::istream_iterator<char>() };
+		return !doc.Parse(content.c_str()).HasParseError();
 	}
 
 	bool WriteFile(const char* file, const Document& doc, bool pretty) {
-		std::ofstream out;
+		File::Write out;
 		out.open(file, std::ios::out);
 
 		if (!out.good()) {
 			LOG("Failed to write json file: %s", file);
 			return false;
 		}
+		bool ok = WriteFile(out, doc, pretty);
+		out.close();
+		return ok;
 
+	}
+
+	bool WriteFile(File::Write& out, const Document& doc, bool pretty) {
 		rapidjson::StringBuffer buffer;
-		if(pretty) {
+		if (pretty) {
 			rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
 			doc.Accept(writer);
 			auto content = buffer.GetString();
@@ -37,7 +46,6 @@ namespace Json {
 			auto content = buffer.GetString();
 			out << content;
 		}
-		out.close();
 		return true;
 	}
 

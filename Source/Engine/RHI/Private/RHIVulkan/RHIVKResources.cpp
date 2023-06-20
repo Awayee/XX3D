@@ -3,17 +3,17 @@
 #include "RHIVulkan.h"
 namespace Engine {
     void RRenderPassVk::SetAttachment(uint32 idx, RImageView* imageView){
-        if(!(idx < m_Attachments.size())) {
-	        for(int i= m_Attachments.size()-1; i<idx; ++i) {
-                m_Attachments.push_back(VK_NULL_HANDLE);
+        if(!(idx < m_Attachments.Size())) {
+	        for(int i= m_Attachments.Size()-1; i<idx; ++i) {
+                m_Attachments.PushBack(VK_NULL_HANDLE);
 	        }
         }
         m_Attachments[idx] = ((RImageViewVk*)imageView)->handle;
     }
     void RRenderPassVk::SetClearValue(uint32 idx, const RSClear& clear){
-        if(!(idx < m_Clears.size())) {
-	        for(int i=m_Clears.size()-1;i<idx; ++i) {
-                m_Clears.emplace_back();
+        if(!(idx < m_Clears.Size())) {
+	        for(int i=m_Clears.Size()-1;i<idx; ++i) {
+                m_Clears.PushBack({});
 	        }
         }
         m_Clears[idx] = ResolveClearValue(clear);
@@ -72,27 +72,27 @@ namespace Engine {
     }
 
 
-    void RDescriptorSetVk::UpdateUniformBuffer(uint32 binding, RBuffer* buffer){
+    void RDescriptorSetVk::SetUniformBuffer(uint32 binding, RBuffer* buffer){
 		VkDescriptorBufferInfo bufferInfo{ ((RBufferVk*)buffer)->handle, 0, buffer->GetSize() };
 		InnerUpdate(binding, 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, &bufferInfo, nullptr);
     }
 
-    void RDescriptorSetVk::UpdateImageSampler(uint32 binding, RSampler* sampler, RImageView* image){
+    void RDescriptorSetVk::SetImageSampler(uint32 binding, RSampler* sampler, RImageView* image){
 		VkDescriptorImageInfo imageInfo{ ((RSamplerVk*)sampler)->handle, ((RImageViewVk*)image)->handle, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
 		InnerUpdate(binding, 0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, &imageInfo, nullptr, nullptr);
     }
 
-    void RDescriptorSetVk::UpdateImage(uint32 binding, RImageView* image) {
+    void RDescriptorSetVk::SetImage(uint32 binding, RImageView* image) {
 		VkDescriptorImageInfo imageInfo{ nullptr, ((RImageViewVk*)image)->handle, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
 		InnerUpdate(binding, 0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, &imageInfo, nullptr, nullptr);
     }
 
-    void RDescriptorSetVk::UpdateSampler(uint32 binding, RSampler* sampler) {
+    void RDescriptorSetVk::SetSampler(uint32 binding, RSampler* sampler) {
 		VkDescriptorImageInfo imageInfo{ ((RSamplerVk*)sampler)->handle, nullptr, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
 		InnerUpdate(binding, 0, 1, VK_DESCRIPTOR_TYPE_SAMPLER, &imageInfo, nullptr, nullptr);
     }
 
-    void RDescriptorSetVk::UpdateInputAttachment(uint32 binding, RImageView* image){
+    void RDescriptorSetVk::SetInputAttachment(uint32 binding, RImageView* image){
 		VkDescriptorImageInfo imageInfo{ VK_NULL_HANDLE, ((RImageViewVk*)image)->handle, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 		InnerUpdate(binding, 0, 1, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, &imageInfo, nullptr, nullptr);
     }
@@ -117,8 +117,8 @@ namespace Engine {
 		passInfo.renderPass = passVk->handle;
 		passInfo.framebuffer = reinterpret_cast<RFramebufferVk*>(framebuffer)->handle;
 		passInfo.renderArea = vkRenderArea;
-		passInfo.clearValueCount = static_cast<uint32>(passVk->GetClears().size());
-		passInfo.pClearValues = passVk->GetClears().data();
+		passInfo.clearValueCount = static_cast<uint32>(passVk->GetClears().Size());
+		passInfo.pClearValues = passVk->GetClears().Data();
 		_vkCmdBeginRenderPass(handle, &passInfo, VK_SUBPASS_CONTENTS_INLINE);
 	}
 

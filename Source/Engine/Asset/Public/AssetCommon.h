@@ -1,5 +1,5 @@
 #pragma once
-#include "Core/Public/Container.h"
+#include "Core/Public/TVector.h"
 #include "Core/Public/String.h"
 #include "Core/Public/Math/Vector.h"
 #include "Core/Public/TypeDefine.h"
@@ -16,8 +16,8 @@
 
 struct AAssetBase {
 
-	virtual bool Load(const char* file) = 0;
-	virtual bool Save(const char* file) = 0;
+	virtual bool Load(File::Read& in) = 0;
+	virtual bool Save(File::Write& out) = 0;
 	virtual ~AAssetBase() = default;
 };
 

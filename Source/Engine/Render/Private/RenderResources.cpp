@@ -3,12 +3,11 @@
 #include "Core/Public/File.h"
 
 namespace Engine {
+	Primitive::Primitive(const TVector<FVertex>& vertices, const TVector<IndexType>& indices) {
 
-	Primitive::Primitive(const TVector<FVertex>& vertices, const TVector<IndexType>& indices)
-	{
-		m_VertexCount = vertices.size();
-		m_IndexCount  = indices.size();
-		if(0 == m_VertexCount) {
+		m_VertexCount = vertices.Size();
+		m_IndexCount = indices.Size();
+		if (0 == m_VertexCount) {
 			return;
 		}
 		GET_RHI(rhi);
@@ -16,25 +15,25 @@ namespace Engine {
 		m_Vertex.reset(new BufferCommon); m_Vertex->CreateForVertex(bufferSize);
 
 		BufferCommon vertexStaging;
-		vertexStaging.CreateForTransfer(bufferSize, (void*)vertices.data());
+		vertexStaging.CreateForTransfer(bufferSize, (void*)vertices.Data());
 
-		if(m_IndexCount > 0) {
+		if (m_IndexCount > 0) {
 			bufferSize = m_IndexCount * sizeof(IndexType);
 			m_Index.reset(new BufferCommon); m_Index->CreateForIndex(bufferSize);
-			
+
 			BufferCommon indexStaging;
-			indexStaging.CreateForTransfer(bufferSize, (void*)indices.data());
+			indexStaging.CreateForTransfer(bufferSize, (void*)indices.Data());
 			rhi->ImmediateCommit([this, &vertexStaging, &indexStaging](Engine::RCommandBuffer* cmd) {
 				cmd->CopyBuffer(vertexStaging.Buffer, m_Vertex->Buffer, 0, 0, vertexStaging.Size);
-				cmd->CopyBuffer(indexStaging.Buffer, m_Index->Buffer, 0, 0, indexStaging.Size);
-			});
+			cmd->CopyBuffer(indexStaging.Buffer, m_Index->Buffer, 0, 0, indexStaging.Size);
+				});
 			indexStaging.Release();
 			vertexStaging.Release();
 		}
 		else {
 			rhi->ImmediateCommit([this, &vertexStaging](Engine::RCommandBuffer* cmd) {
 				cmd->CopyBuffer(vertexStaging.Buffer, m_Vertex->Buffer, 0, 0, vertexStaging.Size);
-			});
+				});
 			vertexStaging.Release();
 		}
 	}
@@ -47,18 +46,18 @@ namespace Engine {
 
 	void FillVectorInput(TVector<Engine::RVertexInputBinding>& bindings, TVector<Engine::RVertexInputAttribute>& attributes)
 	{
-		bindings.resize(1);
+		bindings.Resize(1);
 		bindings[0] = { 0, sizeof(Math::FVector3), Engine::VERTEX_INPUT_RATE_VERTEX };
-		attributes.resize(1);
+		attributes.Resize(1);
 		attributes[0] = { 0, Engine::FORMAT_R32G32B32_SFLOAT, 0 };
 	}
 
 
 	void FillVertexInput(TVector<Engine::RVertexInputBinding>& bindings, TVector<Engine::RVertexInputAttribute>& attributes)
 	{
-		bindings.resize(1);
+		bindings.Resize(1);
 		bindings[0] = { 0, sizeof(FVertex)};
-		attributes.resize(4);
+		attributes.Resize(4);
 		attributes[0] = { 0, Engine::FORMAT_R32G32B32_SFLOAT, 0 };//position
 		attributes[1] = { 0, Engine::FORMAT_R32G32B32_SFLOAT, offsetof(FVertex, Normal)};//normal
 		attributes[2] = { 0, Engine::FORMAT_R32G32B32_SFLOAT, offsetof(FVertex, Tangent)};// tangent
@@ -86,10 +85,10 @@ namespace Engine {
 			{0, 0, 0}, {1, 0, 0}, {0, 1, 0},
 			{0, 1, 0}, {1, 0, 0}, {1, 1, 0}
 		};
-		uint32 bufferSize = vertices.size() * sizeof(Math::FVector3);
+		uint32 bufferSize = vertices.Size() * sizeof(Math::FVector3);
 		m_VertexBuffer.CreateForVertex(bufferSize);
 		BufferCommon staging;
-		staging.CreateForTransfer(bufferSize, (void*)vertices.data());
+		staging.CreateForTransfer(bufferSize, (void*)vertices.Data());
 		RHI::Instance()->ImmediateCommit([&staging, this, bufferSize](Engine::RCommandBuffer* cmd) {
 			cmd->CopyBuffer(staging.Buffer, m_VertexBuffer.Buffer, 0, 0, bufferSize);
 		});

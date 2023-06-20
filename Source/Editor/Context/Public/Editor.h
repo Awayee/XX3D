@@ -3,7 +3,7 @@
 #include "Objects/Public/Engine.h"
 #include "Core/Public/SmartPointer.h"
 
-#include "Render/Public/RenderMesh.h"
+#include "Render/Public/StaticMesh.h"
 
 #include "EditorAsset/Public/TextureImporter.h"
 #include "EditorAsset/Public/MeshImporter.h"
@@ -14,17 +14,6 @@ namespace Editor {
 		Engine::XXEngine* m_Engine;
 		TUniquePtr<UIMgr> m_EditorUI;
 
-		// TODO TEST
-		Engine::RenderScene* m_MainScene;
-		Engine::Camera* m_MainCamera;
-
-		TUniquePtr<AMeshAsset> m_MeshAsset;
-		TUniquePtr<Engine::RenderMesh> m_RenderMesh;
-
-		TUniquePtr<ATextureAsset> m_TextureAsset;
-
-	private:
-		void InitResources();
 	public:
 		XXEditor(Engine::XXEngine* engine);
 		~XXEditor();

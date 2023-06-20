@@ -123,11 +123,11 @@ namespace Engine {
 	public:
 		VkDescriptorSet handle;
 		void Update(uint32 binding, RDescriptorType type, const RDescriptorInfo& info, uint32 arrayElement, uint32 count) override;
-		void UpdateUniformBuffer(uint32 binding, RBuffer* buffer) override;
-		void UpdateImageSampler(uint32 binding, RSampler* sampler, RImageView* image) override;
-		void UpdateImage(uint32 binding, RImageView* image) override;
-		void UpdateSampler(uint32 binding, RSampler* sampler) override;
-		void UpdateInputAttachment(uint32 binding, RImageView* image) override;
+		void SetUniformBuffer(uint32 binding, RBuffer* buffer) override;
+		void SetImageSampler(uint32 binding, RSampler* sampler, RImageView* image) override;
+		void SetImage(uint32 binding, RImageView* image) override;
+		void SetSampler(uint32 binding, RSampler* sampler) override;
+		void SetInputAttachment(uint32 binding, RImageView* image) override;
 	};
 
 	class RCommandBufferVk : public RCommandBuffer {

@@ -15,8 +15,8 @@ namespace Editor {
 	void ObjectsWindow::OnWindow() {
 		Engine::RenderScene* scene = Engine::RenderScene::GetDefaultScene();
 		auto& objects = scene->GetRenderObjects();
-		for (uint32 i = 0; i < objects.size(); ++i) {
-			ImGui::Selectable(objects[i]->Name());
+		for (uint32 i = 0; i < objects.Size(); ++i) {
+			ImGui::Selectable(StringFormat("Object %u", i).c_str());
 		}
 	}
 
@@ -121,7 +121,7 @@ namespace Editor {
 			m_Viewport.w = UINT32_CAST(size.x);
 			m_Viewport.h = UINT32_CAST(size.y);
 			Engine::Context()->Renderer()->SetRenderArea(m_Viewport);
-			Editor::Context()->CurrentScene()->GetMainCamera()->SetAspect(size.x / size.y);
+			Editor::Context()->DefaultScene()->GetMainCamera()->SetAspect(size.x / size.y);
 			m_ViewportShow = true;
 		}
 	}

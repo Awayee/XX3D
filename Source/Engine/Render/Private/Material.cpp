@@ -13,8 +13,8 @@ namespace Engine {
 
 	void Material::SetTexture(TextureCommon* tex) {
 		if (nullptr != tex) {
-			m_DescriptorSet->UpdateImage(0, tex->View);
-			m_DescriptorSet->UpdateSampler(1, SamplerMgr::Get(SAMPLER_DEFAULT));
+			m_DescriptorSet->SetImage(0, tex->View);
+			m_DescriptorSet->SetSampler(1, SamplerMgr::Get(SAMPLER_DEFAULT));
 		}
 	}
 

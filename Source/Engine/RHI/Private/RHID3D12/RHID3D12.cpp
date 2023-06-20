@@ -53,7 +53,7 @@ namespace Engine {
 	void LogAdapters(IDXGIFactory4* factory, DXGI_FORMAT format) {
 		UINT i = 0;
 		IDXGIAdapter* adapter = nullptr;
-		std::vector<IDXGIAdapter*> adapterList;
+		TVector<IDXGIAdapter*> adapterList;
 		while (factory->EnumAdapters(i, &adapter) != DXGI_ERROR_NOT_FOUND)
 		{
 			DXGI_ADAPTER_DESC desc;
@@ -63,11 +63,11 @@ namespace Engine {
 			text += desc.Description;
 			text += L"\n";
 			wprintf(text.c_str());
-			adapterList.push_back(adapter);
+			adapterList.PushBack(adapter);
 			++i;
 		}
 
-		//for (size_t i = 0; i < adapterList.size(); ++i)
+		//for (size_t i = 0; i < adapterList.Size(); ++i)
 		//{
 		//	LogAdapterOutputs(adapterList[i], format);
 		//	DX_RELEASE(adapterList[i]);

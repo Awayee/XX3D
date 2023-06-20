@@ -3,30 +3,9 @@
 
 namespace Editor {
 
-	inline AssetBrowser* Browser() { return Context()->GetAssetBrowser(); }
+	inline AssetManager* Browser() { return Context()->GetAssetBrowser(); }
 
 	TVector<AssetsWindow*> AssetsWindow::s_Instances;
-
-	AssetsWindow::NodeItem::NodeItem(const FileNode* file) {
-		ID = file->GetID();
-		Name = file->GetName().c_str();
-		switch (file->GetType()) {
-		case EFileType::MESH:
-			Type = EDisplayType::MESH; break;
-		case EFileType::TEXTURE:
-			Type = EDisplayType::TEXTURE; break;
-		case EFileType::SCENE:
-			Type = EDisplayType::SCENE; break;
-		default:
-			Type = EDisplayType::UNKNOWN; break;
-		}
-	}
-
-	AssetsWindow::NodeItem::NodeItem(const FolderNode* folder) {
-		ID = folder->GetID();
-		Name = folder->GetName().c_str();
-		Type = EDisplayType::FOLDER;
-	}
 
 	void AssetsWindow::OnFolderRebuildAllWindows(const FolderNode* node) {
 		for(AssetsWindow* wnd: s_Instances) {
@@ -35,7 +14,7 @@ namespace Editor {
 	}
 
 	void AssetsWindow::OnFolderRebuild(const FolderNode* node) {
-		if(m_CurrentFolder && node->Contains(m_CurrentFolder)) {
+		if(m_CurrentFolder && node->Contains(m_CurrentFolder->GetID())) {
 			RefreshItems();
 		}
 	}
@@ -44,33 +23,33 @@ namespace Editor {
 		if(!m_CurrentFolder) {
 			return;
 		}
-		m_Contents.clear();
+		m_Contents.Clear();
 		for(NodeID id : m_CurrentFolder->GetChildFolders()) {
 			FolderNode* node = Browser()->GetFolder(id);
 			if(node) {
-				m_Contents.emplace_back(node);
+				m_Contents.PushBack(MakeUniquePtr<FolderAssetView>(node));
 			}
 		}
 		for(NodeID id : m_CurrentFolder->GetChildFiles()) {
 			FileNode* node = Browser()->GetFile(id);
 			if(node) {
-				m_Contents.emplace_back(node);
+				m_Contents.PushBack(CreateAssetView(node));
 			}
 
 		}
 	}
 
 	AssetsWindow::AssetsWindow() : EditorWindowBase("Assets") {
-		if(s_Instances.empty()) {
+		if(s_Instances.Empty()) {
 			Browser()->RegisterFolderRebuildEvent(AssetsWindow::OnFolderRebuildAllWindows);
 		}
-		s_Instances.push_back(this);
+		s_Instances.PushBack(this);
 		m_CurrentFolder = Browser()->GetRoot();
 		RefreshItems();
 	}
 
 	AssetsWindow::~AssetsWindow() {
-		SwapRemove(s_Instances, this);
+		s_Instances.SwapRemove(this);
 	}
 
 	void AssetsWindow::OnWindow() {
@@ -85,17 +64,17 @@ namespace Editor {
 			ImGui::ArrowButton("Back", ImGuiDir_Left);
 		}
 
-		for(uint32 i=0; i< m_Contents.size(); ++i) {
-			NodeItem& item = m_Contents[i];
-			if (ImGui::Selectable(item.Name, m_SelectedItem == i, ImGuiSelectableFlags_AllowDoubleClick)) {
+		for(uint32 i=0; i< m_Contents.Size(); ++i) {
+			auto& item = m_Contents[i];
+			if (ImGui::Selectable(item->Name().c_str(), m_SelectedItem == i, ImGuiSelectableFlags_AllowDoubleClick)) {
 				if(m_SelectedItem == i) {
-					if (item.Type == EDisplayType::FOLDER) {
-						m_CurrentFolder = Browser()->GetFolder(item.ID);
+					if (item->IsFolder()) {
+						m_CurrentFolder = Browser()->GetFolder(item->ID());
 						RefreshItems();
 						break;
 					}
 					else {
-						PRINT("ASSET: %s, %i", item.Name, item.Type);
+						item->Open();
 					}					
 				}
 				else {

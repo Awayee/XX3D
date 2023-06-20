@@ -28,8 +28,8 @@ struct hs {
 template<class T>
 using TStrMap = std::unordered_map<const char*, T, hs, cmp>;
 
-template<class T>
-using TVector =  std::vector<T>;
+//template<class T>
+//using TVector =  std::vector<T>;
 
 template<typename T1, typename T2>
 using TPair = std::pair<T1, T2>;
@@ -42,47 +42,6 @@ using TSet = std::set<T>;
 
 template<typename TKey, typename TValue>
 using TUnorderedMap = std::unordered_map<TKey, TValue>;
-
-template <class _RanIt, class _Pr>
-inline void TSort(_RanIt _first, _RanIt _last, _Pr _pred) {
-	std::sort(_first, _last, _pred);
-}
-
-template <class _RanIt>
-inline void TSort(const _RanIt _First, const _RanIt _Last) { // order [_First, _Last)
-	std::sort(_First, _Last, less<>{});
-}
-
-template <class T>
-inline void Swap(T& left, T& right) {
-	std::swap(left, right);
-}
-
-template <class T>
-void SwapRemoveAt(TVector<T>& v, uint32 i) {
-	std::swap(v[i], v.back());
-	v.pop_back();
-}
-
-template <class T>
-void SwapRemove(TVector<T>& v, T ele) {
-	for(uint32 i=0; i< v.size(); ++i) {
-		if(v[i] == ele) {
-			std::swap(v[i], v.back());
-			v.pop_back();
-			break;
-		}
-	}
-}
-
-template <class T>
-void Replace(TVector<T>& v, T oldVal, T newVal) {
-	for(uint32 i=0; i< v.size(); ++i) {
-		if(v[i] == oldVal) {
-			v[i] = newVal;
-		}
-	}
-}
 
 template <class T, int L>
 constexpr int ArraySize(const T(&arr)[L]) { return L; }

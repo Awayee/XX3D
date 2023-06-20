@@ -11,7 +11,7 @@ namespace Engine {
 		uint32 queueFamilyCount = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 		TVector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.Data());
 		for (uint32 i = 0; i < queueFamilyCount; i++) {
 			if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 				*pGraphicsIndex = i;
@@ -33,7 +33,7 @@ namespace Engine {
 		uint32 extensionCount;
 		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 		TVector<VkExtensionProperties> availableExtensions(extensionCount);
-		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.Data());
 		bool isSupport = false;
 		for (const char* extensionName : extensions) {
 			bool flag = false;
@@ -77,7 +77,7 @@ namespace Engine {
 		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
 		TVector<VkLayerProperties> availableLayers(layerCount);
-		vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+		vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.Data());
 		for (auto& name: validationLayers)
 		{
 			bool layerFound = false;
@@ -115,7 +115,7 @@ namespace Engine {
 		uint32 formatCount;
 		VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr), "vkGetPhysicalDeviceSurfaceFormatsKHR");
 		TVector<VkSurfaceFormatKHR> formats(formatCount);
-		VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, formats.data()), "vkGetPhysicalDeviceSurfaceFormatsKHR");
+		VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, formats.Data()), "vkGetPhysicalDeviceSurfaceFormatsKHR");
 		for (const auto& format : formats) {
 			if (format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
 				info.swapchainFormat = format;
@@ -126,11 +126,11 @@ namespace Engine {
 		uint32 presentModeCount;
 		vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr);
 		TVector<VkPresentModeKHR> presentModes(presentModeCount);
-		vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes.data());
-		if(presentModes.empty()) {
+		vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes.Data());
+		if(presentModes.Empty()) {
 			return info;
 		}
-		TSort(presentModes.begin(), presentModes.end(), [](const VkPresentModeKHR& v1, const VkPresentModeKHR& v2) {
+		presentModes.Sort([](const VkPresentModeKHR& v1, const VkPresentModeKHR& v2) {
 			VkPresentModeKHR sortList[4]{
 				VK_PRESENT_MODE_IMMEDIATE_KHR,
 				VK_PRESENT_MODE_MAILBOX_KHR,
@@ -138,7 +138,7 @@ namespace Engine {
 				VK_PRESENT_MODE_FIFO_RELAXED_KHR
 			};
 			int idx1{ INT16_MAX }, idx2{ INT16_MAX };
-			for(int i=0; i < std::size(sortList); ++i) {
+			for (int i = 0; i < std::size(sortList); ++i) {
 				if (i == v1) idx1 = i;
 				if (i == v2) idx2 = i;
 			}

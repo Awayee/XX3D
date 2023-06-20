@@ -4,6 +4,7 @@
 #include "Resource/Public/Config.h"
 #include "Core/Public/macro.h"
 #include "Core/Public/Container.h"
+#include "Core/Public/TVector.h"
 
 #define PARSE_CONFIG_FILE(f)\
 	char __s[128]; strcpy(__s, PROJECT_CONFIG); strcat(__s, f); f=__s

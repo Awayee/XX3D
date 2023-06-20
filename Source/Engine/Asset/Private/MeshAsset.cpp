@@ -27,10 +27,9 @@ struct FVertexPack {
 	}
 };
 
-bool AMeshAsset::Load(const char* file) {
-	PARSE_PROJECT_ASSET(file);
+bool AMeshAsset::Load(File::Read& in) {
 	Json::Document doc;
-	if(!Json::ReadFile(file, doc)) {
+	if(!Json::ReadFile(in, doc)) {
 		return false;
 	}
 	if(doc.HasMember("Name")) {
@@ -38,7 +37,7 @@ bool AMeshAsset::Load(const char* file) {
 	}
 	if(doc.HasMember("Primitives")) {
 		Json::Value::Array primitives = doc["Primitives"].GetArray();
-		Primitives.resize(primitives.Size());
+		Primitives.Resize(primitives.Size());
 		for(uint32 i=0; i<primitives.Size(); ++i) {
 			Json::Value::Object v = primitives[i].GetObj();
 			if(v.HasMember("Material")) {
@@ -55,9 +54,7 @@ bool AMeshAsset::Load(const char* file) {
 	return true;
 }
 
-bool AMeshAsset::Save(const char* file) {
-	PARSE_PROJECT_ASSET(file);
-
+bool AMeshAsset::Save(File::Write& out) {
 	Json::Document doc;
 	doc.SetObject();
 
@@ -68,7 +65,7 @@ bool AMeshAsset::Save(const char* file) {
 	//primitives
 	Json::Value primitives;
 	primitives.SetArray();
-	for(uint32 i=0; i<Primitives.size(); ++i) {
+	for(uint32 i=0; i<Primitives.Size(); ++i) {
 		Json::Value v;
 		v.SetObject();
 		Json::AddString(v, "Material", Primitives[i].MaterialFile, doc.GetAllocator());
@@ -76,7 +73,7 @@ bool AMeshAsset::Save(const char* file) {
 		primitives.PushBack(v, doc.GetAllocator());
 	}
 	doc.AddMember("Primitives", primitives, doc.GetAllocator());
-	return Json::WriteFile(file, doc);
+	return Json::WriteFile(out, doc);
 }
 bool AMeshAsset::LoadPrimitiveFile(const char* file, TVector<FVertex>& vertices, TVector<IndexType>& indices) {
 	PARSE_PROJECT_ASSET(file);
@@ -102,26 +99,26 @@ bool AMeshAsset::LoadPrimitiveFile(const char* file, TVector<FVertex>& vertices,
 	uint32 dataByteSize = vertexCount * sizeof(FVertexPack) + indexCount * sizeof(IndexType);
 	TVector<char> data(dataByteSize);
 	if(compressMode == EMeshCompressMode::NONE) {
-		f.read(data.data(), dataByteSize);
+		f.read(data.Data(), dataByteSize);
 	}
 	else if(compressMode == EMeshCompressMode::LZ4) {
 		uint32 compressedByteSize;
 		f.read(BYTE_PTR(&compressedByteSize), sizeof(uint32));
 		TVector<char> compressedData(compressedByteSize);
-		f.read(compressedData.data(), compressedByteSize);
-		LZ4_decompress_safe(compressedData.data(), data.data(), (int)compressedByteSize, (int)dataByteSize);
+		f.read(compressedData.Data(), compressedByteSize);
+		LZ4_decompress_safe(compressedData.Data(), data.Data(), (int)compressedByteSize, (int)dataByteSize);
 	}
 
 	// vertices
-	FVertexPack* vertexPtr = reinterpret_cast<FVertexPack*>(data.data());
-	vertices.resize(vertexCount);
+	FVertexPack* vertexPtr = reinterpret_cast<FVertexPack*>(data.Data());
+	vertices.Resize(vertexCount);
 	for(uint32 i=0; i< vertexCount; ++i) {
 		vertexPtr[i].Unpack(vertices[i]);
 	}
 	//indices
 	if(indexCount > 0) {
-		indices.resize(indexCount);
-		IndexType* indexPtr = reinterpret_cast<IndexType*>(data.data() + sizeof(FVertexPack) * vertexCount);
+		indices.Resize(indexCount);
+		IndexType* indexPtr = reinterpret_cast<IndexType*>(data.Data() + sizeof(FVertexPack) * vertexCount);
 		for(uint32 i=0; i<indexCount;++i) {
 			indices[i] = indexPtr[i];
 		}
@@ -132,7 +129,7 @@ bool AMeshAsset::LoadPrimitiveFile(const char* file, TVector<FVertex>& vertices,
 }
 
 bool AMeshAsset::ExportPrimitiveFile(const char* file, const TVector<FVertex>& vertices, const TVector<IndexType>& indices, EMeshCompressMode packMode) {
-	if(vertices.size() == 0) {
+	if(vertices.Size() == 0) {
 		LOG("null primitive!");
 		return false;
 	}
@@ -143,8 +140,8 @@ bool AMeshAsset::ExportPrimitiveFile(const char* file, const TVector<FVertex>& v
 		LOG("Failed to open file: %s", file);
 		return false;
 	}
-	uint32 vertexCount = vertices.size();
-	uint32 indexCount = indices.size();
+	uint32 vertexCount = vertices.Size();
+	uint32 indexCount = indices.Size();
 	uint32 dataByteSize = sizeof(FVertexPack) * vertexCount + sizeof(IndexType) * indexCount;
 	//header
 	f.write(CBYTE_PTR(&vertexCount), sizeof(uint32));
@@ -152,12 +149,12 @@ bool AMeshAsset::ExportPrimitiveFile(const char* file, const TVector<FVertex>& v
 
 	//cpy vertices and indices;
 	TVector<char> data(dataByteSize);
-	FVertexPack* vertexPtr = reinterpret_cast<FVertexPack*>(data.data());
+	FVertexPack* vertexPtr = reinterpret_cast<FVertexPack*>(data.Data());
 	for(uint32 i=0; i<vertexCount; ++i) {
 		vertexPtr[i].Pack(vertices[i]);
 	}
 	if(indexCount > 0) {
-		IndexType* indexPtr = reinterpret_cast<IndexType*>(data.data() + sizeof(FVertexPack) * vertexCount);
+		IndexType* indexPtr = reinterpret_cast<IndexType*>(data.Data() + sizeof(FVertexPack) * vertexCount);
 		for(uint32 i=0; i<indexCount; ++i) {
 			indexPtr[i] = indices[i];
 		}
@@ -166,16 +163,16 @@ bool AMeshAsset::ExportPrimitiveFile(const char* file, const TVector<FVertex>& v
 
 	// no pack
 	if(packMode == EMeshCompressMode::NONE) {
-		f.write(data.data(), data.size());
+		f.write(data.Data(), data.Size());
 	}
 	//lz4 pack
 	else if(packMode == EMeshCompressMode::LZ4) {
 		uint64 compressBound = LZ4_compressBound(dataByteSize);
 		TVector<char> compressedData(compressBound);
-		uint32 compressedSize = LZ4_compress_default(data.data(), compressedData.data(), (int)data.size(), (int)compressBound);
-		compressedData.resize(compressedSize);
+		uint32 compressedSize = LZ4_compress_default(data.Data(), compressedData.Data(), (int)data.Size(), (int)compressBound);
+		compressedData.Resize(compressedSize);
 		f.write(CBYTE_PTR(&compressedSize), sizeof(uint32));
-		f.write(compressedData.data(), compressedData.size());
+		f.write(compressedData.Data(), compressedData.Size());
 	}
 
 	f.close();

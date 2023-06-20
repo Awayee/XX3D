@@ -8,7 +8,7 @@ struct ATextureAsset : AAssetBase {
 	TVector<uint8> Pixels;
 public:
 	ATextureAsset() = default;
-	bool Load(const char* file) override;
-	bool Save(const char* file) override;
+	bool Load(File::Read& in) override;
+	bool Save(File::Write& out) override;
 	~ATextureAsset() override;
 };

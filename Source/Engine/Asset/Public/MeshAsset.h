@@ -1,6 +1,5 @@
 #pragma once
 #include "AssetCommon.h"
-#include "AssetMgr.h"
 
 enum class EVertexFormat: int8 {
 	UINT16,
@@ -30,10 +29,10 @@ public:
 	AMeshAsset() = default;
 
 	//load with primitive binaries
-	bool Load(const char* file) override;
+	bool Load(File::Read& in) override;
 
 	//save without primitives
-	bool Save(const char* file) override;
+	bool Save(File::Write& out) override;
 
 	//load a packed primitive file
 	static bool LoadPrimitiveFile(const char* file, TVector<FVertex>& vertices, TVector<IndexType>& indices);
