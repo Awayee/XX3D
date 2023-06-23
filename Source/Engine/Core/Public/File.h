@@ -21,6 +21,14 @@ namespace File {
 		return std::filesystem::relative(path, base);
 	}
 
+	inline bool IsFolder(const FPath& path) {
+		return std::filesystem::is_directory(path);
+	}
+
+	inline bool Exist(const FPath& path) {
+		return std::filesystem::exists(path);
+	}
+
 	typedef std::function<void(const FPathEntry&)> FForEachPathFunc;
 	void ForeachPath(const char* folder, FForEachPathFunc&& func, bool recursively = false);
 	void ForeachPath(const FPathEntry& path, FForEachPathFunc&& func, bool recursively = false);

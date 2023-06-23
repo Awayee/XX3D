@@ -1,5 +1,6 @@
-#include "EditorAsset/Public/AssetManager.h"
+#include "Functions/Public/AssetManager.h"
 #include "Core/Public/File.h"
+#include "Core/Public/macro.h"
 
 namespace Editor {
 	
@@ -66,14 +67,14 @@ namespace Editor {
 		}
 	}
 
-	NodeID AssetManager::BuildFolder(const File::FPath& path, NodeID parent) {
+	NodeID AssetManager::BuildFolderRecursively(const File::FPath& path, NodeID parent) {
 		using namespace File;
 		//the folder node
 		NodeID folder = InsertFolder(path, parent);
 		FPathIterator iter(path);
 		for(const FPathEntry& child: iter) {
 			if(child.is_directory()) {
-				BuildFolder(child, folder);
+				BuildFolderRecursively(child, folder);
 			}
 			else {
 				InsertFile(child.path(), folder);
@@ -93,11 +94,37 @@ namespace Editor {
 	void AssetManager::BuildTree() {
 		m_Folders.Clear();
 		m_Files.Clear();
-		m_Root = BuildFolder(m_RootPath, INVALLID_NODE);
+		m_Root = BuildFolderRecursively(m_RootPath, INVALLID_NODE);
 	}
 
 	FileNode* AssetManager::GetFile(NodeID id) {
 		return id < m_Files.Size() ? &m_Files[id] : nullptr;
+	}
+
+	FileNode* AssetManager::GetFile(const File::FPath& path) {
+		FolderNode* folder = GetRoot();
+		for(auto iter: path) {
+			if(!folder) {
+				break;
+			}
+			if(File::IsFolder(iter)) {
+				for(NodeID childID: folder->GetChildFolders()) {
+					if(iter == folder->GetPath().filename()) {
+						folder = GetFolder(childID);
+						break;
+					}
+				}
+			}
+			else {
+				for(NodeID childID: folder->GetChildFiles()) {
+					if(iter==folder->GetPath().filename()) {
+						return GetFile(childID);
+					}
+				}
+			}
+		}
+		LOG("Could not find path: %s", path.string().c_str());
+		return nullptr;
 	}
 
 	FolderNode* AssetManager::GetFolder(NodeID id) {

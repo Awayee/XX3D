@@ -1,4 +1,4 @@
-#include "Render/Public/RenderSystem.h"
+#include "Render/Public/Renderer.h"
 #include "Resource/Public/Config.h"
 #include "RenderMacro.h"
 #include "Window/Public/ImGuiImpl.h"
@@ -6,9 +6,10 @@
 #include "Render/Public/RenderScene.h"
 #include "Render/Public/Camera.h"
 #include "Render/Public/Material.h"
+#include "Asset/Public/AssetLoader.h"
 
 namespace Engine {
-	RenderSystem::RenderSystem(Engine::Wnd* window){
+	Renderer::Renderer(Engine::Wnd* window){
 		auto& size = window->GetWindowSize();
 		DescsMgr::Initialize();
 		SamplerMgr::Initialize();
@@ -20,8 +21,11 @@ namespace Engine {
 		});
 
 	}
-	RenderSystem::~RenderSystem()
+	Renderer::~Renderer()
 	{
+		// wait queue before disabled
+		RHI::Instance()->WaitGraphicsQueue();
+		ImGuiRelease();
 		RenderScene::Clear();
 		DescsMgr::Release();
 		SamplerMgr::Release();
@@ -37,20 +41,7 @@ namespace Engine {
 		}
 	}
 
-	void RenderSystem::SetEnable(bool enable)
-	{
-		m_Enable = enable;
-		if(!enable) {
-			// wait queue before disabled
-			RHI::Instance()->WaitGraphicsQueue();
-		}
-	}
-
-	void RenderSystem::Tick(){
-		if(!m_Enable) {
-			return;
-		}
-
+	void Renderer::Tick(){
 		// window is hided, pause rendering
 		if(!m_WindowAvailable) {
 			return;
@@ -108,25 +99,26 @@ namespace Engine {
 
 	}
 
-	void RenderSystem::InitUIPass() const
+	void Renderer::InitUIPass(void(*InitializeFunc)())
 	{
 		// the last subpass is for ui
 		Engine::ImGuiInitialize(m_PresentPass->GetRHIPass(), 1);
+		InitializeFunc();
 		GET_RHI(rhi);
 		// upload font
 		rhi->ImmediateCommit([](Engine::RCommandBuffer* cmd) {
 			Engine::ImGuiCreateFontsTexture(cmd);
-			});
+		});
 		Engine::ImGuiDestroyFontUploadObjects();
 	}
 
-	void RenderSystem::SetRenderArea(const URect& area){
+	void Renderer::SetRenderArea(const URect& area){
 		m_RenderArea = area;
 		m_RenderAreaDirty = true;
 	}
 
 
-	void RenderSystem::CreateRenderResources()
+	void Renderer::CreateRenderResources()
 	{
 		// create command buffers
 		m_CommandBuffers.Resize(MAX_FRAMES_IN_FLIGHT);
@@ -143,7 +135,7 @@ namespace Engine {
 		m_DeferredLightingDescs->SetInputAttachment(4, m_PresentPass->GetAttachment(DeferredLightingPass::ATTACHMENT_DEPTH));
 	}
 
-	void RenderSystem::ResizeRenderArea(){
+	void Renderer::ResizeRenderArea(){
 		GET_RHI(rhi);
 		rhi->WaitGraphicsQueue();
 		if(m_RenderArea.w > 0 && m_RenderArea.h > 0) {
@@ -157,7 +149,7 @@ namespace Engine {
 	}
 
 
-	void RenderSystem::OnWindowSizeChanged(uint32 w, uint32 h){
+	void Renderer::OnWindowSizeChanged(uint32 w, uint32 h){
 		m_WindowAvailable = (0 != w && 0 != h);
 		if(!m_WindowAvailable) {
 			return;

@@ -8,7 +8,7 @@ namespace Engine {
 		auto& objects = levelAsset.Meshes;
 		for(auto& mesh: objects) {
 			AMeshAsset meshAsset;
-			if(AssetLoader::LoadProjectAsset(mesh.File.c_str(), &meshAsset)) {
+			if(AssetLoader::LoadProjectAsset(&meshAsset, mesh.File.c_str())) {
 				StaticMesh renderMesh{ meshAsset, m_Scene };
 				m_Meshes.PushBack(std::move(renderMesh));
 			}

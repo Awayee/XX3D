@@ -1,15 +1,16 @@
 #pragma once
+#include "EditorUI/Public/Widget.h"
+#include "Functions/Public/AssetManager.h"
 #include "EditorUI/Public/EditorWindow.h"
-#include "EditorAsset/Public/AssetManager.h"
 #include "AssetView.h"
 
 namespace Editor {
 
-	class AssetsWindow : public EditorWindowBase {
+	class AssetsBrowser : public EditorWndBase {
 		const NodeID MAX_FOLDER_NUM = 0xffff;
 
 	private:
-		static TVector<AssetsWindow*> s_Instances;
+		static TVector<AssetsBrowser*> s_Instances;
 
 		FolderNode* m_CurrentFolder{nullptr};
 		TVector<TUniquePtr<AssetViewBase>> m_Contents;
@@ -21,9 +22,10 @@ namespace Editor {
 		void RefreshItems();
 
 	public:
-		AssetsWindow();
-		~AssetsWindow() override;
-		void OnWindow() override;
+		AssetsBrowser();
+		~AssetsBrowser() override;
+		void Update() override;
+		void Display() override;
 	};
 	
 }

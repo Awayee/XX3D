@@ -8,7 +8,7 @@ File::FPath AssetLoader::AssetPath() {
 	return s_ProjectAssetPath;
 }
 
-bool AssetLoader::LoadProjectAsset(File::CharPath file, AAssetBase* asset) {
+bool AssetLoader::LoadProjectAsset(AAssetBase* asset, File::CharPath file) {
 	File::FPath filePath(s_ProjectAssetPath);
 	filePath.append(file);
 	File::Read in(filePath.string().c_str(), std::ios::binary);
@@ -24,7 +24,7 @@ bool AssetLoader::LoadProjectAsset(File::CharPath file, AAssetBase* asset) {
 	return ok;
 }
 
-bool AssetLoader::LoadEngineAsset(File::CharPath file, AAssetBase* asset) {
+bool AssetLoader::LoadEngineAsset(AAssetBase* asset, File::CharPath file) {
 	File::FPath filePath(s_EngineAssetPath);
 	filePath.append(file);
 	File::Read in(filePath.string().c_str(), std::ios::binary);
@@ -40,7 +40,7 @@ bool AssetLoader::LoadEngineAsset(File::CharPath file, AAssetBase* asset) {
 	return ok;
 }
 
-bool AssetLoader::SaveProjectAsset(File::CharPath file, AAssetBase* asset) {
+bool AssetLoader::SaveProjectAsset(AAssetBase* asset, File::CharPath file) {
 	File::FPath filePath(s_ProjectAssetPath);
 	filePath.append(file);
 	File::Write out(filePath.string().c_str(), std::ios::binary);

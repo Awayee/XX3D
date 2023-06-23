@@ -1,4 +1,4 @@
-#include "EditorAsset/Public/MeshImporter.h"
+#include "Functions/Public/MeshImporter.h"
 #include "Core/Public/macro.h"
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_STB_IMAGE_WRITE
@@ -285,6 +285,6 @@ bool MeshImporter::Save() {
 		r |= AMeshAsset::ExportPrimitiveFile(binaryFile.c_str(), primitive.Vertices, primitive.Indices, EMeshCompressMode::NONE);
 		primitive.BinaryFile.swap(binaryFile);
 	}
-	r |= AssetLoader::SaveProjectAsset(m_SaveFile.c_str(), m_Asset);
+	r |= AssetLoader::SaveProjectAsset(m_Asset, m_SaveFile.c_str());
 	return r;
 }

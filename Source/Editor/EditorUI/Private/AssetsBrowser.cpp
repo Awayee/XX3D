@@ -1,25 +1,24 @@
-#include "AssetsWindow.h"
-#include "Context/Public/EditorContext.h"
+#include "AssetsBrowser.h"
 
 namespace Editor {
 
-	inline AssetManager* Browser() { return Context()->GetAssetBrowser(); }
+	inline AssetManager* Browser() { return ProjectAssetMgr::Instance(); }
 
-	TVector<AssetsWindow*> AssetsWindow::s_Instances;
+	TVector<AssetsBrowser*> AssetsBrowser::s_Instances;
 
-	void AssetsWindow::OnFolderRebuildAllWindows(const FolderNode* node) {
-		for(AssetsWindow* wnd: s_Instances) {
+	void AssetsBrowser::OnFolderRebuildAllWindows(const FolderNode* node) {
+		for(AssetsBrowser* wnd: s_Instances) {
 			wnd->OnFolderRebuild(node);
 		}
 	}
 
-	void AssetsWindow::OnFolderRebuild(const FolderNode* node) {
+	void AssetsBrowser::OnFolderRebuild(const FolderNode* node) {
 		if(m_CurrentFolder && node->Contains(m_CurrentFolder->GetID())) {
 			RefreshItems();
 		}
 	}
 
-	void AssetsWindow::RefreshItems() {
+	void AssetsBrowser::RefreshItems() {
 		if(!m_CurrentFolder) {
 			return;
 		}
@@ -39,20 +38,23 @@ namespace Editor {
 		}
 	}
 
-	AssetsWindow::AssetsWindow() : EditorWindowBase("Assets") {
+	AssetsBrowser::AssetsBrowser() : EditorWndBase("Assets") {
 		if(s_Instances.Empty()) {
-			Browser()->RegisterFolderRebuildEvent(AssetsWindow::OnFolderRebuildAllWindows);
+			Browser()->RegisterFolderRebuildEvent(AssetsBrowser::OnFolderRebuildAllWindows);
 		}
 		s_Instances.PushBack(this);
 		m_CurrentFolder = Browser()->GetRoot();
 		RefreshItems();
 	}
 
-	AssetsWindow::~AssetsWindow() {
+	AssetsBrowser::~AssetsBrowser() {
 		s_Instances.SwapRemove(this);
 	}
 
-	void AssetsWindow::OnWindow() {
+	void AssetsBrowser::Update() {
+	}
+
+	void AssetsBrowser::Display() {
 		if(m_CurrentFolder != Browser()->GetRoot()) {
 			if(ImGui::ArrowButton("Back", ImGuiDir_Left)) {
 				m_CurrentFolder = Browser()->GetFolder(m_CurrentFolder->ParentFolder());
@@ -64,6 +66,7 @@ namespace Editor {
 			ImGui::ArrowButton("Back", ImGuiDir_Left);
 		}
 
+		ImGui::BeginChild("Assets");
 		for(uint32 i=0; i< m_Contents.Size(); ++i) {
 			auto& item = m_Contents[i];
 			if (ImGui::Selectable(item->Name().c_str(), m_SelectedItem == i, ImGuiSelectableFlags_AllowDoubleClick)) {
@@ -82,6 +85,11 @@ namespace Editor {
 
 				}
 			}
+		}
+		ImGui::EndChild();
+
+		if(ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+
 		}
 	}
 }

@@ -3,6 +3,7 @@
 #include "Core/Public/macro.h"
 #include "Core/Public/TypeDefine.h"
 #include "Core/Public/BaseStructs.h"
+#include "Core/Public/TRefRange.h"
 
 namespace Engine{
 	class RWindowHandle {

@@ -104,14 +104,13 @@ namespace Engine{
 		void RecordBegin() override {};
 		void RecordEnd() override {};
 
-		RRenderPass* CreateRenderPass(uint32 attachmentCount, const RSAttachment* pAttachments,
-			uint32 subpassCount, const RSubPassInfo* pSubpasses,
-			uint32 dependencyCount, const RSubpassDependency* pDependencies) override;
-		RRenderPass* CreateRenderPass(uint32 colorAttachmentCount, const RSAttachment* pColorAttachments, const RSAttachment* depthAttachment) override;
+		RRenderPass* CreateRenderPass(CRefRange<RSAttachment> attachments, CRefRange<RSubPassInfo> subpasses, CRefRange<RSubpassDependency> dependencies) override;
+		RRenderPass* CreateRenderPass(CRefRange<RSAttachment> colorAttachments, const RSAttachment* depthAttachment) override;
+
 		void DestroyRenderPass(RRenderPass* pass) override;
 
 		// descriptor set
-		RDescriptorSetLayout* CreateDescriptorSetLayout(uint32 bindingCount, const RSDescriptorSetLayoutBinding* bindings)override;
+		RDescriptorSetLayout* CreateDescriptorSetLayout(CRefRange<RSDescriptorSetLayoutBinding> bindings) override;
 		void DestroyDescriptorSetLayout(RDescriptorSetLayout* descriptorSetLayout) override;
 		RDescriptorSet* AllocateDescriptorSet(const RDescriptorSetLayout* layout) override;
 		//void AllocateDescriptorSets(uint32 count, const RDescriptorSetLayout* const* layouts, RDescriptorSet* const* descriptorSets)override;
@@ -119,7 +118,7 @@ namespace Engine{
 		void FreeDescriptorSet(RDescriptorSet* descriptorSet) override;
 
 		// pipeline
-		RPipelineLayout* CreatePipelineLayout(uint32 setLayoutCount, const RDescriptorSetLayout* const* pSetLayouts, uint32 pushConstantRangeCount, const RSPushConstantRange* pPushConstantRanges)override;
+		RPipelineLayout* CreatePipelineLayout(CRefRange<RDescriptorSetLayout*> layouts, CRefRange<RSPushConstantRange> pushConstants) override;
 		void DestroyPipelineLayout(RPipelineLayout* pipelineLayout) override;
 		RPipeline* CreateGraphicsPipeline(const RGraphicsPipelineCreateInfo& createInfo, RPipelineLayout* layout, RRenderPass* renderPass, uint32 subpass,
 			RPipeline* basePipeline, int32_t basePipelineIndex) override;
@@ -127,14 +126,10 @@ namespace Engine{
 		void DestroyPipeline(RPipeline* pipeline) override;
 
 		// command buffer
-		void QueueSubmit(RQueue* queue,
-			uint32 cmdCount, RCommandBuffer* cmds,
-			uint32 waitSemaphoreCount, RSemaphore* waitSemaphores, RPipelineStageFlags* waitStageFlags,
-			uint32 signalSemaphoreCount, RSemaphore* signalSemaphores,
-			RFence* fence) override;
+		void QueueSubmit(RQueue* queue, CRefRange<RCommandBuffer*> cmds, CRefRange<RSemaphore*> waitSemaphores, CRefRange<RPipelineStageFlags> waitStageFlags, CRefRange<RSemaphore*> signalSemaphores, RFence* fence) override;
 		void QueueWaitIdle(RQueue* queue)override;
 		void WaitGraphicsQueue() override;
-		RFramebuffer* CreateFrameBuffer(RRenderPass* pass, uint32 attachmentCount, const RImageView* const* pAttachments, uint32 width, uint32 height, uint32 layers) override;
+		RFramebuffer* CreateFrameBuffer(RRenderPass* pass, CRefRange<RImageView*> attachments, uint32 width, uint32 height, uint32 layers) override;
 		void DestroyFramebuffer(RFramebuffer* framebuffer) override;
 		RCommandBuffer* AllocateCommandBuffer(RCommandBufferLevel level)override;
 		void FreeCommandBuffer(RCommandBuffer* cmd) override;

@@ -156,6 +156,7 @@ bool SPVCompiler::CompileSingleEntry(const wchar_t* hlslFile, const wchar_t* ent
 
 bool SPVCompiler::CompileHLSL(const char* hlslFile) {
 	PARSE_SHADER_PATH(hlslFile);
+	printf("[ShaderCompile] Compiling Shader: %s\n", hlslFile);
 	std::filesystem::path hlslPath(hlslFile);
 
 	// out vs

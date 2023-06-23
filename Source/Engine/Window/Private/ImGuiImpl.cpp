@@ -16,9 +16,14 @@ namespace Engine {
 
 	// check ImGui::NewFrame() is called before Draw
 	static bool s_FrameFlag{ false };
+	static ImGuiContext* s_ImGuiContext{ nullptr };
+
 
 	void ImGuiInitialize(Engine::RRenderPass* pass, uint32 subpass)
 	{
+		IMGUI_CHECKVERSION();
+		s_ImGuiContext = ImGui::CreateContext();
+
 		BRANCH_VULKAN
 		Engine::RHIVulkan* vkRHI = reinterpret_cast<Engine::RHIVulkan*>(RHI::Instance());
 		Engine::RSVkImGuiInitInfo initInfo = vkRHI->GetImGuiInitInfo();
@@ -36,14 +41,19 @@ namespace Engine {
 		imGuiInit.MinImageCount = 3;
 		imGuiInit.ImageCount = 3;
 		ASSERT(ImGui_ImplVulkan_Init(&imGuiInit, reinterpret_cast<Engine::RRenderPassVk*>(pass)->handle), "Failed to init imgui!");
+
 		BRANCH_END
 	}
 	void ImGuiRelease()
 	{
+		if(!s_ImGuiContext) {
+			return;
+		}
 		BRANCH_VULKAN
 		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
 		BRANCH_END
+		ImGui::DestroyContext(s_ImGuiContext); // todo solve
 	}
 	void ImGuiRenderDrawData(Engine::RCommandBuffer* cmd) {
 		if(!s_FrameFlag) {

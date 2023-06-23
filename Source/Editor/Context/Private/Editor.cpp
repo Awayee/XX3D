@@ -1,39 +1,59 @@
 #include "Context/Public/Editor.h"
-#include "Context/Public/EditorContext.h"
 #include "Asset/Public/AssetLoader.h"
 #include "Objects/Public/EngineContext.h"
+#include "Resource/Public/Config.h"
+#include "EditorUI/Public/UIMgr.h"
+#include "Functions/Public/AssetManager.h"
+#include "Functions/Public/EditorLevelMgr.h"
+#include "Functions/Public/EditorTimer.h"
 
 
 namespace Editor {
+	void ImGuiConfig() {
+		// imgui
+		float scaleX, scaleY;
+		Engine::Context()->Window()->GetWindowContentScale(&scaleX, &scaleY);
+		float contentScale = fmaxf(1.0f, fmaxf(scaleX, scaleY));
+
+		// load font for imgui
+		ImGuiIO& io = ImGui::GetIO();
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+		io.ConfigWindowsMoveFromTitleBarOnly = true;
+
+		File::FPath fontPath = AssetLoader::AssetPath();
+		fontPath.append(Engine::GetConfig().DefaultFontPath);
+
+		io.Fonts->AddFontFromFileTTF(fontPath.string().c_str(), contentScale * 16, nullptr, nullptr);
+		ASSERT(io.Fonts->Build(), "Failed to build fonts");
+		//io.IniFilename = nullptr; // Do not save settings
+
+	}
 	
 	XXEditor::XXEditor(Engine::XXEngine* engine){
 		m_Engine = engine;
-		Editor::Context()->m_AssetBrowser.reset(new AssetManager(PROJECT_ASSETS));
-
-		Editor::Context()->m_SceneMgr.reset(new EditorSceneManager);
-		auto scene = Editor::Context()->m_SceneMgr->NewScene();
-		Editor::Context()->m_SceneMgr->SetDefaultScene(scene);
-
-		m_EditorUI.reset(new UIMgr());
-		Engine::Context()->Renderer()->InitUIPass();
-		Engine::Context()->Renderer()->SetEnable(true);
-		Editor::Context()->m_Timer.reset(new Engine::CTimer);
+		Engine::Context()->Renderer()->InitUIPass(ImGuiConfig);
+		Editor::EditorTimer::Initialize();
+		EngineAssetMgr::Initialize();
+		ProjectAssetMgr::Initialize();
+		UIMgr::Initialize();
+		EditorLevelMgr::Initialize();
 	}
 
 	XXEditor::~XXEditor() {
-		Editor::Context()->m_Timer.reset();
-		Editor::Context()->m_AssetBrowser.reset();
-		Editor::Context()->m_SceneMgr.reset();
+		Editor::EditorTimer::Release();
+		EngineAssetMgr::Release();
+		ProjectAssetMgr::Release();
+		UIMgr::Release();
+		EditorLevelMgr::Release();
 	}
 
 	void XXEditor::EditorRun(){
-		while(true) {
-			if(!m_Engine->Tick()) {
+
+		while (true) {
+			UIMgr::Instance()->Tick();
+			if (!m_Engine->Tick()) {
 				return;
 			}
-			// use ui data on pre-frame
-			m_EditorUI->Tick();
-			Editor::Context()->Timer()->Tick();
 		}
 	}
 }

@@ -1,6 +1,6 @@
 #pragma once
 #include "Window/Public/Wnd.h"
-#include "Render/Public/RenderSystem.h"
+#include "Render/Public/Renderer.h"
 #include "Core/Public/Time.h"
 #include "Core/Public/SmartPointer.h"
 

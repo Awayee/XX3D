@@ -1,13 +1,14 @@
 #pragma once
-#include "EditorAsset/Public/AssetManager.h"
+#include "Functions/Public/AssetManager.h"
 #include "Core/Public/File.h"
 #include "Asset/Public/MeshAsset.h"
 #include "Core/Public/SmartPointer.h"
 #include "Asset/Public/TextureAsset.h"
 #include "Asset/Public/LevelAsset.h"
+#include "EditorUI/Public/EditorWindow.h"
 
 namespace Editor {
-
+#pragma region AssetView
 	class AssetViewBase {
 	protected:
 		NodeID m_ID;
@@ -21,7 +22,6 @@ namespace Editor {
 
 		virtual bool IsFolder() = 0;
 		virtual void Open() = 0;
-		virtual void Close() = 0;
 		virtual void Save() = 0;
 	};
 
@@ -32,7 +32,6 @@ namespace Editor {
 		FolderAssetView(FolderNode* node);
 		bool IsFolder() override;
 		void Open() override;
-		void Close() override;
 		void Save() override;
 	};
 
@@ -43,7 +42,6 @@ namespace Editor {
 		FileAssetView(FileNode* node);
 		bool IsFolder() override;
 		virtual void Open() override {}
-		virtual void Close() override {}
 		virtual void Save() override {}
 	};
 
@@ -62,21 +60,19 @@ namespace Editor {
 	public:
 		MeshAssetView(FileNode* node) : FileAssetViewTemplate<AMeshAsset>(node) {}
 		void Open() override;
-		void Close() override;
 	};
 
 	class TextureAssetView: public FileAssetViewTemplate<ATextureAsset> {
 	public:
 		TextureAssetView(FileNode* node) : FileAssetViewTemplate<ATextureAsset>(node) {}
-		void Open() override {}
-		void Close() override {}
+		void Open() override;
 	};
 
 	class LevelAssetView: public FileAssetViewTemplate<ALevelAsset> {
 	public:
 		LevelAssetView(FileNode* node) : FileAssetViewTemplate<ALevelAsset>(node) {}
-		void Open() override {}
-		void Close() override {}
+		void Open() override;
+		void Save() override;
 	};
 
 
@@ -100,4 +96,11 @@ namespace Editor {
 		}
 		return MakeUniquePtr<FileAssetView>(node);
 	}
+
+#pragma endregion
+
+	//
+	class AssetViewer : public EditorWndBase {
+		
+	};
 }

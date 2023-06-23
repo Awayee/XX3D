@@ -87,6 +87,7 @@ namespace Engine {
 		m_Data.WindowSize.w = UINT32_CAST(std::atoi(configMap["WindowWidth"].c_str()));
 		m_Data.WindowSize.h = UINT32_CAST(std::atoi(configMap["WindowHeight"].c_str()));
 		m_Data.MSAASampleCount = UINT8_CAST(std::atoi(configMap["MSAA"].c_str()));
+		m_Data.StartLevel = configMap["StartLevel"];
 	}
 
 	const ConfigData& GetConfig() {

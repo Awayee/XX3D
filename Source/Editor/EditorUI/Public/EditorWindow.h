@@ -1,41 +1,30 @@
 #pragma once
-#include "EditorUI.h"
+#include "Widget.h"
+#include "Core/Public/Func.h"
 
 namespace Editor {
-	class FPSWindow :public EditorWindowBase {
+
+	class EditorWndBase: public WidgetBase {
+		friend class UIMgr;
+	protected:
+		bool m_Enable{ true };
+		const char* m_Name = "Unknown";
+		ImGuiWindowFlags m_Flags = ImGuiWindowFlags_None;
+	protected:
+		virtual void Update() = 0;
+		virtual void Display() = 0;
 	public:
-		FPSWindow() : EditorWindowBase("FPS") {};
-	private:
-		void OnWindow() override;
+		EditorWndBase(const char* name, ImGuiWindowFlags flags = ImGuiWindowFlags_None);
+		virtual ~EditorWndBase();
 	};
 
-	class ObjectsWindow : public EditorWindowBase {
+	class EditorFuncWnd: public EditorWndBase {
+	private:
+		Func<void()> m_Func;
 	public:
-		ObjectsWindow() : EditorWindowBase("Objects") {}
-	private:
-		void OnWindow() override;
-	};
-
-	class DetailWindow : public EditorWindowBase {
-	public:
-		DetailWindow() : EditorWindowBase("Details") {}
-	private:
-		void OnWindow() override;
-	};
-
-	class ViewportWindow : public EditorWindowBase {
-	private:
-		bool m_MouseDown{ false };
-		URect m_Viewport{ 0,0,0,0 };
-		float m_LastX = 0.0f;
-		float m_LastY = 0.0f;
-		bool  m_ViewportShow{ false };
-	public:
-		ViewportWindow() : EditorWindowBase("Viewport", ImGuiWindowFlags_NoBackground) {}
-	private:
-		void CameraControl();
+		EditorFuncWnd(const char* name, const Func<void()>& func, ImGuiWindowFlags flags = ImGuiWindowFlags_None);
 		void Update() override;
-		void OnWindow() override;
+		void Display() override;
 	};
 }
 	

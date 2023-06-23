@@ -1,4 +1,4 @@
-#include "EditorAsset/Public/TextureImporter.h"
+#include "Functions/Public/TextureImporter.h"
 #include "Core/Public/macro.h"
 #include "Asset/Public/AssetLoader.h"
 #define STB_IMAGE_IMPLEMENTATION
@@ -23,5 +23,5 @@ bool TextureImporter::Import(const char* fullPath) {
 }
 
 bool TextureImporter::Save() {
-	return AssetLoader::SaveProjectAsset(m_SaveFile.c_str(), m_Asset);
+	return AssetLoader::SaveProjectAsset(m_Asset, m_SaveFile.c_str());
 }

@@ -24,7 +24,7 @@ namespace Engine {
 
 	class RenderScene {
 	private:
-		friend class RenderSystem;
+		friend class Renderer;
 		TVector<RenderObject*> m_RenderObjects; // all render objects
 		TUniquePtr<DirectionalLight> m_DirectionalLight;
 		TUniquePtr<Camera> m_Camera;

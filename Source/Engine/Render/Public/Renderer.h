@@ -13,7 +13,7 @@ namespace Engine {
 		PASS_COUNT,
 	};
 
-	class RenderSystem {
+	class Renderer {
 	private:
 		bool m_Enable{ false };
 		//Render Passes
@@ -31,12 +31,11 @@ namespace Engine {
 		bool m_RenderAreaDirty{ false };
 
 	public:
-		RenderSystem() = default;
-		RenderSystem(Engine::Wnd* window);
-		~RenderSystem();
-		void SetEnable(bool enable);
+		Renderer() = default;
+		Renderer(Engine::Wnd* window);
+		~Renderer();
 		void Tick();
-		void InitUIPass() const;
+		void InitUIPass(void(*InitializeFunc)());
 		void SetRenderArea(const URect& area);
 
 	private:

@@ -4,14 +4,14 @@
 
 // a simple array just contains data
 template<typename T>
-class TArray {
+class TempArray {
 private:
 	T* data;
 public:
-	TArray(unsigned int size) {
+	TempArray(unsigned int size) {
 		data = new T[size];
 	}
-	~TArray() {
+	~TempArray() {
 		delete[] data;
 	}
 	T& operator[](unsigned int i) {
@@ -31,27 +31,27 @@ public:
 
 
 
-#define _TArrayFree if(data) delete[] data
-#define _TArrayAllocate data = new T[size]
 
 // an array with more info
 // can be replaced by TVector
 template<typename T>
-class TArray2 {
+class TArray {
 private:
 	unsigned int size;
 	T* data;
+#define _TArrayFree if(data) delete[] data
+#define _TArrayAllocate data = new T[size]
 public:
-	TArray2() {
+	TArray() {
 		data = nullptr;
 		size = 0;
 	}
-	TArray2(const TArray2<T>& other) {
+	TArray(const TArray<T>& other) {
 		if (this != &other) {
-			_TArrayFree();
+			_TArrayFree;
 			size = other.size;
 			if (size > 0) {
-				_TArrayAllocate();
+				_TArrayAllocate;
 				memcpy(data, other.data, sizeof(T) * size);
 			}
 			else {
@@ -59,37 +59,37 @@ public:
 			}
 		}
 	}
-	TArray2(TArray2<T>&& other) {
+	TArray(TArray<T>&& other) {
 		data = other.data;
 		size = other.size;
 		other.data = nullptr;
 		other.size = 0u;
 	}
 
-	TArray2(unsigned int l) {
+	TArray(unsigned int l) {
 		size = l;
-		_TArrayAllocate();
+		_TArrayAllocate;
 	}
 
-	TArray2(std::initializer_list<T> p) {
+	TArray(std::initializer_list<T> p) {
 		size = p.size();
-		_TArrayAllocate();
+		_TArrayAllocate;
 		auto begin = p.begin();
 		for (unsigned int i = 0; i < size; i++) {
 			data[i] = *(begin + i);
 		}
 	}
-	TArray2(T* other, unsigned int l) {
+	TArray(T* other, unsigned int l) {
 		size = l;
 		if (size > 0) {
-			_TArrayAllocate();
+			_TArrayAllocate;
 			memcpy(data, other, sizeof(T) * size);
 		}
 		else {
 			data = nullptr;
 		}
 	}
-	~TArray2() {
+	~TArray() {
 		Clear();
 	}
 
@@ -103,12 +103,12 @@ public:
 
 	void Clear() {
 		if (data != nullptr) {
-			_TArrayFree();
+			_TArrayFree;
 		}
 		size = 0;
 	}
 
-	void Swap(TArray2<T>& other) {
+	void Swap(TArray<T>& other) {
 		T* tempData = data;
 		unsigned int tempSize = size;
 		data = other.data;
@@ -135,25 +135,25 @@ public:
 
 	void Resize(unsigned int l) {
 		if (size != l) {
-			_TArrayFree();
+			_TArrayFree;
 
 			size = l;
 			if (l == 0) {
 				data = nullptr;
 			}
 			else {
-				_TArrayAllocate();
+				_TArrayAllocate;
 
 			}
 		}
 	}
 
-	TArray2<T>& operator=(const TArray2<T>& other) {
+	TArray<T>& operator=(const TArray<T>& other) {
 		if (this != &other) {
-			_TArrayFree();
+			_TArrayFree;
 			size = other.size;
 			if (size > 0) {
-				_TArrayAllocate();
+				_TArrayAllocate;
 				memcpy(data, other.data, sizeof(T) * size);
 			}
 			else {

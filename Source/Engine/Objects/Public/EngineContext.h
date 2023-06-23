@@ -7,16 +7,16 @@ namespace Engine {
 
 namespace Engine {
 
-	class RenderSystem;
+	class Renderer;
 
 	class EngineContext {
 	private:
 		friend class XXEngine;
 		Engine::Wnd* m_Window;
-		TUniquePtr<RenderSystem> m_Renderer;
+		TUniquePtr<Renderer> m_Renderer;
 	public:
 		Engine::Wnd* Window() { return m_Window; }
-		RenderSystem* Renderer() { return m_Renderer.get(); }
+		Renderer* Renderer() { return m_Renderer.get(); }
 	};
 
 	EngineContext* Context();

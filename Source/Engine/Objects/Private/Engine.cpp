@@ -32,8 +32,7 @@ namespace Engine {
 			RHI::Instance()->Initialize(&rhiInfo);
 		}
 		// init renderer
-		context->m_Renderer.reset(new RenderSystem(context->Window()));
-		context->m_Renderer->SetEnable(true);
+		context->m_Renderer.reset(new Renderer(context->Window()));
 		PRINT("Engine Initialized.");
 	}
 	XXEngine::~XXEngine() {
@@ -45,7 +44,6 @@ namespace Engine {
 
 	bool XXEngine::Tick() {
 		if(Context()->Window()->ShouldClose()) {
-			Context()->Renderer()->SetEnable(false);
 			return false;
 		}
 

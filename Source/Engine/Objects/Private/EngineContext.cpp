@@ -1,6 +1,6 @@
 #include "Objects/Public/EngineContext.h"
 #include "Window/Public/Wnd.h"
-#include "Render/Public/RenderSystem.h"
+#include "Render/Public/Renderer.h"
 
 namespace Engine {
 

@@ -36,8 +36,6 @@ template<typename T> T* TSingleton<T>::s_Instance{ nullptr };
 template<typename T> Mutex TSingleton<T>::s_Mutex{};
 
 
-
-
 //template<typename T>
 //class TStaticContainer {
 //private:

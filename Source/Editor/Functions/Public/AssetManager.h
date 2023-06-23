@@ -1,10 +1,12 @@
 #pragma once
+#include "AssetManager.h"
 #include "Core/Public/String.h"
 #include "Core/Public/SmartPointer.h"
 #include "Core/Public/Typedefine.h"
 #include "Core/Public/File.h"
+#include "Core/Public/Func.h"
+#include "Core/Public/TSingleton.h"
 #include "Asset/Public/AssetLoader.h"
-#include <functional>
 
 namespace Editor {
 
@@ -22,9 +24,9 @@ namespace Editor {
 		friend class AssetManager;
 	public:
 		PathNode(const File::FPath& path, NodeID id, NodeID parent);
-		const File::FPath& GetPath() const { return m_Path; }
-		NodeID GetID() const { return m_ID; }
-		NodeID ParentFolder() const { return m_ParentID; }
+		_NODISCARD const File::FPath& GetPath() const { return m_Path; }
+		_NODISCARD NodeID GetID() const { return m_ID; }
+		_NODISCARD NodeID ParentFolder() const { return m_ParentID; }
 	};
 
 	//folder
@@ -35,9 +37,9 @@ namespace Editor {
 		friend class AssetManager;
 	public:
 		FolderNode(const File::FPath& path, NodeID id, NodeID parent) : PathNode(path, id, parent) {}
-		const TVector<NodeID>& GetChildFolders() const { return m_Folders; }
-		const TVector<NodeID>& GetChildFiles() const { return m_Files; }
-		bool Contains(NodeID node)const;
+		_NODISCARD const TVector<NodeID>& GetChildFolders() const { return m_Folders; }
+		_NODISCARD const TVector<NodeID>& GetChildFiles() const { return m_Files; }
+		_NODISCARD bool Contains(NodeID node)const;
 	};
 
 	//file
@@ -52,7 +54,7 @@ namespace Editor {
 			T* asset = dynamic_cast<T*>(m_Asset.get());
 			if(!asset) {
 				m_Asset.reset(new T);
-				AssetLoader::LoadProjectAsset(m_Path.string().c_str(), m_Asset.get());
+				AssetLoader::LoadProjectAsset(m_Asset.get(), m_Path.string().c_str());
 				asset = dynamic_cast<T*>(m_Asset.get());
 			}
 			return asset;
@@ -72,15 +74,28 @@ namespace Editor {
 		NodeID InsertFile(const File::FPath& path, NodeID parent);
 		void RemoveFile(NodeID id);
 		void RemoveFolder(NodeID id);
-		NodeID BuildFolder(const File::FPath& path, NodeID parent);
+		NodeID BuildFolderRecursively(const File::FPath& path, NodeID parent);
 	public:
 		AssetManager(const char* rootPath);
 		void BuildTree();
 		FileNode* GetFile(NodeID id);
+		FileNode* GetFile(const File::FPath& path);
 		FolderNode* GetFolder(NodeID id);
 		FolderNode* GetRoot();
 
 		void RegisterFolderRebuildEvent(void (*event)(const FolderNode*)) {m_OnFolderRebuild = event;}
+	};
+
+
+	class EngineAssetMgr: public TSingleton<EngineAssetMgr>, public AssetManager {
+	private:
+		friend TSingleton<EngineAssetMgr>;
+		EngineAssetMgr(): AssetManager(ENGINE_ASSETS){}
+	};
+	class ProjectAssetMgr: public TSingleton<ProjectAssetMgr>, public AssetManager {
+	private:
+		friend TSingleton<ProjectAssetMgr>;
+		ProjectAssetMgr(): AssetManager(PROJECT_ASSETS){}
 	};
 
 }

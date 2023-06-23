@@ -1,4 +1,5 @@
 #include "AssetView.h"
+#include "Functions/Public/EditorLevelMgr.h"
 
 namespace Editor {
 	FolderAssetView::FolderAssetView(FolderNode* node): m_Node(node) {
@@ -11,9 +12,6 @@ namespace Editor {
 	}
 
 	void FolderAssetView::Open() {
-	}
-
-	void FolderAssetView::Close() {
 	}
 
 	void FolderAssetView::Save() {
@@ -33,7 +31,14 @@ namespace Editor {
 		LOG("You opened a mesh asset.");
 	}
 
-	void MeshAssetView::Close() {
-		LOG("You closed a mesh asset.");
+	void TextureAssetView::Open() {
+	}
+
+	void LevelAssetView::Open() {
+		EditorLevelMgr::Instance()->LoadLevel(m_Asset, m_Node->GetPath());
+
+	}
+
+	void LevelAssetView::Save() {
 	}
 }

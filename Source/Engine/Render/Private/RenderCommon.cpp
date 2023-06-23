@@ -17,16 +17,16 @@ namespace Engine {
 		TVector<Engine::RSDescriptorSetLayoutBinding> sceneDescBindings;
 		sceneDescBindings.PushBack({ Engine::DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, Engine::SHADER_STAGE_FRAGMENT_BIT | Engine::SHADER_STAGE_VERTEX_BIT });
 		sceneDescBindings.PushBack({ Engine::DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, Engine::SHADER_STAGE_FRAGMENT_BIT | Engine::SHADER_STAGE_VERTEX_BIT });
-		m_Layouts[DESCS_SCENE] = rhi->CreateDescriptorSetLayout(sceneDescBindings.Size(), sceneDescBindings.Data());
+		m_Layouts[DESCS_SCENE] = rhi->CreateDescriptorSetLayout(sceneDescBindings);
 		// world transform
 		TVector<Engine::RSDescriptorSetLayoutBinding> modelDescBindings;
 		modelDescBindings.PushBack({ Engine::DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, Engine::SHADER_STAGE_VERTEX_BIT });
-		m_Layouts[DESCS_MODEL] = rhi->CreateDescriptorSetLayout(modelDescBindings.Size(), modelDescBindings.Data());
+		m_Layouts[DESCS_MODEL] = rhi->CreateDescriptorSetLayout(modelDescBindings);
 		// material
 		TVector<Engine::RSDescriptorSetLayoutBinding> materialDescBindings;
 		materialDescBindings.PushBack({ Engine::DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1, Engine::SHADER_STAGE_FRAGMENT_BIT });
 		materialDescBindings.PushBack({ Engine::DESCRIPTOR_TYPE_SAMPLER, 1, Engine::SHADER_STAGE_FRAGMENT_BIT });
-		m_Layouts[DESCS_MATERIAL] = rhi->CreateDescriptorSetLayout(materialDescBindings.Size(), materialDescBindings.Data());
+		m_Layouts[DESCS_MATERIAL] = rhi->CreateDescriptorSetLayout(materialDescBindings);
 		// deferred lighting
 		TVector<Engine::RSDescriptorSetLayoutBinding> deferredLightingBindings;
 		deferredLightingBindings.PushBack({ Engine::DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, Engine::SHADER_STAGE_FRAGMENT_BIT });// camera
@@ -34,7 +34,7 @@ namespace Engine {
 		deferredLightingBindings.PushBack({ Engine::DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, Engine::SHADER_STAGE_FRAGMENT_BIT });//normal
 		deferredLightingBindings.PushBack({ Engine::DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, Engine::SHADER_STAGE_FRAGMENT_BIT });//albedo
 		deferredLightingBindings.PushBack({ Engine::DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, Engine::SHADER_STAGE_FRAGMENT_BIT });// depth
-		m_Layouts[DESCS_DEFERRED_LIGHTING] = rhi->CreateDescriptorSetLayout(deferredLightingBindings.Size(), deferredLightingBindings.Data());
+		m_Layouts[DESCS_DEFERRED_LIGHTING] = rhi->CreateDescriptorSetLayout(deferredLightingBindings);
 	}
 
 	DescsMgr::~DescsMgr()
@@ -133,7 +133,7 @@ namespace Engine {
 		}
 		TextureCommon& tex = m_TextureMap.insert({ file, {} }).first->second;
 		ATextureAsset imageAsset;
-		if(!AssetLoader::LoadProjectAsset(file, &imageAsset)){
+		if(!AssetLoader::LoadProjectAsset(&imageAsset, file)){
 			return &m_DefaultTextures[GRAY];
 		}
 		tex.Create(FORMAT, imageAsset.Width, imageAsset.Height, USAGE);
@@ -260,9 +260,7 @@ namespace Engine {
 		dependencies[1].DstAccess = Engine::ACCESS_SHADER_READ_BIT | Engine::ACCESS_COLOR_ATTACHMENT_READ_BIT;
 		dependencies[1].DependencyFlags = Engine::DEPENDENCY_BY_REGION_BIT;
 
-		m_RHIPass = rhi->CreateRenderPass(attachments.Size(), attachments.Data(),
-			subpasses.Size(), subpasses.Data(),
-			dependencies.Size(), dependencies.Data());
+		m_RHIPass = rhi->CreateRenderPass(attachments, subpasses, dependencies);
 
 		// create framebuffers
 		uint32 maxImageCount = rhi->GetSwapchainMaxImageCount();
@@ -273,7 +271,7 @@ namespace Engine {
 				attachments.PushBack(img.View);
 			}
 			attachments.PushBack(rhi->GetSwapchainImageView(i));
-			m_SwapchainFramebuffers[i] = rhi->CreateFrameBuffer(m_RHIPass, attachments.Size(), attachments.Data(), width, height, 1);
+			m_SwapchainFramebuffers[i] = rhi->CreateFrameBuffer(m_RHIPass, attachments, width, height, 1);
 		}
 		m_Framebuffer = m_SwapchainFramebuffers[0];
 	}
@@ -314,7 +312,7 @@ namespace Engine {
 		setLayouts.PushBack(DescsMgr::Get(DESCS_MODEL));
 		setLayouts.PushBack(DescsMgr::Get(DESCS_MATERIAL));
 		
-		m_Layout = rhi->CreatePipelineLayout(setLayouts.Size(), setLayouts.Data(), 0, nullptr);
+		m_Layout = rhi->CreatePipelineLayout(setLayouts, {});
 		// pipeline
 		// shader
 		TVector<int8> vertShaderCode;
@@ -350,7 +348,7 @@ namespace Engine {
 	{
 		GET_RHI(rhi);
 		TVector<Engine::RDescriptorSetLayout*> setLayouts{ DescsMgr::Get(DESCS_DEFERRED_LIGHTING) };
-		m_Layout = rhi->CreatePipelineLayout(setLayouts.Size(), setLayouts.Data(), 0, nullptr);
+		m_Layout = rhi->CreatePipelineLayout(setLayouts, {});
 		// shader
 		TVector<int8> vertShaderCode;
 		LoadShaderFile("DeferredLightingPBRMainVS.spv", vertShaderCode);
