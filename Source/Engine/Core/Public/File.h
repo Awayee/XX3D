@@ -13,7 +13,7 @@ namespace File {
 	typedef std::filesystem::directory_entry FPathEntry;
 	typedef std::filesystem::directory_iterator FPathIterator;
 	typedef std::filesystem::recursive_directory_iterator FPathRecursiveIterator;
-	typedef const char* CharPath;
+	typedef const char* PathStr;
 
 	void LoadFileCode(const char* file, TVector<char>& code);
 

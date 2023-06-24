@@ -5,42 +5,67 @@
 namespace Editor {
 
 	EditorLevelMgr::EditorLevelMgr() {
-		File::FPath startLevel = Engine::GetConfig().StartLevel;
+		File::FPath path = Engine::GetConfig().StartLevel;
 		ALevelAsset* asset;
-		if(File::Exist(startLevel)) {
-			auto node = ProjectAssetMgr::Instance()->GetFile(startLevel);
+		auto node = ProjectAssetMgr::Instance()->GetFile(path);
+		if(node) {
 			asset = node->GetAsset<ALevelAsset>();
+			LOG("Loaded start level: %s", path.string().c_str());
+			LoadLevel(asset, path);
 		}
 		else {
 			m_TempLevel.reset(new ALevelAsset);
 			asset = m_TempLevel.get();
+			LoadLevel(asset, "");
 		}
-		LoadLevel(asset, "");
 	}
 
 	EditorLevelMgr::~EditorLevelMgr() {
 	}
 
-	ALevelAsset* EditorLevelMgr::CurLevelAsset() {
+	void EditorLevelMgr::LoadLevel(ALevelAsset* asset, const File::FPath& path) {
+		m_LevelAsset = asset;
+		m_LevelPath = path;
+		m_Level.reset(new EditorLevel(*m_LevelAsset, Engine::RenderScene::GetDefaultScene()));
+	}
+
+	void EditorLevelMgr::SetLevelPath(File::PathStr path) {
+		m_LevelPath = path;
+	}
+
+	void EditorLevelMgr::ReloadLevel() {
+		FileNode* node = ProjectAssetMgr::Instance()->GetFile(m_LevelPath);
+		if(node) {
+			m_LevelAsset = node->GetAsset<ALevelAsset>();
+			m_Level.reset(new EditorLevel(*m_LevelAsset, Engine::RenderScene::GetDefaultScene()));
+		}
+		else {
+			m_Level.reset();
+		}
+	}
+
+	bool EditorLevelMgr::SaveLevel() {
+		if(m_LevelPath.empty()) {
+			return false;
+		}
+		m_Level->SaveAsset(m_LevelAsset);
+		AssetLoader::SaveProjectAsset(m_LevelAsset, m_LevelPath.string().c_str());
+		return true;
+	}
+
+	EditorLevel* EditorLevelMgr::GetLevel() {
+		return m_Level.get();
+	}
+
+	ALevelAsset* EditorLevelMgr::GetLevelAsset() {
 		return m_LevelAsset;
 	}
 
-	void EditorLevelMgr::SaveCurLevel() {
-		if(!m_LevelAsset) {
-			return;
-		}
-
-		if (m_LevelPath.empty()) {
-
-		}
-		else{
-			AssetLoader::SaveProjectAsset(m_LevelAsset, m_LevelPath.string().c_str());
-		}
+	void EditorLevelMgr::SetSelected(uint32 idx) {
+		m_SelectIndex = idx;
 	}
 
-	void EditorLevelMgr::LoadLevel(ALevelAsset* level, const File::FPath& path) {
-		m_LevelAsset = level;
-		m_LevelPath = path;
-		m_Level.reset(new Engine::Level(*m_LevelAsset, Engine::RenderScene::GetDefaultScene()));
+	uint32 EditorLevelMgr::GetSelected() {
+		return m_SelectIndex;
 	}
 }

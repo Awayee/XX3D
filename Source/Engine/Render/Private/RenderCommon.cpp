@@ -123,6 +123,18 @@ namespace Engine {
 		m_DefaultTextures[GRAY].Create(FORMAT, DEFAULT_SIZE, DEFAULT_SIZE, USAGE);
 		TVector<Math::UCVector4> grayColors(DEFAULT_SIZE * DEFAULT_SIZE, { 128,128,128,255 });
 		m_DefaultTextures[GRAY].UpdatePixels(grayColors.Data(), CHANNELS);
+
+		m_DefaultTextures[RED].Create(FORMAT, DEFAULT_SIZE, DEFAULT_SIZE, USAGE);
+		TVector<Math::UCVector4> redColors(DEFAULT_SIZE * DEFAULT_SIZE, { 128,0,0,255 });
+		m_DefaultTextures[RED].UpdatePixels(redColors.Data(), CHANNELS);
+
+		m_DefaultTextures[GREEN].Create(FORMAT, DEFAULT_SIZE, DEFAULT_SIZE, USAGE);
+		TVector<Math::UCVector4> greenColors(DEFAULT_SIZE * DEFAULT_SIZE, { 0,128,0,255 });
+		m_DefaultTextures[GREEN].UpdatePixels(greenColors.Data(), CHANNELS);
+
+		m_DefaultTextures[BLUE].Create(FORMAT, DEFAULT_SIZE, DEFAULT_SIZE, USAGE);
+		TVector<Math::UCVector4> blueColors(DEFAULT_SIZE * DEFAULT_SIZE, { 0,0,128,255 });
+		m_DefaultTextures[BLUE].UpdatePixels(blueColors.Data(), CHANNELS);
 	}
 
 	TextureCommon* TextureMgr::InstGetTexture(const char* file)

@@ -2,7 +2,9 @@
 #include "Asset/Public/AssetLoader.h"
 #include "Objects/Public/EngineContext.h"
 #include "Resource/Public/Config.h"
-#include "EditorUI/Public/UIMgr.h"
+
+#include "EditorUI/Public/UIController.h"
+#include "EditorUI/Public/EditorUIMgr.h"
 #include "Functions/Public/AssetManager.h"
 #include "Functions/Public/EditorLevelMgr.h"
 #include "Functions/Public/EditorTimer.h"
@@ -35,22 +37,25 @@ namespace Editor {
 		Editor::EditorTimer::Initialize();
 		EngineAssetMgr::Initialize();
 		ProjectAssetMgr::Initialize();
-		UIMgr::Initialize();
+		EditorUIMgr::Initialize();
 		EditorLevelMgr::Initialize();
+		m_UIController.reset(new UIController);
 	}
 
 	XXEditor::~XXEditor() {
+		Engine::RHI::Instance()->WaitGraphicsQueue();//wait last submitted commands
 		Editor::EditorTimer::Release();
 		EngineAssetMgr::Release();
 		ProjectAssetMgr::Release();
-		UIMgr::Release();
+		EditorUIMgr::Release();
 		EditorLevelMgr::Release();
 	}
 
 	void XXEditor::EditorRun(){
 
 		while (true) {
-			UIMgr::Instance()->Tick();
+			EditorTimer::Instance()->Tick();
+			EditorUIMgr::Instance()->Tick();
 			if (!m_Engine->Tick()) {
 				return;
 			}

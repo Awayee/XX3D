@@ -8,9 +8,9 @@
 
 namespace Editor {
 
-	class UIMgr: public TSingleton<UIMgr>{
+	class EditorUIMgr: public TSingleton<EditorUIMgr>{
 	private:
-		friend TSingleton<UIMgr>;
+		friend TSingleton<EditorUIMgr>;
 		struct MenuItem {
 			String Name;
 			Func<void()> Func;
@@ -21,13 +21,15 @@ namespace Editor {
 			TVector<MenuItem> Items;
 		};
 		TVector<MenuColumn> m_MenuBar;
-		TVector<TUniquePtr<EditorWndBase>> m_Windows;
-		UIMgr();
-		~UIMgr();
+		TVector<TUniquePtr<EditorWindowBase>> m_Windows;
+		EditorUIMgr();
+		~EditorUIMgr();
 	public:
 		void Tick();
 		void AddMenu(const char* barName, const char* name, Func<void()>&& func, bool* pToggle);
-		void AddWindow(const char* name, Func<void()>&& func, ImGuiWindowFlags flags=ImGuiWindowFlags_None);
-		void AddWindow(TUniquePtr<EditorWndBase>&& wnd);
+		EditorWindowBase* AddWindow(const char* name, Func<void()>&& func, ImGuiWindowFlags flags=ImGuiWindowFlags_None);
+		void AddWindow(TUniquePtr<EditorWindowBase>&& wnd);
+		void DeleteWindow(EditorWindowBase*& pWnd);
+		void RemoveWindow(WidgetID wndId);
 	};
 }

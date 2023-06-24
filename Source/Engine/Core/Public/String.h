@@ -3,9 +3,9 @@
 
 typedef std::string String;
 
-bool StartsWith(const char* str, const char* sign);
+bool StrStartsWith(const char* str, const char* sign);
 
-bool EndsWith(const char* str, const char* sign);
+bool StrEndsWith(const char* str, const char* sign);
 
 inline bool StrEqual(const char* s0, const char* s1) {
 	return strcmp(s0, s1) == 0;
@@ -21,4 +21,12 @@ String StringFormat(const char* str, T ...args) {
 template<typename T>
 inline String ToString(T val) {
 	return std::to_string(val);
+}
+
+inline void StrAppend(char* str0, const char* str1) {
+	std::strcat(str0, str1);
+}
+
+inline bool StrEmpty(const char* str) {
+	return nullptr == str || '\0' == *str;
 }

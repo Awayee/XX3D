@@ -1,14 +1,24 @@
 #include "Functions/Public/AssetManager.h"
 #include "Core/Public/File.h"
 #include "Core/Public/macro.h"
+#include "Functions/Public/TextureImporter.h"
+#include "Functions/Public/MeshImporter.h"
 
 namespace Editor {
 	
 	PathNode::PathNode(const File::FPath& path, NodeID id, NodeID parent):m_ID(id), m_ParentID(parent), m_Path(path) {
+		m_PathStr = m_Path.string();
+		std::replace(m_PathStr.begin(), m_PathStr.end(), '\\', '/');
 	}
 
 	bool FolderNode::Contains(NodeID id) const {
 		return m_ID < id;
+	}
+
+	void FileNode::Save() {
+		if(AssetLoader::SaveProjectAsset(m_Asset.get(), m_PathStr.c_str())) {
+			LOG("FileNode::Save %s", GetPathStr().c_str());
+		}
 	}
 
 	NodeID AssetManager::InsertFolder(const File::FPath& path, NodeID parent) {
@@ -107,23 +117,26 @@ namespace Editor {
 			if(!folder) {
 				break;
 			}
-			if(File::IsFolder(iter)) {
-				for(NodeID childID: folder->GetChildFolders()) {
-					if(iter == folder->GetPath().filename()) {
-						folder = GetFolder(childID);
-						break;
+			//foreach all files
+			if(iter.has_extension()) {
+				for (NodeID childID : folder->GetChildFiles()) {
+					FileNode* childFile = GetFile(childID);
+					if (childFile->GetPath().filename() == iter) {
+						return childFile;
 					}
 				}
 			}
 			else {
-				for(NodeID childID: folder->GetChildFiles()) {
-					if(iter==folder->GetPath().filename()) {
-						return GetFile(childID);
+				for (NodeID childID : folder->GetChildFolders()) {
+					FolderNode* childFolder = GetFolder(childID);
+					auto stem = childFolder->GetPath().stem();
+					if (stem == iter) {
+						folder = childFolder;
 					}
 				}
 			}
 		}
-		LOG("Could not find path: %s", path.string().c_str());
+		LOG("AssetManager::GetFile failed: %s", path.string().c_str());
 		return nullptr;
 	}
 
@@ -133,5 +146,20 @@ namespace Editor {
 
 	FolderNode* AssetManager::GetRoot() {
 		return GetFolder(m_Root);
+	}
+
+	void AssetManager::ImportAsset(const char* srcFile, const char* dstFile) {
+		if(StrEndsWith(srcFile, ".png")) {
+			ATextureAsset asset;
+			TextureImporter importer(&asset, dstFile);
+			importer.Import(srcFile);
+			importer.Save();
+		}
+		else if (StrEndsWith(srcFile, ".glb")) {
+			AMeshAsset asset;
+			MeshImporter importer(&asset, dstFile);
+			importer.Import(srcFile);
+			importer.Save();
+		}
 	}
 }

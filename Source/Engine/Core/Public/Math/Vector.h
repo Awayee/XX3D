@@ -17,6 +17,10 @@ namespace Math {
         Vector2(T _x, T _y) : x(_x), y(_y) {}
         explicit Vector2(T scaler) : x(scaler), y(scaler) {}
         explicit Vector2(T* r) : x(r[0]), y(r[1]) {}
+
+        T* Data() { return &x; }
+        const T* Data() const { return &x; }
+
         T operator[](int i) const;
         T& operator[](int i);
         bool operator==(const Vector2<T>& rhs) const { return (x == rhs.x && y == rhs.y); }
@@ -123,9 +127,13 @@ namespace Math {
         T y{ 0.0f };
     	T z{ 0.0f };
         Vector3() = default;
-        Vector3(T scalar) :x(scalar), y(scalar), z(scalar) {};
-        Vector3(T _x, T _y, T _z) :x(_x), y(_y), z(_z) {};
+        Vector3(T scalar) :x(scalar), y(scalar), z(scalar) {}
+        Vector3(T _x, T _y, T _z) :x(_x), y(_y), z(_z) {}
         explicit Vector3(const T* coords) : x{ coords[0] }, y{ coords[1] }, z{ coords[2] } {}
+
+        T* Data() { return &x; }
+        const T* Data() const { return &x; }
+
         T operator[](int i) const;
         T& operator[](int i);
         bool operator==(const Vector3<T>& rhs) const { return (x == rhs.x && y == rhs.y && z == rhs.z); }
@@ -223,6 +231,10 @@ namespace Math {
         Vector4(T _x, T _y, T _z, T _w) : x{ _x }, y{ _y }, z{ _z }, w{ _w } {}
         Vector4(const Vector3<T>& v3, T w_) : x{ v3.x }, y{ v3.y }, z{ v3.z }, w{ w_ } {}
         explicit Vector4(T* coords) : x{ coords[0] }, y{ coords[1] }, z{ coords[2] }, w{ coords[3] } {}
+
+        T* Data() { return &x; }
+        const T* Data() const { return &x; }
+
         T operator[](int i) const;
         T& operator[](int i);
         Vector4<T>& operator=(float scalar)

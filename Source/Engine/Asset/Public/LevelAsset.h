@@ -1,6 +1,7 @@
 #pragma once
 #include "AssetCommon.h"
 #include "Core/Public/Math/Vector.h"
+#include "Core/Public/Math/Quaternion.h"
 #include "Core/Public/Macro.h"
 
 struct ALevelAsset : AAssetBase {
@@ -9,7 +10,7 @@ struct ALevelAsset : AAssetBase {
 		String File;
 		Math::FVector3 Position;
 		Math::FVector3 Scale;
-		Math::FVector3 Euler;
+		Math::FVector3 Rotation;
 	};
 	TVector<MeshData> Meshes;
 

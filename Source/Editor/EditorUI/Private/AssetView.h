@@ -10,22 +10,21 @@
 namespace Editor {
 #pragma region AssetView
 	class AssetViewBase {
+		friend class WndAssetBrowser;
 	protected:
 		NodeID m_ID;
 		String m_Name;
 		String m_Icon;
 	public:
 		virtual ~AssetViewBase() {}
-		virtual NodeID ID() { return m_ID; }
-		virtual const String& Name() { return m_Name; }
-		virtual const String& Icon() { return m_Icon; }
 
 		virtual bool IsFolder() = 0;
 		virtual void Open() = 0;
 		virtual void Save() = 0;
+		virtual void OnDrag() = 0;
 	};
 
-	class FolderAssetView : public AssetViewBase {
+	class FolderAssetView final : public AssetViewBase {
 	private:
 		FolderNode* m_Node{ nullptr };
 	public:
@@ -33,6 +32,7 @@ namespace Editor {
 		bool IsFolder() override;
 		void Open() override;
 		void Save() override;
+		void OnDrag() override;
 	};
 
 	class FileAssetView : public AssetViewBase {
@@ -43,6 +43,7 @@ namespace Editor {
 		bool IsFolder() override;
 		virtual void Open() override {}
 		virtual void Save() override {}
+		virtual void OnDrag() override;
 	};
 
 	template<typename T>
@@ -100,7 +101,7 @@ namespace Editor {
 #pragma endregion
 
 	//
-	class AssetViewer : public EditorWndBase {
+	class AssetViewer : public EditorWindowBase {
 		
 	};
 }

@@ -24,7 +24,6 @@ namespace Engine {
 	Renderer::~Renderer()
 	{
 		// wait queue before disabled
-		RHI::Instance()->WaitGraphicsQueue();
 		ImGuiRelease();
 		RenderScene::Clear();
 		DescsMgr::Release();
@@ -141,6 +140,7 @@ namespace Engine {
 		if(m_RenderArea.w > 0 && m_RenderArea.h > 0) {
 			m_GBufferPipeline.reset(new GBufferPipeline(m_PresentPass.get(), DeferredLightingPass::SUBPASS_BASE, m_RenderArea));
 			m_DeferredLightingPipeline.reset(new DeferredLightingPipeline(m_PresentPass.get(), DeferredLightingPass::SUBPASS_DEFERRED_LIGHTING, m_RenderArea));
+			RenderScene::GetDefaultScene()->GetMainCamera()->SetAspect(m_RenderArea.w / (float)m_RenderArea.h);
 		}
 		else {
 			m_GBufferPipeline.reset();

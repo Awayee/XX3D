@@ -1,4 +1,4 @@
-#include "ViewportWindow.h"
+#include "WndViewport.h"
 
 #include "Objects/Public/EngineContext.h"
 #include "Render/Public/RenderScene.h"
@@ -47,9 +47,15 @@ namespace Editor {
 		camera->SetView(eye, at, tempUp);
 	}
 
-	void ViewportWindow::CameraControl() {
+	void WndViewport::CameraControl() {
+		if(!ImGui::IsWindowFocused()) {
+			return;
+		}
 		ImGuiMouseButton btn = ImGuiMouseButton_Right;
-		if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(btn)) {
+		if (ImGui::IsMouseClicked(btn)) {
+			auto pos = ImGui::GetMousePos();
+			m_LastX = pos.x;
+			m_LastY = pos.y;
 			m_MouseDown = true;
 		}
 		if (ImGui::IsMouseReleased(btn)) {
@@ -86,7 +92,7 @@ namespace Editor {
 		}
 	}
 
-	void ViewportWindow::Update() {
+	void WndViewport::Update() {
 		// if this window is hided, disable the main pass rendering
 		if (!m_Enable && m_ViewportShow) {
 			m_ViewportShow = false;
@@ -94,7 +100,7 @@ namespace Editor {
 		}
 	}
 
-	void ViewportWindow::Display() {
+	void WndViewport::Display() {
 		CameraControl();
 		auto size = ImGui::GetWindowSize();
 		auto pos = ImGui::GetWindowPos();

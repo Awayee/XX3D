@@ -524,20 +524,20 @@ namespace Math {
         m_mat[0][0] = scale.x * m_mat[0][0];
         m_mat[0][1] = scale.y * m_mat[0][1];
         m_mat[0][2] = scale.z * m_mat[0][2];
-        m_mat[0][3] = position.x;
         m_mat[1][0] = scale.x * m_mat[1][0];
         m_mat[1][1] = scale.y * m_mat[1][1];
         m_mat[1][2] = scale.z * m_mat[1][2];
-        m_mat[1][3] = position.y;
         m_mat[2][0] = scale.x * m_mat[2][0];
         m_mat[2][1] = scale.y * m_mat[2][1];
         m_mat[2][2] = scale.z * m_mat[2][2];
-        m_mat[2][3] = position.z;
+        m_mat[3][0] = position.x;
+        m_mat[3][1] = position.y;
+        m_mat[3][2] = position.z;
 
         // No projection term
-        m_mat[3][0] = 0;
-        m_mat[3][1] = 0;
-        m_mat[3][2] = 0;
+        m_mat[0][3] = 0;
+        m_mat[1][3] = 0;
+        m_mat[2][3] = 0;
         m_mat[3][3] = 1;
     }
     MATH_GENERIC void Matrix4x4<T>::MakeInverseTransform(const Vector3<T>& position, const Vector3<T>& scale, const Quaternion<T>& rotation)

@@ -4,21 +4,23 @@
 
 namespace Editor {
 
-	class EditorWndBase: public WidgetBase {
-		friend class UIMgr;
+	class EditorWindowBase: public WidgetBase {
+		friend class EditorUIMgr;
 	protected:
 		bool m_Enable{ true };
+		bool m_ToDelete{ false };//mark this windows is to delete
 		const char* m_Name = "Unknown";
 		ImGuiWindowFlags m_Flags = ImGuiWindowFlags_None;
 	protected:
 		virtual void Update() = 0;
 		virtual void Display() = 0;
 	public:
-		EditorWndBase(const char* name, ImGuiWindowFlags flags = ImGuiWindowFlags_None);
-		virtual ~EditorWndBase();
+		EditorWindowBase(const char* name, ImGuiWindowFlags flags = ImGuiWindowFlags_None);
+		virtual ~EditorWindowBase();
+		void Delete();
 	};
 
-	class EditorFuncWnd: public EditorWndBase {
+	class EditorFuncWnd: public EditorWindowBase {
 	private:
 		Func<void()> m_Func;
 	public:

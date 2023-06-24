@@ -66,6 +66,9 @@ namespace Engine {
 			WHITE,
 			BLACK,
 			GRAY,
+			RED,
+			BLUE,
+			GREEN,
 			MAX_NUM
 		};
 		static TextureCommon* Get(const char* file) { return Instance()->InstGetTexture(file); }

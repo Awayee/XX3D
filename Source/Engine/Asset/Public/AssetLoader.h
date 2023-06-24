@@ -18,7 +18,7 @@ private:
 	static String s_ProjectAssetPath;
 public:
 	static File::FPath AssetPath();
-	static bool LoadProjectAsset(AAssetBase* asset, File::CharPath file);
-	static bool LoadEngineAsset(AAssetBase* asset, File::CharPath file);
-	static bool SaveProjectAsset(AAssetBase* asset, File::CharPath file);
+	static bool LoadProjectAsset(AAssetBase* asset, File::PathStr file);
+	static bool LoadEngineAsset(AAssetBase* asset, File::PathStr file);
+	static bool SaveProjectAsset(AAssetBase* asset, File::PathStr file);
 };

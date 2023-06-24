@@ -63,20 +63,22 @@ namespace Json {
 		obj.AddMember(nameStr, v, a);
 	}
 
-	void LoadVector3(const Value& obj, Math::FVector3& vector) {
-		vector.x = obj[0].GetFloat();
-		vector.y = obj[1].GetFloat();
-		vector.z = obj[2].GetFloat();
-	}
+	void AddFloatArray(Value& obj, const char* name, const float* pData, uint32 count, Document::AllocatorType& a) {
 
-	void AddVector3(Value& obj, const char* name, Math::FVector3& vector, Document::AllocatorType& a) {
-		Value v(Type::kArrayType);
-		v.PushBack(vector.x, a);
-		v.PushBack(vector.y, a);
-		v.PushBack(vector.z, a);
+		Value arrayVal(Type::kArrayType);
+		Value val;
+		for(uint32 i=0; i<count; ++i) {
+			val.SetFloat(pData[i]);
+			arrayVal.PushBack(val, a);
+		}
 		Document::StringRefType nameStr(name);
-		obj.AddMember(nameStr, v, a);
+		obj.AddMember(nameStr, arrayVal, a);
 	}
 
+	void LoadFloatArray(const Value& obj, float* pData, uint32 count) {
+		for(uint32 i=0; i<count; ++i) {
+			pData[i] = obj[i].GetFloat();
+		}
+	}
 
 }

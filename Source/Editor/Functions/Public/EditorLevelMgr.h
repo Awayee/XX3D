@@ -2,22 +2,33 @@
 #include "Asset/Public/LevelAsset.h"
 #include "Asset/Public/MeshAsset.h"
 #include "Core/Public/SmartPointer.h"
-#include "Objects/Public/Level.h"
+#include "Functions/Public/EditorLevel.h"
 
 namespace Editor {
+
+	struct LevelObject {
+		String Name;
+		Engine::RenderObject3D* RenderObj;
+	};
 
 	class EditorLevelMgr: public TSingleton<EditorLevelMgr> {
 		friend TSingleton<EditorLevelMgr>;
 	private:
 		TUniquePtr<ALevelAsset> m_TempLevel; //if there is not level asset, create a temp level
-		TUniquePtr<Engine::Level> m_Level;
-		ALevelAsset* m_LevelAsset;
+		TUniquePtr<EditorLevel> m_Level;
 		File::FPath m_LevelPath;
+		ALevelAsset* m_LevelAsset {nullptr};
+		uint32 m_SelectIndex{ UINT32_MAX };
 		EditorLevelMgr();
 		~EditorLevelMgr();
 	public:
-		ALevelAsset* CurLevelAsset();
-		void SaveCurLevel();
-		void LoadLevel(ALevelAsset* level, const File::FPath& path);
+		void LoadLevel(ALevelAsset* asset, const File::FPath& path);
+		void SetLevelPath(File::PathStr path);
+		void ReloadLevel();
+		bool SaveLevel();
+		EditorLevel* GetLevel();
+		ALevelAsset* GetLevelAsset();
+		void SetSelected(uint32 idx);
+		uint32 GetSelected();
 	};
 }

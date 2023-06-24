@@ -6,11 +6,11 @@
 
 namespace Editor {
 
-	class AssetsBrowser : public EditorWndBase {
+	class WndAssetBrowser : public EditorWindowBase {
 		const NodeID MAX_FOLDER_NUM = 0xffff;
 
 	private:
-		static TVector<AssetsBrowser*> s_Instances;
+		static TVector<WndAssetBrowser*> s_Instances;
 
 		FolderNode* m_CurrentFolder{nullptr};
 		TVector<TUniquePtr<AssetViewBase>> m_Contents;
@@ -22,8 +22,8 @@ namespace Editor {
 		void RefreshItems();
 
 	public:
-		AssetsBrowser();
-		~AssetsBrowser() override;
+		WndAssetBrowser();
+		~WndAssetBrowser() override;
 		void Update() override;
 		void Display() override;
 	};

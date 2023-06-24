@@ -1,5 +1,6 @@
 #include "AssetView.h"
 #include "Functions/Public/EditorLevelMgr.h"
+#include "EditorUI/Public/EditorUIMgr.h"
 
 namespace Editor {
 	FolderAssetView::FolderAssetView(FolderNode* node): m_Node(node) {
@@ -17,6 +18,10 @@ namespace Editor {
 	void FolderAssetView::Save() {
 	}
 
+	void FolderAssetView::OnDrag() {
+		ImGui::SetDragDropPayload("Folder", m_Node, sizeof(FolderNode));
+	}
+
 	FileAssetView::FileAssetView(FileNode* node): m_Node(node) {
 		m_Name = m_Node->GetPath().filename().string();
 		m_Icon = m_Node->GetPath().extension().string();
@@ -27,8 +32,38 @@ namespace Editor {
 		return false;
 	}
 
+	void FileAssetView::OnDrag() {
+		ImGui::SetDragDropPayload("File", m_Node, sizeof(FileNode));
+	}
+
 	void MeshAssetView::Open() {
-		LOG("You opened a mesh asset.");
+		auto f = [node=m_Node, asset=m_Asset]() {
+			for(auto& primitive: asset->Primitives) {
+
+				//material
+				File::FPath primitivePath = primitive.BinaryFile;
+				ImGui::Text(primitivePath.stem().string().c_str()); ImGui::SameLine();
+				if(ImGui::BeginDragDropTarget()) {
+					ImGui::Button(primitive.MaterialFile.empty() ? "None" : primitive.MaterialFile.c_str());
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("File")) {
+						ASSERT(payload->DataSize == sizeof(FileNode));
+						const FileNode* fileNode = reinterpret_cast<const FileNode*>(payload->Data);
+						primitive.MaterialFile = fileNode->GetPathStr();
+						node->Save();
+						EditorLevelMgr::Instance()->ReloadLevel();
+					}
+					ImGui::EndDragDropTarget();
+				}
+				else {
+					ImGui::Button(primitive.MaterialFile.empty() ? "None" : primitive.MaterialFile.c_str());
+				}
+			}
+			if(ImGui::Button("Save")) {
+				node->Save();
+				EditorLevelMgr::Instance()->ReloadLevel();
+			}
+		};
+		EditorUIMgr::Instance()->AddWindow("MeshViewer", std::move(f), ImGuiWindowFlags_NoDocking);
 	}
 
 	void TextureAssetView::Open() {
@@ -36,7 +71,6 @@ namespace Editor {
 
 	void LevelAssetView::Open() {
 		EditorLevelMgr::Instance()->LoadLevel(m_Asset, m_Node->GetPath());
-
 	}
 
 	void LevelAssetView::Save() {

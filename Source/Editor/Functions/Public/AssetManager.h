@@ -11,20 +11,23 @@
 namespace Editor {
 
 	typedef uint32 NodeID;
+	typedef uint32 EventID;
+
 	class AssetViewBase;
 
 	constexpr NodeID INVALLID_NODE = UINT32_MAX;
-
 	//Node Base
 	class PathNode {
 	protected:
 		NodeID m_ID{ 0 };
 		NodeID m_ParentID{ INVALLID_NODE };
 		File::FPath m_Path;//relative path
+		String m_PathStr;
 		friend class AssetManager;
 	public:
 		PathNode(const File::FPath& path, NodeID id, NodeID parent);
 		_NODISCARD const File::FPath& GetPath() const { return m_Path; }
+		_NODISCARD const String& GetPathStr() const { return m_PathStr; }
 		_NODISCARD NodeID GetID() const { return m_ID; }
 		_NODISCARD NodeID ParentFolder() const { return m_ParentID; }
 	};
@@ -46,19 +49,20 @@ namespace Editor {
 	class FileNode: public PathNode {
 	private:
 		TUniquePtr<AAssetBase> m_Asset;
+		TVector<std::pair<EventID, Func<void(FileNode*)>>> m_OnFileChange;
 		friend class AssetManager;
 	public:
 		FileNode(const File::FPath& path, NodeID id, NodeID parent): PathNode(path, id, parent){}
-		//lazy load
 		template<typename T> T* GetAsset() {
 			T* asset = dynamic_cast<T*>(m_Asset.get());
-			if(!asset) {
+			if(!asset) {//lazy load
 				m_Asset.reset(new T);
 				AssetLoader::LoadProjectAsset(m_Asset.get(), m_Path.string().c_str());
 				asset = dynamic_cast<T*>(m_Asset.get());
 			}
 			return asset;
 		}
+		void Save();
 	};
 
 	class AssetManager {
@@ -82,8 +86,8 @@ namespace Editor {
 		FileNode* GetFile(const File::FPath& path);
 		FolderNode* GetFolder(NodeID id);
 		FolderNode* GetRoot();
-
 		void RegisterFolderRebuildEvent(void (*event)(const FolderNode*)) {m_OnFolderRebuild = event;}
+		void ImportAsset(const char* srcFile, const char* dstFile);//srcFile is absolute path, dstFile is relative path
 	};
 
 

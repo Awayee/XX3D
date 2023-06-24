@@ -7,7 +7,7 @@ namespace Engine {
 	class Level {
 	private:
 		RenderScene* m_Scene;
-		TVector<StaticMesh> m_Meshes;
+		TVector<TUniquePtr<StaticMesh>> m_Meshes;
 	public:
 		Level() = default;
 		Level(const ALevelAsset& levelAsset, RenderScene* scene);

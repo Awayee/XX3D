@@ -279,6 +279,8 @@ namespace Engine {
 	}
 	void WindowSystemGLFW::OnWindowSize(GLFWwindow* window, int width, int height){
 		WindowSystemGLFW* sys = reinterpret_cast<WindowSystemGLFW*>(glfwGetWindowUserPointer(window));
+		sys->m_Size.w = width;
+		sys->m_Size.h = height;
 		for(auto& func: sys->m_OnWindowSizeFunc) {
 			func(width, height);
 		}

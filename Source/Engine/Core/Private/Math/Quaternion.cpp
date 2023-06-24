@@ -1,7 +1,8 @@
 #include "Core/Public/Math/Quaternion.h"
 #include "Core/Public/Math/MathBase.h"
+#include <glm/gtc/quaternion.hpp>
 namespace Math {
-    MATH_GENERIC Quaternion<T> Quaternion<T>::AngleAxis(T a, const Vector3<T>& axis){
+    template <typename T> Quaternion<T> Quaternion<T>::AngleAxis(T a, const Vector3<T>& axis){
         Quaternion<T> q;
         T hanfA = (T)0.5f * a;
         T sinV = Math::Sin<T>(hanfA);
@@ -11,7 +12,37 @@ namespace Math {
         q.z = axis.z * sinV;
         return q;
     }
-    MATH_GENERIC Vector3<T> Quaternion<T>::RotateVector3(const Vector3<T>& v) const{
+
+    template <typename T>
+    Quaternion<T> Quaternion<T>::Euler(const Vector3<T>& euler) {
+       T cy = Math::Cos(euler.y * 0.5);
+       T sy = Math::Sin(euler.y * 0.5);
+       T cp = Math::Cos(euler.x * 0.5);
+       T sp = Math::Sin(euler.x * 0.5);
+       T cr = Math::Cos(euler.z * 0.5);
+       T sr = Math::Sin(euler.z * 0.5);
+       return {
+	      cy * cp * sr - sy * sp * cr,
+	      sy * cp * sr + cy * sp * cr,
+	      sy * cp * cr - cy * sp * sr,
+          cy * cp * cr + sy * sp * sr
+       };
+    }
+
+    template <typename T> T Quaternion<T>::Roll() const {
+        return static_cast<T>(Math::ATan2(static_cast<T>(2) * (x * y + w * z), w * w + x * x - y * y - z * z));
+    }
+
+    template <typename T> T Quaternion<T>::Pitch() const {
+        return static_cast<T>(Math::ATan2(static_cast<T>(2) * (y * z + w * x), w * w - x * x - y * y + z * z));
+    }
+
+    template <typename T> T Quaternion<T>::Yaw() const {
+        return static_cast<T>(Math::ATan2(static_cast<T>(2) * (y * z + w * x), w * w - x * x - y * y + z * z));
+    }
+
+    template <typename T>
+    Vector3<T> Quaternion<T>::RotateVector3(const Vector3<T>& v) const{
         // nVidia SDK implementation
         Vector3<T> uv, uuv;
         Vector3<T> qvec(x, y, z);
@@ -22,7 +53,14 @@ namespace Math {
 
         return v + uv + uuv;
     }
-    MATH_GENERIC Quaternion<T> Quaternion<T>::Inverse() const{
+
+    template <typename T>
+    Vector3<T> Quaternion<T>::ToEuler() const {
+        return { Pitch(), Yaw(), Roll() };
+    }
+
+    template <typename T>
+    Quaternion<T> Quaternion<T>::Inverse() const{
         T norm = w * w + x * x + y * y + z * z;
         if (norm > 0.0)
         {
@@ -36,7 +74,7 @@ namespace Math {
         }
     }
 
-    MATH_GENERIC Quaternion<T> Quaternion<T>::operator*(const Quaternion<T>& q) const{
+    template <typename T> Quaternion<T> Quaternion<T>::operator*(const Quaternion<T>& q) const{
         return Quaternion<T>(
             w * q.x + x * q.w + y * q.z - z * q.y,
             w * q.y + y * q.w + z * q.x - x * q.z,
@@ -44,7 +82,7 @@ namespace Math {
             w * q.w - x * q.x - y * q.y - z * q.z);
     }
 
-    MATH_GENERIC Quaternion<T> Quaternion<T>::operator*= (const Quaternion<T>& q){
+    template <typename T> Quaternion<T> Quaternion<T>::operator*= (const Quaternion<T>& q){
         x = w * q.x + x * q.w + y * q.z - z * q.y;
         y = w * q.z + z * q.w + x * q.y - y * q.x;
         z = w * q.z + z * q.w + x * q.y - y * q.x;
@@ -53,7 +91,7 @@ namespace Math {
     }
 
     /*
-    MATH_GENERIC Matrix4x4<T> Quaternion<T>::ToRotateMatrix() const
+    template <typename T> Matrix4x4<T> Quaternion<T>::ToRotateMatrix() const
     {
         float fTx = x + x;   // 2x
         float fTy = y + y;   // 2y
@@ -75,8 +113,8 @@ namespace Math {
         };
     }
     */
-    MATH_GENERIC const Quaternion<T> Quaternion<T>::ZERO(0,0,0,0);
-    MATH_GENERIC const Quaternion<T> Quaternion<T>::IDENTITY(0,0,0,1);
+    template <typename T> const Quaternion<T> Quaternion<T>::ZERO(0,0,0,0);
+    template <typename T> const Quaternion<T> Quaternion<T>::IDENTITY(0,0,0,1);
 
     template Quaternion<float>;
     template Quaternion<double>;

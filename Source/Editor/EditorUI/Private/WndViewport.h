@@ -2,7 +2,7 @@
 #include "EditorUI/Public/EditorWindow.h"
 
 namespace Editor {
-	class ViewportWindow : public EditorWndBase {
+	class WndViewport : public EditorWindowBase {
 	private:
 		bool m_MouseDown{ false };
 		URect m_Viewport{ 0,0,0,0 };
@@ -10,7 +10,7 @@ namespace Editor {
 		float m_LastY = 0.0f;
 		bool  m_ViewportShow{ false };
 	public:
-		ViewportWindow() : EditorWndBase("Viewport", ImGuiWindowFlags_NoBackground) {}
+		WndViewport() : EditorWindowBase("Viewport", ImGuiWindowFlags_NoBackground) {}
 	private:
 		void CameraControl();
 		void Update() override;

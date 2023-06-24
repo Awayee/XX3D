@@ -3,6 +3,5 @@
 #include "Core/Public/TSingleton.h"
 
 namespace Editor {
-	class EditorTimer : public TSingleton<EditorTimer>, public Engine::CTimer {
-	};
+	class EditorTimer : public TSingleton<EditorTimer>, public Engine::CTimer {};
 }

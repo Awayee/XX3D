@@ -17,4 +17,7 @@ namespace Json {
 	void AddString(Value& obj, const char* name, const std::string& str, Document::AllocatorType& a);
 	void AddVector3(Value& obj, const char* name, Math::FVector3& vector, Document::AllocatorType& a);
 	void LoadVector3(const Value& obj, Math::FVector3& vector);
+
+	void AddFloatArray(Value& obj, const char* name, const float* pData, uint32 count, Document::AllocatorType& a);
+	void LoadFloatArray(const Value& obj, float* pData, uint32 count);
 }	

@@ -9,8 +9,11 @@ namespace Engine {
 		for(auto& mesh: objects) {
 			AMeshAsset meshAsset;
 			if(AssetLoader::LoadProjectAsset(&meshAsset, mesh.File.c_str())) {
-				StaticMesh renderMesh{ meshAsset, m_Scene };
-				m_Meshes.PushBack(std::move(renderMesh));
+				auto staticMesh = MakeUniquePtr<StaticMesh>(meshAsset, m_Scene);
+				staticMesh->SetPosition(mesh.Position);
+				staticMesh->SetScale(mesh.Scale);
+				staticMesh->SetRotation(Math::FQuaternion::Euler(mesh.Rotation));
+				m_Meshes.PushBack(std::move(staticMesh));
 			}
 		}
 		//camera

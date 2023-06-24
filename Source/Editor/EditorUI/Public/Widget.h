@@ -7,7 +7,7 @@ namespace Editor {
 	typedef uint32 WidgetID;
 
 	class WidgetBase {
-		friend class UIMgr;
+		friend class EditorUIMgr;
 	protected:
 		WidgetID m_ID {0};
 		virtual void Display() = 0;

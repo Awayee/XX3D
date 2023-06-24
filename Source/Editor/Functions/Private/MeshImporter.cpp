@@ -107,6 +107,7 @@ void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TVec
 			}
 
 			// TODO textures
+			auto& attr = primitive.attributes;
 			if (primitive.material > -1) {
 				TVector<std::string>& textureNames = primitives[index].Textures;
 				const tinygltf::Material& mat = model.materials[primitive.material];
@@ -213,10 +214,10 @@ MeshImporter::MeshImporter(AMeshAsset* asset, const char* saveFile) {
 }
 
 bool MeshImporter::Import(const char* fullPath) {
-	if(EndsWith(fullPath, ".glb")) {
+	if(StrEndsWith(fullPath, ".glb")) {
 		return ImportGLB(fullPath);
 	}
-	else if (EndsWith(fullPath, ".fbx")) {
+	else if (StrEndsWith(fullPath, ".fbx")) {
 		return ImportFBX(fullPath);
 	}
 	return false;

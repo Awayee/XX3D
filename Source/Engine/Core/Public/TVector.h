@@ -43,6 +43,8 @@ public:
 	void Resize(uint32 size) { Base::resize(size); }
 	void Resize(uint32 size, const T& val) { Base::resize(size, val); }
 
+	void Reserve(uint32 size) { Base::reserve(size); }
+
 	T* Data() { return Base::data(); }
 	const T* Data() const { return Base::data(); }
 
