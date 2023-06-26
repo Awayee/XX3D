@@ -1,5 +1,5 @@
-#include "Core/Public/Math/MathBase.h"
-#include "Core/Public/Math/Vector.h"
+#include "Math/Public/MathBase.h"
+#include "Math/Public/Vector.h"
 #include "Core/Public/macro.h"
 
 namespace Math {

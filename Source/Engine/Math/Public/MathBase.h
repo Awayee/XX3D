@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cmath>
-#include "Core/Public/TypeDefine.h"
 
 namespace Math {
 

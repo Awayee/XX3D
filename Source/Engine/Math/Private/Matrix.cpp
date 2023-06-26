@@ -1,6 +1,6 @@
-#include "Core/Public/Math/Math.h"
+#include "Math/Public/Math.h"
 #include "Core/Public/macro.h"
-#include "Core/Public/Math/MathBase.h"
+#include "Math/Public/MathBase.h"
 
 namespace Math {
     // matrix 3x3

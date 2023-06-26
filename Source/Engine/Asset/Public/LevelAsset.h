@@ -1,7 +1,7 @@
 #pragma once
 #include "AssetCommon.h"
-#include "Core/Public/Math/Vector.h"
-#include "Core/Public/Math/Quaternion.h"
+#include "Math/Public/Vector.h"
+#include "Math/Public/Quaternion.h"
 #include "Core/Public/Macro.h"
 
 struct ALevelAsset : AAssetBase {

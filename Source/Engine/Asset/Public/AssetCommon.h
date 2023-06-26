@@ -1,7 +1,7 @@
 #pragma once
 #include "Core/Public/TVector.h"
 #include "Core/Public/String.h"
-#include "Core/Public/Math/Vector.h"
+#include "Math/Public/Vector.h"
 #include "Core/Public/TypeDefine.h"
 #include "Core/Public/File.h"
 

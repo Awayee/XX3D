@@ -1,5 +1,5 @@
 #pragma once
-#include "Core/Public/Math/Math.h"
+#include "Math/Public/Math.h"
 #include "Core/Public/SmartPointer.h"
 #include "Asset/Public/MeshAsset.h"
 #include "RenderObject3D.h"

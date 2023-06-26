@@ -1,6 +1,6 @@
 #include "Asset/Public/MeshAsset.h"
 #include "Core/Public/Json.h"
-#include "Core/Public/Math/MathBase.h"
+#include "Math/Public/MathBase.h"
 #include "Core/Public/macro.h"
 #include <lz4.h>
 

@@ -1,5 +1,4 @@
 #pragma once
-#include "Core/Public/TypeDefine.h"
 
 namespace Math {
 #define MATH_GENERIC template<typename T>
@@ -323,21 +322,21 @@ namespace Math {
         static Vector4<T> Min(const Vector4<T>& v0, const Vector4<T>& v1);
     };
 
-    typedef Vector2<float>  FVector2;
-    typedef Vector2<double> DVector2;
-    typedef Vector2<int32>  IVector2;
-    typedef Vector2<uint32> UVector2;
-    typedef Vector2<uint8>  UCVector2;
+    typedef Vector2<float>         FVector2;
+    typedef Vector2<double>        DVector2;
+    typedef Vector2<int>           IVector2;
+    typedef Vector2<unsigned int>  UVector2;
+    typedef Vector2<unsigned char> UCVector2;
 
-    typedef Vector3<float>  FVector3;
-    typedef Vector3<double> DVector3;
-    typedef Vector3<int32>	IVector3;
-    typedef Vector3<uint32> UVector3;
-    typedef Vector3<uint8>  UCVector3;
+    typedef Vector3<float>         FVector3;
+    typedef Vector3<double>        DVector3;
+    typedef Vector3<int>	       IVector3;
+    typedef Vector3<unsigned int>  UVector3;
+    typedef Vector3<unsigned char> UCVector3;
 
-    typedef Vector4<float>  FVector4;
-    typedef Vector4<double> DVector4;
-    typedef Vector4<int32>	IVector4;
-    typedef Vector4<uint32> UVector4;
-    typedef Vector4<uint8>  UCVector4;
+    typedef Vector4<float>         FVector4;
+    typedef Vector4<double>        DVector4;
+    typedef Vector4<int>	       IVector4;
+    typedef Vector4<unsigned int>  UVector4;
+    typedef Vector4<unsigned char> UCVector4;   
 }
