@@ -20,35 +20,37 @@ namespace Editor {
 		EditorLevelMesh* mesh = level->GetMesh(idx);
 
 		//Transform
-		ImGui::Text("Transform");
-		if(ImGui::DragFloat3("Position", mesh->Position.Data(), 0.01f)) {
-			mesh->Mesh->SetPosition(mesh->Position);
-		}
-		if (ImGui::DragFloat3("Scale", mesh->Scale.Data(), 0.01f)) {
-			mesh->Mesh->SetScale(mesh->Scale);
-		}
-		if(ImGui::DragFloat3("Rotation", mesh->Rotation.Data(), 0.01f)) {
-			mesh->Mesh->SetRotation(Math::FQuaternion::Euler(mesh->Rotation));
+		if(ImGui::CollapsingHeader("Transform")) {
+			if (ImGui::DragFloat3("Position", mesh->Position.Data(), 0.01f)) {
+				mesh->Mesh->SetPosition(mesh->Position);
+			}
+			if (ImGui::DragFloat3("Scale", mesh->Scale.Data(), 0.01f)) {
+				mesh->Mesh->SetScale(mesh->Scale);
+			}
+			if (ImGui::DragFloat3("Rotation", mesh->Rotation.Data(), 0.01f)) {
+				mesh->Mesh->SetRotation(Math::FQuaternion::Euler(mesh->Rotation));
+			}
 		}
 
 		//Material
-		ImGui::Text("Materials");
-		for (auto& primitive : mesh->Asset->Primitives) {
-			//material
-			File::FPath primitivePath = primitive.BinaryFile;
-			ImGui::Text(primitivePath.stem().string().c_str()); ImGui::SameLine();
-			if (ImGui::BeginDragDropTarget()) {
-				ImGui::Button(primitive.MaterialFile.empty() ? "None" : primitive.MaterialFile.c_str());
-				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("File")) {
-					ASSERT(payload->DataSize == sizeof(FileNode));
-					const FileNode* fileNode = reinterpret_cast<const FileNode*>(payload->Data);
-					primitive.MaterialFile = fileNode->GetPathStr();
-					EditorLevelMgr::Instance()->ReloadLevel();
+		if(ImGui::CollapsingHeader("Materials")) {
+			for (auto& primitive : mesh->Asset->Primitives) {
+				//material
+				File::FPath primitivePath = primitive.BinaryFile;
+				ImGui::Text(primitivePath.stem().string().c_str()); ImGui::SameLine();
+				if (ImGui::BeginDragDropTarget()) {
+					ImGui::Button(primitive.MaterialFile.empty() ? "None" : primitive.MaterialFile.c_str());
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("File")) {
+						ASSERT(payload->DataSize == sizeof(FileNode));
+						const FileNode* fileNode = reinterpret_cast<const FileNode*>(payload->Data);
+						primitive.MaterialFile = fileNode->GetPathStr();
+						EditorLevelMgr::Instance()->ReloadLevel();
+					}
+					ImGui::EndDragDropTarget();
 				}
-				ImGui::EndDragDropTarget();
-			}
-			else {
-				ImGui::Button(primitive.MaterialFile.empty() ? "None" : primitive.MaterialFile.c_str());
+				else {
+					ImGui::Button(primitive.MaterialFile.empty() ? "None" : primitive.MaterialFile.c_str());
+				}
 			}
 		}
 	}

@@ -1,6 +1,7 @@
 #include "AssetView.h"
 #include "Functions/Public/EditorLevelMgr.h"
 #include "EditorUI/Public/EditorUIMgr.h"
+#include "EditorUI/Public/EditorWindow.h"
 
 namespace Editor {
 	FolderAssetView::FolderAssetView(FolderNode* node): m_Node(node) {
@@ -26,6 +27,7 @@ namespace Editor {
 		m_Name = m_Node->GetPath().filename().string();
 		m_Icon = m_Node->GetPath().extension().string();
 		m_ID = m_Node->GetID();
+		m_Node->GetAsset<AUnknownAsset>();
 	}
 
 	bool FileAssetView::IsFolder() {
@@ -46,7 +48,7 @@ namespace Editor {
 				if(ImGui::BeginDragDropTarget()) {
 					ImGui::Button(primitive.MaterialFile.empty() ? "None" : primitive.MaterialFile.c_str());
 					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("File")) {
-						ASSERT(payload->DataSize == sizeof(FileNode));
+						ASSERT(payload->DataSize == sizeof(FileNode), "");
 						const FileNode* fileNode = reinterpret_cast<const FileNode*>(payload->Data);
 						primitive.MaterialFile = fileNode->GetPathStr();
 						node->Save();

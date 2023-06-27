@@ -6,7 +6,7 @@
 
 namespace Editor {
 	struct EditorLevelMesh {
-		File::FPath File;
+		String File;
 		String Name;
 		AMeshAsset* Asset{nullptr};
 		TUniquePtr<Engine::StaticMesh> Mesh;
@@ -24,7 +24,7 @@ namespace Editor {
 		~EditorLevel();
 		TVector<EditorLevelMesh>& Meshes();
 		EditorLevelMesh* GetMesh(uint32 idx);
-		EditorLevelMesh* AddMesh(const File::FPath& file, AMeshAsset* asset);
+		EditorLevelMesh* AddMesh(const String& file, AMeshAsset* asset);
 		void SaveAsset(ALevelAsset* asset);
 	};
 }

@@ -1,14 +1,12 @@
 #pragma once
 #include "Functions/Public/AssetManager.h"
-#include "Core/Public/File.h"
 #include "Asset/Public/MeshAsset.h"
 #include "Core/Public/SmartPointer.h"
 #include "Asset/Public/TextureAsset.h"
 #include "Asset/Public/LevelAsset.h"
-#include "EditorUI/Public/EditorWindow.h"
 
 namespace Editor {
-#pragma region AssetView
+
 	class AssetViewBase {
 		friend class WndAssetBrowser;
 	protected:
@@ -76,14 +74,6 @@ namespace Editor {
 		void Save() override;
 	};
 
-
-	enum class EAssetType :uint8 {
-		MESH,
-		TEXTURE,
-		SCENE,
-		UNKNOWN
-	};
-
 	inline TUniquePtr<AssetViewBase> CreateAssetView(FileNode* node) {
 		const String& ext = node->GetPath().extension().string();
 		if(ext == ".mesh") {
@@ -97,11 +87,4 @@ namespace Editor {
 		}
 		return MakeUniquePtr<FileAssetView>(node);
 	}
-
-#pragma endregion
-
-	//
-	class AssetViewer : public EditorWindowBase {
-		
-	};
 }

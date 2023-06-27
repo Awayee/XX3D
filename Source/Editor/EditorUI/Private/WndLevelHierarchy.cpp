@@ -1,4 +1,4 @@
-#include "WndLevelHierarchical.h"
+#include "WndLevelHierarchy.h"
 #include "Functions/Public/EditorLevelMgr.h"
 #include "EditorUI/Public/EditorUIMgr.h"
 #include "Functions/Public/EditorLevelMgr.h"
@@ -38,27 +38,40 @@ namespace Editor {
 		}
 	}
 
-	void WndLevelHierarchical::Update() {
+	void WndLevelHierarchy::Update() {
 	}
 
-	void WndLevelHierarchical::Display() {
+	void WndLevelHierarchy::Display() {
 		EditorLevel* level = EditorLevelMgr::Instance()->GetLevel();
 		if(!level) {
 			return;
 		}
-		for (uint32 i = 0; i < level->Meshes().Size(); ++i) {
-			auto meshInfo = level->GetMesh(i);
-			if (ImGui::Selectable(meshInfo->Name.c_str(), m_SelectIdx == i)) {
-				m_SelectIdx = i;
-				EditorLevelMgr::Instance()->SetSelected(m_SelectIdx);
+		if(ImGui::BeginDragDropTarget()) {
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("File")) {
+				ASSERT(payload->DataSize == sizeof(FileNode), "");
+				FileNode* fileNode = reinterpret_cast<FileNode*>(payload->Data);
+				AMeshAsset* meshAsset = fileNode->GetAsset<AMeshAsset>();
+				if(meshAsset) {
+					level->AddMesh(fileNode->GetPathStr(), fileNode->GetAsset<AMeshAsset>());
+				}
+			}
+			ImGui::EndDragDropTarget();
+		}
+		else {
+			for (uint32 i = 0; i < level->Meshes().Size(); ++i) {
+				auto meshInfo = level->GetMesh(i);
+				if (ImGui::Selectable(meshInfo->Name.c_str(), m_SelectIdx == i)) {
+					m_SelectIdx = i;
+					EditorLevelMgr::Instance()->SetSelected(m_SelectIdx);
+				}
 			}
 		}
 	}
 
-	WndLevelHierarchical::WndLevelHierarchical(): EditorWindowBase("Hierarchical") {
+	WndLevelHierarchy::WndLevelHierarchy(): EditorWindowBase("Hierarchy") {
 		EditorUIMgr::Instance()->AddMenu("Level", "Save", SaveLevel, nullptr);
 	}
 
-	WndLevelHierarchical::~WndLevelHierarchical() {
+	WndLevelHierarchy::~WndLevelHierarchy() {
 	}
 }

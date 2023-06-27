@@ -37,6 +37,7 @@ namespace Editor {
 	}
 
 	EditorLevel::~EditorLevel() {
+		
 	}
 
 	TVector<EditorLevelMesh>& EditorLevel::Meshes() {
@@ -47,12 +48,15 @@ namespace Editor {
 		return &m_Meshes[idx];
 	}
 
-	EditorLevelMesh* EditorLevel::AddMesh(const File::FPath& file, AMeshAsset* asset) {
+	EditorLevelMesh* EditorLevel::AddMesh(const String& file, AMeshAsset* asset) {
 		EditorLevelMesh mesh{};
 		mesh.File = file;
-		mesh.Name = file.filename().string();
+		mesh.Name = asset->Name;
 		mesh.Asset = asset;
 		mesh.Mesh.reset(new Engine::StaticMesh(*asset, m_Scene));
+		mesh.Position = mesh.Mesh->GetPosition();
+		mesh.Scale = mesh.Mesh->GetScale();
+		mesh.Rotation = mesh.Mesh->GetRotation().ToEuler();
 		m_Meshes.PushBack(std::move(mesh));
 		return &m_Meshes.Back();
 	}
@@ -71,7 +75,7 @@ namespace Editor {
 		for(uint32 i=0; i<m_Meshes.Size(); ++i) {
 			auto& savedMesh = asset->Meshes[i];
 			auto& mesh = m_Meshes[i];
-			savedMesh.File = mesh.File.string();
+			savedMesh.File = mesh.File;
 			savedMesh.Name = mesh.Name;
 			savedMesh.Position = mesh.Position;
 			savedMesh.Scale = mesh.Scale;

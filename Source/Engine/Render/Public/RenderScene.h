@@ -12,6 +12,7 @@ namespace Engine {
 
 	class RenderObject {
 		friend RenderScene;
+		static constexpr uint32 INVALID_INDEX = UINT32_MAX;
 	protected:
 		RenderScene* m_Scene;
 		uint32 m_Index;

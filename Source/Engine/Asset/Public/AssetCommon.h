@@ -21,6 +21,12 @@ struct AAssetBase {
 	virtual ~AAssetBase() = default;
 };
 
+struct AUnknownAsset: public AAssetBase {
+	bool Load(File::Read& in) override { return true; }
+	bool Save(File::Write& out) override { return true; }
+	~AUnknownAsset() override = default;
+};
+
 struct FVertex {
 	Math::FVector3 Position;
 	Math::FVector3 Normal;

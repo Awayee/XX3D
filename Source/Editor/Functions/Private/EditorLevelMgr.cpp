@@ -50,6 +50,7 @@ namespace Editor {
 		}
 		m_Level->SaveAsset(m_LevelAsset);
 		AssetLoader::SaveProjectAsset(m_LevelAsset, m_LevelPath.string().c_str());
+		LOG("[EditorLevelMgr::SaveLevel] Level saved: %s", m_LevelPath.string().c_str());
 		return true;
 	}
 

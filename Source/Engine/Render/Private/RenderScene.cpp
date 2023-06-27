@@ -91,17 +91,18 @@ namespace Engine {
     }
 
     void RenderScene::AddRenderObject(RenderObject* obj) {
-        m_RenderObjects.PushBack(obj);
         obj->m_Scene = this;
         obj->m_Index = m_RenderObjects.Size();
+        m_RenderObjects.PushBack(obj);
     }
 
     void RenderScene::RemoveRenderObject(RenderObject* obj) {
-        if (obj->m_Scene != this) return;
-        if (0 == obj->m_Index || m_RenderObjects.Size() < obj->m_Index)return;
-        m_RenderObjects.SwapRemoveAt(obj->m_Index - 1);
-        if(!m_RenderObjects.Empty()) {
-            m_RenderObjects[obj->m_Index-1]->m_Index = obj->m_Index;
+        if(obj->m_Scene != this || RenderObject::INVALID_INDEX == obj->m_Index) {
+            return;
+        }
+        if (!m_RenderObjects.Empty()) {
+            m_RenderObjects.Back()->m_Index = obj->m_Index;
+            m_RenderObjects.SwapRemoveAt(obj->m_Index);
         }
     }
 

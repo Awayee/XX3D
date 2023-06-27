@@ -54,13 +54,11 @@ namespace Editor {
 	public:
 		FileNode(const File::FPath& path, NodeID id, NodeID parent): PathNode(path, id, parent){}
 		template<typename T> T* GetAsset() {
-			T* asset = dynamic_cast<T*>(m_Asset.get());
-			if(!asset) {//lazy load
+			if (!m_Asset.get()) {//lazy load
 				m_Asset.reset(new T);
 				AssetLoader::LoadProjectAsset(m_Asset.get(), m_Path.string().c_str());
-				asset = dynamic_cast<T*>(m_Asset.get());
 			}
-			return asset;
+			return dynamic_cast<T*>(m_Asset.get());
 		}
 		void Save();
 	};

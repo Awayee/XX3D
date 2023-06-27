@@ -5,7 +5,7 @@
 #include "WndViewport.h"
 #include "WndAssetBrowser.h"
 #include "WndDetails.h"
-#include "WndLevelHierarchical.h"
+#include "WndLevelHierarchy.h"
 
 namespace Editor {
 
@@ -19,7 +19,7 @@ namespace Editor {
 		//windows
 		uiMgr->AddWindow(MakeUniquePtr<WndAssetBrowser>());
 		uiMgr->AddWindow(MakeUniquePtr<WndViewport>());
-		uiMgr->AddWindow(MakeUniquePtr<WndLevelHierarchical>());
+		uiMgr->AddWindow(MakeUniquePtr<WndLevelHierarchy>());
 		uiMgr->AddWindow(MakeUniquePtr<WndDetails>());
 		uiMgr->AddWindow("FPS",
 			[]() {ImGui::Text("FPS = %u", UINT32_CAST(EditorTimer::Instance()->GetFPS()));},

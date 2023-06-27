@@ -128,8 +128,8 @@ namespace Engine {
 	struct RPipelineShaderInfo {
 
 		RShaderStageFlagBits stage;
-		TVector<int8> code;
-		const char* funcName = "main";
+		TVector<char> code;
+		const char* funcName;
 	};
 
 	struct RVertexInputBinding {
