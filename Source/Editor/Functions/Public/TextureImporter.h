@@ -4,10 +4,10 @@
 
 class TextureImporter {
 private:
-	ATextureAsset* m_Asset;
+	Engine::ATextureAsset* m_Asset;
 	String m_SaveFile;//relative path
 public:
-	TextureImporter(ATextureAsset* asset, const char* saveFile): m_Asset(asset), m_SaveFile(saveFile){}
+	TextureImporter(Engine::ATextureAsset* asset, const char* saveFile): m_Asset(asset), m_SaveFile(saveFile){}
 	//import from external files
 	bool Import(const char* fullPath);
 	bool Save();

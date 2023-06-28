@@ -1,4 +1,4 @@
-#include "Context/Public/Editor.h"
+﻿#include "Context/Public/Editor.h"
 #include "Asset/Public/AssetLoader.h"
 #include "Objects/Public/EngineContext.h"
 #include "Resource/Public/Config.h"
@@ -8,9 +8,15 @@
 #include "Functions/Public/AssetManager.h"
 #include "Functions/Public/EditorLevelMgr.h"
 #include "Functions/Public/EditorTimer.h"
-
+#include "Window/Public/Wnd.h"
+#include "Objects/Public/Renderer.h"
 
 namespace Editor {
+    void SetUIColorStyle()
+    {
+		ImGuiStyle& style = ImGui::GetStyle();
+    }
+
 	void ImGuiConfig() {
 		// imgui
 		float scaleX, scaleY;
@@ -22,13 +28,14 @@ namespace Editor {
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 		io.ConfigWindowsMoveFromTitleBarOnly = true;
 
-		File::FPath fontPath = AssetLoader::AssetPath();
+		File::FPath fontPath = Engine::AssetLoader::AssetPath();
 		fontPath.append(Engine::GetConfig().DefaultFontPath);
 
 		io.Fonts->AddFontFromFileTTF(fontPath.string().c_str(), contentScale * 16, nullptr, nullptr);
 		ASSERT(io.Fonts->Build(), "Failed to build fonts");
 		//io.IniFilename = nullptr; // Do not save settings
 
+		SetUIColorStyle();
 	}
 	
 	XXEditor::XXEditor(Engine::XXEngine* engine){

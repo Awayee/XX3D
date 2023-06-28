@@ -1,6 +1,7 @@
 #pragma once
 #include "RenderScene.h"
-
+#include "Math/Public/Matrix.h"
+#include "Render/Public/RenderCommon.h"
 
 namespace Engine {
 	class RenderObject3D: public RenderObject {

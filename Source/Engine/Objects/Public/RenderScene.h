@@ -1,6 +1,6 @@
 #pragma once
 #include "Core/Public/SmartPointer.h"
-#include "RenderResources.h"
+#include "Render/Public/RenderResources.h"
 #include "Asset/Public/LevelAsset.h"
 
 

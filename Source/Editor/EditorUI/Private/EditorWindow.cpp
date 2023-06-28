@@ -1,5 +1,5 @@
 #include "EditorUI/Public/EditorWindow.h"
-#include "Render/Public/RenderScene.h"
+#include "Objects/Public/RenderScene.h"
 
 namespace Editor {
 

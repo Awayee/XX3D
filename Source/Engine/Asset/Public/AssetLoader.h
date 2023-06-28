@@ -4,21 +4,23 @@
 #include "Core/Public/TVector.h"
 #include "Core/Public/File.h"
 
-enum EAssetType : uint8 {
-	ASSET_TYPE_MESH = 0,
-	ASSET_TYPE_IMAGE,
-	ASSET_TYPE_SCENE
-};
+namespace Engine {
+	enum EAssetType : uint8 {
+		ASSET_TYPE_MESH = 0,
+		ASSET_TYPE_IMAGE,
+		ASSET_TYPE_SCENE
+	};
 
 
-class AssetLoader {
-	// all path are relative
-private:
-	static String s_EngineAssetPath;
-	static String s_ProjectAssetPath;
-public:
-	static File::FPath AssetPath();
-	static bool LoadProjectAsset(AAssetBase* asset, File::PathStr file);
-	static bool LoadEngineAsset(AAssetBase* asset, File::PathStr file);
-	static bool SaveProjectAsset(AAssetBase* asset, File::PathStr file);
-};
+	class AssetLoader {
+		// all path are relative
+	private:
+		static String s_EngineAssetPath;
+		static String s_ProjectAssetPath;
+	public:
+		static File::FPath AssetPath();
+		static bool LoadProjectAsset(AAssetBase* asset, File::PathStr file);
+		static bool LoadEngineAsset(AAssetBase* asset, File::PathStr file);
+		static bool SaveProjectAsset(AAssetBase* asset, File::PathStr file);
+	};
+}

@@ -5,6 +5,7 @@
 #include "Core/Public/Func.h"
 #include "EditorUI/Public/Widget.h"
 #include "EditorUI/Public/EditorWindow.h"
+#include "Core/Public/String.h"
 
 namespace Editor {
 

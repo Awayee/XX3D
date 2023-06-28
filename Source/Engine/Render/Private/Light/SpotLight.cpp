@@ -1,1 +1,0 @@
-#include "Render/Public/Light/SpotLight.h"

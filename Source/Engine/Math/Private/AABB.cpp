@@ -1,9 +1,11 @@
-#include "Math/Public/MathStructs.h"
+#include "Math/Public/AABB.h"
 
 namespace Math {
-	AxisAlignedBox::AxisAlignedBox(const FVector3& center, const FVector3& extent) : Center(center), Extent(extent) {}
+	AABB::AABB() = default;
 
-	void AxisAlignedBox::Contain(const FVector3& newPoint)
+	AABB::AABB(const FVector3& center, const FVector3& extent) : Center(center), Extent(extent) {}
+
+	void AABB::Contain(const FVector3& newPoint)
 	{
 		FVector3 min = Center - Extent;
 		FVector3 max = Center + Extent;
@@ -12,7 +14,7 @@ namespace Math {
 		Center = (min + max) * 0.5f;
 		Extent = (max - min) * 0.5f;
 	}
-	void AxisAlignedBox::Combine(const AxisAlignedBox& box)
+	void AABB::Merge(const AABB& box)
 	{
 		FVector3 thisMin = Center - Extent;
 		FVector3 thisMax = Center + Extent;

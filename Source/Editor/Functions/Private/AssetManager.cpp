@@ -16,7 +16,7 @@ namespace Editor {
 	}
 
 	void FileNode::Save() {
-		if(AssetLoader::SaveProjectAsset(m_Asset.get(), m_PathStr.c_str())) {
+		if(Engine::AssetLoader::SaveProjectAsset(m_Asset.get(), m_PathStr.c_str())) {
 			LOG("FileNode::Save %s", GetPathStr().c_str());
 		}
 	}
@@ -150,13 +150,13 @@ namespace Editor {
 
 	void AssetManager::ImportAsset(const char* srcFile, const char* dstFile) {
 		if(StrEndsWith(srcFile, ".png")) {
-			ATextureAsset asset;
+			Engine::ATextureAsset asset;
 			TextureImporter importer(&asset, dstFile);
 			importer.Import(srcFile);
 			importer.Save();
 		}
 		else if (StrEndsWith(srcFile, ".glb")) {
-			AMeshAsset asset;
+			Engine::AMeshAsset asset;
 			MeshImporter importer(&asset, dstFile);
 			importer.Import(srcFile);
 			importer.Save();

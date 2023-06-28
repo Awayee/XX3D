@@ -2,6 +2,7 @@
 #include "EditorUI/Public/EditorUIMgr.h"
 #include "Objects/Public/EngineContext.h"
 #include "Functions/Public/EditorTimer.h"
+#include "Window/Public/Wnd.h"
 #include "WndViewport.h"
 #include "WndAssetBrowser.h"
 #include "WndDetails.h"

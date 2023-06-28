@@ -2,7 +2,7 @@
 #include "Core/Public/SmartPointer.h"
 #include "Core/Public/BaseStructs.h"
 #include "RHI/Public/RHI.h"
-#include "RenderResources.h"
+#include "Render/Public/RenderResources.h"
 
 namespace Engine {
 	class Wnd;

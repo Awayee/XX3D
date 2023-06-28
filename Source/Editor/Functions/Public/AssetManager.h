@@ -48,7 +48,7 @@ namespace Editor {
 	//file
 	class FileNode: public PathNode {
 	private:
-		TUniquePtr<AAssetBase> m_Asset;
+		TUniquePtr<Engine::AAssetBase> m_Asset;
 		TVector<std::pair<EventID, Func<void(FileNode*)>>> m_OnFileChange;
 		friend class AssetManager;
 	public:
@@ -56,7 +56,7 @@ namespace Editor {
 		template<typename T> T* GetAsset() {
 			if (!m_Asset.get()) {//lazy load
 				m_Asset.reset(new T);
-				AssetLoader::LoadProjectAsset(m_Asset.get(), m_Path.string().c_str());
+				Engine::AssetLoader::LoadProjectAsset(m_Asset.get(), m_Path.string().c_str());
 			}
 			return dynamic_cast<T*>(m_Asset.get());
 		}

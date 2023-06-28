@@ -1,11 +1,10 @@
 #include "Functions/Public/EditorLevel.h"
-#include "Asset/Public/AssetLoader.h"
-#include "Render/Public/Camera.h"
+#include "Objects/Public/Camera.h"
 #include "Functions/Public/AssetManager.h"
 
 namespace Editor {
 
-	EditorLevel::EditorLevel(const ALevelAsset& asset, Engine::RenderScene* scene): m_Scene(scene) {
+	EditorLevel::EditorLevel(const Engine::ALevelAsset& asset, Engine::RenderScene* scene): m_Scene(scene) {
 		//camera
 		auto& cameraParam = asset.CameraParam;
 		Engine::Camera* camera = scene->GetMainCamera();
@@ -21,7 +20,7 @@ namespace Editor {
 			FileNode* node = ProjectAssetMgr::Instance()->GetFile(meshData.File);
 			if (node) {
 				EditorLevelMesh levelMesh;
-				levelMesh.Asset = node->GetAsset<AMeshAsset>();
+				levelMesh.Asset = node->GetAsset<Engine::AMeshAsset>();
 				levelMesh.Position = meshData.Position;
 				levelMesh.Scale = meshData.Scale;
 				levelMesh.Rotation = meshData.Rotation;
@@ -48,7 +47,7 @@ namespace Editor {
 		return &m_Meshes[idx];
 	}
 
-	EditorLevelMesh* EditorLevel::AddMesh(const String& file, AMeshAsset* asset) {
+	EditorLevelMesh* EditorLevel::AddMesh(const String& file, Engine::AMeshAsset* asset) {
 		EditorLevelMesh mesh{};
 		mesh.File = file;
 		mesh.Name = asset->Name;
@@ -61,7 +60,7 @@ namespace Editor {
 		return &m_Meshes.Back();
 	}
 
-	void EditorLevel::SaveAsset(ALevelAsset* asset) {
+	void EditorLevel::SaveAsset(Engine::ALevelAsset* asset) {
 		Engine::Camera* camera = m_Scene->GetMainCamera();
 		asset->CameraParam.Eye = camera->GetView().Eye;
 		asset->CameraParam.At = camera->GetView().At;

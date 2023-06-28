@@ -1,6 +1,7 @@
 #include "EditorUI/Public/EditorUIMgr.h"
 #include "Resource/Public/Config.h"
 #include "Objects/Public/EngineContext.h"
+#include "Window/Public/Wnd.h"
 
 namespace Editor {
 
@@ -30,7 +31,7 @@ namespace Editor {
 		//dock
 		ImGuiID main_docking_id = ImGui::GetID("Main Docking");
 		ImGuiDockNodeFlags docFlags = ImGuiDockNodeFlags_None;
-		ImGui::PushStyleColor(ImGuiCol_DockingEmptyBg, { 0.0f, 0.0f, 0.0f, 0.0f });
+		ImGui::PushStyleColor(ImGuiCol_DockingEmptyBg, { 0.0f, 0.0f, 0.0f, 1.0f });
 		ImGui::DockSpace(main_docking_id, { 0, 0 }, docFlags);
 		ImGui::PopStyleColor();
 

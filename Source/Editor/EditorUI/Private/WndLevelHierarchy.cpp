@@ -50,9 +50,9 @@ namespace Editor {
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("File")) {
 				ASSERT(payload->DataSize == sizeof(FileNode), "");
 				FileNode* fileNode = reinterpret_cast<FileNode*>(payload->Data);
-				AMeshAsset* meshAsset = fileNode->GetAsset<AMeshAsset>();
+				Engine::AMeshAsset* meshAsset = fileNode->GetAsset<Engine::AMeshAsset>();
 				if(meshAsset) {
-					level->AddMesh(fileNode->GetPathStr(), fileNode->GetAsset<AMeshAsset>());
+					level->AddMesh(fileNode->GetPathStr(), fileNode->GetAsset<Engine::AMeshAsset>());
 				}
 			}
 			ImGui::EndDragDropTarget();

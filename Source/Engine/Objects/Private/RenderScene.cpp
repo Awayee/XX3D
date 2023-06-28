@@ -1,9 +1,9 @@
-#include "Render/Public/RenderScene.h"
 #include "Resource/Public/Config.h"
 #include "Core/Public/Concurrency.h"
 
-#include "Render/Public/Camera.h"
-#include "Render/Public/Light/DirectionalLight.h"
+#include "Objects/Public/RenderScene.h"
+#include "Objects/Public/Camera.h"
+#include "Objects/Public/Light/DirectionalLight.h"
 
 namespace Engine {
     RenderObject::RenderObject(RenderScene* scene)

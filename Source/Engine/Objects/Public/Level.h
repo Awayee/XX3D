@@ -1,6 +1,6 @@
 #pragma once
-#include "Render/Public/RenderScene.h"
-#include "Render/Public/StaticMesh.h"
+#include "Objects/Public/RenderScene.h"
+#include "Objects/Public/StaticMesh.h"
 #include "Asset/Public/LevelAsset.h"
 
 namespace Engine {

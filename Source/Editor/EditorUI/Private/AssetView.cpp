@@ -27,7 +27,7 @@ namespace Editor {
 		m_Name = m_Node->GetPath().filename().string();
 		m_Icon = m_Node->GetPath().extension().string();
 		m_ID = m_Node->GetID();
-		m_Node->GetAsset<AUnknownAsset>();
+		m_Node->GetAsset<Engine::AUnknownAsset>();
 	}
 
 	bool FileAssetView::IsFolder() {

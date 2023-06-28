@@ -1,8 +1,9 @@
 #include "WndViewport.h"
 
 #include "Objects/Public/EngineContext.h"
-#include "Render/Public/RenderScene.h"
-#include "Render/Public/Camera.h"
+#include "Objects/Public/RenderScene.h"
+#include "Objects/Public/Camera.h"
+#include "Objects/Public/Renderer.h"
 
 namespace Editor {
 

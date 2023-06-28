@@ -15,8 +15,6 @@ namespace Engine {
 	class Camera {
 	private:
 		CameraView m_View;
-		// transform
-		Math::FMatrix4x4 m_ViewMatrix;
 
 		// projection
 		EProjectiveType m_ProjType;
@@ -28,6 +26,7 @@ namespace Engine {
 			float m_Height;
 		};
 
+		Math::FMatrix4x4 m_ViewMatrix;
 		Math::FMatrix4x4 m_ProjectMatrix;
 		Math::FMatrix4x4 m_ViewProjectMatrix;
 		Math::FMatrix4x4 m_InvViewProjectMatrix;

@@ -25,7 +25,7 @@ uint32 GetPrimitiveCount(const tinygltf::Model& model, const tinygltf::Node& nod
 	return count;
 }
 
-void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TVector<AMeshAsset::SPrimitive>& primitives, uint32& index) {
+void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TVector<Engine::AMeshAsset::SPrimitive>& primitives, uint32& index) {
 	if (node.mesh > -1) {
 		const tinygltf::Mesh& mesh = model.meshes[node.mesh];
 		for (uint32 i = 0; i < mesh.primitives.size(); i++) {
@@ -63,7 +63,7 @@ void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TVec
 				uv0ByteStride = uvAccessor.ByteStride(uvView) / sizeof(float);
 			}
 
-			TVector<FVertex>& vertices = primitives[index].Vertices;
+			TVector<Engine::FVertex>& vertices = primitives[index].Vertices;
 			vertices.Resize(vertexCount);
 
 			for (uint32 v = 0; v < vertexCount; v++) {
@@ -141,10 +141,10 @@ uint32 GetPrimitiveCount(const aiScene* aScene, aiNode* aNode) {
 	return count;
 }
 
-void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TVector<AMeshAsset::SPrimitive>& meshInfos) {
+void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TVector<Engine::AMeshAsset::SPrimitive>& meshInfos) {
 	for (uint32 i = 0; i < aNode->mNumMeshes; i++) {
 		aiMesh* aMesh = aScene->mMeshes[aNode->mMeshes[i]];
-		TVector<FVertex>& vertices = meshInfos[i].Vertices;
+		TVector<Engine::FVertex>& vertices = meshInfos[i].Vertices;
 		TVector<uint32>& indices = meshInfos[i].Indices;
 		//TVector<std::string>& textures = meshInfos[i].textures;
 
@@ -208,7 +208,7 @@ void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TVector<AMeshAsset::SPrim
 	}
 }
 
-MeshImporter::MeshImporter(AMeshAsset* asset, const char* saveFile) {
+MeshImporter::MeshImporter(Engine::AMeshAsset* asset, const char* saveFile) {
 	m_Asset = asset;
 	m_SaveFile = saveFile;
 }
@@ -283,9 +283,9 @@ bool MeshImporter::Save() {
 		String binaryFile = parentPath.string();
 		std::replace(binaryFile.begin(), binaryFile.end(), '\\', '/');
 
-		r |= AMeshAsset::ExportPrimitiveFile(binaryFile.c_str(), primitive.Vertices, primitive.Indices, EMeshCompressMode::NONE);
+		r |= Engine::AMeshAsset::ExportPrimitiveFile(binaryFile.c_str(), primitive.Vertices, primitive.Indices, Engine::EMeshCompressMode::NONE);
 		primitive.BinaryFile.swap(binaryFile);
 	}
-	r |= AssetLoader::SaveProjectAsset(m_Asset, m_SaveFile.c_str());
+	r |= Engine::AssetLoader::SaveProjectAsset(m_Asset, m_SaveFile.c_str());
 	return r;
 }

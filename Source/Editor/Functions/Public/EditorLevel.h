@@ -1,14 +1,14 @@
 #pragma once
 #include "Asset/Public/LevelAsset.h"
-#include "Render/Public/RenderScene.h"
-#include "Render/Public/StaticMesh.h"
+#include "Objects/Public/RenderScene.h"
+#include "Objects/Public/StaticMesh.h"
 #include "Functions/Public/AssetManager.h"
 
 namespace Editor {
 	struct EditorLevelMesh {
 		String File;
 		String Name;
-		AMeshAsset* Asset{nullptr};
+		Engine::AMeshAsset* Asset{nullptr};
 		TUniquePtr<Engine::StaticMesh> Mesh;
 		Math::FVector3 Position;
 		Math::FVector3 Scale;
@@ -20,11 +20,11 @@ namespace Editor {
 		TVector<EditorLevelMesh> m_Meshes;
 		Engine::RenderScene* m_Scene{nullptr};
 	public:
-		EditorLevel(const ALevelAsset& asset, Engine::RenderScene* scene);
+		EditorLevel(const Engine::ALevelAsset& asset, Engine::RenderScene* scene);
 		~EditorLevel();
 		TVector<EditorLevelMesh>& Meshes();
 		EditorLevelMesh* GetMesh(uint32 idx);
-		EditorLevelMesh* AddMesh(const String& file, AMeshAsset* asset);
-		void SaveAsset(ALevelAsset* asset);
+		EditorLevelMesh* AddMesh(const String& file, Engine::AMeshAsset* asset);
+		void SaveAsset(Engine::ALevelAsset* asset);
 	};
 }

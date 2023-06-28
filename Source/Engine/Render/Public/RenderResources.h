@@ -1,6 +1,5 @@
 #pragma once
 #include "Core/Public/TVector.h"
-#include "Math/Public/Math.h"
 #include "RHI/Public/RHI.h"
 #include "RenderCommon.h"
 #include "Core/Public/SmartPointer.h"

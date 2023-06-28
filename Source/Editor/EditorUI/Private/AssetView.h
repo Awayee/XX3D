@@ -55,21 +55,21 @@ namespace Editor {
 	};
 
 	// asset extents
-	class MeshAssetView : public FileAssetViewTemplate<AMeshAsset> {
+	class MeshAssetView : public FileAssetViewTemplate<Engine::AMeshAsset> {
 	public:
-		MeshAssetView(FileNode* node) : FileAssetViewTemplate<AMeshAsset>(node) {}
+		MeshAssetView(FileNode* node) : FileAssetViewTemplate<Engine::AMeshAsset>(node) {}
 		void Open() override;
 	};
 
-	class TextureAssetView: public FileAssetViewTemplate<ATextureAsset> {
+	class TextureAssetView: public FileAssetViewTemplate<Engine::ATextureAsset> {
 	public:
-		TextureAssetView(FileNode* node) : FileAssetViewTemplate<ATextureAsset>(node) {}
+		TextureAssetView(FileNode* node) : FileAssetViewTemplate<Engine::ATextureAsset>(node) {}
 		void Open() override;
 	};
 
-	class LevelAssetView: public FileAssetViewTemplate<ALevelAsset> {
+	class LevelAssetView: public FileAssetViewTemplate<Engine::ALevelAsset> {
 	public:
-		LevelAssetView(FileNode* node) : FileAssetViewTemplate<ALevelAsset>(node) {}
+		LevelAssetView(FileNode* node) : FileAssetViewTemplate<Engine::ALevelAsset>(node) {}
 		void Open() override;
 		void Save() override;
 	};

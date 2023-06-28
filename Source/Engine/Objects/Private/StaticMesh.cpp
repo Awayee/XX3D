@@ -1,5 +1,5 @@
-#include "Render/Public/StaticMesh.h"
-#include "Render/Public/Material.h"
+#include "Objects/Public/StaticMesh.h"
+#include "Objects/Public/Material.h"
 
 namespace Engine {
 

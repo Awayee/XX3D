@@ -6,15 +6,15 @@ namespace Editor {
 
 	EditorLevelMgr::EditorLevelMgr() {
 		File::FPath path = Engine::GetConfig().StartLevel;
-		ALevelAsset* asset;
+		Engine::ALevelAsset* asset;
 		auto node = ProjectAssetMgr::Instance()->GetFile(path);
 		if(node) {
-			asset = node->GetAsset<ALevelAsset>();
+			asset = node->GetAsset<Engine::ALevelAsset>();
 			LOG("Loaded start level: %s", path.string().c_str());
 			LoadLevel(asset, path);
 		}
 		else {
-			m_TempLevel.reset(new ALevelAsset);
+			m_TempLevel.reset(new Engine::ALevelAsset);
 			asset = m_TempLevel.get();
 			LoadLevel(asset, "");
 		}
@@ -23,7 +23,7 @@ namespace Editor {
 	EditorLevelMgr::~EditorLevelMgr() {
 	}
 
-	void EditorLevelMgr::LoadLevel(ALevelAsset* asset, const File::FPath& path) {
+	void EditorLevelMgr::LoadLevel(Engine::ALevelAsset* asset, const File::FPath& path) {
 		m_LevelAsset = asset;
 		m_LevelPath = path;
 		m_Level.reset(new EditorLevel(*m_LevelAsset, Engine::RenderScene::GetDefaultScene()));
@@ -36,7 +36,7 @@ namespace Editor {
 	void EditorLevelMgr::ReloadLevel() {
 		FileNode* node = ProjectAssetMgr::Instance()->GetFile(m_LevelPath);
 		if(node) {
-			m_LevelAsset = node->GetAsset<ALevelAsset>();
+			m_LevelAsset = node->GetAsset<Engine::ALevelAsset>();
 			m_Level.reset(new EditorLevel(*m_LevelAsset, Engine::RenderScene::GetDefaultScene()));
 		}
 		else {
@@ -49,7 +49,7 @@ namespace Editor {
 			return false;
 		}
 		m_Level->SaveAsset(m_LevelAsset);
-		AssetLoader::SaveProjectAsset(m_LevelAsset, m_LevelPath.string().c_str());
+		Engine::AssetLoader::SaveProjectAsset(m_LevelAsset, m_LevelPath.string().c_str());
 		LOG("[EditorLevelMgr::SaveLevel] Level saved: %s", m_LevelPath.string().c_str());
 		return true;
 	}
@@ -58,7 +58,7 @@ namespace Editor {
 		return m_Level.get();
 	}
 
-	ALevelAsset* EditorLevelMgr::GetLevelAsset() {
+	Engine::ALevelAsset* EditorLevelMgr::GetLevelAsset() {
 		return m_LevelAsset;
 	}
 

@@ -1,4 +1,5 @@
 #pragma once
+#include "Core/Public/SmartPointer.h"
 #include "Objects/Public/Engine.h"
 
 namespace Editor {

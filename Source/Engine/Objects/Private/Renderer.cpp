@@ -1,11 +1,11 @@
-#include "Render/Public/Renderer.h"
+#include "Objects/Public/Renderer.h"
 #include "Resource/Public/Config.h"
-#include "RenderMacro.h"
+#include "Render/Public/RenderMacro.h"
 #include "Window/Public/ImGuiImpl.h"
 #include "Window/Public/Wnd.h"
-#include "Render/Public/RenderScene.h"
-#include "Render/Public/Camera.h"
-#include "Render/Public/Material.h"
+#include "Objects/Public/RenderScene.h"
+#include "Objects/Public/Camera.h"
+#include "Objects/Public/Material.h"
 #include "Asset/Public/AssetLoader.h"
 
 namespace Engine {
