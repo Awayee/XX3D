@@ -12,6 +12,7 @@ namespace Math {
 	template<typename T> T Min(T a, T b) { return a < b ? a : b; }
 	template<typename T> T Max(T a, T b) { return a > b ? a : b; }
 	template<typename T> T Abs(T x) { return x < (T)0 ? -x : x; }
+	template<typename T> T Clamp(T x, T min, T max) { return x < max ? (x > min ? x : min) : max; }
 	inline bool IsNaN(float f) { return std::isnan(f); };
 	template<typename T> bool FloatEqual(float a, T b, float precision = 1e-6f) { return std::fabs(b - a) <= precision; }
 

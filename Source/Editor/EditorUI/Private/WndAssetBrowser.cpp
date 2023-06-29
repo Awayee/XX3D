@@ -54,6 +54,7 @@ namespace Editor {
 
 	WndAssetBrowser::WndAssetBrowser() : EditorWindowBase("Assets") {
 		EditorUIMgr::Instance()->AddMenu("Menu", "Import", ImportAsset, nullptr);
+		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
 		if(s_Instances.Empty()) {
 			Browser()->RegisterFolderRebuildEvent(WndAssetBrowser::OnFolderRebuildAllWindows);
 		}

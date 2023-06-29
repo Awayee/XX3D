@@ -76,6 +76,15 @@ namespace Editor {
 		Engine::ImGuiEndFrame();
 	}
 
+	void EditorUIMgr::AddMenuBar(const char* barName) {
+		for (auto& column : m_MenuBar) {
+			if (column.Name == barName) {
+				return;
+			}
+		}
+		m_MenuBar.PushBack({ barName, {} });
+	}
+
 	void EditorUIMgr::AddMenu(const char* barName, const char* name, Func<void()>&& func, bool* pToggle) {
 		for(auto& column: m_MenuBar) {
 			if(column.Name == barName) {

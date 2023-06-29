@@ -226,15 +226,15 @@ namespace Math {
         T fTyz = fTz * q.y; // 2yz
         T fTzz = fTz * q.z; // 2z^2
 
-        m[0][0] = 1 - (fTyy + fTzz); // 1 - 2y^2 - 2z^2
-        m[0][1] = fTxy - fTwz;          // 2xy - 2wz
-        m[0][2] = fTxz + fTwy;          // 2xz + 2wy
-        m[1][0] = fTxy + fTwz;          // 2xy + 2wz
-        m[1][1] = 1 - (fTxx + fTzz); // 1 - 2x^2 - 2z^2
-        m[1][2] = fTyz - fTwx;          // 2yz - 2wx
-        m[2][0] = fTxz - fTwy;          // 2xz - 2wy
-        m[2][1] = fTyz + fTwx;          // 2yz + 2wx
-        m[2][2] = 1 - (fTxx + fTyy); // 1 - 2x^2 - 2y^2
+        m[0][0] = (T)1 - (fTyy + fTzz); // 1 - 2y^2 - 2z^2
+        m[1][0] = fTxy - fTwz;          // 2xy - 2wz
+        m[2][0] = fTxz + fTwy;          // 2xz + 2wy
+        m[0][1] = fTxy + fTwz;          // 2xy + 2wz
+        m[1][1] = (T)1 - (fTxx + fTzz); // 1 - 2x^2 - 2z^2
+        m[2][1] = fTyz - fTwx;          // 2yz - 2wx
+        m[0][2] = fTxz - fTwy;          // 2xz - 2wy
+        m[1][2] = fTyz + fTwx;          // 2yz + 2wx
+        m[2][2] = (T)1 - (fTxx + fTyy); // 1 - 2x^2 - 2y^2
     }
 
     MATH_GENERIC const Matrix3x3<T> Matrix3x3<T>::IDENTITY = Matrix3x3<T>(1, 0, 0, 0, 1, 0, 0, 0, 1);

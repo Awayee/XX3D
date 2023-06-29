@@ -1,5 +1,6 @@
 #include "WndDetails.h"
 #include "AssetView.h"
+#include "EditorUI/Public/EditorUIMgr.h"
 #include "Functions/Public/EditorLevelMgr.h"
 
 namespace Editor {
@@ -20,20 +21,23 @@ namespace Editor {
 		EditorLevelMesh* mesh = level->GetMesh(idx);
 
 		//Transform
-		if(ImGui::CollapsingHeader("Transform")) {
-			if (ImGui::DragFloat3("Position", mesh->Position.Data(), 0.01f)) {
+		if(ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
+			ImGui::Text("Position"); ImGui::SameLine();
+			if (ImGui::DragFloat3("##Position", mesh->Position.Data(), 0.01f)) {
 				mesh->Mesh->SetPosition(mesh->Position);
 			}
-			if (ImGui::DragFloat3("Scale", mesh->Scale.Data(), 0.01f)) {
+			ImGui::Text("Scale   "); ImGui::SameLine();
+			if (ImGui::DragFloat3("##Scale", mesh->Scale.Data(), 0.01f)) {
 				mesh->Mesh->SetScale(mesh->Scale);
 			}
-			if (ImGui::DragFloat3("Rotation", mesh->Rotation.Data(), 0.01f)) {
+			ImGui::Text("Rotation"); ImGui::SameLine();
+			if (ImGui::DragFloat3("##Rotation", mesh->Rotation.Data(), 0.01f)) {
 				mesh->Mesh->SetRotation(Math::FQuaternion::Euler(mesh->Rotation));
 			}
 		}
 
 		//Material
-		if(ImGui::CollapsingHeader("Materials")) {
+		if(ImGui::CollapsingHeader("Materials", ImGuiTreeNodeFlags_DefaultOpen)) {
 			for (auto& primitive : mesh->Asset->Primitives) {
 				//material
 				File::FPath primitivePath = primitive.BinaryFile;
@@ -56,5 +60,6 @@ namespace Editor {
 	}
 
 	WndDetails::WndDetails(): EditorWindowBase("Details") {
+		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
 	}
 }

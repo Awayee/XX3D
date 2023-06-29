@@ -1,5 +1,6 @@
 #include "WndViewport.h"
 
+#include "EditorUI/Public/EditorUIMgr.h"
 #include "Objects/Public/EngineContext.h"
 #include "Objects/Public/RenderScene.h"
 #include "Objects/Public/Camera.h"
@@ -46,6 +47,10 @@ namespace Editor {
 		else {
 		}
 		camera->SetView(eye, at, tempUp);
+	}
+
+	WndViewport::WndViewport() : EditorWindowBase("Viewport", ImGuiWindowFlags_NoBackground) {
+		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
 	}
 
 	void WndViewport::CameraControl() {

@@ -27,6 +27,7 @@ namespace Editor {
 		~EditorUIMgr();
 	public:
 		void Tick();
+		void AddMenuBar(const char* barName);
 		void AddMenu(const char* barName, const char* name, Func<void()>&& func, bool* pToggle);
 		EditorWindowBase* AddWindow(const char* name, Func<void()>&& func, ImGuiWindowFlags flags=ImGuiWindowFlags_None);
 		void AddWindow(TUniquePtr<EditorWindowBase>&& wnd);

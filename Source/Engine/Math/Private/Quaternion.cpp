@@ -15,18 +15,18 @@ namespace Math {
 
     template <typename T>
     Quaternion<T> Quaternion<T>::Euler(const Vector3<T>& euler) {
-       T cy = Math::Cos(euler.y * 0.5);
-       T sy = Math::Sin(euler.y * 0.5);
-       T cp = Math::Cos(euler.x * 0.5);
-       T sp = Math::Sin(euler.x * 0.5);
-       T cr = Math::Cos(euler.z * 0.5);
-       T sr = Math::Sin(euler.z * 0.5);
-       return {
-	      cy * cp * sr - sy * sp * cr,
-	      sy * cp * sr + cy * sp * cr,
-	      sy * cp * cr - cy * sp * sr,
-          cy * cp * cr + sy * sp * sr
-       };
+        T cosR = Math::Cos(euler.x * 0.5);//roll
+        T sinR = Math::Sin(euler.x * 0.5);
+        T cosP = Math::Cos(euler.y * 0.5);//pitch
+        T sinP = Math::Sin(euler.y * 0.5);
+		T cosY = Math::Cos(euler.z * 0.5);//yaw
+		T sinY = Math::Sin(euler.z * 0.5);
+		return {
+			sinP * sinY * cosR + cosP * cosY * sinR,
+			sinP * cosY * cosR - cosP * sinY * sinR,
+			cosP * sinY * cosR - sinP * cosY * sinR,
+			cosP * cosY * cosR + sinP * sinY * sinR
+		};
     }
 
     template <typename T> T Quaternion<T>::Roll() const {
@@ -38,7 +38,12 @@ namespace Math {
     }
 
     template <typename T> T Quaternion<T>::Yaw() const {
-        return static_cast<T>(Math::ATan2(static_cast<T>(2) * (y * z + w * x), w * w - x * x - y * y + z * z));
+        return Math::ASin<T>(Math::Clamp<T>(static_cast<T>(-2) * (x * z - w * y), static_cast<T>(-1), static_cast<T>(1)));
+    }
+
+    template <typename T>
+    Vector3<T> Quaternion<T>::ToEuler() const {
+        return { Pitch(), Yaw(), Roll() };
     }
 
     template <typename T>
@@ -52,11 +57,6 @@ namespace Math {
         uuv *=  2.0f;
 
         return v + uv + uuv;
-    }
-
-    template <typename T>
-    Vector3<T> Quaternion<T>::ToEuler() const {
-        return { Pitch(), Yaw(), Roll() };
     }
 
     template <typename T>

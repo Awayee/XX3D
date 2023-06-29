@@ -78,7 +78,7 @@ namespace Editor {
 			savedMesh.Name = mesh.Name;
 			savedMesh.Position = mesh.Position;
 			savedMesh.Scale = mesh.Scale;
-			savedMesh.Rotation = mesh.Rotation;
+			savedMesh.Rotation = mesh.Mesh->GetRotation().ToEuler();
 		}
 	}
 }

@@ -10,7 +10,7 @@ namespace Editor {
 		float m_LastY = 0.0f;
 		bool  m_ViewportShow{ false };
 	public:
-		WndViewport() : EditorWindowBase("Viewport", ImGuiWindowFlags_NoBackground) {}
+		WndViewport();
 	private:
 		void CameraControl();
 		void Update() override;

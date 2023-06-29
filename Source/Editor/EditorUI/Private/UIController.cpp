@@ -17,6 +17,10 @@ namespace Editor {
 	UIController::UIController() {
 		EditorUIMgr* uiMgr = EditorUIMgr::Instance();
 
+		uiMgr->AddMenuBar("Menu");
+		uiMgr->AddMenuBar("Level");
+		uiMgr->AddMenuBar("Window");
+
 		//windows
 		uiMgr->AddWindow(MakeUniquePtr<WndAssetBrowser>());
 		uiMgr->AddWindow(MakeUniquePtr<WndViewport>());
