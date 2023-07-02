@@ -11,11 +11,9 @@ namespace Editor {
 		friend class WndAssetBrowser;
 	protected:
 		NodeID m_ID;
-		String m_Name;
-		String m_Icon;
 	public:
 		virtual ~AssetViewBase() {}
-
+		virtual const String& GetName() = 0;
 		virtual bool IsFolder() = 0;
 		virtual void Open() = 0;
 		virtual void Save() = 0;
@@ -27,6 +25,7 @@ namespace Editor {
 		FolderNode* m_Node{ nullptr };
 	public:
 		FolderAssetView(FolderNode* node);
+		const String& GetName() override;
 		bool IsFolder() override;
 		void Open() override;
 		void Save() override;
@@ -38,6 +37,7 @@ namespace Editor {
 		FileNode* m_Node = nullptr;
 	public:
 		FileAssetView(FileNode* node);
+		const String& GetName() override;
 		bool IsFolder() override;
 		virtual void Open() override {}
 		virtual void Save() override {}

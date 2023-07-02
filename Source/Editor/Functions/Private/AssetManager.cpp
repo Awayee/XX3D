@@ -9,6 +9,7 @@ namespace Editor {
 	PathNode::PathNode(const File::FPath& path, NodeID id, NodeID parent):m_ID(id), m_ParentID(parent), m_Path(path) {
 		m_PathStr = m_Path.string();
 		std::replace(m_PathStr.begin(), m_PathStr.end(), '\\', '/');
+		m_Name = m_Path.filename().string();
 	}
 
 	bool FolderNode::Contains(NodeID id) const {
@@ -105,6 +106,7 @@ namespace Editor {
 		m_Folders.Clear();
 		m_Files.Clear();
 		m_Root = BuildFolderRecursively(m_RootPath, INVALLID_NODE);
+		m_Folders[m_Root].m_Name = m_RootPath.parent_path().stem().string();
 	}
 
 	FileNode* AssetManager::GetFile(NodeID id) {

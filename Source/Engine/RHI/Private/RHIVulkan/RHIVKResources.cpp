@@ -102,7 +102,7 @@ namespace Engine {
 		VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr };
 		beginInfo.flags = flags;
 		beginInfo.pInheritanceInfo = nullptr;
-		_vkBeginCommandBuffer(handle, &beginInfo);
+		vkBeginCommandBuffer(handle, &beginInfo);
 	}
 
 	void RCommandBufferVk::End(){
@@ -119,7 +119,7 @@ namespace Engine {
 		passInfo.renderArea = vkRenderArea;
 		passInfo.clearValueCount = static_cast<uint32>(passVk->GetClears().Size());
 		passInfo.pClearValues = passVk->GetClears().Data();
-		_vkCmdBeginRenderPass(handle, &passInfo, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBeginRenderPass(handle, &passInfo, VK_SUBPASS_CONTENTS_INLINE);
 	}
 
 	void RCommandBufferVk::NextSubpass(){
@@ -142,7 +142,7 @@ namespace Engine {
 		region.imageSubresource.layerCount = layerCount;
 		region.imageOffset = { 0, 0, 0 };
 		region.imageExtent = { imageVk->GetExtent().w, imageVk->GetExtent().h, imageVk->GetExtent().d };
-		_vkCmdCopyBufferToImage(handle, ((RBufferVk*)buffer)->handle, imageVk->handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+		vkCmdCopyBufferToImage(handle, ((RBufferVk*)buffer)->handle, imageVk->handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 	}
 
 	void RCommandBufferVk::BlitImage(RCommandBuffer* cmd, RImage* srcImage, RImage* dstImage, const RSImageBlit& region)
@@ -156,49 +156,49 @@ namespace Engine {
 		blit.dstSubresource.baseArrayLayer = region.dstBaseLayer;
 		blit.dstSubresource.layerCount = region.dstLayerCount;
 		memcpy(blit.dstOffsets, region.dstOffsets, sizeof(VkOffset3D) * 2);
-		_vkCmdBlitImage(((RCommandBufferVk*)cmd)->handle, ((RImageVk*)srcImage)->handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		vkCmdBlitImage(((RCommandBufferVk*)cmd)->handle, ((RImageVk*)srcImage)->handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 			((RImageVk*)dstImage)->handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 	}
 
 	void RCommandBufferVk::BindPipeline(RPipeline* pipeline){
-		_vkCmdBindPipeline(handle, (VkPipelineBindPoint)pipeline->GetType(), ((RPipelineVk*)pipeline)->handle);
+		vkCmdBindPipeline(handle, (VkPipelineBindPoint)pipeline->GetType(), ((RPipelineVk*)pipeline)->handle);
 	}
 
 	void RCommandBufferVk::BindDescriptorSet(RPipelineLayout* layout, RDescriptorSet* descriptorSet, uint32 setIdx, RPipelineType pipelineType){
-		_vkCmdBindDescriptorSets(handle, (VkPipelineBindPoint)pipelineType, ((RPipelineLayoutVk*)layout)->handle, setIdx, 1, &((RDescriptorSetVk*)descriptorSet)->handle, 0, nullptr);
+		vkCmdBindDescriptorSets(handle, (VkPipelineBindPoint)pipelineType, ((RPipelineLayoutVk*)layout)->handle, setIdx, 1, &((RDescriptorSetVk*)descriptorSet)->handle, 0, nullptr);
 	}
 
 	void RCommandBufferVk::BindVertexBuffer(RBuffer* buffer, uint32 first, uint64 offset){
-		_vkCmdBindVertexBuffers(handle, first, 1, &((RBufferVk*)buffer)->handle, &offset);
+		vkCmdBindVertexBuffers(handle, first, 1, &((RBufferVk*)buffer)->handle, &offset);
 	}
 
 	void RCommandBufferVk::BindIndexBuffer(RBuffer* buffer, uint64 offset){
-		_vkCmdBindIndexBuffer(handle, ((RBufferVk*)buffer)->handle, offset, VK_INDEX_TYPE_UINT32);
+		vkCmdBindIndexBuffer(handle, ((RBufferVk*)buffer)->handle, offset, VK_INDEX_TYPE_UINT32);
 	}
 
 	void RCommandBufferVk::Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance){
-		_vkCmdDraw(handle, vertexCount, instanceCount, firstIndex, firstInstance);
+		vkCmdDraw(handle, vertexCount, instanceCount, firstIndex, firstInstance);
 	}
 
 	void RCommandBufferVk::DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance){
-		_vkCmdDrawIndexed(handle, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+		vkCmdDrawIndexed(handle, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	}
 
 	void RCommandBufferVk::DrawPrimitive(RBuffer* buffer, uint32 vertexCount, uint32 instanceCount){
 		constexpr VkDeviceSize offset = 0;
-		_vkCmdBindVertexBuffers(handle, 0, 1, &((RBufferVk*)buffer)->handle, &offset);
-		_vkCmdDraw(handle, vertexCount, instanceCount, 0, 0);
+		vkCmdBindVertexBuffers(handle, 0, 1, &((RBufferVk*)buffer)->handle, &offset);
+		vkCmdDraw(handle, vertexCount, instanceCount, 0, 0);
 	}
 
 	void RCommandBufferVk::DrawPrimitiveIndexed(RBuffer* vertexBuffer, RBuffer* indexBuffer, uint32 indexCount, uint32 instanceCount){
 		constexpr VkDeviceSize offset = 0;
-		_vkCmdBindVertexBuffers(handle, 0, 1, &((RBufferVk*)vertexBuffer)->handle, &offset);
-		_vkCmdBindIndexBuffer(handle, ((RBufferVk*)indexBuffer)->handle, 0, VK_INDEX_TYPE_UINT32);
-		_vkCmdDrawIndexed(handle, indexCount, instanceCount, 0, 0, 0);
+		vkCmdBindVertexBuffers(handle, 0, 1, &((RBufferVk*)vertexBuffer)->handle, &offset);
+		vkCmdBindIndexBuffer(handle, ((RBufferVk*)indexBuffer)->handle, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdDrawIndexed(handle, indexCount, instanceCount, 0, 0, 0);
 	}
 
 	void RCommandBufferVk::Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ){
-		_vkCmdDispatch(handle, groupCountX, groupCountY, groupCountZ);
+		vkCmdDispatch(handle, groupCountX, groupCountY, groupCountZ);
 	}
 
 	void RCommandBufferVk::ClearAttachment(RImageAspectFlags aspect, const float* color, const URect& rect){
@@ -215,7 +215,7 @@ namespace Engine {
 		clearRect.rect.offset.y = rect.y;
 		clearRect.baseArrayLayer = 0;
 		clearRect.layerCount = 1;
-		_vkCmdClearAttachments(handle, 1, &clearAttachment, 1, &clearRect);
+		vkCmdClearAttachments(handle, 1, &clearAttachment, 1, &clearRect);
 	}
 
 	void RCommandBufferVk::CopyBuffer(RBuffer* srcBuffer, RBuffer* dstBuffer, uint64 srcOffset, uint64 dstOffset, uint64 size){
@@ -250,7 +250,7 @@ namespace Engine {
 	}
 
 	void RCommandBufferVk::BeginDebugLabel(const char* msg, const float* color) {
-		if (nullptr != _vkCmdBeginDebugUtilsLabelEXT) {
+		if (nullptr != vkCmdBeginDebugUtilsLabelEXT) {
 			VkDebugUtilsLabelEXT labelInfo{ VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT, nullptr };
 			labelInfo.pLabelName = msg;
 			if (nullptr != color) {
@@ -258,13 +258,13 @@ namespace Engine {
 					labelInfo.color[i] = color[i];
 				}
 			}
-			_vkCmdBeginDebugUtilsLabelEXT(handle, &labelInfo);
+			vkCmdBeginDebugUtilsLabelEXT(handle, &labelInfo);
 		}
 	}
 
 	void RCommandBufferVk::EndDebugLabel(){
-		if(nullptr != _vkCmdEndDebugUtilsLabelEXT) {
-			_vkCmdEndDebugUtilsLabelEXT(handle);
+		if(nullptr != vkCmdEndDebugUtilsLabelEXT) {
+			vkCmdEndDebugUtilsLabelEXT(handle);
 		}
 	}
 }

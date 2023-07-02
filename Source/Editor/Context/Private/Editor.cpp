@@ -121,7 +121,7 @@ namespace Editor {
 	}
 
 	XXEditor::~XXEditor() {
-		Engine::RHI::Instance()->WaitGraphicsQueue();//wait last submitted commands
+		Engine::Context()->Renderer()->WaitGPU();
 		Editor::EditorTimer::Release();
 		EngineAssetMgr::Release();
 		ProjectAssetMgr::Release();

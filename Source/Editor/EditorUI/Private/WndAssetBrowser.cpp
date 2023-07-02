@@ -52,15 +52,14 @@ namespace Editor {
 		}
 	}
 
-	WndAssetBrowser::WndAssetBrowser() : EditorWindowBase("Assets") {
+	WndAssetBrowser::WndAssetBrowser() : EditorWndBase("Assets") {
 		EditorUIMgr::Instance()->AddMenu("Menu", "Import", ImportAsset, nullptr);
 		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
 		if(s_Instances.Empty()) {
 			Browser()->RegisterFolderRebuildEvent(WndAssetBrowser::OnFolderRebuildAllWindows);
 		}
 		s_Instances.PushBack(this);
-		m_CurrentFolder = Browser()->GetRoot();
-		RefreshItems();
+		SetCurrentFolder(Browser()->GetRoot());
 	}
 
 	WndAssetBrowser::~WndAssetBrowser() {
@@ -70,9 +69,29 @@ namespace Editor {
 	void WndAssetBrowser::Update() {
 	}
 
-	void WndAssetBrowser::Display() {
-		if(m_CurrentFolder != Browser()->GetRoot()) {
-			if(ImGui::ArrowButton("Back", ImGuiDir_Left)) {
+	void WndAssetBrowser::WndContent() {
+
+		ImGui::Columns(2);
+
+		// folders TODO
+		FolderNode* rootNode = Browser()->GetRoot();
+		if(ImGui::TreeNode(rootNode->GetName().c_str())) {
+			if(ImGui::IsItemClicked(0)) {
+				SetCurrentFolder(rootNode);
+			}
+			for(NodeID nodeId: rootNode->GetChildFolders()) {
+				FolderNode* node = Browser()->GetFolder(nodeId);
+				if(ImGui::Button(node->GetName().c_str())) {
+					SetCurrentFolder(node);
+				}
+			}
+			ImGui::TreePop();
+		}
+
+		// files
+		ImGui::NextColumn();
+		if (m_CurrentFolder->ParentFolder() == INVALLID_NODE) {
+			if (ImGui::ArrowButton("Back", ImGuiDir_Left)) {
 				m_CurrentFolder = Browser()->GetFolder(m_CurrentFolder->ParentFolder());
 				RefreshItems();
 				return;
@@ -86,12 +105,11 @@ namespace Editor {
 		for(uint32 i=0; i< m_Contents.Size(); ++i) {
 			auto& item = m_Contents[i];
 
-			if (ImGui::Selectable(item->m_Name.c_str(), m_SelectedItem == i, ImGuiSelectableFlags_AllowDoubleClick)) {
+			if (ImGui::Selectable(item->GetName().c_str(), m_SelectedItem == i, ImGuiSelectableFlags_AllowDoubleClick)) {
 				m_SelectedItem = i;
 				if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
 					if(item->IsFolder()) {
-						m_CurrentFolder = Browser()->GetFolder(item->m_ID);
-						RefreshItems();
+						SetCurrentFolder(Browser()->GetFolder(item->m_ID));
 					}
 					else {
 						item->Open();
@@ -100,14 +118,19 @@ namespace Editor {
 			}
 
 			if (ImGui::BeginDragDropSource()) {
-				ImGui::Text(item->m_Name.c_str());
+				ImGui::Text(item->GetName().c_str());
 				item->OnDrag();
 				ImGui::EndDragDropSource();
 			}
+
+			if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+			}
 		}
 		ImGui::EndChild();
+	}
 
-		if(ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
-		}
+	void WndAssetBrowser::SetCurrentFolder(FolderNode* node) {
+		m_CurrentFolder = node;
+		RefreshItems();
 	}
 }

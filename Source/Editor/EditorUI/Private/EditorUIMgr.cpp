@@ -52,24 +52,15 @@ namespace Editor {
 
 		ImGui::End();
 		//windows
-		for (uint32 i = 0; i < m_Windows.Size();) {
-			auto& wnd = m_Windows[i];
+		for (uint32 i = 0; i < m_Widgets.Size();) {
+			auto& wnd = m_Widgets[i];
 			if(wnd->m_ToDelete) {
-				m_Windows.SwapRemoveAt(i);
+				m_Widgets.SwapRemoveAt(i);
 			}
 			else {
 				++i;
 				wnd->Update();
-				if(wnd->m_Enable) {
-					if(ImGui::Begin(wnd->m_Name, &wnd->m_Enable, wnd->m_Flags)) {
-						// support right click to focus window
-						if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
-							ImGui::SetWindowFocus();
-						}
-						wnd->Display();
-					}
-					ImGui::End();
-				}
+				wnd->Display();
 			}
 		}
 
@@ -95,21 +86,26 @@ namespace Editor {
 		m_MenuBar.PushBack({ barName , {{ name, func, pToggle }}});
 	}
 
-	EditorWindowBase* EditorUIMgr::AddWindow(const char* name, Func<void()>&& func, ImGuiWindowFlags flags) {
-		m_Windows.PushBack(MakeUniquePtr<EditorFuncWnd>(name, func, flags));
-		return m_Windows.Back().get();
+	EditorWndBase* EditorUIMgr::AddWindow(const char* name, Func<void()>&& func, ImGuiWindowFlags flags) {
+		auto wndPtr = MakeUniquePtr<EditorFuncWnd>(name, func, flags);
+		EditorWndBase* ptr = wndPtr.get();
+		m_Widgets.PushBack(std::move(wndPtr));
+		return ptr;
 	}
 
-	void EditorUIMgr::AddWindow(TUniquePtr<EditorWindowBase>&& wnd) {
-		m_Windows.PushBack(std::forward<TUniquePtr<EditorWindowBase>>(wnd));
+	void EditorUIMgr::AddWindow(TUniquePtr<EditorWndBase>&& wnd) {
+		m_Widgets.PushBack(std::forward<TUniquePtr<EditorWndBase>>(wnd));
 	}
 
-	void EditorUIMgr::DeleteWindow(EditorWindowBase*& pWnd) {
+	void EditorUIMgr::DeleteWindow(EditorWndBase*& pWnd) {
 		pWnd->m_ToDelete = true;
 		pWnd = nullptr;
 	}
 
-	void EditorUIMgr::RemoveWindow(WidgetID wndId) {
-
+	EditorPopup* EditorUIMgr::AddPopUp(Func<void()>&& func) {
+		auto popPtr = MakeUniquePtr<EditorPopup>(func);
+		EditorPopup* ptr = popPtr.get();
+		m_Widgets.PushBack(std::move(popPtr));
+		return ptr;
 	}
 }

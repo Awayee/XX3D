@@ -2,10 +2,9 @@
 #include "VulkanUtil.h"
 #include <GLFW/glfw3.h>
 #ifdef USE_VMA
+#define VK_NO_PROTOTYPES
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
-#else
-#include <vulkan/vulkan.h>
 #endif
 
 namespace Engine {
@@ -14,6 +13,8 @@ namespace Engine {
 	cls##Vk* cls##Ptr = new cls##Vk;\
 	cls##Ptr->handle = hd; \
 	return reinterpret_cast<cls*>(cls##Ptr)
+
+	constexpr uint64 WAIT_MAX = 0xffffffff;
 
 #pragma region rhi initialzie
 
@@ -29,8 +30,8 @@ namespace Engine {
 		return extensions;
 	}
 	void RHIVulkan::CreateInstance() {
-		ASSERT(!m_EnableValidationLayers || CheckValidationLayerSupport(m_ValidationLayers), 
-			"validation layers requested, but not available!");
+		InitializeInstanceProcAddr();
+		ASSERT(!m_EnableValidationLayers || CheckValidationLayerSupport(m_ValidationLayers), "validation layers requested, but not available!");
 		// app info
 		VkApplicationInfo appInfo{};
 		appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -64,6 +65,8 @@ namespace Engine {
 
 		// create m_vulkan_context._instance
 		VK_CHECK(vkCreateInstance(&createInfo, nullptr, &m_Instance), "");
+
+		LoadInstanceFunctions(m_Instance);
 	}
 	void RHIVulkan::InitializeDebugMessenger() {
 		if(m_EnableValidationLayers) {
@@ -74,7 +77,7 @@ namespace Engine {
 		}
 	}
 	void RHIVulkan::CreateWindowSurface() {
-		VK_CHECK(glfwCreateWindowSurface(m_Instance, reinterpret_cast<GLFWwindow*>(m_WindowHandle), nullptr, &m_Surface), "vk create window surface");
+		VK_CHECK(glfwCreateWindowSurface(m_Instance, static_cast<GLFWwindow*>(m_WindowHandle), nullptr, &m_Surface), "vk create window surface");
 	}
 
 	void RHIVulkan::InitializePhysicalDevice() {
@@ -160,39 +163,8 @@ namespace Engine {
 			m_DepthFormat = FORMAT_D16_UNORM;
 		}
 		ASSERT(m_DepthFormat != FORMAT_UNDEFINED, "");
-	}
 
-
-	void RHIVulkan::LoadDeviceFunctions() {
-		// more efficient pointer
-		const auto& device = m_Device;
-		GET_DEVICE_FUNC(vkWaitForFences             );
-		GET_DEVICE_FUNC(vkResetFences               );
-		GET_DEVICE_FUNC(vkResetCommandPool          );
-		GET_DEVICE_FUNC(vkBeginCommandBuffer        );
-		GET_DEVICE_FUNC(vkEndCommandBuffer          );
-		GET_DEVICE_FUNC(vkCmdBeginRenderPass        );
-		GET_DEVICE_FUNC(vkCmdCopyBufferToImage      );
-		GET_DEVICE_FUNC(vkCmdBlitImage              );
-		GET_DEVICE_FUNC(vkCmdNextSubpass            );
-		GET_DEVICE_FUNC(vkCmdEndRenderPass          );
-		GET_DEVICE_FUNC(vkCmdBindPipeline           );
-		GET_DEVICE_FUNC(vkCmdSetViewport            );
-		GET_DEVICE_FUNC(vkCmdSetScissor             );
-		GET_DEVICE_FUNC(vkCmdBindVertexBuffers      );
-		GET_DEVICE_FUNC(vkCmdBindIndexBuffer        );
-		GET_DEVICE_FUNC(vkCmdBindDescriptorSets     );
-		GET_DEVICE_FUNC(vkCmdDrawIndexed            );
-		GET_DEVICE_FUNC(vkCmdClearAttachments       );
-		GET_DEVICE_FUNC(vkCmdDraw                   );
-		GET_DEVICE_FUNC(vkCmdDispatch               );
-		GET_DEVICE_FUNC(vkCmdCopyBuffer             );
-
-		if (m_EnableDebugUtils) {
-			GET_DEVICE_FUNC(vkCmdBeginDebugUtilsLabelEXT);
-			GET_DEVICE_FUNC(vkCmdEndDebugUtilsLabelEXT);
-		}
-
+		LoadDeviceFunctions(m_Device);
 	}
 
 	void RHIVulkan::CreateCommandPools() {
@@ -264,18 +236,16 @@ namespace Engine {
 		m_ImageAvaliableSemaphores.Resize(m_MaxFramesInFlight);
 		m_PresentationFinishSemaphores.Resize(m_MaxFramesInFlight);
 		m_ImageAvaliableForTextureCopySemaphores.Resize(m_MaxFramesInFlight);
-		m_IsFrameInFlightFences.Resize(m_MaxFramesInFlight);
 		for(uint32 i=0; i< m_MaxFramesInFlight; ++i) {
 			VK_CHECK(vkCreateSemaphore(m_Device, &semaphoreCreateInfo, nullptr, &m_ImageAvaliableSemaphores[i]), "ImageAvaliableSemaphore");
 			VK_CHECK(vkCreateSemaphore(m_Device, &semaphoreCreateInfo, nullptr, &m_PresentationFinishSemaphores[i]), "PresentationFinishSemaphore");
 			VK_CHECK(vkCreateSemaphore(m_Device, &semaphoreCreateInfo, nullptr, &m_ImageAvaliableForTextureCopySemaphores[i]), "ImageAvaliableForTextureCopySemaphore");
-			VK_CHECK(vkCreateFence(m_Device, &fenceCreateInfo, nullptr, &m_IsFrameInFlightFences[i]), "vkCreateFence");
 		}
 	}
 	void RHIVulkan::CreateMemoryAllocator() {
 		VmaVulkanFunctions vulkanFunctions = {};
-		vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
-		vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
+		vulkanFunctions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
+		vulkanFunctions.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
 
 		VmaAllocatorCreateInfo allocatorCreateInfo = {};
 		allocatorCreateInfo.vulkanApiVersion = VK_API_VER;
@@ -362,7 +332,6 @@ namespace Engine {
 		CreateWindowSurface();
 		InitializePhysicalDevice();
 		CreateLogicalDevice();
-		LoadDeviceFunctions();
 		CreateCommandPools();
 		CreateDescriptorPool();
 		CreateSyncResources();
@@ -391,10 +360,6 @@ namespace Engine {
 			vkDestroySemaphore(m_Device, smp, nullptr);
 		}
 		m_ImageAvaliableForTextureCopySemaphores.Clear();
-		for (auto fence : m_IsFrameInFlightFences) {
-			vkDestroyFence(m_Device, fence, nullptr);
-		}
-		m_IsFrameInFlightFences.Clear();
 		for (auto pool : m_CommandPools) {
 			vkDestroyCommandPool(m_Device, pool, nullptr);
 		}
@@ -543,7 +508,7 @@ namespace Engine {
 		}
 		RRenderPassVk* pass = new RRenderPassVk;
 		pass->handle = handle;
-		return reinterpret_cast<RRenderPass*>(pass);
+		return static_cast<RRenderPass*>(pass);
 
 	}
 
@@ -826,15 +791,10 @@ namespace Engine {
 	}
 
 	RQueue* RHIVulkan::GetGraphicsQueue() {
-		return reinterpret_cast<RQueue*>(&m_GraphicsQueue);
+		return static_cast<RQueue*>(&m_GraphicsQueue);
 	}
 
 	void RHIVulkan::ResizeSwapchain(uint32 width, uint32 height) {
-		if (VK_SUCCESS != _vkWaitForFences(m_Device, m_IsFrameInFlightFences.Size(), m_IsFrameInFlightFences.Data(), VK_TRUE, UINT64_MAX))
-		{
-			ERROR("_vkWaitForFences failed");
-			return;
-		}
 		m_SwapchainExtent.w = static_cast<uint32>(width);
 		m_SwapchainExtent.h = static_cast<uint32>(height);
 		ClearSwapchain();
@@ -849,7 +809,7 @@ namespace Engine {
 		// wait semaphores
 		TempArray<VkSemaphore> vkWaitSmps(waitSemaphores.Size());
 		for (i = 0; i < waitSemaphores.Size(); ++i) {
-			vkWaitSmps[i] = reinterpret_cast<RSemaphoreVk*>(waitSemaphores + i)->handle;
+			vkWaitSmps[i] = dynamic_cast<RSemaphoreVk*>(waitSemaphores[i])->handle;
 		}
 		submitInfo.waitSemaphoreCount = waitSemaphores.Size();
 		submitInfo.pWaitSemaphores = vkWaitSmps.Data();
@@ -858,7 +818,7 @@ namespace Engine {
 		// commands
 		TempArray<VkCommandBuffer> vkCmds(cmds.Size());
 		for (i = 0; i < cmds.Size(); ++i) {
-			vkCmds[i] = reinterpret_cast<RCommandBufferVk*>(cmds + i)->handle;
+			vkCmds[i] = dynamic_cast<RCommandBufferVk*>(cmds[i])->handle;
 		}
 		submitInfo.commandBufferCount = cmds.Size();
 		submitInfo.pCommandBuffers = vkCmds.Data();
@@ -866,34 +826,30 @@ namespace Engine {
 		// signal semaphores
 		TempArray<VkSemaphore> vkSignalSmps(signalSemaphores.Size());
 		for(i=0; i< signalSemaphores.Size(); ++i) {
-			vkSignalSmps[i] = reinterpret_cast<RSemaphoreVk*>(signalSemaphores + i)->handle;
+			vkSignalSmps[i] = dynamic_cast<RSemaphoreVk*>(signalSemaphores[i])->handle;
 		}
 		submitInfo.signalSemaphoreCount = signalSemaphores.Size();
 		submitInfo.pSignalSemaphores = vkSignalSmps.Data();
 
 		// fence
-		VkFence vkFence = (nullptr == fence) ? VK_NULL_HANDLE : reinterpret_cast<RFenceVk*>(fence)->handle;
+		VkFence vkFence = (nullptr == fence) ? VK_NULL_HANDLE : dynamic_cast<RFenceVk*>(fence)->handle;
 
-		VK_CHECK(vkQueueSubmit(reinterpret_cast<RQueueVk*>(queue)->handle, 1, &submitInfo, vkFence), "vkQueueSubmit");
+		VK_CHECK(vkQueueSubmit(dynamic_cast<RQueueVk*>(queue)->handle, 1, &submitInfo, vkFence), "vkQueueSubmit");
 	}
 	void RHIVulkan::QueueWaitIdle(RQueue* queue) {
-		VK_CHECK(vkQueueWaitIdle(reinterpret_cast<RQueueVk*>(queue)->handle), "vkQueueWaitIdle");
-	}
-
-	void RHIVulkan::WaitGraphicsQueue() {
-		VK_CHECK(vkQueueWaitIdle(m_GraphicsQueue.handle), "vkQueueWaitIdle");
+		VK_CHECK(vkQueueWaitIdle(dynamic_cast<RQueueVk*>(queue)->handle), "vkQueueWaitIdle");
 	}
 
 	RImageView* RHIVulkan::GetSwapchainImageView(uint8 i) {
 		ASSERT(i < m_SwapchainImageViews.Size(), "i < m_MaxFramesInFlight");
-		return reinterpret_cast<RImageView*>(&m_SwapchainImageViews[i]);
+		return static_cast<RImageView*>(&m_SwapchainImageViews[i]);
 	}
 	uint32 RHIVulkan::GetSwapchainMaxImageCount() {
 		return (uint32)m_SwapchainImages.Size();
 	}
 	RFramebuffer* RHIVulkan::CreateFrameBuffer(RRenderPass* pass, CRefRange<RImageView*> attachments, uint32 width, uint32 height, uint32 layers) {
 		VkFramebufferCreateInfo framebufferInfo{ VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
-		framebufferInfo.renderPass = reinterpret_cast<RRenderPassVk*>(pass)->handle;
+		framebufferInfo.renderPass = dynamic_cast<RRenderPassVk*>(pass)->handle;
 		TempArray<VkImageView> vkImageViews(attachments.Size());
 		for(uint32 i=0; i< attachments.Size(); ++i) {
 			const RImageViewVk* imageViewVk = (const RImageViewVk*)(attachments[i]);
@@ -939,7 +895,7 @@ namespace Engine {
 	}
 
 	void RHIVulkan::FreeCommandBuffer(RCommandBuffer* cmd) {
-		RCommandBufferVk* vkCmd = reinterpret_cast<RCommandBufferVk*>(cmd);
+		RCommandBufferVk* vkCmd = dynamic_cast<RCommandBufferVk*>(cmd);
 		vkFreeCommandBuffers(m_Device, vkCmd->m_Pool, 1, &vkCmd->handle);
 		delete vkCmd;
 	}
@@ -961,13 +917,13 @@ namespace Engine {
 		beginInfo.pNext = nullptr;
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 		beginInfo.pInheritanceInfo = nullptr;
-		VK_CHECK(_vkBeginCommandBuffer(cmd.handle, &beginInfo), "Failed to begin command buffer!");
+		VK_CHECK(vkBeginCommandBuffer(cmd.handle, &beginInfo), "Failed to begin command buffer!");
 
 		// run
 		func(&cmd);
 
 		// end
-		_vkEndCommandBuffer(cmd.handle);
+		vkEndCommandBuffer(cmd.handle);
 
 		// submit
 		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
@@ -981,7 +937,6 @@ namespace Engine {
 	}
 
 	int RHIVulkan::PreparePresent(uint8 frameIndex) {
-		_vkWaitForFences(m_Device, 1, &m_IsFrameInFlightFences[frameIndex], VK_TRUE, UINT64_MAX);
 		VkResult res = vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX, m_ImageAvaliableSemaphores[frameIndex], VK_NULL_HANDLE, &m_CurrentSwapchainImageIndex);
 		if(VK_ERROR_OUT_OF_DATE_KHR == res){
 			return -1;
@@ -991,18 +946,16 @@ namespace Engine {
 		}
 
 
-		VK_CHECK(_vkResetCommandPool(m_Device, m_CommandPools[frameIndex], 0), "Failed to reset command pool!");
+		VK_CHECK(vkResetCommandPool(m_Device, m_CommandPools[frameIndex], 0), "Failed to reset command pool!");
 		return static_cast<int>(m_CurrentSwapchainImageIndex);
 	}
-	int RHIVulkan::QueueSubmitPresent(RCommandBuffer* cmd, uint8 frameIndex) {
-		VK_CHECK(_vkResetFences(m_Device, 1, &m_IsFrameInFlightFences[frameIndex]));
-
+	int RHIVulkan::QueueSubmitPresent(RCommandBuffer* cmd, uint8 frameIndex, RFence* fence) {
 		// submit command buffer
 		//VkSemaphore semaphores[2] = { m_ImageAvaliableForTextureCopySemaphores[m_CurrentFrame], m_PresentationFinishSemaphores[m_CurrentFrame] };
 		VkSemaphore semaphores[1] = { m_PresentationFinishSemaphores[frameIndex] };
 		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-		VkCommandBuffer vkCmd = reinterpret_cast<RCommandBufferVk*>(cmd)->handle;
+		VkCommandBuffer vkCmd = dynamic_cast<RCommandBufferVk*>(cmd)->handle;
 		submitInfo.waitSemaphoreCount = 1;
 		submitInfo.pWaitSemaphores = &m_ImageAvaliableSemaphores[frameIndex];
 		submitInfo.pWaitDstStageMask = waitStages;
@@ -1010,7 +963,8 @@ namespace Engine {
 		submitInfo.pCommandBuffers = &vkCmd;
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = semaphores;
-		VK_CHECK(vkQueueSubmit(m_GraphicsQueue.handle, 1, &submitInfo, m_IsFrameInFlightFences[frameIndex]), "Failed to submit graphics queue!");
+		const RFenceVk* fenceVk = dynamic_cast<RFenceVk*>(fence);
+		VK_CHECK(vkQueueSubmit(m_GraphicsQueue.handle, 1, &submitInfo, fenceVk->handle), "Failed to submit graphics queue!");
 
 		// present
 		VkPresentInfoKHR presentQueue = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
@@ -1027,7 +981,7 @@ namespace Engine {
 		return 0;
 	}
 	void RHIVulkan::FreeMemory(RMemory* memory) {
-		vmaFreeMemory(m_Vma, reinterpret_cast<RMemoryVma*>(memory)->handle);
+		vmaFreeMemory(m_Vma, dynamic_cast<RMemoryVma*>(memory)->handle);
 	}
 
 	RBuffer* RHIVulkan::CreateBuffer(uint64 size, RBufferUsageFlags usage) {
@@ -1151,7 +1105,7 @@ namespace Engine {
 	}
 
 	RMemory* RHIVulkan::CreateImageMemory(RImage* image, RMemoryPropertyFlags memoryProperty, void* pData) {
-		VkImage imageVk = reinterpret_cast<RImageVk*>(image)->handle;
+		VkImage imageVk = dynamic_cast<RImageVk*>(image)->handle;
 		VmaAllocationCreateInfo info;
 		info.flags = 0;
 		info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
@@ -1168,7 +1122,7 @@ namespace Engine {
 		}
 		RMemoryVma* memory = new RMemoryVma;
 		memory->handle = handle;
-		return reinterpret_cast<RMemory*>(memory);
+		return static_cast<RMemory*>(memory);
 	}
 
 	void RHIVulkan::DestroyImage(RImage* image) {
@@ -1236,6 +1190,33 @@ namespace Engine {
 
 	void RHIVulkan::DestroySampler(RSampler* sampler) {
 		vkDestroySampler(m_Device, ((RSamplerVk*)sampler)->handle, nullptr);
+	}
+
+	RFence* RHIVulkan::CreateFence(bool sig) {
+		VkFenceCreateInfo info;
+		info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		info.pNext = nullptr;
+		info.flags = sig ? VK_FENCE_CREATE_SIGNALED_BIT : 0; // the fence is initialized as signaled
+		RFenceVk* fenceVk = new RFenceVk;
+		vkCreateFence(m_Device, &info, nullptr, &fenceVk->handle);
+		return static_cast<RFence*>(fenceVk);
+	}
+
+	void RHIVulkan::DestroyFence(RFence* fence) {
+		RFenceVk* fenceVk = dynamic_cast<RFenceVk*>(fence);
+		vkDestroyFence(m_Device, fenceVk->handle, nullptr);
+		delete fenceVk;
+	}
+
+	void RHIVulkan::WaitForFence(RFence* fence) {
+		RFenceVk* fenceVk = dynamic_cast<RFenceVk*>(fence);
+		VkResult r = vkWaitForFences(m_Device, 1, &fenceVk->handle, true, WAIT_MAX);
+		ASSERT(r == VK_SUCCESS, "");
+	}
+
+	void RHIVulkan::ResetFence(RFence* fence) {
+		RFenceVk* fenceVk = dynamic_cast<RFenceVk*>(fence);
+		vkResetFences(m_Device, 1, &fenceVk->handle);
 	}
 
 	RHIVulkan* RHIVulkan::InstanceVulkan() {

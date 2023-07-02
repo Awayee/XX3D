@@ -1,5 +1,6 @@
 #pragma once
 
+#define VK_NO_PROTOTYPES
 #ifdef USE_VMA
 #include <vk_mem_alloc.h>
 #else
@@ -7,6 +8,8 @@
 #endif
 #include "RHI/Public/RHI.h"
 #include "RHIVKResources.h"
+#include "RHI/Public/RHIClasses.h"
+#include "RHI/Public/RHIStructs.h"
 #include "Core/Public/Container.h"
 #include "Core/Public/TVector.h"
 
@@ -56,7 +59,6 @@ namespace Engine{
 		TVector<VkSemaphore> m_ImageAvaliableSemaphores;
 		TVector<VkSemaphore> m_PresentationFinishSemaphores;
 		TVector<VkSemaphore> m_ImageAvaliableForTextureCopySemaphores;
-		TVector<VkFence> m_IsFrameInFlightFences;
 		VmaAllocator m_Vma{ nullptr };
 
 
@@ -76,7 +78,6 @@ namespace Engine{
 		void CreateWindowSurface();
 		void InitializePhysicalDevice();
 		void CreateLogicalDevice();
-		void LoadDeviceFunctions();
 		void CreateCommandPools();
 		void CreateDescriptorPool();
 		void CreateSyncResources();
@@ -128,7 +129,6 @@ namespace Engine{
 		// command buffer
 		void QueueSubmit(RQueue* queue, CRefRange<RCommandBuffer*> cmds, CRefRange<RSemaphore*> waitSemaphores, CRefRange<RPipelineStageFlags> waitStageFlags, CRefRange<RSemaphore*> signalSemaphores, RFence* fence) override;
 		void QueueWaitIdle(RQueue* queue)override;
-		void WaitGraphicsQueue() override;
 		RFramebuffer* CreateFrameBuffer(RRenderPass* pass, CRefRange<RImageView*> attachments, uint32 width, uint32 height, uint32 layers) override;
 		void DestroyFramebuffer(RFramebuffer* framebuffer) override;
 		RCommandBuffer* AllocateCommandBuffer(RCommandBufferLevel level)override;
@@ -136,7 +136,7 @@ namespace Engine{
 
 		void ImmediateCommit(const CommandBufferFunc& func) override;
 		int PreparePresent(uint8 frameIndex) override;
-		int QueueSubmitPresent(RCommandBuffer* cmd, uint8 frameIndex) override;
+		int QueueSubmitPresent(RCommandBuffer* cmd, uint8 frameIndex, RFence* fence) override;
 
 		// buffer
 		RBuffer* CreateBuffer(uint64 size, RBufferUsageFlags usage) override;
@@ -156,7 +156,14 @@ namespace Engine{
 			uint32 baseMipLevel, uint32 levelCount, uint32 baseLayer, uint32 layerCount) override;
 		void DestroyImageView(RImageView* imageView) override;
 		RSampler* CreateSampler(const RSSamplerInfo& samplerInfo) override;
-		void DestroySampler(RSampler* sampler) override;
+		void DestroySampler(RSampler* sampler) override;\
+
+		//sync
+		RFence* CreateFence(bool sig) override;
+		void DestroyFence(RFence* fence) override;
+		void WaitForFence(RFence* fence) override;
+		void ResetFence(RFence* fence) override;
+
 
 		void FreeMemory(RMemory* memory)override;
 		VkDevice GetDevice();

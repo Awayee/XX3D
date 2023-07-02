@@ -29,18 +29,20 @@ namespace Engine {
 		bool m_WindowAvailable{ true };
 		URect m_RenderArea;
 		bool m_RenderAreaDirty{ false };
-
-	public:
-		Renderer() = default;
-		Renderer(Engine::Wnd* window);
-		~Renderer();
-		void Tick();
-		void InitUIPass(void(*InitializeFunc)());
-		void SetRenderArea(const URect& area);
+		TVector<RFence*> m_Fences;
 
 	private:
 		void CreateRenderResources();
 		void ResizeRenderArea();
 		void OnWindowSizeChanged(uint32 w, uint32 h);
+		RFence* GetCurrentFence();
+
+	public:
+		Renderer(Engine::Wnd* window);
+		~Renderer();
+		void Tick();
+		void InitUIPass(void(*InitializeFunc)());
+		void SetRenderArea(const URect& area);
+		void WaitGPU();
 	};
 }

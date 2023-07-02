@@ -49,7 +49,7 @@ namespace Editor {
 		camera->SetView(eye, at, tempUp);
 	}
 
-	WndViewport::WndViewport() : EditorWindowBase("Viewport", ImGuiWindowFlags_NoBackground) {
+	WndViewport::WndViewport() : EditorWndBase("Viewport", ImGuiWindowFlags_NoBackground) {
 		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
 	}
 
@@ -106,7 +106,7 @@ namespace Editor {
 		}
 	}
 
-	void WndViewport::Display() {
+	void WndViewport::WndContent() {
 		CameraControl();
 		auto size = ImGui::GetWindowSize();
 		auto pos = ImGui::GetWindowPos();

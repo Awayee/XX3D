@@ -4,17 +4,33 @@
 namespace Editor {
 
 
-	EditorWindowBase::EditorWindowBase(const char* name, ImGuiWindowFlags flags): m_Name(name), m_Flags(flags) {
+	void EditorWndBase::Update() {
 	}
 
-	EditorWindowBase::~EditorWindowBase() {
+	void EditorWndBase::Display() {
+		if(m_Enable) {
+			if (ImGui::Begin(m_Name, &m_Enable, m_Flags)) {
+				// support right click to focus window
+				if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+					ImGui::SetWindowFocus();
+				}
+				WndContent();
+			}
+			ImGui::End();
+		}
 	}
 
-	void EditorWindowBase::Delete() {
+	EditorWndBase::EditorWndBase(const char* name, ImGuiWindowFlags flags): m_Name(name), m_Flags(flags) {
+	}
+
+	EditorWndBase::~EditorWndBase() {
+	}
+
+	void EditorWndBase::Delete() {
 		m_ToDelete = true;
 	}
 
-	EditorFuncWnd::EditorFuncWnd(const char* name, const Func<void()>& func, ImGuiWindowFlags flags): EditorWindowBase(name, flags) {
+	EditorFuncWnd::EditorFuncWnd(const char* name, const Func<void()>& func, ImGuiWindowFlags flags): EditorWndBase(name, flags) {
 		m_Func = std::move(func);
 	}
 
@@ -22,7 +38,25 @@ namespace Editor {
 		m_ToDelete = !m_Enable;
 	}
 
-	void EditorFuncWnd::Display() {
+	void EditorFuncWnd::WndContent() {
 		m_Func();
+	}
+
+	EditorPopup::EditorPopup(const Func<void()>& func) {
+		m_Func = func;
+	}
+
+	EditorPopup::~EditorPopup() {
+	}
+
+	void EditorPopup::Update() {
+	}
+
+	void EditorPopup::Display() {
+		String str = StringFormat("Popup_%u", m_ID);
+		if(ImGui::BeginPopupContextItem(str.c_str())) {
+			m_Func();
+			ImGui::EndPopup();
+		}
 	}
 }

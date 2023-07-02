@@ -22,16 +22,16 @@ namespace Editor {
 			TVector<MenuItem> Items;
 		};
 		TVector<MenuColumn> m_MenuBar;
-		TVector<TUniquePtr<EditorWindowBase>> m_Windows;
+		TVector<TUniquePtr<WidgetBase>> m_Widgets;
 		EditorUIMgr();
 		~EditorUIMgr();
 	public:
 		void Tick();
 		void AddMenuBar(const char* barName);
 		void AddMenu(const char* barName, const char* name, Func<void()>&& func, bool* pToggle);
-		EditorWindowBase* AddWindow(const char* name, Func<void()>&& func, ImGuiWindowFlags flags=ImGuiWindowFlags_None);
-		void AddWindow(TUniquePtr<EditorWindowBase>&& wnd);
-		void DeleteWindow(EditorWindowBase*& pWnd);
-		void RemoveWindow(WidgetID wndId);
+		EditorWndBase* AddWindow(const char* name, Func<void()>&& func, ImGuiWindowFlags flags=ImGuiWindowFlags_None);
+		void AddWindow(TUniquePtr<EditorWndBase>&& wnd);
+		void DeleteWindow(EditorWndBase*& pWnd);
+		EditorPopup* AddPopUp(Func<void()>&& func);
 	};
 }

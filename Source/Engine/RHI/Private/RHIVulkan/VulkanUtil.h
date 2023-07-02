@@ -1,4 +1,5 @@
 #pragma once
+#define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 #include "Core/Public/macro.h"
 #include "Core/Public/TVector.h"

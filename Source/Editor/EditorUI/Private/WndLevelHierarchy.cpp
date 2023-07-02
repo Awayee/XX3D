@@ -7,7 +7,7 @@
 namespace Editor {
 	void SaveLevel() {
 		if (!EditorLevelMgr::Instance()->SaveLevel()) {
-			static EditorWindowBase* s_FileSelectWnd = nullptr;
+			static EditorWndBase* s_FileSelectWnd = nullptr;
 			auto f = []() {
 				static char s_FilePath[128] = { 0 };
 				bool close = false;
@@ -41,7 +41,7 @@ namespace Editor {
 	void WndLevelHierarchy::Update() {
 	}
 
-	void WndLevelHierarchy::Display() {
+	void WndLevelHierarchy::WndContent() {
 		EditorLevel* level = EditorLevelMgr::Instance()->GetLevel();
 		if(!level) {
 			return;
@@ -60,15 +60,31 @@ namespace Editor {
 		else {
 			for (uint32 i = 0; i < level->Meshes().Size(); ++i) {
 				auto meshInfo = level->GetMesh(i);
+				ImGui::PushID(static_cast<int>(i));
 				if (ImGui::Selectable(meshInfo->Name.c_str(), m_SelectIdx == i)) {
 					m_SelectIdx = i;
 					EditorLevelMgr::Instance()->SetSelected(m_SelectIdx);
+				}
+				ImGui::PopID();
+				//right click
+				if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(1)) {
+					m_PressedIdx = i;
+				}
+				if(m_PressedIdx == i) {
+					if(ImGui::BeginPopupContextItem("Popup")) {
+						if(ImGui::MenuItem("Delete")) {
+							EditorLevelMgr::Instance()->GetLevel()->DelMesh(i);
+							m_PressedIdx = INVALID_INDEX;
+							m_SelectIdx = INVALID_INDEX;
+						}
+						ImGui::EndPopup();
+					}
 				}
 			}
 		}
 	}
 
-	WndLevelHierarchy::WndLevelHierarchy(): EditorWindowBase("Hierarchy") {
+	WndLevelHierarchy::WndLevelHierarchy(): EditorWndBase("Hierarchy") {
 		EditorUIMgr::Instance()->AddMenu("Level", "Save", SaveLevel, nullptr);
 		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
 	}

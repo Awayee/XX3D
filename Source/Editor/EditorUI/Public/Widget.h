@@ -10,6 +10,8 @@ namespace Editor {
 		friend class EditorUIMgr;
 	protected:
 		WidgetID m_ID {0};
+		bool m_ToDelete{ false };//mark this widget is to delete
+		virtual void Update() = 0;
 		virtual void Display() = 0;
 	public:
 		virtual ~WidgetBase() = default;

@@ -60,7 +60,6 @@ namespace Engine{
 			CRefRange<RSemaphore*> signalSemaphores,
 			RFence* fence) = 0;
 		virtual void QueueWaitIdle(RQueue* queue) = 0;
-		virtual void WaitGraphicsQueue() = 0;
 		virtual RFramebuffer* CreateFrameBuffer(RRenderPass* pass, CRefRange<RImageView*> attachments, uint32 width, uint32 height, uint32 layers) = 0;
 		virtual void DestroyFramebuffer(RFramebuffer* framebuffer) = 0;
 		// cmd
@@ -69,7 +68,7 @@ namespace Engine{
 		virtual void ImmediateCommit(const CommandBufferFunc& func) = 0;
 
 		virtual int PreparePresent(uint8 frameIndex) = 0; // return image index of the swapchain, return -1 if out of date.
-		virtual int QueueSubmitPresent(RCommandBuffer* cmd, uint8 frameIndex) = 0; // return -1 if out of date
+		virtual int QueueSubmitPresent(RCommandBuffer* cmd, uint8 frameIndex, RFence* fence) = 0; // return -1 if out of date
 
 		virtual void FreeMemory(RMemory* memory) = 0;
 
@@ -93,6 +92,13 @@ namespace Engine{
 		virtual RSampler* CreateSampler(const RSSamplerInfo& samplerInfo) = 0;
 		virtual void DestroySampler(RSampler* sampler) = 0;
 		static RHI* Instance();
+
+		//sync
+
+		virtual RFence* CreateFence(bool sig = true) = 0;
+		virtual void DestroyFence(RFence* fence) = 0;
+		virtual void WaitForFence(RFence* fence) = 0;
+		virtual void ResetFence(RFence* fence) = 0;
 	};
 
 }

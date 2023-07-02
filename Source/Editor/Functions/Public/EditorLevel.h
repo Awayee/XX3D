@@ -25,6 +25,7 @@ namespace Editor {
 		TVector<EditorLevelMesh>& Meshes();
 		EditorLevelMesh* GetMesh(uint32 idx);
 		EditorLevelMesh* AddMesh(const String& file, Engine::AMeshAsset* asset);
+		void DelMesh(uint32 idx);
 		void SaveAsset(Engine::ALevelAsset* asset);
 	};
 }

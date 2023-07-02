@@ -23,9 +23,11 @@ namespace Editor {
 		NodeID m_ParentID{ INVALLID_NODE };
 		File::FPath m_Path;//relative path
 		String m_PathStr;
+		String m_Name;
 		friend class AssetManager;
 	public:
 		PathNode(const File::FPath& path, NodeID id, NodeID parent);
+		_NODISCARD const String& GetName() const { return m_Name; }
 		_NODISCARD const File::FPath& GetPath() const { return m_Path; }
 		_NODISCARD const String& GetPathStr() const { return m_PathStr; }
 		_NODISCARD NodeID GetID() const { return m_ID; }

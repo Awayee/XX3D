@@ -8,7 +8,7 @@ namespace Editor {
 	void WndDetails::Update() {
 	}
 
-	void WndDetails::Display() {
+	void WndDetails::WndContent() {
 		EditorLevelMgr* inst = EditorLevelMgr::Instance();
 		EditorLevel* level = inst->GetLevel();
 		if(!level) {
@@ -59,7 +59,7 @@ namespace Editor {
 		}
 	}
 
-	WndDetails::WndDetails(): EditorWindowBase("Details") {
+	WndDetails::WndDetails(): EditorWndBase("Details") {
 		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
 	}
 }

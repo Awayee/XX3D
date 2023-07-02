@@ -2,7 +2,7 @@
 #include "EditorUI/Public/EditorWindow.h"
 
 namespace Editor {
-	class WndViewport : public EditorWindowBase {
+	class WndViewport : public EditorWndBase {
 	private:
 		bool m_MouseDown{ false };
 		URect m_Viewport{ 0,0,0,0 };
@@ -14,6 +14,6 @@ namespace Editor {
 	private:
 		void CameraControl();
 		void Update() override;
-		void Display() override;
+		void WndContent() override;
 	};
 }

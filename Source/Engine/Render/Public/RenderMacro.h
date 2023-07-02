@@ -1,4 +1,4 @@
 #pragma once
 namespace Engine {
-#define MAX_FRAMES_IN_FLIGHT 3
+#define MAX_FRAMES_IN_FLIGHT 1
 }

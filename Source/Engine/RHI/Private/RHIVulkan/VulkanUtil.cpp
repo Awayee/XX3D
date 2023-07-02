@@ -1,4 +1,5 @@
 #include "VulkanUtil.h"
+#include "VulkanFuncs.h"
 #include "Resource/Public/Config.h"
 
 namespace Engine {

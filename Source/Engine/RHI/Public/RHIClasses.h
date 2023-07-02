@@ -95,6 +95,7 @@ namespace Engine{
 
 	class RDescriptorSet {
 	public:
+		virtual ~RDescriptorSet() = default;
 		virtual void Update(uint32 binding, RDescriptorType type, const RDescriptorInfo& info, uint32 arrayElement, uint32 count) = 0;
 		virtual void SetUniformBuffer(uint32 binding, RBuffer* buffer) = 0;
 		virtual void SetImageSampler(uint32 binding, RSampler* sampler, RImageView* image) = 0;
@@ -129,10 +130,17 @@ namespace Engine{
 		virtual void BeginDebugLabel(const char* msg, const float* color) = 0;
 		virtual void EndDebugLabel() = 0;
 	};
-
-	class RDevice {};
-	class RFence {};
-	class RSemaphore {};
-	class RQueue {};
+	class RFence {
+	public:
+		virtual ~RFence() = default;
+	};
+	class RSemaphore {
+	public:
+		virtual ~RSemaphore() = default;
+	};
+	class RQueue {
+	public:
+		virtual ~RQueue() = default;
+	};
 
 } // namespace RHI

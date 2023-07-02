@@ -6,7 +6,7 @@
 
 namespace Editor {
 
-	class WndAssetBrowser : public EditorWindowBase {
+	class WndAssetBrowser : public EditorWndBase {
 		const NodeID MAX_FOLDER_NUM = 0xffff;
 
 	private:
@@ -14,8 +14,10 @@ namespace Editor {
 
 		FolderNode* m_CurrentFolder{nullptr};
 		TVector<TUniquePtr<AssetViewBase>> m_Contents;
+		TVector<TUniquePtr<FolderAssetView>> m_Folders;
 
 		uint32 m_SelectedItem{ INVALLID_NODE };
+		uint32 m_SelectedFolder{ INVALLID_NODE };
 	private:
 		static void OnFolderRebuildAllWindows(const FolderNode* node);
 		void OnFolderRebuild(const FolderNode* node);
@@ -25,7 +27,8 @@ namespace Editor {
 		WndAssetBrowser();
 		~WndAssetBrowser() override;
 		void Update() override;
-		void Display() override;
+		void WndContent() override;
+		void SetCurrentFolder(FolderNode* node);
 	};
 	
 }

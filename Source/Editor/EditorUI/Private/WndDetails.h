@@ -2,10 +2,10 @@
 #include "EditorUI/Public/EditorWindow.h"
 
 namespace Editor {
-	class WndDetails : public EditorWindowBase {
+	class WndDetails : public EditorWndBase {
 	private:
 		void Update() override;
-		void Display() override;
+		void WndContent() override;
 	public:
 		WndDetails();
 	};

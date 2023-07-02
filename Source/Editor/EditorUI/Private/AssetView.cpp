@@ -5,8 +5,11 @@
 
 namespace Editor {
 	FolderAssetView::FolderAssetView(FolderNode* node): m_Node(node) {
-		m_Name = m_Node->GetPath().filename().string();
 		m_ID = m_Node->GetID();
+	}
+
+	const String& FolderAssetView::GetName() {
+		return m_Node->GetName();
 	}
 
 	bool FolderAssetView::IsFolder() {
@@ -24,10 +27,12 @@ namespace Editor {
 	}
 
 	FileAssetView::FileAssetView(FileNode* node): m_Node(node) {
-		m_Name = m_Node->GetPath().filename().string();
-		m_Icon = m_Node->GetPath().extension().string();
 		m_ID = m_Node->GetID();
 		m_Node->GetAsset<Engine::AUnknownAsset>();
+	}
+
+	const String& FileAssetView::GetName() {
+		return m_Node->GetName();
 	}
 
 	bool FileAssetView::IsFolder() {

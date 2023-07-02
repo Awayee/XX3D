@@ -58,6 +58,10 @@ public:
 
 	void Sort() { std::sort(Base::begin(), Base::end(), std::less<T>()); }
 
+	void RemoveAt(uint32 i) {
+		Base::erase(Base::begin() + i);
+	}
+
 	void SwapRemove(const T& ele) {
 		for (uint32 i = 0; i < Base::size(); ++i) {
 			if (Base::at(i) == ele) {

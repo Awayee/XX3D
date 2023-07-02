@@ -60,6 +60,10 @@ namespace Editor {
 		return &m_Meshes.Back();
 	}
 
+	void EditorLevel::DelMesh(uint32 idx) {
+		m_Meshes.RemoveAt(idx);
+	}
+
 	void EditorLevel::SaveAsset(Engine::ALevelAsset* asset) {
 		Engine::Camera* camera = m_Scene->GetMainCamera();
 		asset->CameraParam.Eye = camera->GetView().Eye;
@@ -78,7 +82,7 @@ namespace Editor {
 			savedMesh.Name = mesh.Name;
 			savedMesh.Position = mesh.Position;
 			savedMesh.Scale = mesh.Scale;
-			savedMesh.Rotation = mesh.Mesh->GetRotation().ToEuler();
+			savedMesh.Rotation = mesh.Rotation;
 		}
 	}
 }
