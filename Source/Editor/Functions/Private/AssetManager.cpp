@@ -150,6 +150,10 @@ namespace Editor {
 		return GetFolder(m_Root);
 	}
 
+	NodeID AssetManager::RootID() {
+		return m_Root;
+	}
+
 	void AssetManager::ImportAsset(const char* srcFile, const char* dstFile) {
 		if(StrEndsWith(srcFile, ".png")) {
 			Engine::ATextureAsset asset;

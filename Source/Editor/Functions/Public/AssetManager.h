@@ -86,6 +86,7 @@ namespace Editor {
 		FileNode* GetFile(const File::FPath& path);
 		FolderNode* GetFolder(NodeID id);
 		FolderNode* GetRoot();
+		NodeID RootID();
 		void RegisterFolderRebuildEvent(void (*event)(const FolderNode*)) {m_OnFolderRebuild = event;}
 		void ImportAsset(const char* srcFile, const char* dstFile);//srcFile is absolute path, dstFile is relative path
 	};

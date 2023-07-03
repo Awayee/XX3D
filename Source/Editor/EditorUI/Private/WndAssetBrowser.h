@@ -22,6 +22,8 @@ namespace Editor {
 		static void OnFolderRebuildAllWindows(const FolderNode* node);
 		void OnFolderRebuild(const FolderNode* node);
 		void RefreshItems();
+		void DisplayFolderTree(NodeID node);
+		void DisplayContents();
 
 	public:
 		WndAssetBrowser();

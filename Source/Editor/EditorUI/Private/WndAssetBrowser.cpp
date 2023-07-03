@@ -52,6 +52,68 @@ namespace Editor {
 		}
 	}
 
+	void WndAssetBrowser::DisplayFolderTree(NodeID node) {
+		FolderNode* folderNode = Browser()->GetFolder(node);
+		if(!folderNode) {
+			return;
+		}
+		auto& children = folderNode->GetChildFolders();
+		ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_OpenOnArrow;
+		if(children.Empty()) {
+			nodeFlags |= ImGuiTreeNodeFlags_Leaf;
+		}
+
+		if(ImGui::TreeNodeEx(folderNode->GetName().c_str(), nodeFlags)) {
+			for(NodeID child: children) {
+				DisplayFolderTree(child);
+			}
+			ImGui::TreePop();
+		}
+		if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+			SetCurrentFolder(folderNode);
+		}
+	}
+
+	void WndAssetBrowser::DisplayContents() {
+		if (m_CurrentFolder->ParentFolder() != INVALLID_NODE) {
+			if (ImGui::ArrowButton("Back", ImGuiDir_Left)) {
+				m_CurrentFolder = Browser()->GetFolder(m_CurrentFolder->ParentFolder());
+				RefreshItems();
+				return;
+			}
+		}
+		else {
+			ImGui::ArrowButton("Back", ImGuiDir_Left);
+		}
+
+		ImGui::BeginChild("Assets");
+		for (uint32 i = 0; i < m_Contents.Size(); ++i) {
+			auto& item = m_Contents[i];
+
+			if (ImGui::Selectable(item->GetName().c_str(), m_SelectedItem == i, ImGuiSelectableFlags_AllowDoubleClick)) {
+				m_SelectedItem = i;
+				if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+					if (item->IsFolder()) {
+						SetCurrentFolder(Browser()->GetFolder(item->m_ID));
+					}
+					else {
+						item->Open();
+					}
+				}
+			}
+
+			if (ImGui::BeginDragDropSource()) {
+				ImGui::Text(item->GetName().c_str());
+				item->OnDrag();
+				ImGui::EndDragDropSource();
+			}
+
+			if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+			}
+		}
+		ImGui::EndChild();
+	}
+
 	WndAssetBrowser::WndAssetBrowser() : EditorWndBase("Assets") {
 		EditorUIMgr::Instance()->AddMenu("Menu", "Import", ImportAsset, nullptr);
 		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
@@ -73,60 +135,12 @@ namespace Editor {
 
 		ImGui::Columns(2);
 
-		// folders TODO
-		FolderNode* rootNode = Browser()->GetRoot();
-		if(ImGui::TreeNode(rootNode->GetName().c_str())) {
-			if(ImGui::IsItemClicked(0)) {
-				SetCurrentFolder(rootNode);
-			}
-			for(NodeID nodeId: rootNode->GetChildFolders()) {
-				FolderNode* node = Browser()->GetFolder(nodeId);
-				if(ImGui::Button(node->GetName().c_str())) {
-					SetCurrentFolder(node);
-				}
-			}
-			ImGui::TreePop();
-		}
+		// folders
+		DisplayFolderTree(Browser()->RootID());
 
 		// files
 		ImGui::NextColumn();
-		if (m_CurrentFolder->ParentFolder() == INVALLID_NODE) {
-			if (ImGui::ArrowButton("Back", ImGuiDir_Left)) {
-				m_CurrentFolder = Browser()->GetFolder(m_CurrentFolder->ParentFolder());
-				RefreshItems();
-				return;
-			}
-		}
-		else {
-			ImGui::ArrowButton("Back", ImGuiDir_Left);
-		}
-
-		ImGui::BeginChild("Assets");
-		for(uint32 i=0; i< m_Contents.Size(); ++i) {
-			auto& item = m_Contents[i];
-
-			if (ImGui::Selectable(item->GetName().c_str(), m_SelectedItem == i, ImGuiSelectableFlags_AllowDoubleClick)) {
-				m_SelectedItem = i;
-				if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-					if(item->IsFolder()) {
-						SetCurrentFolder(Browser()->GetFolder(item->m_ID));
-					}
-					else {
-						item->Open();
-					}
-				}
-			}
-
-			if (ImGui::BeginDragDropSource()) {
-				ImGui::Text(item->GetName().c_str());
-				item->OnDrag();
-				ImGui::EndDragDropSource();
-			}
-
-			if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
-			}
-		}
-		ImGui::EndChild();
+		DisplayContents();
 	}
 
 	void WndAssetBrowser::SetCurrentFolder(FolderNode* node) {
