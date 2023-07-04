@@ -63,14 +63,20 @@ namespace Editor {
 			nodeFlags |= ImGuiTreeNodeFlags_Leaf;
 		}
 
-		if(ImGui::TreeNodeEx(folderNode->GetName().c_str(), nodeFlags)) {
+		if(folderNode == m_CurrentFolder) {
+			nodeFlags |= ImGuiTreeNodeFlags_Selected;
+		}
+
+		bool expanded = ImGui::TreeNodeEx(folderNode->GetName().c_str(), nodeFlags);
+		if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+			SetCurrentFolder(folderNode);
+		}
+
+		if(expanded){
 			for(NodeID child: children) {
 				DisplayFolderTree(child);
 			}
 			ImGui::TreePop();
-		}
-		if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
-			SetCurrentFolder(folderNode);
 		}
 	}
 
@@ -136,6 +142,7 @@ namespace Editor {
 		ImGui::Columns(2);
 
 		// folders
+		ImGui::SetColumnWidth(0, 256.0f);
 		DisplayFolderTree(Browser()->RootID());
 
 		// files
