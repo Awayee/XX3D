@@ -90,6 +90,7 @@ PFN_vkDestroyShaderModule                      vkDestroyShaderModule            
 #include <Windows.h>
 static const char* VK_LIBRARY = "vulkan-1.dll";
 
+#define LOAD_GLOBAL_PROC_ADDR(x) x = reinterpret_cast<PFN_##x>(vkGetInstanceProcAddr(nullptr, #x))
 #define LOAD_INSTANCE_PROC_ADDR(x) x = reinterpret_cast<PFN_##x>(vkGetInstanceProcAddr(instance, #x))
 #define LOAD_DEVICE_PROC_ADDR(x) x = reinterpret_cast<PFN_##x>(vkGetDeviceProcAddr(device, #x))
 
@@ -100,12 +101,13 @@ bool InitializeInstanceProcAddr() {
 	}
 	vkGetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(GetProcAddress(s_Lib, "vkGetInstanceProcAddr"));
 #if defined(VK_VERSION_1_0)
-	vkCreateInstance = (PFN_vkCreateInstance)vkGetInstanceProcAddr(nullptr, "vkCreateInstance");
-	vkEnumerateInstanceExtensionProperties = (PFN_vkEnumerateInstanceExtensionProperties)vkGetInstanceProcAddr(nullptr, "vkEnumerateInstanceExtensionProperties");
-	vkEnumerateInstanceLayerProperties = (PFN_vkEnumerateInstanceLayerProperties)vkGetInstanceProcAddr(nullptr, "vkEnumerateInstanceLayerProperties");
+	LOAD_GLOBAL_PROC_ADDR(vkCreateInstance);
+	LOAD_GLOBAL_PROC_ADDR(vkEnumerateInstanceExtensionProperties);
+	LOAD_GLOBAL_PROC_ADDR(vkEnumerateInstanceLayerProperties);
+
 #endif // defined(VK_VERSION_1_0)
 #if defined(VK_VERSION_1_1)
-	vkEnumerateInstanceVersion = (PFN_vkEnumerateInstanceVersion)vkGetInstanceProcAddr(nullptr, "vkEnumerateInstanceVersion");
+	LOAD_GLOBAL_PROC_ADDR(vkEnumerateInstanceVersion);
 #endif // defined(VK_VERSION_1_1)
 	return true;
 }

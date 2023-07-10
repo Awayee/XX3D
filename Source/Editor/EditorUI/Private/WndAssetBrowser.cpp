@@ -5,6 +5,13 @@ namespace Editor {
 
 	inline AssetManager* Browser() { return ProjectAssetMgr::Instance(); }
 
+	inline bool IsMouseOnTreeNodeArrow() {
+		ImVec2 arrowMin = ImGui::GetItemRectMin();
+		ImVec2 arrowMax = ImGui::GetItemRectMax();
+		arrowMax.x = arrowMin.x + ImGui::GetTreeNodeToLabelSpacing();
+		return ImGui::IsMouseHoveringRect(arrowMin, arrowMax);
+	}
+
 	void ImportAsset() {
 		auto f = []() {
 			static char s_SrcFile[128];
@@ -69,7 +76,9 @@ namespace Editor {
 
 		bool expanded = ImGui::TreeNodeEx(folderNode->GetName().c_str(), nodeFlags);
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
-			SetCurrentFolder(folderNode);
+			if (children.Empty() || !IsMouseOnTreeNodeArrow()) {
+				SetCurrentFolder(folderNode);
+			}
 		}
 
 		if(expanded){
