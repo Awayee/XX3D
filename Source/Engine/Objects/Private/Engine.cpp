@@ -1,7 +1,7 @@
 #include "Window/Public/Wnd.h"
 #include "Objects/Public/Renderer.h"
 #include "Core/Public/Time.h"
-#include "Core/Public/SmartPointer.h"
+#include "Core/Public/TPtr.h"
 #include "Objects/Public/Engine.h"
 #include "Objects/Public/EngineContext.h"
 #include "Core/Public/macro.h"

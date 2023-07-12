@@ -1,7 +1,7 @@
 #pragma once
 #include "Functions/Public/AssetManager.h"
 #include "Asset/Public/MeshAsset.h"
-#include "Core/Public/SmartPointer.h"
+#include "Core/Public/TPtr.h"
 #include "Asset/Public/TextureAsset.h"
 #include "Asset/Public/LevelAsset.h"
 

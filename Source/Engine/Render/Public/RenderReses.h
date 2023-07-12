@@ -2,7 +2,7 @@
 #include "Core/Public/TVector.h"
 #include "RHI/Public/RHI.h"
 #include "RenderCommon.h"
-#include "Core/Public/SmartPointer.h"
+#include "Core/Public/TPtr.h"
 #include "Asset/Public/AssetCommon.h"
 
 namespace Engine {

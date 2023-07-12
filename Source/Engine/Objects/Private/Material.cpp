@@ -1,5 +1,5 @@
 #include "Objects/Public/Material.h"
-#include "Render/Public/RenderResources.h"
+#include "Render/Public/RenderReses.h"
 
 namespace Engine {
 	Material::Material() {

@@ -1,5 +1,5 @@
 #pragma once
-#include "Core/Public/SmartPointer.h"
+#include "Core/Public/TPtr.h"
 
 namespace Engine {
 	class Wnd;

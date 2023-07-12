@@ -1,23 +1,24 @@
 #pragma once
+#include "Core/Public/TypeDefine.h"
 
 #include <initializer_list>
 
 // a simple array just contains data
-template<typename T>
+template<typename T, typename SizeType=uint32>
 class TempArray {
 private:
 	T* data;
 public:
-	TempArray(unsigned int size) {
+	TempArray(SizeType size) {
 		data = new T[size];
 	}
 	~TempArray() {
 		delete[] data;
 	}
-	T& operator[](unsigned int i) {
+	T& operator[](SizeType i) {
 		return data[i];
 	}
-	const T& operator[](unsigned int i)const {
+	const T& operator[](SizeType i)const {
 		return data[i];
 	}
 
@@ -34,10 +35,10 @@ public:
 
 // an array with more info
 // can be replaced by TVector
-template<typename T>
+template<typename T, typename SizeType=uint32>
 class TArray {
 private:
-	unsigned int size;
+	SizeType size;
 	T* data;
 #define _TArrayFree if(data) delete[] data
 #define _TArrayAllocate data = new T[size]
@@ -66,7 +67,7 @@ public:
 		other.size = 0u;
 	}
 
-	TArray(unsigned int l) {
+	TArray(SizeType l) {
 		size = l;
 		_TArrayAllocate;
 	}
@@ -75,11 +76,11 @@ public:
 		size = p.size();
 		_TArrayAllocate;
 		auto begin = p.begin();
-		for (unsigned int i = 0; i < size; i++) {
+		for (SizeType i = 0; i < size; i++) {
 			data[i] = *(begin + i);
 		}
 	}
-	TArray(T* other, unsigned int l) {
+	TArray(T* other, SizeType l) {
 		size = l;
 		if (size > 0) {
 			_TArrayAllocate;
@@ -93,7 +94,7 @@ public:
 		Clear();
 	}
 
-	unsigned int Size()const {
+	SizeType Size()const {
 		return size;
 	}
 
@@ -110,7 +111,7 @@ public:
 
 	void Swap(TArray<T>& other) {
 		T* tempData = data;
-		unsigned int tempSize = size;
+		SizeType tempSize = size;
 		data = other.data;
 		size = other.size;
 		other.data = tempData;
@@ -133,7 +134,7 @@ public:
 		return data[i];
 	}
 
-	void Resize(unsigned int l) {
+	void Resize(SizeType l) {
 		if (size != l) {
 			_TArrayFree;
 

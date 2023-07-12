@@ -1,7 +1,7 @@
 #include "Window/Public/Wnd.h"
 #include "Core/Public/Concurrency.h"
 #include "Core/Public/macro.h"
-#include "Core/Public/SmartPointer.h"
+#include "Core/Public/TPtr.h"
 #include "Resource/Public/Config.h"
 #include "Window/Private/WindowGLFW/WindowSystemGLFW.h"
 #include "WIndow/Private/WindowWin32/WindowSystemWin32.h"

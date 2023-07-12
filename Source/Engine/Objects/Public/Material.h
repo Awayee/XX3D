@@ -1,7 +1,7 @@
 #pragma once
 #include "Render/Public/RenderCommon.h"
 #include "Core/Public/TVector.h"
-#include "Core/Public/SmartPointer.h"
+#include "Core/Public/TPtr.h"
 
 namespace Engine {
 	class Material {

@@ -2,7 +2,7 @@
 #include "Core/Public/File.h"
 #include "Core/Public/String.h"
 #include "Core/Public/TSingleton.h"
-#include "Render/Public/RenderResources.h"
+#include "Render/Public/RenderReses.h"
 #include "Resource/Public/Shaders.h"
 
 #include "Asset/Public/AssetLoader.h"

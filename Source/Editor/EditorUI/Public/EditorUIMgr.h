@@ -1,7 +1,7 @@
 #pragma once
 #include "Core/Public/TSingleton.h"
 #include "Core/Public/TVector.h"
-#include "Core/Public/SmartPointer.h"
+#include "Core/Public/TPtr.h"
 #include "Core/Public/Func.h"
 #include "EditorUI/Public/Widget.h"
 #include "EditorUI/Public/EditorWindow.h"
