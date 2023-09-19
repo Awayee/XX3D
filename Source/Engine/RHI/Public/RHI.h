@@ -2,7 +2,7 @@
 #include "RHIClasses.h"
 #include "RHIResources.h"
 #include "Core/Public/TRefRange.h"
-#include <functional>
+#include "Core/Public/Func.h"
 
 namespace Engine{
 	typedef void(*DebugFunc)(const char*);
