@@ -1,7 +1,8 @@
 #pragma once
+#include "Core/Public/TypeDefine.h"
 
 namespace Engine {
-    enum RFormat {
+    enum ERHIFormat {
         FORMAT_UNDEFINED,
         FORMAT_R8_UNORM,
         FORMAT_R8_SNORM,
@@ -46,9 +47,163 @@ namespace Engine {
         FORMAT_R32G32B32A32_SINT,
         FORMAT_R32G32B32A32_SFLOAT,
         FORMAT_D16_UNORM,
-    	FORMAT_D24_UNORM_S8_UINT,
+        FORMAT_D24_UNORM_S8_UINT,
         FORMAT_D32_SFLOAT,
         FORMAT_MAX_ENUM
+    };
+
+    enum EBufferFlagBit {
+        BUFFER_FLAG_CPY_SRC = 1u,
+        BUFFER_FLAG_TPY_DST = 1u << 1,
+        BUFFER_FLAG_UNIFORM = 1u << 2,
+        BUFFER_FLAG_INDEX = 1u << 3,
+        BUFFER_FLAG_VERTEX = 1u << 4,
+        BUFFER_FLAG_STORAGE = 1u << 5,
+        BUFFER_FLAG_INDIRECT = 1u << 6,
+    };
+
+    typedef uint32 EBufferFlags;
+
+    enum class ETextureDimension : uint8 {
+        Tex2D,
+        Tex2DArray,
+        TexCube,
+        TexCubeArray,
+        Tex3D,
+    };
+
+    enum ETextureFlagBit {
+        TEXTURE_FLAG_RENDER_TARGET = 1u,
+        TEXTURE_FLAG_DEPTH = 1u << 1,
+        TEXTURE_FLAG_STENCIL=1u << 2,
+        TEXTURE_FLAG_SRV = 1u << 3,
+        TEXTURE_FLAG_UAV = 1u << 4,
+        TEXTURE_FLAG_PRESENT = 1u << 5,
+        TEXTURE_FLAG_CPY_SRC = 1u << 6,
+        TEXTURE_FLAG_CPY_DST = 1u << 7,
+    };
+    typedef uint32 ETextureFlags;
+
+    enum class ESamplerFilter : uint8 {
+        Point=0,
+        Bilinear,
+        Trilinear,
+        AnisotropicPoint,
+        AnisotropicLinear,
+        MaxNum
+    };
+
+    enum class ESamplerAddressMode : uint8 {
+        Wrap=0,
+        Clamp,
+        Mirror,
+        Border,
+        MaxNum
+    };
+
+    enum class EPrimitiveTopology : uint8 {
+        TriangleList,
+        TriangleStrip,
+        PointList,
+        LineList,
+        LineStrip,
+    };
+
+    enum class ERTLoadOp : uint8 {
+        ENoAction,
+        ELoad,
+        EClear
+    };
+
+    enum class ERTStoreOp: uint8 {
+	    ENoAction,
+        EStore
+    };
+
+    // shader
+    enum EShaderStageFlagBit: uint8 {
+        SHADER_STAGE_VERTEX_BIT = 1,
+        SHADER_STAGE_GEOMETRY_BIT = 2,
+        SHADER_STAGE_FRAGMENT_BIT = 4,
+        SHADER_STAGE_COMPUTE_BIT = 8,
+    };
+    typedef uint8 EShaderStageFlags;
+
+    enum class EBindingType : uint8 {
+        Sampler,
+        TextureSampler,
+        Texture,
+        UniformBuffer,
+        StorageBuffer
+    };
+
+    // blend state
+    enum class EBlendOption: uint8 {
+	    Add,
+        Sub,
+        Min,
+        Max,
+        ReverseSub,
+    };
+
+    enum class EBlendFactor:uint8 {
+        Zero,
+        One,
+        SrcColor,
+        InverseSrcColor,
+        DstColor,
+        InverseDstColor,
+        SrcAlpha,
+        InverseSrcAlpha,
+        DstAlpha,
+        InverseDstAlpha,
+        ConstColor,
+        InverseConstColor,
+        ConstAlpha,
+        InverseConstAlpha,
+    };
+
+    enum EColorWriteMaskFlagBit {
+        COLOR_WRITE_MASK_R=1,
+        COLOR_WRITE_MASK_G=2,
+        COLOR_WRITE_MASK_B=4,
+        COLOR_WRITE_MASK_A=8,
+    };
+    typedef uint32 EColorWriteMaskFlags;
+
+    enum class ERasterizerFill : uint8
+    {
+        Point,
+        Wireframe,
+        Solid,
+    };
+
+    enum class ERasterizerCull: uint8 {
+	    Back,
+        Front,
+        Null,
+    };
+
+    enum class ECompareType: uint8 {
+        Less,
+        LessEqual,
+        Greater,
+        GreaterEqual,
+        Equal,
+        NotEqual,
+        Never,
+        Always,
+    };
+
+    enum class EStencilOp: uint8 {
+        Keep,
+        Zero,
+        Replace,
+        SaturatedIncrement,
+        SaturatedDecrement,
+        Invert,
+        Increment,
+        Decrement,
     };
 
     enum RImageLayout {
@@ -112,7 +267,7 @@ namespace Engine {
         COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT = 0x00000004,
         COMMAND_BUFFER_USAGE_FLAG_BITS_MAX_ENUM = 0x7FFFFFFF
     };
-    typedef unsigned int RCommandBufferUsageFlags;
+    typedef uint32 RCommandBufferUsageFlags;
 
     enum RPipelineStageFlagBits {
         PIPELINE_STAGE_TOP_OF_PIPE_BIT = 0x00000001,
@@ -147,7 +302,7 @@ namespace Engine {
         PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV = PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
         PIPELINE_STAGE_FLAG_BITS_MAX_ENUM = 0x7FFFFFFF
     };
-    typedef unsigned int RPipelineStageFlags;
+    typedef uint32 RPipelineStageFlags;
 
     enum RAccessFlagBits {
         ACCESS_INDIRECT_COMMAND_READ_BIT = 0x00000001,
@@ -184,7 +339,7 @@ namespace Engine {
         ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR = ACCESS_SHADING_RATE_IMAGE_READ_BIT_NV,
         ACCESS_FLAG_BITS_MAX_ENUM = 0x7FFFFFFF
     };
-    typedef unsigned int RAccessFlags;
+    typedef uint32 RAccessFlags;
 
     enum RDependencyFlagBits {
         DEPENDENCY_BY_REGION_BIT = 0x00000001,
@@ -194,31 +349,7 @@ namespace Engine {
         DEPENDENCY_DEVICE_GROUP_BIT_KHR = DEPENDENCY_DEVICE_GROUP_BIT,
         DEPENDENCY_FLAG_BITS_MAX_ENUM = 0x7FFFFFFF
     };
-    typedef unsigned int RDependencyFlags;
-
-    enum RBufferUsageFlagBits {
-        BUFFER_USAGE_TRANSFER_SRC_BIT = 0x00000001,
-        BUFFER_USAGE_TRANSFER_DST_BIT = 0x00000002,
-        BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT = 0x00000004,
-        BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT = 0x00000008,
-        BUFFER_USAGE_UNIFORM_BUFFER_BIT = 0x00000010,
-        BUFFER_USAGE_STORAGE_BUFFER_BIT = 0x00000020,
-        BUFFER_USAGE_INDEX_BUFFER_BIT = 0x00000040,
-        BUFFER_USAGE_VERTEX_BUFFER_BIT = 0x00000080,
-        BUFFER_USAGE_INDIRECT_BUFFER_BIT = 0x00000100,
-        BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT = 0x00020000,
-        BUFFER_USAGE_TRANSFORM_FEEDBACK_BUFFER_BIT_EXT = 0x00000800,
-        BUFFER_USAGE_TRANSFORM_FEEDBACK_COUNTER_BUFFER_BIT_EXT = 0x00001000,
-        BUFFER_USAGE_CONDITIONAL_RENDERING_BIT_EXT = 0x00000200,
-        BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR = 0x00080000,
-        BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR = 0x00100000,
-        BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR = 0x00000400,
-        BUFFER_USAGE_RAY_TRACING_BIT_NV = BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR,
-        BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_EXT = BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-        BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR = BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-        BUFFER_USAGE_FLAG_BITS_MAX_ENUM = 0x7FFFFFFF
-    };
-    typedef unsigned int RBufferUsageFlags;
+    typedef uint32 RDependencyFlags;
 
     enum RImageType {
         IMAGE_TYPE_1D = 0,
@@ -236,7 +367,7 @@ namespace Engine {
         SAMPLE_COUNT_64_BIT = 0x00000040,
         SAMPLE_COUNT_FLAG_BITS_MAX_ENUM = 0x7FFFFFFF
     };
-    typedef unsigned int RSampleCountFlags;
+    typedef uint32 RSampleCountFlags;
 
     enum RImageUsageFlagBits {
         IMAGE_USAGE_TRANSFER_SRC_BIT = 0x00000001,
@@ -252,7 +383,7 @@ namespace Engine {
         IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR = IMAGE_USAGE_SHADING_RATE_IMAGE_BIT_NV,
         IMAGE_USAGE_FLAG_BITS_MAX_ENUM = 0x7FFFFFFF
     };
-    typedef unsigned int RImageUsageFlags;
+    typedef uint32 RImageUsageFlags;
 
     enum RImageTiling {
         IMAGE_TILING_OPTIMAL = 0,
@@ -273,7 +404,7 @@ namespace Engine {
         MEMORY_PROPERTY_RDMA_CAPABLE_BIT_NV = 0x00000100,
         MEMORY_PROPERTY_FLAG_BITS_MAX_ENUM = 0x7FFFFFFF
     };
-    typedef unsigned int RMemoryPropertyFlags;
+    typedef uint32 RMemoryPropertyFlags;
 
     enum RImageViewType {
         IMAGE_VIEW_TYPE_1D = 0,
@@ -303,7 +434,7 @@ namespace Engine {
         IMAGE_ASPECT_PLANE_2_BIT_KHR = IMAGE_ASPECT_PLANE_2_BIT,
         IMAGE_ASPECT_FLAG_BITS_MAX_ENUM = 0x7FFFFFFF
     };
-    typedef unsigned int RImageAspectFlags;
+    typedef uint32 RImageAspectFlags;
 
     enum RFilter
     {
@@ -364,34 +495,6 @@ namespace Engine {
         DESCRIPTOR_TYPE_MAX_ENUM = 0x7FFFFFFF
     };
 
-    enum RShaderStageFlagBits {
-        SHADER_STAGE_VERTEX_BIT = 0x00000001,
-        SHADER_STAGE_TESSELLATION_CONTROL_BIT = 0x00000002,
-        SHADER_STAGE_TESSELLATION_EVALUATION_BIT = 0x00000004,
-        SHADER_STAGE_GEOMETRY_BIT = 0x00000008,
-        SHADER_STAGE_FRAGMENT_BIT = 0x00000010,
-        SHADER_STAGE_COMPUTE_BIT = 0x00000020,
-        SHADER_STAGE_ALL_GRAPHICS = 0x0000001F,
-        SHADER_STAGE_ALL = 0x7FFFFFFF,
-        SHADER_STAGE_RAYGEN_BIT_KHR = 0x00000100,
-        SHADER_STAGE_ANY_HIT_BIT_KHR = 0x00000200,
-        SHADER_STAGE_CLOSEST_HIT_BIT_KHR = 0x00000400,
-        SHADER_STAGE_MISS_BIT_KHR = 0x00000800,
-        SHADER_STAGE_INTERSECTION_BIT_KHR = 0x00001000,
-        SHADER_STAGE_CALLABLE_BIT_KHR = 0x00002000,
-        SHADER_STAGE_TASK_BIT_NV = 0x00000040,
-        SHADER_STAGE_MESH_BIT_NV = 0x00000080,
-        SHADER_STAGE_SUBPASS_SHADING_BIT_HUAWEI = 0x00004000,
-        SHADER_STAGE_RAYGEN_BIT_NV = SHADER_STAGE_RAYGEN_BIT_KHR,
-        SHADER_STAGE_ANY_HIT_BIT_NV = SHADER_STAGE_ANY_HIT_BIT_KHR,
-        SHADER_STAGE_CLOSEST_HIT_BIT_NV = SHADER_STAGE_CLOSEST_HIT_BIT_KHR,
-        SHADER_STAGE_MISS_BIT_NV = SHADER_STAGE_MISS_BIT_KHR,
-        SHADER_STAGE_INTERSECTION_BIT_NV = SHADER_STAGE_INTERSECTION_BIT_KHR,
-        SHADER_STAGE_CALLABLE_BIT_NV = SHADER_STAGE_CALLABLE_BIT_KHR,
-        SHADER_STAGE_FLAG_BITS_MAX_ENUM = 0x7FFFFFFF
-    };
-    typedef unsigned int RShaderStageFlags;
-
     enum RClearValueType {
         CLEAR_VALUE_COLOR,
         CLEAR_VALUE_DEPTH_STENCIL,
@@ -434,9 +537,7 @@ namespace Engine {
         CULL_MODE_FRONT_AND_BACK = 0x00000003,
         CULL_MODE_FLAG_BITS_MAX_ENUM = 0x7FFFFFFF
     };
-    typedef unsigned int RCullModeFlags;
-
-    typedef unsigned int RSampleMask;
+    typedef uint32 RCullModeFlags;
 
     enum RCompareOp
     {
@@ -569,7 +670,7 @@ namespace Engine {
         COLOR_COMPONENT_ALL = COLOR_COMPONENT_R_BIT | COLOR_COMPONENT_G_BIT | COLOR_COMPONENT_B_BIT | COLOR_COMPONENT_A_BIT,
         COLOR_COMPONENT_FLAG_BITS_MAX_ENUM = 0x7FFFFFFF
     };
-    typedef unsigned int RColorComponentFlags;
+    typedef uint32 RColorComponentFlags;
 
     enum RDynamicState {
         DYNAMIC_STATE_VIEWPORT = 0,

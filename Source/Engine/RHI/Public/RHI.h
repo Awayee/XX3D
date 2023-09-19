@@ -1,38 +1,22 @@
 #pragma once
 #include "RHIClasses.h"
+#include "RHIResources.h"
+#include "Core/Public/TRefRange.h"
 #include <functional>
 
 namespace Engine{
 	typedef void(*DebugFunc)(const char*);
 	//typedef void(*CommandBufferFunc)(RCommandBuffer*);
-	typedef  std::function<void(RCommandBuffer*)> CommandBufferFunc;
+	typedef  std::function<void(RHICommandBuffer*)> CommandBufferFunc;
 
 	class RHI
 	{
 	public:
-		virtual void Initialize(const RSInitInfo* initInfo)=0;
-		virtual void Release() = 0;
-		virtual uint8 GetMaxFramesInFlight() = 0;
-		virtual const USize2D& GetSwapchainExtent() = 0;
-		virtual RFormat GetSwapchainImageFormat() = 0;
-		virtual RImageView* GetSwapchainImageView(uint8 i) = 0;
-		virtual uint32 GetSwapchainMaxImageCount() = 0;
-		virtual RQueue* GetGraphicsQueue() = 0;
-		virtual RFormat GetDepthFormat() = 0;
-
-		virtual void ResizeSwapchain(uint32 width, uint32 height) = 0;
-
-		/**
-		 * \brief if RecordBegin is called, some functions will not execute until call RecordEnd, in order to reduce the interaction with graphics API, such as:
-		 * RecordBegin();
-		 * AllocateDescriptorSet(layout0);
-		 * AllocateDescriptorSet(layout1);
-		 * AllocateDescriptorSet(Layout2);
-		 * RecordEnd();
-		 */
-		virtual void RecordBegin() = 0;
-		virtual void RecordEnd() = 0;
-
+		static RHI* Instance();
+		static void Initialize(const RSInitInfo* initInfo);
+		static void Release();
+		virtual ERHIFormat GetDepthFormat() = 0;
+		virtual RHISwapChain* GetSwapChain() = 0;
 		virtual RRenderPass* CreateRenderPass(CRefRange<RSAttachment> attachments, CRefRange<RSubPassInfo> subpasses, CRefRange<RSubpassDependency> dependencies) = 0;
 		// for single subpass
 		virtual RRenderPass* CreateRenderPass(CRefRange<RSAttachment> colorAttachments, const RSAttachment* depthAttachment)=0;
@@ -53,52 +37,27 @@ namespace Engine{
 		virtual RPipeline* CreateComputePipeline(const RPipelineShaderInfo& shader, RPipelineLayout* layout, RPipeline* basePipeline, uint32 basePipelineIndex) = 0;
 		virtual void DestroyPipeline(RPipeline* pipeline) = 0;
 
-		virtual void QueueSubmit(RQueue* queue,
-			CRefRange<RCommandBuffer*> cmds,
-			CRefRange<RSemaphore*> waitSemaphores,
-			CRefRange<RPipelineStageFlags> waitStageFlags,
-			CRefRange<RSemaphore*> signalSemaphores,
-			RFence* fence) = 0;
-		virtual void QueueWaitIdle(RQueue* queue) = 0;
-		virtual RFramebuffer* CreateFrameBuffer(RRenderPass* pass, CRefRange<RImageView*> attachments, uint32 width, uint32 height, uint32 layers) = 0;
-		virtual void DestroyFramebuffer(RFramebuffer* framebuffer) = 0;
 		// cmd
-		virtual RCommandBuffer* AllocateCommandBuffer(RCommandBufferLevel level) = 0;
-		virtual void FreeCommandBuffer(RCommandBuffer* cmd) = 0;
-		virtual void ImmediateCommit(const CommandBufferFunc& func) = 0;
+		virtual RHICommandBuffer* AllocateCommandBuffer(RCommandBufferLevel level) = 0;
+		virtual void FreeCommandBuffer(RHICommandBuffer* cmd) = 0;
+		virtual void SubmitCommandBuffer(const RHICommandBuffer* cmd, RHIFence* fence, RHISwapChain* swapChain) = 0;
+		virtual void ImmediateSubmit(const CommandBufferFunc& func) = 0;
 
-		virtual int PreparePresent(uint8 frameIndex) = 0; // return image index of the swapchain, return -1 if out of date.
-		virtual int QueueSubmitPresent(RCommandBuffer* cmd, uint8 frameIndex, RFence* fence) = 0; // return -1 if out of date
-
-		virtual void FreeMemory(RMemory* memory) = 0;
-
-		// buffer
-		virtual RBuffer* CreateBuffer(uint64 size, RBufferUsageFlags usage) = 0;
-		virtual RMemory* CreateBufferMemory(RBuffer* buffer, RMemoryPropertyFlags memoryProperty, uint64 dataSize, void* pData) = 0;
-		virtual void CreateBufferWithMemory(uint64 size, RBufferUsageFlags usage, RMemoryPropertyFlags memoryFlags,
-			RBuffer*& pBuffer, RMemory*& pMemory, uint64 dataSize, void* data) = 0;
-		virtual void DestroyBuffer(RBuffer* buffer) = 0;
-		virtual void MapMemory(RMemory* memory, void** pData) = 0;
-		virtual void UnmapMemory(RMemory* memory) = 0;
-
-		// image todo delete
-		virtual RImage* CreateImage2D(RFormat format, uint32 width, uint32 height, uint32 mipLevels,
-			RSampleCountFlagBits samples, RImageTiling tiling, RImageUsageFlags usage) = 0;
-		virtual RMemory* CreateImageMemory(RImage* image, RMemoryPropertyFlags memoryProperty, void* data) = 0;
-		virtual void DestroyImage(RImage* image) = 0;
-		virtual RImageView* CreateImageView(RImage* image, RImageViewType viewType, RImageAspectFlags aspectMast,
-			uint32 baseMiplevel, uint32 levelCount, uint32 baseLayer,uint32 layerCount) = 0;
-		virtual void DestroyImageView(RImageView* imageView) = 0;
-		virtual RSampler* CreateSampler(const RSSamplerInfo& samplerInfo) = 0;
-		virtual void DestroySampler(RSampler* sampler) = 0;
-		static RHI* Instance();
-
-		//sync
-
-		virtual RFence* CreateFence(bool sig = true) = 0;
-		virtual void DestroyFence(RFence* fence) = 0;
-		virtual void WaitForFence(RFence* fence) = 0;
-		virtual void ResetFence(RFence* fence) = 0;
+		virtual int QueueSubmitPresent(RHICommandBuffer* cmd, uint8 frameIndex, RHIFence* fence) = 0; // return -1 if out of date
+		virtual RHIBuffer* CreateBuffer(const RHIBufferDesc& desc) = 0;
+		virtual RHITexture* CreateTexture(const RHITextureDesc& desc) = 0;
+		virtual RHISampler* CreateSampler(const RHISamplerDesc& desc) = 0;
+		virtual RHIFence* CreateFence(bool sig = true) = 0;
+		virtual RHIShader* CreateShader(EShaderStageFlagBit type, const char* codeData, size_t codeSize, const char* entryFunc) = 0;
+		virtual RHIGraphicsPipelineState* CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) = 0;
+	protected:
+		RHI() = default;
+		RHI(const RHI&) = delete;
+		RHI(RHI&&) = delete;
+		RHI* operator=(const RHI&) = delete;
+		virtual ~RHI() = 0;
+	private:
+		static RHI* s_Instance;
 	};
 
 }

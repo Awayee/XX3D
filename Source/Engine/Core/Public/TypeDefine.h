@@ -24,9 +24,13 @@ typedef unsigned long long	uint64;
 #define UINT32_MAX       0xffffffffui32
 #define UINT64_MAX       0xffffffffffffffffui64
 
+#define FLOAT_MAX        3.402823466e+38f
+
 #define INT_CAST(val)   static_cast<int>(val)
 #define UINT8_CAST(val) static_cast<uint8>((val) > 0 ? (val) : 0)
 #define UINT16_CAST(val) static_cast<uint16>((val) > 0 ? (val) : 0)
 #define UINT32_CAST(val) static_cast<uint32>((val) > 0 ? (val) : 0)
 #define UINT64_CAST(val) static_cast<uint64>((val) > 0 ? (val) : 0)
+
+#define XX_NODISCARD [[nodiscard]]
 	

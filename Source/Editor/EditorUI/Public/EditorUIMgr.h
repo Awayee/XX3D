@@ -13,12 +13,12 @@ namespace Editor {
 	private:
 		friend TSingleton<EditorUIMgr>;
 		struct MenuItem {
-			String Name;
+			XXString Name;
 			Func<void()> Func;
 			bool* Toggle;
 		};
 		struct MenuColumn {
-			String Name;
+			XXString Name;
 			TVector<MenuItem> Items;
 		};
 		TVector<MenuColumn> m_MenuBar;

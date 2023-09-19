@@ -272,7 +272,7 @@ namespace Engine {
 		FlushCommandQueue();
 	}
 
-	void RHID3D12::Initialize(const RSInitInfo* initInfo) {
+	RHID3D12::RHID3D12(const RSInitInfo* initInfo) {
 		CreateDeviceContext();
 		CreateCommandObjects();
 
@@ -283,7 +283,7 @@ namespace Engine {
 		OnResized();
 	}
 
-	void RHID3D12::Release() {
+	RHID3D12::~RHID3D12() {
 		for (uint32 i = 0; i < BACK_BUFFER_COUNT; ++i) {
 			DX_RELEASE(m_SwapchainBuffer[i]);
 		}
@@ -296,14 +296,5 @@ namespace Engine {
 		DX_RELEASE(m_Fence);
 		DX_RELEASE(m_Swapchain);
 		DX_RELEASE(m_Device);
-	}
-
-	void RHID3D12::ResizeSwapchain(uint32 width, uint32 height) {
-		if(width != m_SwapchainExtent.w || height != m_SwapchainExtent.h) {
-			m_SwapchainExtent.w = width;
-			m_SwapchainExtent.h = height;
-			// todo: execute in next frame
-			OnResized();
-		}
 	}
 }

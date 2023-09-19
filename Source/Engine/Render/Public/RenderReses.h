@@ -22,19 +22,9 @@ namespace Engine {
 		~Primitive();
 	};
 
-	class Quad {
-		BufferCommon m_VertexBuffer;
-	public:
-		Quad();
-		~Quad();
-		Engine::RBuffer* GetVertexBuffer() const { return m_VertexBuffer.Buffer; }
-	};
-
 	void FillVectorInput(TVector<Engine::RVertexInputBinding>& bindings, TVector<Engine::RVertexInputAttribute>& attributes);
 
 	void FillVertexInput(TVector<Engine::RVertexInputBinding>& bindings, TVector<Engine::RVertexInputAttribute>& attributes);
 
-	void DrawPrimitive(Engine::RCommandBuffer* cmd, const Primitive* primitive);
-
-	void DrawQuad(Engine::RCommandBuffer* cmd, const Quad* quad);
+	void DrawPrimitive(Engine::RHICommandBuffer* cmd, const Primitive* primitive);
 }

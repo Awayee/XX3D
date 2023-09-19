@@ -55,17 +55,17 @@ namespace Engine {
 		BRANCH_END
 		ImGui::DestroyContext(s_ImGuiContext); // todo solve
 	}
-	void ImGuiRenderDrawData(Engine::RCommandBuffer* cmd) {
+	void ImGuiRenderDrawData(Engine::RHICommandBuffer* cmd) {
 		if(!s_FrameFlag) {
 			return;
 		}
 		s_FrameFlag = false;
 		ImGui::Render();
-		BRANCH_VULKAN ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), reinterpret_cast<Engine::RCommandBufferVk*>(cmd)->handle); BRANCH_END
+		BRANCH_VULKAN ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), reinterpret_cast<Engine::RHICommandBufferVk*>(cmd)->handle); BRANCH_END
 	}
-	void ImGuiCreateFontsTexture(Engine::RCommandBuffer* cmd)
+	void ImGuiCreateFontsTexture(Engine::RHICommandBuffer* cmd)
 	{
-		BRANCH_VULKAN ASSERT(ImGui_ImplVulkan_CreateFontsTexture(reinterpret_cast<Engine::RCommandBufferVk*>(cmd)->handle), "Failed to upload imgui fonts!"); BRANCH_END
+		BRANCH_VULKAN ASSERT(ImGui_ImplVulkan_CreateFontsTexture(reinterpret_cast<Engine::RHICommandBufferVk*>(cmd)->handle), "Failed to upload imgui fonts!"); BRANCH_END
 	}
 	void ImGuiNewFrame() {
 		BRANCH_VULKAN

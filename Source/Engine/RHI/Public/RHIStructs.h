@@ -7,12 +7,12 @@
 namespace Engine {
 	struct RSInitInfo {
 		bool EnableDebug;
-		bool EnableGeometryShader;
+		uint8 MaxFramesInFlight;
 		USize2D WindowSize;
 		void* WindowHandle;
 		const char* ApplicationName;
-		uint8 MaxFramesInFlight;
 	};
+
 
 	struct RSViewport {
 		float x;
@@ -49,7 +49,7 @@ namespace Engine {
 	};
 
 	struct RSAttachment {
-		RFormat Format;
+		ERHIFormat Format;
 		RImageLayout InitialLayout{ IMAGE_LAYOUT_UNDEFINED };
 		RImageLayout FinalLayout{ IMAGE_LAYOUT_UNDEFINED };
 		RSampleCountFlagBits SampleCount{ SAMPLE_COUNT_1_BIT };
@@ -81,7 +81,7 @@ namespace Engine {
 		RDependencyFlags DependencyFlags;
 	};
 
-	struct RSImageBlit {
+	struct RSTextureCopyRegion {
 		RImageAspectFlags srcAspect;
 		uint32		  srcMipLevel;
 		uint32		  srcBaseLayer;
@@ -92,24 +92,6 @@ namespace Engine {
 		uint32		  dstBaseLayer;
 		uint32		  dstLayerCount;
 		UOffset2D		  dstOffsets[2];
-	};
-
-	struct RSSamplerInfo {
-		RFilter magFilter;
-		RFilter minFilter;
-		RSamplerMipmapMode mipmapMode;
-		RSamplerAddressMode addressModeU;
-		RSamplerAddressMode addressModeV;
-		RSamplerAddressMode addressModeW;
-		float minLodBias{ 0.0f };
-		bool anisotropyEnable{ false };
-		float maxAnisotropy{0.0f};
-		bool compareEnable{ false };
-		RCompareOp compreOp;
-		float minLod{ 0.0f };
-		float maxLod{ 1000.0f }; // none
-		RBorderColor borderColor{ BORDER_COLOR_FLOAT_OPAQUE_BLACK };
-		bool unnormalizedCoordinates{ false };
 	};
 
 	struct RSDescriptorSetLayoutBinding {
@@ -141,7 +123,7 @@ namespace Engine {
 	struct RVertexInputAttribute
 	{
 		uint32 binding;
-		RFormat format;
+		ERHIFormat format;
 		uint32 offset;
 	};
 
@@ -226,24 +208,4 @@ namespace Engine {
 		// dynamic
 		TVector<RDynamicState> DynamicStates;
 	};
-
-
-	class RSampler;
-	class RImageView;
-	class RBuffer;
-
-	// use for update descriptor set
-	union RDescriptorInfo {
-		struct {
-			const RSampler* sampler;
-			const RImageView* imageView;
-		};
-
-		struct {
-			const RBuffer* buffer;
-			uint64 offset;
-			uint64 range;
-		};
-	};
-
 }

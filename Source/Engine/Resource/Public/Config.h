@@ -23,13 +23,13 @@ namespace Engine {
 	};
 
 	struct ConfigData {
-		String        DefaultFontPath;
+		XXString        DefaultFontPath;
 		EGPUType      GPUType;
 		ERHIType      RHIType;
 		uint32        MSAASampleCount{ 0 };
 		ERenderPath   RenderPath;
 		USize2D       WindowSize;
-		String        StartLevel;
+		XXString        StartLevel;
 	};
 
 	class ConfigManager {

@@ -8,7 +8,7 @@ namespace Engine {
 	void ImGuiRelease();
 	void ImGuiNewFrame();
 	void ImGuiEndFrame();
-	void ImGuiRenderDrawData(Engine::RCommandBuffer* cmd);
-	void ImGuiCreateFontsTexture(Engine::RCommandBuffer* cmd);
+	void ImGuiRenderDrawData(Engine::RHICommandBuffer* cmd);
+	void ImGuiCreateFontsTexture(Engine::RHICommandBuffer* cmd);
 	void ImGuiDestroyFontUploadObjects();
 }

@@ -52,13 +52,13 @@ namespace Engine {
 
 	// lod .ini file
 
-	bool LoadIniFile(const char* file, TUnorderedMap<String, String>& configMap) {
+	bool LoadIniFile(const char* file, TUnorderedMap<XXString, XXString>& configMap) {
 		std::ifstream configFile(file);
 		if (!configFile.is_open()) {
 			LOG("Failed to load file: %s", file);
 			return false;
 		}
-		String fileLine;
+		XXString fileLine;
 		configMap.clear();
 		while (std::getline(configFile, fileLine)) {
 			if (fileLine.empty() || fileLine[0] == '#') {
@@ -66,8 +66,8 @@ namespace Engine {
 			}
 			uint32 separate = fileLine.find_first_of('=');
 			if (separate > 0 && separate < fileLine.length() - 1) {
-				String name = fileLine.substr(0, separate);
-				String value = fileLine.substr(separate + 1, fileLine.length() - separate - 1);
+				XXString name = fileLine.substr(0, separate);
+				XXString value = fileLine.substr(separate + 1, fileLine.length() - separate - 1);
 				configMap.insert({ std::move(name), std::move(value) });
 			}
 		}
@@ -75,7 +75,7 @@ namespace Engine {
 	}
 
 	ConfigManager::ConfigManager(const char* file) {
-		TUnorderedMap<String, String> configMap;
+		TUnorderedMap<XXString, XXString> configMap;
 		if(!LoadIniFile(file,configMap)) {
 			LOG("Missing necessary ini file: %s", file);
 			return;

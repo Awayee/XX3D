@@ -1,270 +1,289 @@
 #include "RHIVKResources.h"
 #include "VulkanUtil.h"
 #include "RHIVulkan.h"
+#include "VulkanBuilder.h"
+#include "VulkanLayout.h"
 namespace Engine {
-    void RRenderPassVk::SetAttachment(uint32 idx, RImageView* imageView){
-        if(!(idx < m_Attachments.Size())) {
-	        for(int i= m_Attachments.Size()-1; i<idx; ++i) {
-                m_Attachments.PushBack(VK_NULL_HANDLE);
-	        }
-        }
-        m_Attachments[idx] = ((RImageViewVk*)imageView)->handle;
-    }
-    void RRenderPassVk::SetClearValue(uint32 idx, const RSClear& clear){
-        if(!(idx < m_Clears.Size())) {
-	        for(int i=m_Clears.Size()-1;i<idx; ++i) {
-                m_Clears.PushBack({});
-	        }
-        }
-        m_Clears[idx] = ResolveClearValue(clear);
-    }
+#define SET_VK_OBJECT_NAME(type, handle, name) do{\
+	VkDebugUtilsObjectNameInfoEXT info{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, nullptr, type, reinterpret_cast<uint64>(handle), name};\
+	vkSetDebugUtilsObjectNameEXT(RHIVulkan::GetDevice(), &info);\
+	}while(0)
 
+	RHIVulkanSwapChain::RHIVulkanSwapChain(const VulkanContext* context) : m_ContextPtr(context) {
+		ASSERT(m_ContextPtr, "");
+		CreateSwapChain();
 
-	void RDescriptorSetVk::InnerUpdate(uint32 binding, uint32 arrayElement, uint32 count, VkDescriptorType type, const VkDescriptorImageInfo* imageInfo, const VkDescriptorBufferInfo* bufferInfo, const VkBufferView* texelBufferView){
-		VkWriteDescriptorSet write{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, handle };
-		write.dstBinding = binding;
-		write.dstArrayElement = arrayElement;
-		write.descriptorCount = count;
-		write.descriptorType = type;
-		write.pImageInfo = imageInfo;
-		write.pBufferInfo = bufferInfo;
-		write.pTexelBufferView = texelBufferView;
-		vkUpdateDescriptorSets(RHIVulkan::InstanceVulkan()->GetDevice(), 1, &write, 0, nullptr);
-	}
-
-	void RDescriptorSetVk::Update(uint32 binding, RDescriptorType type, const RDescriptorInfo& info,  uint32 arrayElement, uint32 count){
-		VkDescriptorType vkType = (VkDescriptorType)type;
-		switch (vkType) {
-			// buffer
-		case (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER):
-		case (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER):
-		case (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC):
-		case (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC): {
-			VkDescriptorBufferInfo bufferInfo{ ((RBufferVk*)info.buffer)->handle, info.offset, info.range };
-			InnerUpdate(binding, arrayElement, count, vkType, nullptr, &bufferInfo, nullptr);
-			break;
-		}
-
-		// image
-		case (VK_DESCRIPTOR_TYPE_SAMPLER):
-		case (VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER):
-		case (VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE):
-		case (VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT):
-		case (VK_DESCRIPTOR_TYPE_STORAGE_IMAGE): {
-			VkDescriptorImageInfo imageInfo{};
-			if (nullptr != info.sampler) {
-				imageInfo.sampler = ((RSamplerVk*)info.sampler)->handle;
-			}
-			if (nullptr != info.imageView) {
-				RImageViewVk* imageViewVk = (RImageViewVk*)info.imageView;
-				imageInfo.imageView = imageViewVk->handle;
-				imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			}
-			InnerUpdate(binding, arrayElement, count, vkType, &imageInfo, nullptr, nullptr);
-			break;
-		}
-
-		// buffer view TODO
-		case (VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER):
-		case (VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER): { }
-		default: break;
-		}
-    }
-
-
-    void RDescriptorSetVk::SetUniformBuffer(uint32 binding, RBuffer* buffer){
-		VkDescriptorBufferInfo bufferInfo{ ((RBufferVk*)buffer)->handle, 0, buffer->GetSize() };
-		InnerUpdate(binding, 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, &bufferInfo, nullptr);
-    }
-
-    void RDescriptorSetVk::SetImageSampler(uint32 binding, RSampler* sampler, RImageView* image){
-		VkDescriptorImageInfo imageInfo{ ((RSamplerVk*)sampler)->handle, ((RImageViewVk*)image)->handle, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
-		InnerUpdate(binding, 0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, &imageInfo, nullptr, nullptr);
-    }
-
-    void RDescriptorSetVk::SetImage(uint32 binding, RImageView* image) {
-		VkDescriptorImageInfo imageInfo{ nullptr, ((RImageViewVk*)image)->handle, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
-		InnerUpdate(binding, 0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, &imageInfo, nullptr, nullptr);
-    }
-
-    void RDescriptorSetVk::SetSampler(uint32 binding, RSampler* sampler) {
-		VkDescriptorImageInfo imageInfo{ ((RSamplerVk*)sampler)->handle, nullptr, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
-		InnerUpdate(binding, 0, 1, VK_DESCRIPTOR_TYPE_SAMPLER, &imageInfo, nullptr, nullptr);
-    }
-
-    void RDescriptorSetVk::SetInputAttachment(uint32 binding, RImageView* image){
-		VkDescriptorImageInfo imageInfo{ VK_NULL_HANDLE, ((RImageViewVk*)image)->handle, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-		InnerUpdate(binding, 0, 1, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, &imageInfo, nullptr, nullptr);
-    }
-
-
-	void RCommandBufferVk::Begin(RCommandBufferUsageFlags flags){
-		VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr };
-		beginInfo.flags = flags;
-		beginInfo.pInheritanceInfo = nullptr;
-		vkBeginCommandBuffer(handle, &beginInfo);
-	}
-
-	void RCommandBufferVk::End(){
-		vkEndCommandBuffer(handle);
-	}
-
-	void RCommandBufferVk::BeginRenderPass(RRenderPass* pass, RFramebuffer* framebuffer, const URect& area){
-		RRenderPassVk* passVk = reinterpret_cast<RRenderPassVk*>(pass);
-		VkRect2D vkRenderArea{ {(int32)area.x, (int32)area.y}, {area.w, area.h} };
-		VkRenderPassBeginInfo passInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-		passInfo.pNext = nullptr;
-		passInfo.renderPass = passVk->handle;
-		passInfo.framebuffer = reinterpret_cast<RFramebufferVk*>(framebuffer)->handle;
-		passInfo.renderArea = vkRenderArea;
-		passInfo.clearValueCount = static_cast<uint32>(passVk->GetClears().Size());
-		passInfo.pClearValues = passVk->GetClears().Data();
-		vkCmdBeginRenderPass(handle, &passInfo, VK_SUBPASS_CONTENTS_INLINE);
-	}
-
-	void RCommandBufferVk::NextSubpass(){
-		vkCmdNextSubpass(handle, VK_SUBPASS_CONTENTS_INLINE);
-	}
-
-	void RCommandBufferVk::EndRenderPass(){
-		vkCmdEndRenderPass(handle);
-	}
-
-	void RCommandBufferVk::CopyBufferToImage(RBuffer* buffer, RImage* image, RImageAspectFlags aspect, uint32 mipLevel, uint32 baseLayer, uint32 layerCount){
-		RImageVk* imageVk = (RImageVk*)image;
-		VkBufferImageCopy region;
-		region.bufferOffset = 0;
-		region.bufferRowLength = 0;
-		region.bufferImageHeight = 0;
-		region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		region.imageSubresource.mipLevel = mipLevel;
-		region.imageSubresource.baseArrayLayer = 0;
-		region.imageSubresource.layerCount = layerCount;
-		region.imageOffset = { 0, 0, 0 };
-		region.imageExtent = { imageVk->GetExtent().w, imageVk->GetExtent().h, imageVk->GetExtent().d };
-		vkCmdCopyBufferToImage(handle, ((RBufferVk*)buffer)->handle, imageVk->handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-	}
-
-	void RCommandBufferVk::BlitImage(RCommandBuffer* cmd, RImage* srcImage, RImage* dstImage, const RSImageBlit& region)
-	{
-		VkImageBlit blit{};
-		blit.srcSubresource.aspectMask = region.srcAspect;
-		blit.srcSubresource.baseArrayLayer = region.srcBaseLayer;
-		blit.srcSubresource.layerCount = region.srcLayerCount;
-		memcpy(blit.srcOffsets, region.srcOffsets, sizeof(VkOffset3D) * 2);
-		blit.dstSubresource.aspectMask = region.dstAspect;
-		blit.dstSubresource.baseArrayLayer = region.dstBaseLayer;
-		blit.dstSubresource.layerCount = region.dstLayerCount;
-		memcpy(blit.dstOffsets, region.dstOffsets, sizeof(VkOffset3D) * 2);
-		vkCmdBlitImage(((RCommandBufferVk*)cmd)->handle, ((RImageVk*)srcImage)->handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			((RImageVk*)dstImage)->handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
-	}
-
-	void RCommandBufferVk::BindPipeline(RPipeline* pipeline){
-		vkCmdBindPipeline(handle, (VkPipelineBindPoint)pipeline->GetType(), ((RPipelineVk*)pipeline)->handle);
-	}
-
-	void RCommandBufferVk::BindDescriptorSet(RPipelineLayout* layout, RDescriptorSet* descriptorSet, uint32 setIdx, RPipelineType pipelineType){
-		vkCmdBindDescriptorSets(handle, (VkPipelineBindPoint)pipelineType, ((RPipelineLayoutVk*)layout)->handle, setIdx, 1, &((RDescriptorSetVk*)descriptorSet)->handle, 0, nullptr);
-	}
-
-	void RCommandBufferVk::BindVertexBuffer(RBuffer* buffer, uint32 first, uint64 offset){
-		vkCmdBindVertexBuffers(handle, first, 1, &((RBufferVk*)buffer)->handle, &offset);
-	}
-
-	void RCommandBufferVk::BindIndexBuffer(RBuffer* buffer, uint64 offset){
-		vkCmdBindIndexBuffer(handle, ((RBufferVk*)buffer)->handle, offset, VK_INDEX_TYPE_UINT32);
-	}
-
-	void RCommandBufferVk::Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance){
-		vkCmdDraw(handle, vertexCount, instanceCount, firstIndex, firstInstance);
-	}
-
-	void RCommandBufferVk::DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance){
-		vkCmdDrawIndexed(handle, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
-	}
-
-	void RCommandBufferVk::DrawPrimitive(RBuffer* buffer, uint32 vertexCount, uint32 instanceCount){
-		constexpr VkDeviceSize offset = 0;
-		vkCmdBindVertexBuffers(handle, 0, 1, &((RBufferVk*)buffer)->handle, &offset);
-		vkCmdDraw(handle, vertexCount, instanceCount, 0, 0);
-	}
-
-	void RCommandBufferVk::DrawPrimitiveIndexed(RBuffer* vertexBuffer, RBuffer* indexBuffer, uint32 indexCount, uint32 instanceCount){
-		constexpr VkDeviceSize offset = 0;
-		vkCmdBindVertexBuffers(handle, 0, 1, &((RBufferVk*)vertexBuffer)->handle, &offset);
-		vkCmdBindIndexBuffer(handle, ((RBufferVk*)indexBuffer)->handle, 0, VK_INDEX_TYPE_UINT32);
-		vkCmdDrawIndexed(handle, indexCount, instanceCount, 0, 0, 0);
-	}
-
-	void RCommandBufferVk::Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ){
-		vkCmdDispatch(handle, groupCountX, groupCountY, groupCountZ);
-	}
-
-	void RCommandBufferVk::ClearAttachment(RImageAspectFlags aspect, const float* color, const URect& rect){
-		VkClearAttachment clearAttachment;
-		clearAttachment.aspectMask = aspect;
-		clearAttachment.clearValue.color.float32[0] = color[0];
-		clearAttachment.clearValue.color.float32[1] = color[1];
-		clearAttachment.clearValue.color.float32[2] = color[2];
-		clearAttachment.clearValue.color.float32[3] = color[3];
-		VkClearRect clearRect;
-		clearRect.rect.extent.width = rect.w;
-		clearRect.rect.extent.height = rect.h;
-		clearRect.rect.offset.x = rect.x;
-		clearRect.rect.offset.y = rect.y;
-		clearRect.baseArrayLayer = 0;
-		clearRect.layerCount = 1;
-		vkCmdClearAttachments(handle, 1, &clearAttachment, 1, &clearRect);
-	}
-
-	void RCommandBufferVk::CopyBuffer(RBuffer* srcBuffer, RBuffer* dstBuffer, uint64 srcOffset, uint64 dstOffset, uint64 size){
-		VkBufferCopy copy{ srcOffset, dstOffset, size };
-		vkCmdCopyBuffer(handle, ((RBufferVk*)srcBuffer)->handle, ((RBufferVk*)dstBuffer)->handle, 1, &copy);
-	}
-
-	void RCommandBufferVk::TransitionImageLayout(RImage* image, RImageLayout oldLayout, RImageLayout newLayout, uint32 baseMipLevel, uint32 levelCount, uint32 baseLayer, uint32 layerCount, RImageAspectFlags aspect){
-		RImageVk* imageVk = (RImageVk*)image;
-		VkImageMemoryBarrier barrier{};
-		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.oldLayout = (VkImageLayout)oldLayout;
-		barrier.newLayout = (VkImageLayout)newLayout;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.image = imageVk->handle;
-		barrier.subresourceRange.aspectMask = aspect;
-		barrier.subresourceRange.baseMipLevel = baseMipLevel;
-		barrier.subresourceRange.levelCount = levelCount;
-		barrier.subresourceRange.baseArrayLayer = baseLayer;
-		barrier.subresourceRange.layerCount = layerCount;
-		VkPipelineStageFlags srcStage;
-		VkPipelineStageFlags dstStage;
-		GetPipelineBarrierStage(barrier.oldLayout, barrier.newLayout, barrier.srcAccessMask, barrier.dstAccessMask, srcStage, dstStage);
-		vkCmdPipelineBarrier(handle, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-		imageVk->SetLayout(newLayout);
-    }
-
-	void RCommandBufferVk::GenerateMipmap(RImage* image, uint32 levelCount, RImageAspectFlags aspect, uint32 baseLayer, uint32 layerCount) {
-		RImageVk* imageVk = (RImageVk*)image;
-		GenerateMipMap(handle, imageVk->handle, levelCount, imageVk->GetExtent().w, imageVk->GetExtent().h, aspect, baseLayer, layerCount);
-	}
-
-	void RCommandBufferVk::BeginDebugLabel(const char* msg, const float* color) {
-		if (nullptr != vkCmdBeginDebugUtilsLabelEXT) {
-			VkDebugUtilsLabelEXT labelInfo{ VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT, nullptr };
-			labelInfo.pLabelName = msg;
-			if (nullptr != color) {
-				for (int i = 0; i < 4; ++i) {
-					labelInfo.color[i] = color[i];
-				}
-			}
-			vkCmdBeginDebugUtilsLabelEXT(handle, &labelInfo);
+		// Create semaphores
+		m_FrameRes.Resize(MAX_FRAME_COUNT);
+		VkSemaphoreCreateInfo smpInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr };
+		for (FrameResource& res : m_FrameRes) {
+			vkCreateSemaphore(m_ContextPtr->Device, &smpInfo, nullptr, &res.ImageAvailableSmp);
+			vkCreateSemaphore(m_ContextPtr->Device, &smpInfo, nullptr, &res.PreparePresentSmp);
 		}
 	}
 
-	void RCommandBufferVk::EndDebugLabel(){
-		if(nullptr != vkCmdEndDebugUtilsLabelEXT) {
-			vkCmdEndDebugUtilsLabelEXT(handle);
+	RHIVulkanSwapChain::~RHIVulkanSwapChain() {
+		ClearSwapChain();
+		for (FrameResource& res : m_FrameRes) {
+			vkDestroySemaphore(m_ContextPtr->Device, res.ImageAvailableSmp, nullptr);
+			vkDestroySemaphore(m_ContextPtr->Device, res.PreparePresentSmp, nullptr);
 		}
+	}
+
+	bool RHIVulkanSwapChain::Present() {
+		if (m_Prepared) {
+			VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr };
+			FrameResource& lastFrame = m_FrameRes[m_CurFrame];
+			presentInfo.waitSemaphoreCount = 1;
+			presentInfo.pWaitSemaphores = &lastFrame.PreparePresentSmp;
+			presentInfo.swapchainCount = 1;
+			presentInfo.pSwapchains = &m_Handle;
+			presentInfo.pImageIndices = &m_FrameRes[m_CurFrame].ImageIdx;
+			vkQueuePresentKHR(m_ContextPtr->PresentQueue.Handle, &presentInfo);
+			m_CurFrame = (m_CurFrame + 1) % m_FrameRes.Size();
+			m_Prepared = false;
+		}
+		FrameResource& currentFrame = m_FrameRes[m_CurFrame];
+		VkResult res = vkAcquireNextImageKHR(m_ContextPtr->Device, m_Handle, WAIT_MAX, currentFrame.ImageAvailableSmp, VK_NULL_HANDLE, &currentFrame.ImageIdx);
+		if (VK_SUCCESS == res) {
+			m_Prepared = true;
+			return true;
+		}
+		return false;
+	}
+
+    RHIVkBuffer::~RHIVkBuffer() {
+		VkDevice device = RHIVulkan::GetDevice();
+		vkDestroyBuffer(device, m_Buffer, nullptr);
+		m_Mem.Free();
+    }
+
+    void RHIVkBuffer::SetName(const char* name) {
+		SET_VK_OBJECT_NAME(VK_OBJECT_TYPE_BUFFER, m_Buffer, name);
+    }
+
+    void RHIVkBuffer::UpdateData(const void* data, size_t byteSize) {
+		void* mappedData = m_Mem.Map();
+		memcpy(mappedData, data, byteSize);
+		m_Mem.Unmap();
+    }
+
+    RHIVkTexture::~RHIVkTexture() {
+		VkDevice device = RHIVulkan::GetDevice();
+		vkDestroyImage(device, m_Image, nullptr);
+		vkDestroyImageView(device, m_View, nullptr);
+    }
+
+    void RHIVkTexture::SetName(const char* name) {
+		SET_VK_OBJECT_NAME(VK_OBJECT_TYPE_IMAGE, m_Image, name);
+		SET_VK_OBJECT_NAME(VK_OBJECT_TYPE_IMAGE_VIEW, m_View, name);
+    }
+
+    RHIVkTextureWithMem::~RHIVkTextureWithMem() {
+		m_Mem.Free();
+    }
+
+    RHIVkSampler::~RHIVkSampler() {
+		VkDevice device = RHIVulkan::GetDevice();
+		vkDestroySampler(device, m_Sampler, nullptr);
+	}
+
+	void RHIVkSampler::SetName(const char* name) {
+		SET_VK_OBJECT_NAME(VK_OBJECT_TYPE_SAMPLER, m_Sampler, name);
+	}
+
+
+	RHIVkFence::~RHIVkFence() {
+		VkDevice device = RHIVulkan::GetDevice();
+		vkDestroyFence(device, m_Handle, nullptr);
+	}
+
+	void RHIVkFence::Wait() {
+		vkWaitForFences(RHIVulkan::GetDevice(), 1, &m_Handle, 1, WAIT_MAX);
+	}
+
+	void RHIVkFence::Reset() {
+		vkResetFences(RHIVulkan::GetDevice(), 1, &m_Handle);
+	}
+
+	void RHIVkFence::SetName(const char* name) {
+		SET_VK_OBJECT_NAME(VK_OBJECT_TYPE_FENCE, m_Handle, name);
+	}
+
+	void RHIVulkanSwapChain::Resize(USize2D size) {
+		ClearSwapChain();
+		CreateSwapChain();
+	}
+
+	void RHIVulkanSwapChain::CreateSwapChain() {
+		SwapChainBuilder initializer(m_Handle, m_Images, m_Views);
+		initializer.Extent = { m_Width, m_Height };
+		initializer.SetContext(*m_ContextPtr);
+		initializer.Build();
+	}
+
+	void RHIVulkanSwapChain::ClearSwapChain() {
+		VkDevice device = RHIVulkan::GetDevice();
+		vkDestroySwapchainKHR(device, m_Handle, nullptr);
+		for (VkImage image : m_Images) {
+			vkDestroyImage(device, image, nullptr);
+		}for (VkImageView view : m_Views) {
+			vkDestroyImageView(device, view, nullptr);
+		}
+	}
+
+	RHIVulkanShader::RHIVulkanShader(EShaderStageFlagBit type, const char* code, size_t codeSize, const char* funcName): RHIShader(type) {
+		VkDevice device = RHIVulkan::GetDevice();
+		VkShaderModuleCreateInfo shaderInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, nullptr, 0, codeSize, reinterpret_cast<const uint32*>(code)};
+		vkCreateShaderModule(device, &shaderInfo, nullptr, &m_ShaderModule);
+		m_EntryName = funcName;
+	}
+
+	RHIVulkanShader::~RHIVulkanShader() {
+		VkDevice device = RHIVulkan::GetDevice();
+		vkDestroyShaderModule(device, m_ShaderModule, nullptr);
+	}
+
+	VkShaderStageFlagBits RHIVulkanShader::GetVkStage() const {
+		return ToVkShaderStageFlagBit(m_Type);
+	}
+
+	void RHIVulkanShader::SetName(const char* name) {
+		SET_VK_OBJECT_NAME(VK_OBJECT_TYPE_SHADER_MODULE, m_ShaderModule, name);
+	}
+
+	void RHIVulkanShader::GetPipelineShaderCreateInfo(VkPipelineShaderStageCreateInfo& info) const {
+		info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		info.pNext = nullptr;
+		info.flags = 0;
+		info.stage = ToVkShaderStageFlagBit(m_Type);
+		info.module = m_ShaderModule;
+		info.pName = m_EntryName.data();
+		info.pSpecializationInfo = nullptr;
+	}
+
+	RHIVulkanGraphicsPipelineState::RHIVulkanGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc):RHIGraphicsPipelineState(desc) {
+		VkDevice device = RHIVulkan::GetDevice();
+		// create layout
+		uint32 layoutCount = desc.Layout.Size();
+		TempArray<VkDescriptorSetLayout> layouts(layoutCount);
+		for(uint32 i=0; i<layoutCount; ++i) {
+			layouts[i] = VulkanLayoutMgr::Instance()->GetLayoutHandle(desc.Layout[i]);
+		}
+		VkPipelineLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0 };
+		layoutInfo.setLayoutCount = layoutCount;
+		layoutInfo.pSetLayouts = layouts.Data();
+		vkCreatePipelineLayout(device, &layoutInfo, nullptr, &m_PipelineLayout);
+	}
+
+	RHIVulkanGraphicsPipelineState::~RHIVulkanGraphicsPipelineState() {
+		VkDevice device = RHIVulkan::GetDevice();
+		vkDestroyPipelineLayout(device, m_PipelineLayout, nullptr);
+		vkDestroyPipeline(device, m_Pipeline, nullptr);
+	}
+
+	void RHIVulkanGraphicsPipelineState::SetName(const char* name) {
+		m_Name = name;
+	}
+
+	void RHIVulkanGraphicsPipelineState::CreatePipelineHandle(VkRenderPass pass, uint32 subPass) {
+		VkGraphicsPipelineCreateInfo pipelineInfo{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, nullptr, 0 };
+		// shader stage
+
+		auto& shaders = m_Desc.Shaders;
+		uint32 shaderCount = shaders.Size();
+		TempArray<VkPipelineShaderStageCreateInfo> shaderStages(shaderCount);
+		for(uint32 i=0; i<shaderCount; ++i) {
+			RHIVulkanShader* vkShader = dynamic_cast<RHIVulkanShader*>(shaders[i]);
+			shaderStages[i] = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
+				ToVkShaderStageFlagBit(vkShader->GetStage()),
+				vkShader->GetShaderModule(),
+				vkShader->GetEntry().c_str(),
+				nullptr,
+			};
+		}
+
+		// vertex input
+		auto& vertexInput = m_Desc.VertexInput;
+		VkPipelineVertexInputStateCreateInfo vertexInputInfo{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO, nullptr, 0 };
+		const uint32 attrCount = vertexInput.Attributes.Size();
+		TempArray<VkVertexInputAttributeDescription> viAttrs(attrCount);
+		for (uint32 i = 0; i < attrCount; ++i) {
+			viAttrs[i].format = ToVkFormat(vertexInput.Attributes[i].Format);
+			viAttrs[i].binding = vertexInput.Attributes[i].Binding;
+			viAttrs[i].location = i;
+			viAttrs[i].offset = vertexInput.Attributes[i].Offset;
+		}
+		vertexInputInfo.vertexAttributeDescriptionCount = attrCount;
+		vertexInputInfo.pVertexAttributeDescriptions = viAttrs.Data();
+		const uint32 bindingCount = vertexInput.Bindings.Size();
+		TempArray<VkVertexInputBindingDescription> viBindings(bindingCount);
+		for(uint32 i=0; i<bindingCount; ++i) {
+			viBindings[i].binding = i;
+			viBindings[i].inputRate = vertexInput.Bindings[i].PerInstance ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
+			viBindings[i].stride = vertexInput.Bindings[i].Stride;
+		}
+		vertexInputInfo.vertexBindingDescriptionCount = bindingCount;
+		vertexInputInfo.pVertexBindingDescriptions = viBindings.Data();
+
+		// input assembly
+		VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO, nullptr, 0 };
+		inputAssemblyInfo.topology = ToPrimitiveTopology(m_Desc.PrimitiveTopology);
+		inputAssemblyInfo.primitiveRestartEnable = false;
+
+		// tessellation state TODO
+		VkPipelineTessellationStateCreateInfo tessellationStateInfo{ VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO, nullptr, 0 };
+		tessellationStateInfo.patchControlPoints = 0;
+
+		// viewport state (dynamic)
+		VkPipelineViewportStateCreateInfo viewportInfo{ VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO, nullptr, 0 };
+		viewportInfo.viewportCount = 1;
+		viewportInfo.scissorCount = 1;
+
+		// rasterization
+		VkPipelineRasterizationStateCreateInfo rasterizationStateInfo = ToRasterizationStateCreateInfo(m_Desc.RasterizerState);
+
+		// multi-sample
+		VkPipelineMultisampleStateCreateInfo multiSampleInfo{ VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO, nullptr, 0 };
+		multiSampleInfo.rasterizationSamples = ToVkMultiSampleCount(m_Desc.NumSamples);
+
+		// depth stencil
+		VkPipelineDepthStencilStateCreateInfo depthStencilInfo = ToDepthStencilStateCreateInfo(m_Desc.DepthStencilState);
+
+		// color blend
+		auto& blendDesc = m_Desc.BlendDesc;
+		VkPipelineColorBlendStateCreateInfo colorBlendInfo{ VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr, 0 };
+		colorBlendInfo.logicOpEnable = false;
+		colorBlendInfo.logicOp = VK_LOGIC_OP_COPY;
+		uint32 blendStateCount = blendDesc.BlendStates.Size();
+		TempArray<VkPipelineColorBlendAttachmentState> states(blendStateCount);
+		for(uint32 i=0; i<blendStateCount; ++i) {
+			states[i] = ToAttachmentBlendState(blendDesc.BlendStates[i]);
+		}
+		for(uint32 i=0; i<4;++i) {
+			colorBlendInfo.blendConstants[i] = blendDesc.BlendConst[i];
+		}
+
+		// dynamic state
+		static VkDynamicState s_DynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+		VkPipelineDynamicStateCreateInfo dynamicInfo{ VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO, nullptr, 0 };
+		dynamicInfo.dynamicStateCount = ArraySize(s_DynamicStates);
+		dynamicInfo.pDynamicStates = s_DynamicStates;
+
+		pipelineInfo.stageCount = shaderCount;
+		pipelineInfo.pStages = shaderStages.Data();
+		pipelineInfo.pVertexInputState = &vertexInputInfo;
+		pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
+		pipelineInfo.pTessellationState = &tessellationStateInfo;
+		pipelineInfo.pViewportState = &viewportInfo;
+		pipelineInfo.pRasterizationState = &rasterizationStateInfo;
+		pipelineInfo.pMultisampleState = &multiSampleInfo;
+		pipelineInfo.pDepthStencilState = &depthStencilInfo;
+		pipelineInfo.pColorBlendState = &colorBlendInfo;
+		pipelineInfo.pDynamicState = &dynamicInfo;
+		pipelineInfo.layout = m_PipelineLayout;
+		pipelineInfo.renderPass = pass;
+		pipelineInfo.subpass = subPass;
+		VK_CHECK(vkCreateGraphicsPipelines(RHIVulkan::GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_Pipeline), "vkCreateGraphicsPipelines");
 	}
 }
