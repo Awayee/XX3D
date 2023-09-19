@@ -8,7 +8,10 @@
 
 namespace Engine{
 
+	RHI* RHI::s_Instance = nullptr;
+
 	RHI* RHI::Instance() {
+		return s_Instance;
 		static TUniquePtr<RHI> s_Instance;
 		static Mutex s_InstanceMutex;
 
@@ -29,5 +32,28 @@ namespace Engine{
 		}
 
 		return s_Instance.get();
+	}
+
+	void RHI::Initialize(const RSInitInfo* initInfo) {
+		static Mutex s_InstanceMutex;
+
+		if (nullptr == s_Instance) {
+			MutexLock lock(s_InstanceMutex);
+			if (nullptr == s_Instance) {
+				ERHIType rhiType = GetConfig().RHIType;
+				if (RHI_VULKAN == rhiType) {
+					s_Instance = new RHIVulkan(initInfo));
+				}
+				else if (RHI_DX11 == rhiType) {
+					//s_Instance.reset(new RHIDX11());
+				}
+				else {
+					ERROR("Failed to initialize RHI!");
+				}
+			}
+		}
+	}
+
+	void RHI::Release() {
 	}
 }

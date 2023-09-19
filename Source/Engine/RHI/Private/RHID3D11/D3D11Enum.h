@@ -2,4 +2,4 @@
 #include <d3d11.h>
 #include "RHI/Public/RHIEnum.h"
 
-DXGI_FORMAT ConvertD3D11Format(Engine::RFormat f);
+DXGI_FORMAT ConvertD3D11Format(Engine::ERHIFormat f);

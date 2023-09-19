@@ -42,7 +42,7 @@ namespace Engine {
 		}
 	}
 
-	void RenderObject3D::DrawCall(Engine::RCommandBuffer* cmd, Engine::RPipelineLayout* layout) {
+	void RenderObject3D::DrawCall(Engine::RHICommandBuffer* cmd, Engine::RPipelineLayout* layout) {
 		cmd->BindDescriptorSet(layout, m_TransformDescs, 1, Engine::PIPELINE_GRAPHICS);
 	}
 }

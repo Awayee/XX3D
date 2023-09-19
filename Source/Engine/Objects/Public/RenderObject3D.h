@@ -27,6 +27,6 @@ namespace Engine {
 		_NODISCARD const Math::FVector3& GetScale() const { return m_Scale; }
 
 		virtual void Update() override;
-		virtual void DrawCall(Engine::RCommandBuffer* cmd, Engine::RPipelineLayout* layout) override;
+		virtual void DrawCall(Engine::RHICommandBuffer* cmd, Engine::RPipelineLayout* layout) override;
 	};
 }

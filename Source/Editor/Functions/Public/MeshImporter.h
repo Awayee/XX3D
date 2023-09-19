@@ -4,7 +4,7 @@
 class MeshImporter {
 private:
 	Engine::AMeshAsset* m_Asset;
-	String m_SaveFile;//relative path
+	XXString m_SaveFile;//relative path
 public:
 	MeshImporter(Engine::AMeshAsset* asset, const char* saveFile);
 	//import from external files

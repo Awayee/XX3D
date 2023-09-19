@@ -3,8 +3,8 @@
 
 namespace Engine {
 
-	String AssetLoader::s_EngineAssetPath{ ENGINE_ASSETS };
-	String AssetLoader::s_ProjectAssetPath{ PROJECT_ASSETS };
+	XXString AssetLoader::s_EngineAssetPath{ ENGINE_ASSETS };
+	XXString AssetLoader::s_ProjectAssetPath{ PROJECT_ASSETS };
 
 	namespace {
 		// TODO Temporary to check the file content, all assets will be binary

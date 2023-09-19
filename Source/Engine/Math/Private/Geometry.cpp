@@ -1,4 +1,4 @@
-#include "Math/Public/AABB.h"
+#include "Math/Public/Geometry.h"
 
 namespace Math {
 	AABB::AABB() = default;

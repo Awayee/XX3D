@@ -22,6 +22,7 @@ public:
 	static void Release() {
 		if(nullptr != s_Instance) {
 			delete s_Instance;
+			s_Instance = nullptr;
 		}
 	}
 	static T* Instance() {

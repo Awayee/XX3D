@@ -52,7 +52,7 @@ namespace Engine {
 		m_RenderAreaDirty = true;
 	}
 
-	RFence* Renderer::GetCurrentFence() {
+	RHIFence* Renderer::GetCurrentFence() {
 		return m_Fences[m_CurrentFrameIndex];
 	}
 
@@ -97,7 +97,7 @@ namespace Engine {
 		}
 		m_CommandBuffers.Clear();
 		for(auto& fence: m_Fences) {
-			rhi->DestroyFence(fence);
+			delete fence;
 		}
 		m_Fences.Clear();
 	}
@@ -114,7 +114,7 @@ namespace Engine {
 
 		GET_RHI(rhi);
 		// begin render pass;
-		rhi->WaitForFence(GetCurrentFence());
+		GetCurrentFence()->Wait();
 
 		if(m_RenderAreaDirty) {
 			ResizeRenderArea();
@@ -122,15 +122,14 @@ namespace Engine {
 			return;
 		}
 
-		int swapchainImageIndex = rhi->PreparePresent(m_CurrentFrameIndex);
-		if(-1 == swapchainImageIndex) {
+		if(!rhi->GetSwapChain()->Present()){
 			OnWindowSizeChanged(0, 0);
 			return;
 		}
 
-		rhi->ResetFence(GetCurrentFence());
+		GetCurrentFence()->Reset();
 
-		Engine::RCommandBuffer* cmd = m_CommandBuffers[m_CurrentFrameIndex];
+		Engine::RHICommandBuffer* cmd = m_CommandBuffers[m_CurrentFrameIndex];
 		cmd->Begin(0);
 
 		m_PresentPass->SetImageIndex(swapchainImageIndex);
@@ -159,6 +158,7 @@ namespace Engine {
 		cmd->EndRenderPass();
 		cmd->End();
 		int res = rhi->QueueSubmitPresent(cmd, m_CurrentFrameIndex, GetCurrentFence());
+		rhi->GetSwapChain()->Present();
 		if(-1 == res) {
 			OnWindowSizeChanged(0, 0);
 		}
@@ -171,7 +171,7 @@ namespace Engine {
 		InitializeFunc();
 		GET_RHI(rhi);
 		// upload font
-		rhi->ImmediateCommit([](Engine::RCommandBuffer* cmd) {
+		rhi->ImmediateSubmit([](Engine::RHICommandBuffer* cmd) {
 			Engine::ImGuiCreateFontsTexture(cmd);
 		});
 		Engine::ImGuiDestroyFontUploadObjects();
@@ -184,7 +184,7 @@ namespace Engine {
 
 	void Renderer::WaitGPU() {
 		for(auto& fence: m_Fences) {
-			RHI::Instance()->WaitForFence(fence);
+			fence->Wait();
 		}
 	}
 }

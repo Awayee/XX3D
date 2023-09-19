@@ -18,7 +18,7 @@ namespace Engine {
 		}
 	}
 
-	void StaticMesh::DrawCall(Engine::RCommandBuffer* cmd, Engine::RPipelineLayout* layout)
+	void StaticMesh::DrawCall(Engine::RHICommandBuffer* cmd, Engine::RPipelineLayout* layout)
 	{
 		RenderObject3D::DrawCall(cmd, layout);
 		for(uint32 i=0; i< m_Primitives.Size(); ++i) {

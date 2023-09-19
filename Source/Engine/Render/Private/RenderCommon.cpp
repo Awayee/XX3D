@@ -4,7 +4,7 @@
 #include "Core/Public/TSingleton.h"
 #include "Render/Public/RenderReses.h"
 #include "Resource/Public/Shaders.h"
-
+#include "Core/Public/macro.h"
 #include "Asset/Public/AssetLoader.h"
 #include "Asset/Public/TextureAsset.h"
 
@@ -50,20 +50,18 @@ namespace Engine {
 	{
 		GET_RHI(rhi);
 		m_Samplers.Resize(SAMPLER_COUNT);
-		Engine::RSSamplerInfo defaulIInfo{};
-		defaulIInfo.minFilter = Engine::FILTER_LINEAR;
-		defaulIInfo.magFilter = Engine::FILTER_LINEAR;
-		defaulIInfo.addressModeU = Engine::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		defaulIInfo.addressModeV = Engine::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		defaulIInfo.addressModeW = Engine::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		m_Samplers[SAMPLER_DEFAULT] = rhi->CreateSampler(defaulIInfo);
+		Engine::RHISamplerDesc defaultInfo{};
+		defaultInfo.Filter = Engine::ESamplerFilter::Bilinear;
+		defaultInfo.AddressU = Engine::ESamplerAddressMode::Clamp;
+		defaultInfo.AddressV = defaultInfo.AddressU;
+		defaultInfo.AddressW = defaultInfo.AddressV;
+		m_Samplers[SAMPLER_DEFAULT] = rhi->CreateSampler(defaultInfo);
 
-		Engine::RSSamplerInfo deferredLightingInfo{};
-		deferredLightingInfo.minFilter = Engine::FILTER_LINEAR;
-		deferredLightingInfo.magFilter = Engine::FILTER_LINEAR;
-		deferredLightingInfo.addressModeU = Engine::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		deferredLightingInfo.addressModeV = Engine::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		deferredLightingInfo.addressModeW = Engine::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		Engine::RHISamplerDesc deferredLightingInfo{};
+		deferredLightingInfo.Filter = Engine::ESamplerFilter::Bilinear;
+		deferredLightingInfo.AddressU = Engine::ESamplerAddressMode::Clamp;
+		deferredLightingInfo.AddressV = defaultInfo.AddressU;
+		deferredLightingInfo.AddressW = defaultInfo.AddressV;
 		m_Samplers[SAMPLER_DEFERRED_LIGHTING] = rhi->CreateSampler(deferredLightingInfo);
 	}
 
@@ -71,47 +69,48 @@ namespace Engine {
 	{
 		GET_RHI(rhi);
 		for(auto sampler: m_Samplers) {
-			rhi->DestroySampler(sampler);
+			delete sampler;
 		}
 		m_Samplers.Clear();
 	}
 
-	void TextureCommon::Create(Engine::RFormat format, uint32 width, uint32 height, Engine::RImageUsageFlags usage)
+	void TextureCommon::Create(Engine::ERHIFormat format, uint32 width, uint32 height, Engine::ETextureFlags flags)
 	{
 		Release();
-		GET_RHI(rhi);
-		Image = rhi->CreateImage2D(format, width, height, 1, Engine::SAMPLE_COUNT_1_BIT, Engine::IMAGE_TILING_OPTIMAL, usage);
-		Memory = rhi->CreateImageMemory(Image, Engine::MEMORY_PROPERTY_DEVICE_LOCAL_BIT, nullptr);
-		const bool bForDepth = usage & Engine::IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-		View = rhi->CreateImageView(Image, Engine::IMAGE_VIEW_TYPE_2D, bForDepth ? Engine::IMAGE_ASPECT_DEPTH_BIT: Engine::IMAGE_ASPECT_COLOR_BIT,
-			0, 1, 0, 1);
+		RHITextureDesc desc;
+		desc.Format = format;
+		desc.Flags = flags;
+		desc.ArraySize = 1;
+		desc.NumMips = 1;
+		desc.Depth = 0;
+		desc.Dimension = ETextureDimension::Tex2D;
+		desc.Size = { width, height, 1 };
+		desc.Samples = SAMPLE_COUNT_1_BIT;
+		Texture = RHI::Instance()->CreateTexture(desc);
 	}
 
 	void TextureCommon::UpdatePixels(void* pixels, int channels) {
 		BufferCommon b;
-		b.CreateForTransfer(Image->GetExtent().w * Image->GetExtent().h * channels, pixels);
-		RHI::Instance()->ImmediateCommit([&b, this](Engine::RCommandBuffer* cmd) {
-			cmd->TransitionImageLayout(Image, Engine::IMAGE_LAYOUT_UNDEFINED, Engine::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, 1, 0, 1, Engine::IMAGE_ASPECT_COLOR_BIT);
-			cmd->CopyBufferToImage(b.Buffer, Image, Engine::IMAGE_ASPECT_COLOR_BIT, 0, 0, 1);
-			cmd->TransitionImageLayout(Image, Engine::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, Engine::IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, 1, 0, 1, Engine::IMAGE_ASPECT_COLOR_BIT);
+		const USize3D& size = Texture->GetDesc().Size;
+		b.CreateForTransfer(size.w * size.h * channels, pixels);
+		RHI::Instance()->ImmediateSubmit([&b, this](Engine::RHICommandBuffer* cmd) {
+			cmd->TransitionTextureLayout(Texture, Engine::IMAGE_LAYOUT_UNDEFINED, Engine::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, 1, 0, 1, Engine::IMAGE_ASPECT_COLOR_BIT);
+			cmd->CopyBufferToTexture(b.Buffer, Texture, 0, 0, 1);
+			cmd->TransitionTextureLayout(Texture, Engine::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, Engine::IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, 1, 0, 1, Engine::IMAGE_ASPECT_COLOR_BIT);
 		});
 	}
 
 	void TextureCommon::Release()
 	{
-		GET_RHI(rhi);
-		if(nullptr != Image) {
-			rhi->DestroyImageView(View);
-			View = nullptr;
-			rhi->FreeMemory(Memory);
-			Memory = nullptr;
-			rhi->DestroyImage(Image);
-			Image = nullptr;
+		if(Texture) {
+			delete Texture;
+			Texture = nullptr;
 		}
 	}
 
 	TextureMgr::TextureMgr(){
 		m_DefaultTextures.Resize(MAX_NUM);
+
 		m_DefaultTextures[WHITE].Create(FORMAT, DEFAULT_SIZE, DEFAULT_SIZE, USAGE);
 		TVector<Math::UCVector4> whiteColors(DEFAULT_SIZE * DEFAULT_SIZE, { 255,255,255,255 });
 		m_DefaultTextures[WHITE].UpdatePixels(whiteColors.Data(), CHANNELS);
@@ -154,31 +153,28 @@ namespace Engine {
 
 	}
 
-	void BufferCommon::Create(uint64 size, Engine::RBufferUsageFlags usage, Engine::RMemoryPropertyFlags memoryFlags, void* pData) {
+	void BufferCommon::Create(uint64 size, Engine::EBufferFlags usage, void* pData) {
 		if (Size) Release();
-		RHI::Instance()->CreateBufferWithMemory(size, usage, memoryFlags, Buffer, Memory, size, pData);
+		RHIBufferDesc desc{ usage, size, 0 };
+		Buffer = RHI::Instance()->CreateBuffer(desc);
+		if(pData) {
+			Buffer->UpdateData(pData, size);
+		}
 		Size = size;
-		Usage = usage;
+		Flags = usage;
 	}
 
 	void BufferCommon::UpdateData(void* pData)
 	{
-		GET_RHI(rhi);
-		void* p;
-		rhi->MapMemory(Memory, &p);
-		memcpy(p, pData, Size);
-		rhi->UnmapMemory(Memory);
+		Buffer->UpdateData(pData, Size);
 	}
 
 	void BufferCommon::Release() {
 		if(Size) {
 			GET_RHI(rhi);
-			rhi->DestroyBuffer(Buffer);
-			Buffer = nullptr;
-			rhi->FreeMemory(Memory);
-			Memory = nullptr;
+			delete Buffer;
 			Size = 0u;
-			Usage = Engine::BUFFER_USAGE_FLAG_BITS_MAX_ENUM;
+			Flags = 0u;
 		}
 	}
 
@@ -190,9 +186,9 @@ namespace Engine {
 		if(nullptr != m_Framebuffer) rhi->DestroyFramebuffer(m_Framebuffer);
 		if(nullptr != m_RHIPass) rhi->DestroyRenderPass(m_RHIPass);
 	}
-	void RenderPassCommon::Begin(Engine::RCommandBuffer* cmd)
+	void RenderPassCommon::Begin(Engine::RHICommandBuffer* cmd)
 	{
-		cmd->BeginRenderPass(m_RHIPass, m_Framebuffer, { 0, 0, m_Framebuffer->GetWidth(), m_Framebuffer->GetHeight() });
+		cmd->BeginRenderPass(m_RHIPass, m_Framebuffer, { 0, 0, m_Framebuffer->Extent().w, m_Framebuffer->Extent().h });
 	}
 
 	Engine::RImageView* RenderPassCommon::GetAttachment(uint32 attachmentIdx) const
@@ -310,7 +306,7 @@ namespace Engine {
 		rhi->DestroyPipeline(m_Pipeline);
 	}
 
-	void GraphicsPipelineCommon::Bind(Engine::RCommandBuffer* cmd) {
+	void GraphicsPipelineCommon::Bind(Engine::RHICommandBuffer* cmd) {
 		cmd->BindPipeline(m_Pipeline);
 	}
 

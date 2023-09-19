@@ -102,7 +102,7 @@ namespace Engine {
 		m_Context->RSSetViewports(1, &m_Viewport);
 	}
 
-	void RHID3D11::Initialize(const RSInitInfo* initInfo) {
+	RHID3D11::RHID3D11(const RSInitInfo* initInfo) {
 		CreateDeviceContext();
 		m_SwapchainExtent = initInfo->WindowSize;
 		HWND wnd = reinterpret_cast<HWND>(initInfo->WindowHandle);
@@ -110,20 +110,11 @@ namespace Engine {
 		OnResized();
 	}
 
-	void RHID3D11::Release() {
+	RHID3D11::~RHID3D11() {
 		DX_RELEASE(m_RenderTargetView);
 		DX_RELEASE(m_Swapchain);
 		m_Context->ClearState();
 		DX_RELEASE(m_Context);
 		DX_RELEASE(m_Device);
-	}
-
-	void RHID3D11::ResizeSwapchain(uint32 width, uint32 height) {
-		if(width != m_SwapchainExtent.w || height != m_SwapchainExtent.h) {
-			m_SwapchainExtent.w = width;
-			m_SwapchainExtent.h = height;
-			// todo: execute in next frame
-			OnResized();
-		}
 	}
 }

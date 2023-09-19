@@ -1,162 +1,124 @@
 #pragma once
-#include "RHI/Public/RHIClasses.h"
-#include "VUlkanFuncs.h"
-#ifdef USE_VMA
-#include <vk_mem_alloc.h>
-#else
-#include <vulkan/vulkan.h>
-#endif
+#include "RHI/Public/RHIResources.h"
+#include "VulkanMemory.h"
+#include "Core/Public/String.h"
+
 namespace Engine {
-#define RESOURCE_VK_HANDLE(cls, vkHandle)\
-	class cls##Vk{\
-	public:\
-		vkHandle handle;\
-	}
 
 	class RHIVulkan;
 
-	struct RSVkImGuiInitInfo {
-		void* windowHandle;
-		VkInstance instance;
-		VkDevice device;
-		VkPhysicalDevice physicalDevice;
-		uint32 queueIndex;
-		VkQueue queue;
-		VkDescriptorPool descriptorPool;
-	};
-
-	class RWindowHandleVk: public RWindowHandle {
+	class RHIVulkanSwapChain : public RHISwapChain {
 	public:
-		uint64_t handle;
-	};
-
-
-	class RRenderPassVk: public RRenderPass {
-	public:
-		VkRenderPass handle;
-		void SetAttachment(uint32 idx, RImageView* imageView) override;
-		void SetClearValue(uint32 idx, const RSClear& clear) override;
-		const TVector<VkClearValue>& GetClears() { return m_Clears; }
+		explicit RHIVulkanSwapChain(const VulkanContext* context);
+		~RHIVulkanSwapChain() override;
+		bool Present() override;
+		void Resize(USize2D size) override;
 	private:
-		TVector<VkClearValue> m_Clears;
-		TVector<VkImageView> m_Attachments;
-		friend RHIVulkan;
+		enum : uint32 {
+			WAIT_MAX = 0xff,
+			MAX_FRAME_COUNT = 3,
+		};
+		const VulkanContext* m_ContextPtr;
+		uint32 m_Width;
+		uint32 m_Height;
+		VkSwapchainKHR m_Handle;
+		TVector<VkImage> m_Images;
+		TVector<VkImageView> m_Views;
+		uint8 m_CurFrame{ 0 };
+		bool m_Prepared = false;
+		struct FrameResource {
+			uint32 ImageIdx;
+			VkSemaphore ImageAvailableSmp{ VK_NULL_HANDLE };
+			VkSemaphore PreparePresentSmp{ VK_NULL_HANDLE };
+		};
+		TVector<FrameResource> m_FrameRes;
+		void CreateSwapChain();
+		void ClearSwapChain();
 	};
 
-	class RMemoryVk: public RMemory {
-	public:
-		VkDeviceMemory handle;
-		VkDeviceSize offset;
-		VkDeviceSize size;
-	};
-
-	class RMemoryVma: public RMemory {
-	public:
-		VmaAllocation handle;
-	};
-
-	class RImageVk: public RImage {
-	public:
-		friend RHIVulkan;
-		VkImage handle;
-		void SetLayout(RImageLayout layout) { m_Layout = layout; }
-	};
-
-	class RImageViewVk: public RImageView {
-	public:
-		VkImageView handle;
-		friend RHIVulkan;
-	};
-
-	class RFramebufferVk: public RFramebuffer {
-	public:
-		VkFramebuffer handle;
-		friend RHIVulkan;
-	};
-
-	class RQueueVk: public RQueue {
-	public:
-		VkQueue handle;
-	};
-
-	class RSemaphoreVk: public RSemaphore {
-	public:
-		VkSemaphore handle;
-	};
-
-	class RFenceVk: public RFence {
-	public:
-		VkFence handle;
-	};
-
-	class RBufferVk: public RBuffer {
-		friend RHIVulkan;
-	public:
-		VkBuffer handle;
-	};
-
-	class RSamplerVk: public RSampler {
-	public:
-		VkSampler handle;
-	};
-
-	class RPipelineVk: public RPipeline {
-	public:
-		VkPipeline handle;
-		friend RHIVulkan;
-	};
-
-	class RDescriptorSetLayoutVk: public RDescriptorSetLayout {
-	public:
-		VkDescriptorSetLayout handle;
-	};
-
-	class RPipelineLayoutVk : public RPipelineLayout {
-	public:
-		VkPipelineLayout handle;
-	};
-
-	class RDescriptorSetVk: public RDescriptorSet {
-		friend RHIVulkan;
+	class RHIVkBuffer: public RHIBuffer {
 	private:
-		void InnerUpdate(uint32 binding, uint32 arrayElement, uint32 count, VkDescriptorType type, const VkDescriptorImageInfo* imageInfo, const VkDescriptorBufferInfo* bufferInfo, const VkBufferView* texelBufferView);
+		friend RHIVulkan;
+		VkBuffer m_Buffer;
+		VulkanMem m_Mem;
 	public:
-		VkDescriptorSet handle;
-		void Update(uint32 binding, RDescriptorType type, const RDescriptorInfo& info, uint32 arrayElement, uint32 count) override;
-		void SetUniformBuffer(uint32 binding, RBuffer* buffer) override;
-		void SetImageSampler(uint32 binding, RSampler* sampler, RImageView* image) override;
-		void SetImage(uint32 binding, RImageView* image) override;
-		void SetSampler(uint32 binding, RSampler* sampler) override;
-		void SetInputAttachment(uint32 binding, RImageView* image) override;
+		using RHIBuffer::RHIBuffer;
+		~RHIVkBuffer()override;
+		void SetName(const char* name) override;
+		void UpdateData(const void* data, size_t byteSize) override;
+		VkBuffer GetBuffer() { return m_Buffer; }
 	};
 
-	class RCommandBufferVk : public RCommandBuffer {
+	class RHIVkTexture: public RHITexture {
+	protected:
+		friend RHIVulkan;
+		VkImage m_Image;
+		VkImageView m_View;
 	public:
-		RCommandBufferVk() = default;
-		VkCommandBuffer handle{ VK_NULL_HANDLE };
-		VkCommandPool m_Pool{ VK_NULL_HANDLE };
-		void Begin(RCommandBufferUsageFlags flags) override;
-		void End() override;
-		void BeginRenderPass(RRenderPass* pass, RFramebuffer* framebuffer, const URect& area) override;
-		void NextSubpass() override;
-		void EndRenderPass() override;
-		void CopyBufferToImage(RBuffer* buffer, RImage* image, RImageAspectFlags aspect, uint32 mipLevel, uint32 baseLayer, uint32 layerCount) override;
-		void BlitImage(RCommandBuffer* cmd, RImage* srcImage, RImage* dstImage, const RSImageBlit& region) override;
-		void BindPipeline(RPipeline* pipeline) override;
-		void BindDescriptorSet(RPipelineLayout* layout, RDescriptorSet* descriptorSet, uint32 setIdx, RPipelineType pipelineType) override;
-		void BindVertexBuffer(RBuffer* buffer, uint32 first, uint64 offset) override;
-		void BindIndexBuffer(RBuffer* buffer, uint64 offset) override;
-		void Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance) override;
-		void DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance) override;
-		void DrawPrimitive(RBuffer* buffer, uint32 vertexCount, uint32 instanceCount) override;
-		void DrawPrimitiveIndexed(RBuffer* vertexBuffer, RBuffer* indexBuffer, uint32 indexCount, uint32 instanceCount) override;
-		void Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ) override;
-		void ClearAttachment(RImageAspectFlags aspect, const float* color, const URect& rect) override;
-		void CopyBuffer(RBuffer* srcBuffer, RBuffer* dstBuffer, uint64 srcOffset, uint64 dstOffset, uint64 size) override;
-		void TransitionImageLayout(RImage* image, RImageLayout oldLayout, RImageLayout newLayout, uint32 baseMipLevel, uint32 levelCount, uint32 baseLayer, uint32 layerCount, RImageAspectFlags aspect) override;
-		void GenerateMipmap(RImage* image, uint32 levelCount, RImageAspectFlags aspect, uint32 baseLayer, uint32 layerCount) override;
-		void BeginDebugLabel(const char* msg, const float* color) override;
-		void EndDebugLabel() override;
+		using RHITexture::RHITexture;
+		virtual ~RHIVkTexture() override;
+		VkImage GetImage() { return m_Image; }
+		VkImageView GetView() { return m_View; }
+		void SetName(const char* name) override;
 	};
 
+	class RHIVkTextureWithMem: public RHIVkTexture {
+	private:
+		friend RHIVulkan;
+		VulkanMem m_Mem;
+	public:
+		using RHIVkTexture::RHIVkTexture;
+		~RHIVkTextureWithMem() override;
+	};
+
+	class RHIVkSampler: public RHISampler{
+	private:
+		friend RHIVulkan;
+		VkSampler m_Sampler;
+	public:
+		using RHISampler::RHISampler;
+		~RHIVkSampler()override;
+		VkSampler GetSampler() { return m_Sampler; }
+		void SetName(const char* name) override;
+	};
+
+	class RHIVkFence : public RHIFence {
+	public:
+		~RHIVkFence() override;
+		void Wait() override;
+		void Reset() override;
+		void SetName(const char* name) override;
+	private:
+		friend RHIVulkan;
+		static constexpr uint32 WAIT_MAX = 0xffff;
+		VkFence m_Handle;
+	};
+
+	class RHIVulkanShader: public RHIShader {
+	public:
+		RHIVulkanShader(EShaderStageFlagBit type, const char* code, size_t codeSize, const char* funcName);
+		~RHIVulkanShader() override;
+		void SetName(const char* name) override;
+		VkShaderStageFlagBits GetVkStage() const;
+		const XXString& GetEntry() { return m_EntryName; }
+		VkShaderModule GetShaderModule() { return m_ShaderModule; }
+		void GetPipelineShaderCreateInfo(VkPipelineShaderStageCreateInfo& info) const;
+		
+	private:
+		XXString m_EntryName;
+		VkShaderModule m_ShaderModule;
+	};
+
+	class RHIVulkanGraphicsPipelineState : public RHIGraphicsPipelineState {
+	public:
+		explicit RHIVulkanGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc);
+		~RHIVulkanGraphicsPipelineState() override;
+		void SetName(const char* name) override;
+		void CreatePipelineHandle(VkRenderPass pass, uint32 subPass);
+	private:
+		friend RHIVulkan;
+		XXString m_Name;
+		VkPipelineLayout m_PipelineLayout{VK_NULL_HANDLE};
+		VkPipeline m_Pipeline{VK_NULL_HANDLE};
+	};
 }

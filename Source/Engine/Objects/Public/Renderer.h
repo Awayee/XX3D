@@ -19,7 +19,7 @@ namespace Engine {
 		//Render Passes
 		TUniquePtr<DeferredLightingPass> m_PresentPass;
 		// command buffers
-		TVector<Engine::RCommandBuffer*> m_CommandBuffers;
+		TVector<Engine::RHICommandBuffer*> m_CommandBuffers;
 		// Render pipelines
 		TUniquePtr<GBufferPipeline> m_GBufferPipeline;
 		TUniquePtr<DeferredLightingPipeline> m_DeferredLightingPipeline;
@@ -29,13 +29,13 @@ namespace Engine {
 		bool m_WindowAvailable{ true };
 		URect m_RenderArea;
 		bool m_RenderAreaDirty{ false };
-		TVector<RFence*> m_Fences;
+		TVector<RHIFence*> m_Fences;
 
 	private:
 		void CreateRenderResources();
 		void ResizeRenderArea();
 		void OnWindowSizeChanged(uint32 w, uint32 h);
-		RFence* GetCurrentFence();
+		RHIFence* GetCurrentFence();
 
 	public:
 		Renderer(Engine::Wnd* window);

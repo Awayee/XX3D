@@ -1,6 +1,6 @@
 #include "Core/Public/String.h"
 
-bool StrStartsWith(const char* str, const char* sign) {
+inline bool StrStartsWith(const char* str, const char* sign) {
 	if (!str || !sign) {
 		return false;
 	}
@@ -13,7 +13,7 @@ bool StrStartsWith(const char* str, const char* sign) {
 	return strncmp(str, sign, signLen) == 0;
 }
 
-bool StrEndsWith(const char* str, const char* sign) {
+inline bool StrEndsWith(const char* str, const char* sign) {
 	if(!str || ! sign) {
 		return false;
 	}

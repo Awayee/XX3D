@@ -47,7 +47,7 @@ namespace Editor {
 		return &m_Meshes[idx];
 	}
 
-	EditorLevelMesh* EditorLevel::AddMesh(const String& file, Engine::AMeshAsset* asset) {
+	EditorLevelMesh* EditorLevel::AddMesh(const XXString& file, Engine::AMeshAsset* asset) {
 		EditorLevelMesh mesh{};
 		mesh.File = file;
 		mesh.Name = asset->Name;

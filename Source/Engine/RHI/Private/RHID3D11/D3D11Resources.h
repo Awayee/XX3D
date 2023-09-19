@@ -8,7 +8,7 @@ namespace Engine {
 		ID3D11RenderTargetView* handle;
 	};
 
-	class RCommandBufferD3D11: public RCommandBuffer {
+	class RCommandBufferD3D11: public RHICommandBuffer {
 	private:
 		bool m_IsBegin{ false };
 	public:
