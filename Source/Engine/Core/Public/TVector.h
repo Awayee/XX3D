@@ -33,10 +33,8 @@ public:
 
 	void PushBack(T&& ele) { Base::push_back(std::forward<T>(ele)); }
 
-	void PushBack(const T& ele) { Base::push_back(ele); }
 
-	template<typename ...Args>
-	void EmplaceBack(Args&&...args) { Base::emplace_back(std::forward<Args>(args)...); }
+	void PushBack(const T& ele) { Base::push_back(ele); }
 
 	void PopBack() { Base::pop_back(); }
 

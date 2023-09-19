@@ -1,6 +1,6 @@
 #pragma once
+#include <vector>
 #include <unordered_map>
-#include <map>
 #include "TempArray.h"
 #include <algorithm>
 #include <string>
@@ -39,9 +39,6 @@ using TUnorderedSet = std::unordered_set<T>;
 
 template<typename T>
 using TSet = std::set<T>;
-
-template<typename TKey, typename TValue>
-using TMap = std::map<TKey, TValue>;
 
 template<typename TKey, typename TValue>
 using TUnorderedMap = std::unordered_map<TKey, TValue>;

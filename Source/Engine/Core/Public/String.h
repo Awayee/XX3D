@@ -1,25 +1,25 @@
 #pragma once
 #include <string>
 
-typedef std::string XXString;
+typedef std::string String;
 
-inline bool StrStartsWith(const char* str, const char* sign);
+bool StrStartsWith(const char* str, const char* sign);
 
-inline bool StrEndsWith(const char* str, const char* sign);
+bool StrEndsWith(const char* str, const char* sign);
 
 inline bool StrEqual(const char* s0, const char* s1) {
 	return strcmp(s0, s1) == 0;
 }
 
-template <unsigned int Num=128, typename ...T>
-XXString StringFormat(const char* str, T ...args) {
-	char strBuf[Num];
+template <typename ...T>
+String StringFormat(const char* str, T ...args) {
+	char strBuf[128];
 	sprintf(strBuf, str, args...);
-	return XXString(strBuf);
+	return String(strBuf);
 }
 
 template<typename T>
-inline XXString ToString(T val) {
+inline String ToString(T val) {
 	return std::to_string(val);
 }
 

@@ -7,7 +7,7 @@
 namespace Editor {
 
 	struct LevelObject {
-		XXString Name;
+		String Name;
 		Engine::RenderObject3D* RenderObj;
 	};
 

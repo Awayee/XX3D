@@ -1,11 +1,6 @@
 #pragma once
-#include <d3d12.h>
-#include "RHI/Public/RHIResources.h"
+#include <d3d11.h>
+#include "RHI/Public/RHIClasses.h"
 
 namespace Engine {
-	class RHIBufferDX12: public RHIBuffer {
-		ID3D12Resource* m_Resource;
-	};
-
-	class 
 }

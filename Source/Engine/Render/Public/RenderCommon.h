@@ -31,16 +31,18 @@ namespace Engine {
 
 	class SamplerMgr: public TSingleton<SamplerMgr> {
 	private:
-		TVector<Engine::RHISampler*> m_Samplers;
+		TVector<Engine::RSampler*> m_Samplers;
 	public:
 		SamplerMgr();
 		~SamplerMgr();
-		static Engine::RHISampler* Get(ESamplerType type) { return Instance()->m_Samplers[type]; }
+		static Engine::RSampler* Get(ESamplerType type) { return Instance()->m_Samplers[type]; }
 	};
 
 	struct TextureCommon {
-		Engine::RHITexture* Texture{ nullptr };
-		void Create(Engine::ERHIFormat format, uint32 width, uint32 height, Engine::ETextureFlags flags);
+		Engine::RImage* Image{nullptr};
+		Engine::RImageView* View{nullptr};
+		Engine::RMemory* Memory{nullptr};
+		void Create(Engine::RFormat format, uint32 width, uint32 height, Engine::RImageUsageFlags usage);
 		void UpdatePixels(void* pixels, int channels);
 		void Release();
 		~TextureCommon() { Release(); }
@@ -48,7 +50,7 @@ namespace Engine {
 
 	class TextureMgr : public TSingleton<TextureMgr> {
 	private:
-		const static Engine::ERHIFormat FORMAT = Engine::FORMAT_R8G8B8A8_SRGB;
+		const static Engine::RFormat FORMAT = Engine::FORMAT_R8G8B8A8_SRGB;
 		const static Engine::RImageUsageFlags USAGE = Engine::IMAGE_USAGE_SAMPLED_BIT | Engine::IMAGE_USAGE_TRANSFER_DST_BIT;
 		const static int CHANNELS = 4;
 		const static uint32 DEFAULT_SIZE = 2;
@@ -74,34 +76,35 @@ namespace Engine {
 	};
 
 	struct BufferCommon {
-		Engine::RHIBuffer* Buffer;
+		Engine::RBuffer* Buffer{nullptr};
+		Engine::RMemory* Memory{nullptr};
 		uint64 Size{ 0u };
-		Engine::EBufferFlags Flags{0};
+		Engine::RBufferUsageFlags Usage{Engine::BUFFER_USAGE_FLAG_BITS_MAX_ENUM};
 	public:
 		BufferCommon() = default;
 		BufferCommon(const BufferCommon&) = default;
 		BufferCommon(BufferCommon&&) = default;
-		BufferCommon(uint64 size, Engine::EBufferFlags usage, void* pData) { Create(size, usage, pData); }
-		void Create(uint64 size, Engine::EBufferFlags usage, void* pData);
+		BufferCommon(uint64 size, Engine::RBufferUsageFlags usage, Engine::RMemoryPropertyFlags memoryFlags, void* pData) { Create(size, usage, memoryFlags, pData); }
+		void Create(uint64 size, Engine::RBufferUsageFlags usage, Engine::RMemoryPropertyFlags memoryFlags, void* pData);
 		void UpdateData(void* pData);
 		void Release();
 		~BufferCommon() { Release(); }
 
 		// vertex buffer
 		void CreateForVertex(uint64 size){
-			Create(size, Engine::BUFFER_FLAG_VERTEX | Engine::BUFFER_FLAG_TPY_DST,nullptr);
+			Create(size, Engine::BUFFER_USAGE_VERTEX_BUFFER_BIT | Engine::BUFFER_USAGE_TRANSFER_DST_BIT, Engine::MEMORY_PROPERTY_DEVICE_LOCAL_BIT, nullptr);
 		};
 		// index buffer
 		void CreateForIndex(uint64 size){
-			Create(size, Engine::BUFFER_FLAG_INDEX | Engine::BUFFER_FLAG_TPY_DST, nullptr);
+			Create(size, Engine::BUFFER_USAGE_INDEX_BUFFER_BIT | Engine::BUFFER_USAGE_TRANSFER_DST_BIT, Engine::MEMORY_PROPERTY_DEVICE_LOCAL_BIT, nullptr);
 		};
 		// staging buffer
 		void CreateForTransfer(uint64 size, void* pData){
-			Create(size, Engine::BUFFER_FLAG_CPY_SRC, pData);
+			Create(size, Engine::BUFFER_USAGE_TRANSFER_SRC_BIT, Engine::MEMORY_PROPERTY_HOST_COHERENT_BIT | Engine::MEMORY_PROPERTY_HOST_VISIBLE_BIT, pData);
 		};
 		// uniform buffer
 		void CreateForUniform(uint64 size, void* pData){
-			Create(size, Engine::BUFFER_FLAG_UNIFORM, pData);
+			Create(size, Engine::BUFFER_USAGE_UNIFORM_BUFFER_BIT, Engine::MEMORY_PROPERTY_HOST_COHERENT_BIT | Engine::MEMORY_PROPERTY_HOST_VISIBLE_BIT, pData);
 		};
 		/*
 		// vertex buffer
@@ -139,7 +142,7 @@ namespace Engine {
 		uint32 GetColorAttachmentCount(uint32 subpass) const { ASSERT(subpass < m_ColorAttachments.Size()); return m_ColorAttachments[subpass].Size(); }
 		Engine::RImageView* GetColorAttachment(uint32 subpass, uint32 idx) const { return m_ColorAttachments[subpass][idx]->View; }
 		Engine::RImageView* GetDepthAttachment(uint32 subpass) const { return m_DepthAttachments[subpass]->View; }
-		virtual void Begin(Engine::RHICommandBuffer* cmd);
+		virtual void Begin(Engine::RCommandBuffer* cmd);
 	};
 
 	class DeferredLightingPass final: public RenderPassCommon {
@@ -171,7 +174,7 @@ namespace Engine {
 	public:
 		virtual ~GraphicsPipelineCommon();
 		Engine::RPipelineLayout* GetLayout()const { return m_Layout; }
-		void Bind(Engine::RHICommandBuffer* cmd);
+		void Bind(Engine::RCommandBuffer* cmd);
 	};
 
 	class GBufferPipeline: public GraphicsPipelineCommon {

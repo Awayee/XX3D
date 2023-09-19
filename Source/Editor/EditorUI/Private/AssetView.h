@@ -13,7 +13,7 @@ namespace Editor {
 		NodeID m_ID;
 	public:
 		virtual ~AssetViewBase() {}
-		virtual const XXString& GetName() = 0;
+		virtual const String& GetName() = 0;
 		virtual bool IsFolder() = 0;
 		virtual void Open() = 0;
 		virtual void Save() = 0;
@@ -25,7 +25,7 @@ namespace Editor {
 		FolderNode* m_Node{ nullptr };
 	public:
 		FolderAssetView(FolderNode* node);
-		const XXString& GetName() override;
+		const String& GetName() override;
 		bool IsFolder() override;
 		void Open() override;
 		void Save() override;
@@ -37,7 +37,7 @@ namespace Editor {
 		FileNode* m_Node = nullptr;
 	public:
 		FileAssetView(FileNode* node);
-		const XXString& GetName() override;
+		const String& GetName() override;
 		bool IsFolder() override;
 		virtual void Open() override {}
 		virtual void Save() override {}
@@ -75,7 +75,7 @@ namespace Editor {
 	};
 
 	inline TUniquePtr<AssetViewBase> CreateAssetView(FileNode* node) {
-		const XXString& ext = node->GetPath().extension().string();
+		const String& ext = node->GetPath().extension().string();
 		if(ext == ".mesh") {
 			return MakeUniquePtr<MeshAssetView>(node);
 		}

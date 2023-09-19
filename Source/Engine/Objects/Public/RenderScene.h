@@ -17,7 +17,7 @@ namespace Engine {
 		RenderScene* m_Scene;
 		uint32 m_Index;
 	public:
-		virtual void DrawCall(Engine::RHICommandBuffer* cmd, Engine::RPipelineLayout* layout) = 0;
+		virtual void DrawCall(Engine::RCommandBuffer* cmd, Engine::RPipelineLayout* layout) = 0;
 		virtual void Update() = 0;
 		RenderObject(RenderScene* scene);
 		virtual ~RenderObject();
@@ -49,6 +49,6 @@ namespace Engine {
 		void AddRenderObject(RenderObject* obj);
 		void RemoveRenderObject(RenderObject* obj);
 		void Update();
-		void RenderGBuffer(Engine::RHICommandBuffer* cmd, Engine::RPipelineLayout* layout);
+		void RenderGBuffer(Engine::RCommandBuffer* cmd, Engine::RPipelineLayout* layout);
 	};
 }

@@ -15,8 +15,8 @@ namespace Engine {
 	class AssetLoader {
 		// all path are relative
 	private:
-		static XXString s_EngineAssetPath;
-		static XXString s_ProjectAssetPath;
+		static String s_EngineAssetPath;
+		static String s_ProjectAssetPath;
 	public:
 		static File::FPath AssetPath();
 		static bool LoadProjectAsset(AAssetBase* asset, File::PathStr file);

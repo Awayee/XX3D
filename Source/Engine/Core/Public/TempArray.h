@@ -126,11 +126,11 @@ public:
 		return data + size;
 	}
 
-	T& operator[](SizeType i) {
+	T& operator[](int i) {
 		return data[i];
 	}
 
-	const T& operator[](SizeType i)const {
+	const T& operator[](int i)const {
 		return data[i];
 	}
 

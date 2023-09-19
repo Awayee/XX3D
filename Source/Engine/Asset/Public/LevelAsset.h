@@ -7,8 +7,8 @@
 namespace Engine {
 	struct ALevelAsset : AAssetBase {
 		struct MeshData {
-			XXString Name;
-			XXString File;
+			String Name;
+			String File;
 			Math::FVector3 Position;
 			Math::FVector3 Scale;
 			Math::FVector3 Rotation;

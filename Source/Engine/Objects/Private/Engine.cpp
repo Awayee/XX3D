@@ -29,6 +29,7 @@ namespace Engine {
 #else
 			rhiInfo.EnableDebug = false
 #endif
+			rhiInfo.EnableGeometryShader = true;
 			rhiInfo.WindowSize = context->m_Window->GetWindowSize();
 			rhiInfo.WindowHandle = context->m_Window->GetWindowHandle();
 			rhiInfo.MaxFramesInFlight = 3;

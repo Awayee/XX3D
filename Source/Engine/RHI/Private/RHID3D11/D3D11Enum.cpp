@@ -1,7 +1,7 @@
 #include "D3D11Enum.h"
 
-DXGI_FORMAT ConvertD3D11Format(Engine::ERHIFormat f) {
-	static DXGI_FORMAT s_D3D11FormatMap[Engine::ERHIFormat::FORMAT_MAX_ENUM] {
+DXGI_FORMAT ConvertD3D11Format(Engine::RFormat f) {
+	static DXGI_FORMAT s_D3D11FormatMap[Engine::RFormat::FORMAT_MAX_ENUM] {
         DXGI_FORMAT_UNKNOWN,
         DXGI_FORMAT_R8_UNORM,
         DXGI_FORMAT_R8_SNORM,

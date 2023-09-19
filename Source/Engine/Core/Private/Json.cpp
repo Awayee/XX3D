@@ -14,7 +14,7 @@ namespace Json {
 	}
 
 	bool ReadFile( File::Read& in, Document& doc) {
-		const XXString content{ std::istream_iterator<char>(in), std::istream_iterator<char>() };
+		const String content{ std::istream_iterator<char>(in), std::istream_iterator<char>() };
 		return !doc.Parse(content.c_str()).HasParseError();
 	}
 

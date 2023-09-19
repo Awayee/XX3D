@@ -40,6 +40,6 @@ namespace Engine {
 	struct SPrimitiveData {
 		TVector<FVertex> Vertices;
 		TVector<uint32>  Indices;
-		TVector<XXString>  Textures;
+		TVector<String>  Textures;
 	};
 }

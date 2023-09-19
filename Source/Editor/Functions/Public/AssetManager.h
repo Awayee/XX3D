@@ -22,14 +22,14 @@ namespace Editor {
 		NodeID m_ID{ 0 };
 		NodeID m_ParentID{ INVALLID_NODE };
 		File::FPath m_Path;//relative path
-		XXString m_PathStr;
-		XXString m_Name;
+		String m_PathStr;
+		String m_Name;
 		friend class AssetManager;
 	public:
 		PathNode(const File::FPath& path, NodeID id, NodeID parent);
-		_NODISCARD const XXString& GetName() const { return m_Name; }
+		_NODISCARD const String& GetName() const { return m_Name; }
 		_NODISCARD const File::FPath& GetPath() const { return m_Path; }
-		_NODISCARD const XXString& GetPathStr() const { return m_PathStr; }
+		_NODISCARD const String& GetPathStr() const { return m_PathStr; }
 		_NODISCARD NodeID GetID() const { return m_ID; }
 		_NODISCARD NodeID ParentFolder() const { return m_ParentID; }
 	};

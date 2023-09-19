@@ -13,7 +13,7 @@ namespace Engine {
 		//RHI::RDescriptorSet* m_DescriptorSet;
 	public:
 		StaticMesh(const AMeshAsset& meshAsset, RenderScene* scene);
-		void DrawCall(Engine::RHICommandBuffer* cmd, Engine::RPipelineLayout* layout) override;
+		void DrawCall(Engine::RCommandBuffer* cmd, Engine::RPipelineLayout* layout) override;
 		~StaticMesh() override;
 	};
 }

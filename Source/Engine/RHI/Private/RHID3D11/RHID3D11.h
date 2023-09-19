@@ -10,16 +10,24 @@ namespace Engine {
 		ID3D11RenderTargetView* m_RenderTargetView{ nullptr };
 		D3D11_VIEWPORT          m_Viewport{};
 		USize2D                 m_SwapchainExtent{};
-		ERHIFormat                 m_SwapchainFormat{ FORMAT_B8G8R8A8_UNORM };
-		ERHIFormat                 m_DepthFormat{ FORMAT_D24_UNORM_S8_UINT };
+		RFormat                 m_SwapchainFormat{ FORMAT_B8G8R8A8_UNORM };
+		RFormat                 m_DepthFormat{ FORMAT_D24_UNORM_S8_UINT };
 		void CreateDeviceContext();
 		void CreateSwapchain(HWND wnd);
 		void OnResized();
 	public:
-		explicit RHID3D11(const RSInitInfo* initInfo);
-		~RHID3D11() override;
+		RHID3D11() = default;
+		~RHID3D11() = default;
+		void Initialize(const RSInitInfo* initInfo) override;
+		void Release() override;
 		ID3D11Device* Device() { return m_Device; }
 		ID3D11DeviceContext* Context() { return m_Context; }
+		const USize2D& GetSwapchainExtent() override { return m_SwapchainExtent; }
+		RFormat GetSwapchainImageFormat() override { return m_SwapchainFormat; }
+		RFormat GetDepthFormat() override { return m_DepthFormat; }
+		RImageView* GetSwapchainImageView(uint8 i) override;
+		uint32 GetSwapchainMaxImageCount() override { return 1; }
+		void ResizeSwapchain(uint32 width, uint32 height) override;
 
 		static RHID3D11* InstanceD3D11() { return dynamic_cast<RHID3D11*>(RHI::Instance()); }
 	};

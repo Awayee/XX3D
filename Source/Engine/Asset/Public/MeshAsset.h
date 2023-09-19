@@ -16,12 +16,12 @@ namespace Engine {
 
 	struct AMeshAsset : public AAssetBase {
 	public:
-		XXString Name;
+		String Name;
 		struct SPrimitive {
-			XXString BinaryFile;
-			XXString MaterialFile;
-			XXString Name;
-			TVector<XXString> Textures;
+			String BinaryFile;
+			String MaterialFile;
+			String Name;
+			TVector<String> Textures;
 			TVector<FVertex> Vertices;
 			TVector<IndexType> Indices;
 		};

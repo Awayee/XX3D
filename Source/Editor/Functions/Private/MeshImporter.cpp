@@ -226,9 +226,9 @@ bool MeshImporter::Import(const char* fullPath) {
 bool MeshImporter::ImportGLB(const char* file) {
 	tinygltf::Model gltfModel;
 	tinygltf::TinyGLTF gltfContext;
-	XXString error;
-	XXString warning;
-	XXString fullPath(file);
+	String error;
+	String warning;
+	String fullPath(file);
 	if (!gltfContext.LoadBinaryFromFile(&gltfModel, &error, &warning, fullPath)) {
 		LOG("Failed to load GLTF mesh: %s", file);
 		return false;
@@ -269,7 +269,7 @@ bool MeshImporter::Save() {
 	bool r = true;
 	const File::FPath FullPath(m_SaveFile.c_str());
 
-	TUnorderedSet<XXString> usedNames;
+	TUnorderedSet<String> usedNames;
 	for (uint32 i = 0; i < m_Asset->Primitives.Size(); ++i) {
 		auto& primitive = m_Asset->Primitives[i];
 		//generate name if empty
@@ -280,7 +280,7 @@ bool MeshImporter::Save() {
 		File::FPath parentPath = FullPath.parent_path();
 		parentPath.append(primitive.Name);
 		parentPath.replace_extension(".primitive");
-		XXString binaryFile = parentPath.string();
+		String binaryFile = parentPath.string();
 		std::replace(binaryFile.begin(), binaryFile.end(), '\\', '/');
 
 		r |= Engine::AMeshAsset::ExportPrimitiveFile(binaryFile.c_str(), primitive.Vertices, primitive.Indices, Engine::EMeshCompressMode::NONE);

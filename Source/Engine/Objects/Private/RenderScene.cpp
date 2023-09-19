@@ -113,7 +113,7 @@ namespace Engine {
         }
     }
 
-    void RenderScene::RenderGBuffer(Engine::RHICommandBuffer* cmd, Engine::RPipelineLayout* layout) {
+    void RenderScene::RenderGBuffer(Engine::RCommandBuffer* cmd, Engine::RPipelineLayout* layout) {
         cmd->BindDescriptorSet(layout, m_SceneDescs, 0, Engine::PIPELINE_GRAPHICS);
         for(RenderObject* obj: m_RenderObjects) {
             obj->DrawCall(cmd, layout);
