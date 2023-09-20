@@ -212,4 +212,18 @@ namespace Engine{
 		RHIGraphicsPipelineStateDesc m_Desc;
 	};
 
+	// compute pipeline
+	struct RHIComputePipelineStateDesc {
+		RHIShader* Shader;
+		RHIPipelineLayout Layout;
+	};
+
+	class RHIComputePipelineState: public RHIResource {
+	public:
+		RHIComputePipelineState(const RHIComputePipelineStateDesc& desc) : m_Desc(desc) {}
+		XX_NODISCARD const RHIComputePipelineStateDesc& GetDesc() const { return m_Desc; }
+	protected:
+		RHIComputePipelineStateDesc m_Desc;
+	};
+
 } // namespace RHI

@@ -29,27 +29,21 @@ namespace Engine{
 		virtual void FreeDescriptorSet(RDescriptorSet* descriptorSet) = 0;
 		//virtual void AllocateDescriptorSets(uint32 count, const RDescriptorSetLayout* const* layouts, RDescriptorSet*const* descriptorSets) = 0;
 		//virtual void FreeDescriptorSets(uint32 count, RDescriptorSet** descriptorSets) = 0;
-		// pipeline
-		virtual RPipelineLayout* CreatePipelineLayout(CRefRange<RDescriptorSetLayout*> layouts, CRefRange<RSPushConstantRange> pushConstants) = 0;
-		virtual void DestroyPipelineLayout(RPipelineLayout* pipelineLayout) = 0;
-		virtual RPipeline* CreateGraphicsPipeline(const RGraphicsPipelineCreateInfo& createInfo, RPipelineLayout* layout, RRenderPass* renderPass, uint32 subpass,
-			RPipeline* basePipeline, int32_t basePipelineIndex) = 0;
-		virtual RPipeline* CreateComputePipeline(const RPipelineShaderInfo& shader, RPipelineLayout* layout, RPipeline* basePipeline, uint32 basePipelineIndex) = 0;
-		virtual void DestroyPipeline(RPipeline* pipeline) = 0;
 
 		// cmd
 		virtual RHICommandBuffer* AllocateCommandBuffer(RCommandBufferLevel level) = 0;
-		virtual void FreeCommandBuffer(RHICommandBuffer* cmd) = 0;
 		virtual void SubmitCommandBuffer(const RHICommandBuffer* cmd, RHIFence* fence, RHISwapChain* swapChain) = 0;
 		virtual void ImmediateSubmit(const CommandBufferFunc& func) = 0;
-
 		virtual int QueueSubmitPresent(RHICommandBuffer* cmd, uint8 frameIndex, RHIFence* fence) = 0; // return -1 if out of date
+
 		virtual RHIBuffer* CreateBuffer(const RHIBufferDesc& desc) = 0;
 		virtual RHITexture* CreateTexture(const RHITextureDesc& desc) = 0;
 		virtual RHISampler* CreateSampler(const RHISamplerDesc& desc) = 0;
 		virtual RHIFence* CreateFence(bool sig = true) = 0;
 		virtual RHIShader* CreateShader(EShaderStageFlagBit type, const char* codeData, size_t codeSize, const char* entryFunc) = 0;
 		virtual RHIGraphicsPipelineState* CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) = 0;
+		virtual RHIComputePipelineState* CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) = 0;
+
 	protected:
 		RHI() = default;
 		RHI(const RHI&) = delete;

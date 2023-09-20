@@ -144,36 +144,36 @@ namespace Engine {
 		vkDestroyShaderModule(device, m_ShaderModule, nullptr);
 	}
 
-	VkShaderStageFlagBits RHIVulkanShader::GetVkStage() const {
-		return ToVkShaderStageFlagBit(m_Type);
-	}
-
 	void RHIVulkanShader::SetName(const char* name) {
 		SET_VK_OBJECT_NAME(VK_OBJECT_TYPE_SHADER_MODULE, m_ShaderModule, name);
 	}
 
-	void RHIVulkanShader::GetPipelineShaderCreateInfo(VkPipelineShaderStageCreateInfo& info) const {
-		info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		info.pNext = nullptr;
-		info.flags = 0;
+	VkPipelineShaderStageCreateInfo RHIVulkanShader::GetShaderStageInfo() const {
+		VkPipelineShaderStageCreateInfo info{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0 };
 		info.stage = ToVkShaderStageFlagBit(m_Type);
 		info.module = m_ShaderModule;
 		info.pName = m_EntryName.data();
 		info.pSpecializationInfo = nullptr;
+		return info;
 	}
 
-	RHIVulkanGraphicsPipelineState::RHIVulkanGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc):RHIGraphicsPipelineState(desc) {
+	inline VkPipelineLayout CreatePipelineLayout(const RHIPipelineLayout& rhiLayout) {
 		VkDevice device = RHIVulkan::GetDevice();
-		// create layout
-		uint32 layoutCount = desc.Layout.Size();
+		uint32 layoutCount = rhiLayout.Size();
 		TempArray<VkDescriptorSetLayout> layouts(layoutCount);
-		for(uint32 i=0; i<layoutCount; ++i) {
-			layouts[i] = VulkanLayoutMgr::Instance()->GetLayoutHandle(desc.Layout[i]);
+		for (uint32 i = 0; i < layoutCount; ++i) {
+			layouts[i] = VulkanLayoutMgr::Instance()->GetLayoutHandle(rhiLayout[i]);
 		}
 		VkPipelineLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0 };
 		layoutInfo.setLayoutCount = layoutCount;
 		layoutInfo.pSetLayouts = layouts.Data();
-		vkCreatePipelineLayout(device, &layoutInfo, nullptr, &m_PipelineLayout);
+		VkPipelineLayout handle;
+		vkCreatePipelineLayout(device, &layoutInfo, nullptr, &handle);
+		return handle;
+	}
+
+	RHIVulkanGraphicsPipelineState::RHIVulkanGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc):RHIGraphicsPipelineState(desc) {
+		m_PipelineLayout = CreatePipelineLayout(desc.Layout);
 	}
 
 	RHIVulkanGraphicsPipelineState::~RHIVulkanGraphicsPipelineState() {
@@ -195,12 +195,7 @@ namespace Engine {
 		TempArray<VkPipelineShaderStageCreateInfo> shaderStages(shaderCount);
 		for(uint32 i=0; i<shaderCount; ++i) {
 			RHIVulkanShader* vkShader = dynamic_cast<RHIVulkanShader*>(shaders[i]);
-			shaderStages[i] = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
-				ToVkShaderStageFlagBit(vkShader->GetStage()),
-				vkShader->GetShaderModule(),
-				vkShader->GetEntry().c_str(),
-				nullptr,
-			};
+			shaderStages[i] = vkShader->GetShaderStageInfo();
 		}
 
 		// vertex input
@@ -285,5 +280,28 @@ namespace Engine {
 		pipelineInfo.renderPass = pass;
 		pipelineInfo.subpass = subPass;
 		VK_CHECK(vkCreateGraphicsPipelines(RHIVulkan::GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_Pipeline), "vkCreateGraphicsPipelines");
+	}
+
+	RHIVulkanComputePipelineState::RHIVulkanComputePipelineState(const RHIComputePipelineStateDesc& desc): RHIComputePipelineState(desc) {
+		// create layout
+		m_PipelineLayout = CreatePipelineLayout(desc.Layout);
+
+		// create pipeline
+		VkComputePipelineCreateInfo pipelineInfo{ VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, nullptr, 0 };
+		pipelineInfo.stage = dynamic_cast<RHIVulkanShader*>(m_Desc.Shader)->GetShaderStageInfo();
+		pipelineInfo.layout = m_PipelineLayout;
+		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+		pipelineInfo.basePipelineIndex = 0;
+		vkCreateComputePipelines(RHIVulkan::GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_Pipeline);
+	}
+
+	RHIVulkanComputePipelineState::~RHIVulkanComputePipelineState() {
+		VkDevice device = RHIVulkan::GetDevice();
+		vkDestroyPipelineLayout(device, m_PipelineLayout, nullptr);
+		vkDestroyPipeline(device, m_Pipeline, nullptr);
+	}
+
+	void RHIVulkanComputePipelineState::SetName(const char* name) {
+		SET_VK_OBJECT_NAME(VK_OBJECT_TYPE_PIPELINE, m_Pipeline, name);
 	}
 }

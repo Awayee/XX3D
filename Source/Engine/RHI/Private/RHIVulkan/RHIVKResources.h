@@ -99,11 +99,7 @@ namespace Engine {
 		RHIVulkanShader(EShaderStageFlagBit type, const char* code, size_t codeSize, const char* funcName);
 		~RHIVulkanShader() override;
 		void SetName(const char* name) override;
-		VkShaderStageFlagBits GetVkStage() const;
-		const XXString& GetEntry() { return m_EntryName; }
-		VkShaderModule GetShaderModule() { return m_ShaderModule; }
-		void GetPipelineShaderCreateInfo(VkPipelineShaderStageCreateInfo& info) const;
-		
+		XX_NODISCARD VkPipelineShaderStageCreateInfo GetShaderStageInfo() const;
 	private:
 		XXString m_EntryName;
 		VkShaderModule m_ShaderModule;
@@ -120,5 +116,16 @@ namespace Engine {
 		XXString m_Name;
 		VkPipelineLayout m_PipelineLayout{VK_NULL_HANDLE};
 		VkPipeline m_Pipeline{VK_NULL_HANDLE};
+	};
+
+	class RHIVulkanComputePipelineState: public RHIComputePipelineState {
+	public:
+		explicit RHIVulkanComputePipelineState(const RHIComputePipelineStateDesc& desc);
+		~RHIVulkanComputePipelineState() override;
+		void SetName(const char* name) override;
+	private:
+		friend RHIVulkan;
+		VkPipelineLayout m_PipelineLayout{ VK_NULL_HANDLE };
+		VkPipeline m_Pipeline{ VK_NULL_HANDLE };
 	};
 }

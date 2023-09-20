@@ -104,16 +104,21 @@ namespace Engine {
 		InnerUpdate(binding, 0, 1, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, &imageInfo, nullptr, nullptr);
     }
 
+    RHIVulkanCommandBuffer::~RHIVulkanCommandBuffer() {
+		VkDevice device = RHIVulkan::GetDevice();
+		vkFreeCommandBuffers(device, m_Pool, 1, &m_VkCmd);
+    }
 
-	void RHIVulkanCommandBuffer::Begin(RCommandBufferUsageFlags flags){
+
+    void RHIVulkanCommandBuffer::Begin(RCommandBufferUsageFlags flags){
 		VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr };
 		beginInfo.flags = flags;
 		beginInfo.pInheritanceInfo = nullptr;
-		vkBeginCommandBuffer(handle, &beginInfo);
+		vkBeginCommandBuffer(m_VkCmd, &beginInfo);
 	}
 
 	void RHIVulkanCommandBuffer::End(){
-		vkEndCommandBuffer(handle);
+		vkEndCommandBuffer(m_VkCmd);
 	}
 
 	void RHIVulkanCommandBuffer::BeginRenderPass(RRenderPass* pass, RFramebuffer* framebuffer, const URect& area){
@@ -126,20 +131,20 @@ namespace Engine {
 		passInfo.renderArea = vkRenderArea;
 		passInfo.clearValueCount = static_cast<uint32>(passVk->GetClears().Size());
 		passInfo.pClearValues = passVk->GetClears().Data();
-		vkCmdBeginRenderPass(handle, &passInfo, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBeginRenderPass(m_VkCmd, &passInfo, VK_SUBPASS_CONTENTS_INLINE);
 	}
 
 	void RHIVulkanCommandBuffer::NextSubpass(){
-		vkCmdNextSubpass(handle, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdNextSubpass(m_VkCmd, VK_SUBPASS_CONTENTS_INLINE);
 	}
 
 	void RHIVulkanCommandBuffer::EndRenderPass(){
-		vkCmdEndRenderPass(handle);
+		vkCmdEndRenderPass(m_VkCmd);
 	}
 
 	void RHIVulkanCommandBuffer::CopyBufferToBuffer(RHIBuffer* srcBuffer, RHIBuffer* dstBuffer, uint64 srcOffset, uint64 dstOffset, uint64 size) {
 		VkBufferCopy copy{ srcOffset, dstOffset, size };
-		vkCmdCopyBuffer(handle, dynamic_cast<RHIVkBuffer*>(srcBuffer)->GetBuffer(), dynamic_cast<RHIVkBuffer*>(dstBuffer)->GetBuffer(), 1, &copy);
+		vkCmdCopyBuffer(m_VkCmd, dynamic_cast<RHIVkBuffer*>(srcBuffer)->GetBuffer(), dynamic_cast<RHIVkBuffer*>(dstBuffer)->GetBuffer(), 1, &copy);
 	}
 
 	void RHIVulkanCommandBuffer::CopyBufferToTexture(RHIBuffer* buffer, RHITexture* texture, uint32 mipLevel, uint32 baseLayer, uint32 layerCount){
@@ -155,7 +160,7 @@ namespace Engine {
 		region.imageOffset = { 0, 0, 0 };
 		const USize3D size = vkTex->GetDesc().Size;
 		region.imageExtent = { size.w, size.h, size.d};
-		vkCmdCopyBufferToImage(handle, ((RHIVkBuffer*)buffer)->GetBuffer(), vkTex->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+		vkCmdCopyBufferToImage(m_VkCmd, ((RHIVkBuffer*)buffer)->GetBuffer(), vkTex->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 	}
 
 	void RHIVulkanCommandBuffer::CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RSTextureCopyRegion& region)
@@ -169,7 +174,7 @@ namespace Engine {
 		blit.dstSubresource.baseArrayLayer = region.dstBaseLayer;
 		blit.dstSubresource.layerCount = region.dstLayerCount;
 		memcpy(blit.dstOffsets, region.dstOffsets, sizeof(VkOffset3D) * 2);
-		vkCmdBlitImage(handle, ((RHIVkTexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, ((RHIVkTexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
+		vkCmdBlitImage(m_VkCmd, ((RHIVkTexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, ((RHIVkTexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 	}
 
 	void RHIVulkanCommandBuffer::TransitionTextureLayout(RHITexture* texture, RImageLayout oldLayout, RImageLayout newLayout, uint32 baseMipLevel, uint32 levelCount, uint32 baseLayer, uint32 layerCount, RImageAspectFlags aspect) {
@@ -189,42 +194,42 @@ namespace Engine {
 		VkPipelineStageFlags srcStage;
 		VkPipelineStageFlags dstStage;
 		GetPipelineBarrierStage(barrier.oldLayout, barrier.newLayout, barrier.srcAccessMask, barrier.dstAccessMask, srcStage, dstStage);
-		vkCmdPipelineBarrier(handle, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+		vkCmdPipelineBarrier(m_VkCmd, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
 	void RHIVulkanCommandBuffer::GenerateMipmap(RHITexture* texture, uint32 levelCount, RImageAspectFlags aspect, uint32 baseLayer, uint32 layerCount) {
 		RHIVkTexture* vkTex = dynamic_cast<RHIVkTexture*>(texture);
 		USize3D size = vkTex->GetDesc().Size;
-		GenerateMipMap(handle, vkTex->GetImage(), levelCount, size.w, size.h, aspect, baseLayer, layerCount);
+		GenerateMipMap(m_VkCmd, vkTex->GetImage(), levelCount, size.w, size.h, aspect, baseLayer, layerCount);
 	}
 
 	void RHIVulkanCommandBuffer::BindPipeline(RPipeline* pipeline){
-		vkCmdBindPipeline(handle, (VkPipelineBindPoint)pipeline->GetType(), ((RPipelineVk*)pipeline)->handle);
+		vkCmdBindPipeline(m_VkCmd, (VkPipelineBindPoint)pipeline->GetType(), ((RPipelineVk*)pipeline)->handle);
 	}
 
 	void RHIVulkanCommandBuffer::BindDescriptorSet(RPipelineLayout* layout, RDescriptorSet* descriptorSet, uint32 setIdx, RPipelineType pipelineType){
-		vkCmdBindDescriptorSets(handle, (VkPipelineBindPoint)pipelineType, ((RPipelineLayoutVk*)layout)->handle, setIdx, 1, &((RDescriptorSetVk*)descriptorSet)->handle, 0, nullptr);
+		vkCmdBindDescriptorSets(m_VkCmd, (VkPipelineBindPoint)pipelineType, ((RPipelineLayoutVk*)layout)->handle, setIdx, 1, &((RDescriptorSetVk*)descriptorSet)->handle, 0, nullptr);
 	}
 
 	void RHIVulkanCommandBuffer::BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset){
 		VkBuffer vkBuffer = dynamic_cast<RHIVkBuffer*>(buffer)->GetBuffer();
-		vkCmdBindVertexBuffers(handle, first, 1, &vkBuffer, &offset);
+		vkCmdBindVertexBuffers(m_VkCmd, first, 1, &vkBuffer, &offset);
 	}
 
 	void RHIVulkanCommandBuffer::BindIndexBuffer(RHIBuffer* buffer, uint64 offset){
-		vkCmdBindIndexBuffer(handle, dynamic_cast<RHIVkBuffer*>(buffer)->GetBuffer(), offset, VK_INDEX_TYPE_UINT32);
+		vkCmdBindIndexBuffer(m_VkCmd, dynamic_cast<RHIVkBuffer*>(buffer)->GetBuffer(), offset, VK_INDEX_TYPE_UINT32);
 	}
 
 	void RHIVulkanCommandBuffer::Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance){
-		vkCmdDraw(handle, vertexCount, instanceCount, firstIndex, firstInstance);
+		vkCmdDraw(m_VkCmd, vertexCount, instanceCount, firstIndex, firstInstance);
 	}
 
 	void RHIVulkanCommandBuffer::DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance){
-		vkCmdDrawIndexed(handle, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+		vkCmdDrawIndexed(m_VkCmd, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	}
 
 	void RHIVulkanCommandBuffer::Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ){
-		vkCmdDispatch(handle, groupCountX, groupCountY, groupCountZ);
+		vkCmdDispatch(m_VkCmd, groupCountX, groupCountY, groupCountZ);
 	}
 
 	void RHIVulkanCommandBuffer::ClearAttachment(RImageAspectFlags aspect, const float* color, const URect& rect){
@@ -241,7 +246,7 @@ namespace Engine {
 		clearRect.rect.offset.y = rect.y;
 		clearRect.baseArrayLayer = 0;
 		clearRect.layerCount = 1;
-		vkCmdClearAttachments(handle, 1, &clearAttachment, 1, &clearRect);
+		vkCmdClearAttachments(m_VkCmd, 1, &clearAttachment, 1, &clearRect);
 	}
 
 	void RHIVulkanCommandBuffer::BeginDebugLabel(const char* msg, const float* color) {
@@ -253,13 +258,13 @@ namespace Engine {
 					labelInfo.color[i] = color[i];
 				}
 			}
-			vkCmdBeginDebugUtilsLabelEXT(handle, &labelInfo);
+			vkCmdBeginDebugUtilsLabelEXT(m_VkCmd, &labelInfo);
 		}
 	}
 
 	void RHIVulkanCommandBuffer::EndDebugLabel(){
 		if(nullptr != vkCmdEndDebugUtilsLabelEXT) {
-			vkCmdEndDebugUtilsLabelEXT(handle);
+			vkCmdEndDebugUtilsLabelEXT(m_VkCmd);
 		}
 	}
 }

@@ -45,24 +45,17 @@ namespace Engine{
 		//void FreeDescriptorSets(uint32 count, RDescriptorSet** descriptorSets) override;
 		void FreeDescriptorSet(RDescriptorSet* descriptorSet) override;
 
-		// pipeline
-		RPipelineLayout* CreatePipelineLayout(CRefRange<RDescriptorSetLayout*> layouts, CRefRange<RSPushConstantRange> pushConstants) override;
-		void DestroyPipelineLayout(RPipelineLayout* pipelineLayout) override;
-		RPipeline* CreateGraphicsPipeline(const RGraphicsPipelineCreateInfo& createInfo, RPipelineLayout* layout, RRenderPass* renderPass, uint32 subpass, RPipeline* basePipeline, int32_t basePipelineIndex) override;
-		RPipeline* CreateComputePipeline(const RPipelineShaderInfo& shader, RPipelineLayout* layout, RPipeline* basePipeline, uint32 basePipelineIndex) override;
-		void DestroyPipeline(RPipeline* pipeline) override;
-
 		RHICommandBuffer* AllocateCommandBuffer(RCommandBufferLevel level)override;
-		void FreeCommandBuffer(RHICommandBuffer* cmd) override;
-
 		void ImmediateSubmit(const CommandBufferFunc& func) override;
 		void SubmitCommandBuffer(const RHICommandBuffer* cmd, RHIFence* fence, RHISwapChain* swapChain) override;
 		int QueueSubmitPresent(RHICommandBuffer* cmd, uint8 frameIndex, RHIFence* fence) override;
+
 		RHIBuffer* CreateBuffer(const RHIBufferDesc& desc) override;
 		RHITexture* CreateTexture(const RHITextureDesc& desc) override;
 		RHISampler* CreateSampler(const RHISamplerDesc& desc) override;
 		RHIFence* CreateFence(bool sig) override;
 		RHIShader* CreateShader(EShaderStageFlagBit type, const char* codeData, size_t codeSize, const char* entryFunc) override;
 		RHIGraphicsPipelineState* CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) override;
+		RHIComputePipelineState* CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) override;
 	};
 }

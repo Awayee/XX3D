@@ -71,9 +71,8 @@ namespace Engine {
 
 	class RHIVulkanCommandBuffer : public RHICommandBuffer {
 	public:
-		RHIVulkanCommandBuffer() = default;
-		VkCommandBuffer handle{ VK_NULL_HANDLE };
-		VkCommandPool m_Pool{ VK_NULL_HANDLE };
+		RHIVulkanCommandBuffer(VkCommandBuffer cmd, VkCommandPool pool): m_VkCmd(cmd), m_Pool(pool){}
+		~RHIVulkanCommandBuffer() override;
 		void Begin(RCommandBufferUsageFlags flags) override;
 		void End() override;
 		void BeginRenderPass(RRenderPass* pass, RFramebuffer* framebuffer, const URect& area) override;
@@ -94,6 +93,9 @@ namespace Engine {
 		void ClearAttachment(RImageAspectFlags aspect, const float* color, const URect& rect) override;
 		void BeginDebugLabel(const char* msg, const float* color) override;
 		void EndDebugLabel() override;
+	private:
+		VkCommandBuffer m_VkCmd{ VK_NULL_HANDLE };
+		VkCommandPool m_Pool{ VK_NULL_HANDLE };
 	};
 
 }

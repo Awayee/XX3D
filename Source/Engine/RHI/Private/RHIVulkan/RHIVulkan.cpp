@@ -304,267 +304,6 @@ namespace Engine {
 		delete descirptorSetVk;
 	}
 
-	/*
-	void RHIVulkan::AllocateDescriptorSets(uint32 count, const RDescriptorSetLayout* const* layouts, RDescriptorSet* const* descriptorSets) {
-		TArray<VkDescriptorSetLayout> layoutsVk(count);
-		for(uint32 i=0; i< count; ++i) {
-			layoutsVk[i] = ((RDescriptorSetLayoutVk*)layouts[i])->handle;
-		}
-		VkDescriptorSetAllocateInfo info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
-		info.pNext = nullptr;
-		info.descriptorPool = m_DescriptorPool;
-		info.descriptorSetCount = count;
-		info.pSetLayouts = layoutsVk.Data();
-		TArray<VkDescriptorSet> descriptorSetsVk(count);
-		if(VK_SUCCESS != vkAllocateDescriptorSets(GetDevice(), &info, descriptorSetsVk.Data())) {
-			return;
-		}
-		for(uint32 i=0; i< count; ++i) {
-			RDescriptorSetVk* descriptorSetVk = (RDescriptorSetVk*)descriptorSets[i];
-			descriptorSetVk->handle = descriptorSetsVk[i];
-		}
-	}
-	void RHIVulkan::FreeDescriptorSets(uint32 count, RDescriptorSet** descriptorSets) {
-		TArray<VkDescriptorSet> descriptorSetsVk(count);
-		for(uint32 i=0; i<count; ++i) {
-			descriptorSetsVk[i] = ((RDescriptorSetVk*)descriptorSets[i])->handle;
-			delete descriptorSets[i];
-		}
-		vkFreeDescriptorSets(GetDevice(), m_DescriptorPool, count, descriptorSetsVk.Data());
-	}
-	*/
-	
-	RPipelineLayout* RHIVulkan::CreatePipelineLayout(CRefRange<RDescriptorSetLayout*> layouts, CRefRange<RSPushConstantRange> pushConstants) {
-		uint32 i;
-		VkPipelineLayoutCreateInfo info{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-		info.flags = 0;
-		info.pNext = nullptr;
-		info.setLayoutCount = layouts.Size();
-		TempArray<VkDescriptorSetLayout> setLayoutsVk(layouts.Size());
-		for (i = 0; i < layouts.Size(); ++i) {
-			setLayoutsVk[i] = ((RDescriptorSetLayoutVk*)layouts[i])->handle;
-		}
-		info.pSetLayouts = setLayoutsVk.Data();
-		
-		info.pushConstantRangeCount = pushConstants.Size();
-		if(pushConstants.Size() > 0) {
-			TempArray<VkPushConstantRange> pushConstantRangesVk(pushConstants.Size());
-			for(i=0; i< pushConstants.Size(); ++i) {
-				pushConstantRangesVk[i].offset = pushConstants[i].offset;
-				pushConstantRangesVk[i].size = pushConstants[i].size;
-				pushConstantRangesVk[i].stageFlags = pushConstants[i].stageFlags;
-			}
-			info.pPushConstantRanges = pushConstantRangesVk.Data();
-		}
-
-		VkPipelineLayout handle;
-		if(VK_SUCCESS != vkCreatePipelineLayout(GetDevice(), &info, nullptr, &handle)) {
-			return nullptr;
-		}
-		RPipelineLayoutVk* pipelineLayout = new RPipelineLayoutVk;
-		pipelineLayout->handle = handle;
-		return pipelineLayout;
-	}
-
-	void RHIVulkan::DestroyPipelineLayout(RPipelineLayout* pipelineLayout) {
-		RPipelineLayoutVk* pipelineLayoutVk = (RPipelineLayoutVk*)pipelineLayout;
-		vkDestroyPipelineLayout(GetDevice(), pipelineLayoutVk->handle, nullptr);
-		delete pipelineLayoutVk;
-	}
-
-	RPipeline* RHIVulkan::CreateGraphicsPipeline(const RGraphicsPipelineCreateInfo& info, RPipelineLayout* layout, RRenderPass* renderPass, uint32 subpass, RPipeline* basePipeline, int32_t basePipelineIndex) {
-		uint32 i; // iter
-		// shader stages
-		TempArray<VkShaderModuleCreateInfo> shaderModuleInfos(info.Shaders.Size());
-		TempArray<VkShaderModule> shaderModules(info.Shaders.Size());
-		TempArray<VkPipelineShaderStageCreateInfo> shaderInfos(info.Shaders.Size());
-		for (i = 0; i < info.Shaders.Size(); ++i) {
-			shaderModuleInfos[i] = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, nullptr, 0 };
-			shaderModuleInfos[i].codeSize = info.Shaders[i].code.Size();
-			shaderModuleInfos[i].pCode = reinterpret_cast<const uint32*>(info.Shaders[i].code.Data());
-			vkCreateShaderModule(GetDevice(), &shaderModuleInfos[i], nullptr, &shaderModules[i]);
-
-			shaderInfos[i] = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0 };
-			shaderInfos[i].module = shaderModules[i];
-			shaderInfos[i].pName = info.Shaders[i].funcName;
-			shaderInfos[i].stage = (VkShaderStageFlagBits)info.Shaders[i].stage;
-		}
-
-		// vertex input
-		VkPipelineVertexInputStateCreateInfo vertexInputInfo{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO, nullptr, 0 };
-		TempArray<VkVertexInputBindingDescription> vertexInputBindings(info.Bindings.Size());
-		for(i=0; i< info.Bindings.Size(); ++i) {
-			vertexInputBindings[i].binding = info.Bindings[i].binding;
-			vertexInputBindings[i].stride = info.Bindings[i].stride;
-			vertexInputBindings[i].inputRate = (VkVertexInputRate)info.Bindings[i].inputRate;
-		}
-		vertexInputInfo.vertexBindingDescriptionCount = info.Bindings.Size();
-		vertexInputInfo.pVertexBindingDescriptions = vertexInputBindings.Data();
-		TempArray<VkVertexInputAttributeDescription> vertexInputAttrs(info.Attributes.Size());
-		for(i=0; i< info.Attributes.Size(); ++i) {
-			vertexInputAttrs[i].location = i;
-			vertexInputAttrs[i].binding = info.Attributes[i].binding;
-			vertexInputAttrs[i].format = ToVkFormat(info.Attributes[i].format);
-			vertexInputAttrs[i].offset = info.Attributes[i].offset;
-		}
-		vertexInputInfo.vertexAttributeDescriptionCount = info.Attributes.Size();
-		vertexInputInfo.pVertexAttributeDescriptions = vertexInputAttrs.Data();
-
-		// input assembly
-		VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO, nullptr, 0 };
-		inputAssemblyInfo.primitiveRestartEnable = info.PrimitiveRestartEnable;
-		inputAssemblyInfo.topology = (VkPrimitiveTopology)info.Topology;
-
-		// tessellation
-		VkPipelineTessellationStateCreateInfo tessellationInfo{ VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO, nullptr, 0 };
-		tessellationInfo.patchControlPoints = info.PatchControlPoints;
-
-		// viewport
-		VkPipelineViewportStateCreateInfo viewportInfo{ VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO, nullptr, 0 };
-		auto& viewport = info.Viewport;
-		VkViewport viewportVk{ viewport.x, viewport.y, viewport.width, viewport.height, viewport.minDepth, viewport.maxDepth };
-		viewportInfo.viewportCount = 1;
-		viewportInfo.pViewports = &viewportVk;
-		auto& scissor = info.Scissor;
-		VkRect2D scissorVk{ {(int32)scissor.x, (int32)scissor.y}, {scissor.w, scissor.h} };
-		viewportInfo.scissorCount = 1;
-		viewportInfo.pScissors = &scissorVk;
-
-		// rasterization
-		VkPipelineRasterizationStateCreateInfo rasterizationInfo = TranslateVkPipelineRasterizationState(info);
-		// multi sample
-		VkPipelineMultisampleStateCreateInfo multisampleInfo = TranslatePipelineMultisample(info);
-		// depth stencil
-		VkPipelineDepthStencilStateCreateInfo depthStencilInfo = TranslatePipelineDepthStencil(info);
-
-		// color blend
-		TempArray<VkPipelineColorBlendAttachmentState> attachments(info.AttachmentStates.Size());
-		for(i=0; i<info.AttachmentStates.Size(); ++i) {
-			TranslateColorBlendAttachmentState(attachments[i], info.AttachmentStates[i]);
-		}
-		VkPipelineColorBlendStateCreateInfo colorBlendInfo{ VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr, 0 };
-		colorBlendInfo.logicOpEnable = info.LogicOpEnable;
-		colorBlendInfo.logicOp = (VkLogicOp)info.LogicOp;
-		colorBlendInfo.attachmentCount = info.AttachmentStates.Size();
-		colorBlendInfo.pAttachments = attachments.Data();
-		colorBlendInfo.blendConstants[0] = info.BlendConstants[0];
-		colorBlendInfo.blendConstants[1] = info.BlendConstants[1];
-		colorBlendInfo.blendConstants[2] = info.BlendConstants[2];
-		colorBlendInfo.blendConstants[3] = info.BlendConstants[3];
-
-		// dynamic
-		VkPipelineDynamicStateCreateInfo dynamicInfo{ VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO, nullptr, 0 };
-		dynamicInfo.dynamicStateCount = info.DynamicStates.Size();
-		dynamicInfo.pDynamicStates = (const VkDynamicState*)info.DynamicStates.Data();
-
-		// pipeline
-		VkGraphicsPipelineCreateInfo createInfo{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, nullptr, 0 };
-		createInfo.stageCount = info.Shaders.Size();
-		createInfo.pStages = shaderInfos.Data();
-		createInfo.pVertexInputState = &vertexInputInfo;
-		createInfo.pInputAssemblyState = &inputAssemblyInfo;
-		createInfo.pTessellationState = &tessellationInfo;
-		createInfo.pViewportState = &viewportInfo;
-		createInfo.pRasterizationState = &rasterizationInfo;
-		createInfo.pMultisampleState = &multisampleInfo;
-		createInfo.pDepthStencilState = &depthStencilInfo;
-		createInfo.pColorBlendState = &colorBlendInfo;
-		createInfo.pDynamicState = &dynamicInfo;
-		createInfo.layout = ((RPipelineLayoutVk*)layout)->handle;
-		createInfo.renderPass = ((RRenderPassVk*)renderPass)->handle;
-		createInfo.subpass = subpass;
-		createInfo.basePipelineHandle = nullptr == basePipeline ? VK_NULL_HANDLE : ((RPipelineVk*)basePipeline)->handle;
-		createInfo.basePipelineIndex = basePipelineIndex;
-
-		VkPipeline handle;
-		VkResult res = vkCreateGraphicsPipelines(GetDevice(), VK_NULL_HANDLE, 1, &createInfo, nullptr, &handle);
-		for(i=0; i< info.Shaders.Size(); ++i) {
-			vkDestroyShaderModule(GetDevice(), shaderModules[i], nullptr);
-		}
-		if(VK_SUCCESS != res) {
-			return nullptr;
-		}
-		RPipelineVk* pipeline = new RPipelineVk;
-		pipeline->handle = handle;
-		pipeline->m_Type = PIPELINE_GRAPHICS;
-		return pipeline;
-	}
-
-	RPipeline* RHIVulkan::CreateComputePipeline(const RPipelineShaderInfo& shader, RPipelineLayout* layout, RPipeline* basePipeline, uint32 basePipelineIndex) {
-		VkComputePipelineCreateInfo createInfo{ VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, nullptr, 0 };
-		// shader stages
-		VkShaderModuleCreateInfo shaderModuleInfo;
-		VkShaderModule shaderModule;
-		VkPipelineShaderStageCreateInfo& shaderInfo = createInfo.stage;
-		shaderModuleInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, nullptr, 0 };
-		shaderModuleInfo.codeSize = shader.code.Size();
-		shaderModuleInfo.pCode = reinterpret_cast<const uint32*>(shader.code.Data());
-		vkCreateShaderModule(GetDevice(), &shaderModuleInfo, nullptr, &shaderModule);
-
-		shaderInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0 };
-		shaderInfo.module = shaderModule;
-		shaderInfo.pName = shader.funcName;
-		shaderInfo.stage = (VkShaderStageFlagBits)shader.stage;
-
-		createInfo.layout = ((RPipelineLayoutVk*)layout)->handle;
-		createInfo.basePipelineHandle = nullptr == basePipeline ? VK_NULL_HANDLE : ((RPipelineVk*)basePipeline)->handle;
-		createInfo.basePipelineIndex = basePipelineIndex;
-
-		VkPipeline handle;
-		VkResult res = vkCreateComputePipelines(GetDevice(), VK_NULL_HANDLE, 1, &createInfo, nullptr, &handle);
-		vkDestroyShaderModule(GetDevice(), shaderModule, nullptr);
-		if(VK_SUCCESS != res) {
-			return nullptr;
-		}
-		RPipelineVk* pipeline = new RPipelineVk;
-		pipeline->handle = handle;
-		pipeline->m_Type = PIPELINE_COMPUTE;
-		return pipeline;
-	}
-
-	void RHIVulkan::DestroyPipeline(RPipeline* pipeline) {
-		RPipelineVk* pipelineVk = (RPipelineVk*)pipeline;
-		vkDestroyPipeline(GetDevice(), pipelineVk->handle, nullptr);
-		delete pipelineVk;
-	}
-
-	/*
-	void RHIVulkan::QueueSubmit(CRefRange<RHICommandBuffer*> cmds, CRefRange<RSemaphore*> waitSemaphores, CRefRange<RPipelineStageFlags> waitStageFlags, CRefRange<RSemaphore*> signalSemaphores, RHIFence* fence) {
-		VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
-		submitInfo.pNext = nullptr;
-		uint32 i;
-
-		// wait semaphores
-		TempArray<VkSemaphore> vkWaitSmps(waitSemaphores.Size());
-		for (i = 0; i < waitSemaphores.Size(); ++i) {
-			vkWaitSmps[i] = dynamic_cast<RSemaphoreVk*>(waitSemaphores[i])->handle;
-		}
-		submitInfo.waitSemaphoreCount = waitSemaphores.Size();
-		submitInfo.pWaitSemaphores = vkWaitSmps.Data();
-		submitInfo.pWaitDstStageMask = (VkPipelineStageFlags*)waitStageFlags.Data();
-
-		// commands
-		TempArray<VkCommandBuffer> vkCmds(cmds.Size());
-		for (i = 0; i < cmds.Size(); ++i) {
-			vkCmds[i] = dynamic_cast<RCommandBufferVk*>(cmds[i])->handle;
-		}
-		submitInfo.commandBufferCount = cmds.Size();
-		submitInfo.pCommandBuffers = vkCmds.Data();
-
-		// signal semaphores
-		TempArray<VkSemaphore> vkSignalSmps(signalSemaphores.Size());
-		for(i=0; i< signalSemaphores.Size(); ++i) {
-			vkSignalSmps[i] = dynamic_cast<RSemaphoreVk*>(signalSemaphores[i])->handle;
-		}
-		submitInfo.signalSemaphoreCount = signalSemaphores.Size();
-		submitInfo.pSignalSemaphores = vkSignalSmps.Data();
-
-		// fence
-		VkFence vkFence = (nullptr == fence) ? VK_NULL_HANDLE : dynamic_cast<RHIVkFence*>(fence)->handle;
-
-		VK_CHECK(vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, vkFence), "vkQueueSubmit");
-	}
-	*/
 	RHICommandBuffer* RHIVulkan::AllocateCommandBuffer(RCommandBufferLevel level) {
 		VkCommandBufferAllocateInfo allocateInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
 		allocateInfo.pNext = nullptr;
@@ -575,52 +314,39 @@ namespace Engine {
 		if(VK_SUCCESS != vkAllocateCommandBuffers(GetDevice(), &allocateInfo, &handle)){
 			return nullptr;
 		}
-		RHIVulkanCommandBuffer* cmd = new RHIVulkanCommandBuffer;
-		cmd->handle = handle;
-		cmd->m_Pool = allocateInfo.commandPool;
-		return cmd;
-	}
-
-	void RHIVulkan::FreeCommandBuffer(RHICommandBuffer* cmd) {
-		RHIVulkanCommandBuffer* vkCmd = dynamic_cast<RHIVulkanCommandBuffer*>(cmd);
-		vkFreeCommandBuffers(GetDevice(), vkCmd->m_Pool, 1, &vkCmd->handle);
-		delete vkCmd;
+		return new RHIVulkanCommandBuffer(handle, allocateInfo.commandPool);
 	}
 
 	void RHIVulkan::ImmediateSubmit(const CommandBufferFunc& func) {
-		RHIVulkanCommandBuffer cmd;
-
 		// allocate
 		VkCommandBufferAllocateInfo allocateInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
 		allocateInfo.pNext = nullptr;
 		allocateInfo.commandPool = m_RHICommandPool;
 		allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		allocateInfo.commandBufferCount = 1;
-		VK_CHECK(vkAllocateCommandBuffers(GetDevice(), &allocateInfo, &cmd.handle), "Failed to allocate command buffers!");
-		cmd.m_Pool = m_RHICommandPool;
+		VkCommandBuffer cmd;
+		VK_CHECK(vkAllocateCommandBuffers(GetDevice(), &allocateInfo, &cmd), "Failed to allocate command buffers!");
+		RHIVulkanCommandBuffer rhiCmd(cmd, allocateInfo.commandPool);
 
 		// begin
 		VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 		beginInfo.pNext = nullptr;
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 		beginInfo.pInheritanceInfo = nullptr;
-		VK_CHECK(vkBeginCommandBuffer(cmd.handle, &beginInfo), "Failed to begin command buffer!");
+		VK_CHECK(vkBeginCommandBuffer(cmd, &beginInfo), "Failed to begin command buffer!");
 
 		// run
-		func(&cmd);
+		func(&rhiCmd);
 
 		// end
-		vkEndCommandBuffer(cmd.handle);
+		vkEndCommandBuffer(cmd);
 
 		// submit
 		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &cmd.handle;
+		submitInfo.pCommandBuffers = &cmd;
 		vkQueueSubmit(m_Context.GraphicsQueue.Handle, 1, &submitInfo, VK_NULL_HANDLE);
 		vkQueueWaitIdle(m_Context.GraphicsQueue.Handle);
-
-		// free
-		vkFreeCommandBuffers(GetDevice(), cmd.m_Pool, 1, &cmd.handle);
 	}
 
 	void RHIVulkan::SubmitCommandBuffer(const RHICommandBuffer* cmd, RHIFence* fence, RHISwapChain* swapChain) {
@@ -632,7 +358,7 @@ namespace Engine {
 		VkSemaphore semaphores[1] = { m_PresentationFinishSemaphores[frameIndex] };
 		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-		VkCommandBuffer vkCmd = dynamic_cast<RHIVulkanCommandBuffer*>(cmd)->handle;
+		VkCommandBuffer vkCmd = dynamic_cast<RHIVulkanCommandBuffer*>(cmd)->m_VkCmd;
 		submitInfo.waitSemaphoreCount = 1;
 		submitInfo.pWaitSemaphores = &m_ImageAvaliableSemaphores[frameIndex];
 		submitInfo.pWaitDstStageMask = waitStages;
@@ -751,6 +477,10 @@ namespace Engine {
 
 	RHIGraphicsPipelineState* RHIVulkan::CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) {
 		return new RHIVulkanGraphicsPipelineState(desc);
+	}
+
+	RHIComputePipelineState* RHIVulkan::CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) {
+		return new RHIVulkanComputePipelineState(desc);
 	}
 
 } // namespace Engine
