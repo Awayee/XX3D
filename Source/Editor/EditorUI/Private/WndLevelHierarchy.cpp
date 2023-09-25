@@ -14,7 +14,7 @@ namespace Editor {
 				ImGui::InputText("FilePath", s_FilePath, sizeof(s_FilePath));
 				if (ImGui::Button("Save")) {
 					if (StrEmpty(s_FilePath)) {
-						LOG("Invalid file path!");
+						PRINT("Invalid file path!");
 					}
 					else {
 						if (!StrEndsWith(s_FilePath, ".level")) {

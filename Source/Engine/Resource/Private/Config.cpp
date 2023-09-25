@@ -2,7 +2,7 @@
 #include <string>
 #include <mutex>
 #include "Resource/Public/Config.h"
-#include "Core/Public/macro.h"
+#include "Core/Public/Defines.h"
 #include "Core/Public/Container.h"
 #include "Core/Public/TVector.h"
 
@@ -15,18 +15,18 @@
 namespace Engine {
 	inline ERHIType ParseRHIType(const std::string& rhiTypeStr) {
 		if ("Vulkan" == rhiTypeStr) {
-			return RHI_VULKAN;
+			return ERHIType::Vulkan;
 		}
 		if ("DX11" == rhiTypeStr) {
-			return RHI_DX11;
+			return ERHIType::DX11;
 		}
 		if ("DX12" == rhiTypeStr) {
-			return RHI_DX12;
+			return ERHIType::DX12;
 		}
 		if ("GL" == rhiTypeStr) {
-			return RHI_GL;
+			return ERHIType::OpenGL;
 		}
-		return RHI_NONE;
+		return ERHIType::Invalid;
 	}
 
 	inline ERenderPath ParseRenderPath(const std::string& renderPathStr) {
@@ -55,7 +55,7 @@ namespace Engine {
 	bool LoadIniFile(const char* file, TUnorderedMap<XXString, XXString>& configMap) {
 		std::ifstream configFile(file);
 		if (!configFile.is_open()) {
-			LOG("Failed to load file: %s", file);
+			PRINT("Failed to load file: %s", file);
 			return false;
 		}
 		XXString fileLine;
@@ -77,7 +77,7 @@ namespace Engine {
 	ConfigManager::ConfigManager(const char* file) {
 		TUnorderedMap<XXString, XXString> configMap;
 		if(!LoadIniFile(file,configMap)) {
-			LOG("Missing necessary ini file: %s", file);
+			PRINT("Missing necessary ini file: %s", file);
 			return;
 		}
 		m_Data.DefaultFontPath = configMap["DefaultFont"];

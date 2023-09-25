@@ -1,14 +1,8 @@
 #pragma once
 #include "Core/Public/File.h"
 #include "Core/Public/BaseStructs.h"
+#include "RHI/Public/RHI.h"
 namespace Engine {
-	enum ERHIType {
-		RHI_VULKAN,
-		RHI_DX11,
-		RHI_DX12,
-		RHI_GL,
-		RHI_NONE
-	};
 
 	enum ERenderPath {
 		RENDER_FORWARD,
@@ -23,13 +17,13 @@ namespace Engine {
 	};
 
 	struct ConfigData {
-		XXString        DefaultFontPath;
+		XXString      DefaultFontPath;
 		EGPUType      GPUType;
 		ERHIType      RHIType;
 		uint32        MSAASampleCount{ 0 };
 		ERenderPath   RenderPath;
 		USize2D       WindowSize;
-		XXString        StartLevel;
+		XXString      StartLevel;
 	};
 
 	class ConfigManager {

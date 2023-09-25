@@ -1,10 +1,5 @@
-#include "VUlkanFuncs.h"
 #include "VulkanMemory.h"
 #include "VulkanBuilder.h"
-#define VK_NO_PROTOTYPES
-#define VMA_IMPLEMENTATION
-#include <vk_mem_alloc.h>
-#include "VulkanUtil.h"
 
 inline VmaMemoryUsage ConvertVmaMemoryUsage(EMemoryType type) {
 	switch (type) {

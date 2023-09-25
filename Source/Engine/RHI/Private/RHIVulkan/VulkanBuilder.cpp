@@ -45,7 +45,7 @@ bool CheckValidationLayerSupport(const TVector<const char*>& validationLayers)
 	return true;
 }
 
-inline bool CheckExtensionsIsSupported(VkPhysicalDevice device, CRefRange<const char*>& extensions) {
+inline bool CheckExtensionsIsSupported(VkPhysicalDevice device, TConstArrayView<const char*>& extensions) {
 	uint32 extensionCount;
 	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 	TVector<VkExtensionProperties> availableExtensions(extensionCount);
@@ -135,7 +135,7 @@ inline VkPresentModeKHR FindPresentMode(VkPhysicalDevice physicalDevice, VkSurfa
 	return VK_PRESENT_MODE_MAX_ENUM_KHR;
 }
 
-inline DeviceInfo GetPhysicalDeviceInfo(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, CRefRange<const char*> extensions, bool isIntegrateGPU) {
+inline DeviceInfo GetPhysicalDeviceInfo(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, TConstArrayView<const char*> extensions, bool isIntegrateGPU) {
 	DeviceInfo info;
 	if (!CheckExtensionsIsSupported(physicalDevice, extensions)) {
 		return info;
@@ -234,9 +234,8 @@ void ContextBuilder::Release() {
 	if(m_Context.DebugMsg) {
 		vkDestroyDebugUtilsMessengerEXT(m_Context.Instance, m_Context.DebugMsg, nullptr);
 	}
-	if(m_Context.Device) {
-		vkDestroyDevice(m_Context.Device, nullptr);
-	}
+	vkDestroyDevice(m_Context.Device, nullptr);
+	vkDestroyInstance(m_Context.Instance, nullptr);
 	m_Context = {};
 }
 
@@ -324,7 +323,7 @@ void ContextBuilder::PickGPU() {
 	m_Context.PhysicalDevice = devicesInfo[0].first;
 	auto& deviceInfo = devicesInfo[0].second;
 	vkGetPhysicalDeviceProperties(m_Context.PhysicalDevice, &m_Context.DeviceProperties);
-	LOG("Picked GPU: %s %u", m_Context.DeviceProperties.deviceName, m_Context.DeviceProperties.deviceID);
+	PRINT("Picked GPU: %s %u", m_Context.DeviceProperties.deviceName, m_Context.DeviceProperties.deviceID);
 	m_Context.GraphicsQueue.FamilyIndex = deviceInfo.m_GraphicsIdx;
 	m_Context.PresentQueue.FamilyIndex = deviceInfo.m_PresentIdx;
 	m_Context.ComputeQueue.FamilyIndex = deviceInfo.ComputeIndex;

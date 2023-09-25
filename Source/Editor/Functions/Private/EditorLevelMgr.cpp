@@ -10,7 +10,7 @@ namespace Editor {
 		auto node = ProjectAssetMgr::Instance()->GetFile(path);
 		if(node) {
 			asset = node->GetAsset<Engine::ALevelAsset>();
-			LOG("Loaded start level: %s", path.string().c_str());
+			PRINT("Loaded start level: %s", path.string().c_str());
 			LoadLevel(asset, path);
 		}
 		else {
@@ -50,7 +50,7 @@ namespace Editor {
 		}
 		m_Level->SaveAsset(m_LevelAsset);
 		Engine::AssetLoader::SaveProjectAsset(m_LevelAsset, m_LevelPath.string().c_str());
-		LOG("[EditorLevelMgr::SaveLevel] Level saved: %s", m_LevelPath.string().c_str());
+		PRINT("[EditorLevelMgr::SaveLevel] Level saved: %s", m_LevelPath.string().c_str());
 		return true;
 	}
 

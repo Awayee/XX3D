@@ -49,7 +49,7 @@ namespace Engine {
 		bindings.Resize(1);
 		bindings[0] = { 0, sizeof(Math::FVector3), Engine::VERTEX_INPUT_RATE_VERTEX };
 		attributes.Resize(1);
-		attributes[0] = { 0, Engine::FORMAT_R32G32B32_SFLOAT, 0 };
+		attributes[0] = { 0, Engine::ERHIFormat::R32G32B32_SFLOAT, 0 };
 	}
 
 
@@ -58,10 +58,10 @@ namespace Engine {
 		bindings.Resize(1);
 		bindings[0] = { 0, sizeof(FVertex)};
 		attributes.Resize(4);
-		attributes[0] = { 0, Engine::FORMAT_R32G32B32_SFLOAT, 0 };//position
-		attributes[1] = { 0, Engine::FORMAT_R32G32B32_SFLOAT, offsetof(FVertex, Normal)};//normal
-		attributes[2] = { 0, Engine::FORMAT_R32G32B32_SFLOAT, offsetof(FVertex, Tangent)};// tangent
-		attributes[3] = { 0, Engine::FORMAT_R32G32_SFLOAT,    offsetof(FVertex, UV)};//uv
+		attributes[0] = { 0, Engine::ERHIFormat::R32G32B32_SFLOAT, 0 };//position
+		attributes[1] = { 0, Engine::ERHIFormat::R32G32B32_SFLOAT, offsetof(FVertex, Normal)};//normal
+		attributes[2] = { 0, Engine::ERHIFormat::R32G32B32_SFLOAT, offsetof(FVertex, Tangent)};// tangent
+		attributes[3] = { 0, Engine::ERHIFormat::R32G32_SFLOAT,    offsetof(FVertex, UV)};//uv
 	}
 
 

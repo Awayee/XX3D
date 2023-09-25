@@ -1,5 +1,5 @@
 #include "Math/Public/Math.h"
-#include "Core/Public/macro.h"
+#include "Core/Public/Defines.h"
 #include "Math/Public/MathBase.h"
 
 namespace Math {

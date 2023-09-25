@@ -1,5 +1,5 @@
 #include "Core/Public/File.h"
-#include "Core/Public/macro.h"
+#include "Core/Public/Defines.h"
 #include "Core/Public/TypeDefine.h"
 
 namespace File {

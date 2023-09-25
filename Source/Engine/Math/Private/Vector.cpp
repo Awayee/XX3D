@@ -1,6 +1,6 @@
 #include "Math/Public/MathBase.h"
 #include "Math/Public/Vector.h"
-#include "Core/Public/macro.h"
+#include "Core/Public/Defines.h"
 
 namespace Math {
     // vector2

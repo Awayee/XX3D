@@ -49,7 +49,7 @@ namespace Engine {
     void RenderScene::CreateResources() {
         m_DirectionalLight.reset(new DirectionalLight);
         m_DirectionalLight->SetDir({-1, -1, -1});
-        auto& ext = RHI::Instance()->GetSwapchainExtent();
+        auto ext = RHI::Instance()->GetSwapChain()->GetExtent();
         m_Camera.reset(new Camera(CAMERA_PERSPECTIVE, (float)ext.w / ext.h, 0.1f, 1000.0f, Math::Deg2Rad * 75.0f));
         m_Camera->SetView({ 0, 4, -4 }, { 0, 2, 0}, { 0, 1, 0 });
     }

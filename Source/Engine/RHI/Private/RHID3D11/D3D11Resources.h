@@ -19,6 +19,6 @@ namespace Engine {
 		void Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ) override;
 		void BindVertexBuffer(RBuffer* buffer, uint32 first, uint64 offset) override;
 		void BindIndexBuffer(RBuffer* buffer, uint64 offset) override;
-		void ClearAttachment(RImageAspectFlags aspect, const float* color, const URect& rect) override;
+		void ClearAttachment(EImageAspectFlags aspect, const float* color, const URect& rect) override;
 	};
 }

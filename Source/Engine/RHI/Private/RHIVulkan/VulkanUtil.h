@@ -1,5 +1,5 @@
 #pragma once
-#include "Core/Public/macro.h"
+#include "Core/Public/Defines.h"
 #include "RHIVKResources.h"
 #include "RHIVKClasses.h"
 #include "VulkanConverter.h"

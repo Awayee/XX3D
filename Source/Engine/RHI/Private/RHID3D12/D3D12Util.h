@@ -1,7 +1,7 @@
 #pragma once
 #include <d3d12.h>
 #include <d3dx12.h>
-#include "Core/Public/macro.h"
+#include "Core/Public/Defines.h"
 #include "D3D12Enum.h"
 #if defined(DEBUG) || defined(_DEBUG)
 #define _CRTDBG_MAP_ALLOC

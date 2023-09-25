@@ -1,9 +1,6 @@
 #pragma once
 #include "Core/Public/TypeDefine.h"
-#include "Core/Public/TPtr.h"
-#include "Core/Public/TRefRange.h"
-#define VK_NO_PROTOTYPES
-#include <vk_mem_alloc.h>
+#include "VUlkanCommon.h"
 
 enum class EMemoryType : uint8 {
 	CPU,

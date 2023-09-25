@@ -1,6 +1,6 @@
 #include "Functions/Public/AssetManager.h"
 #include "Core/Public/File.h"
-#include "Core/Public/macro.h"
+#include "Core/Public/Defines.h"
 #include "Functions/Public/TextureImporter.h"
 #include "Functions/Public/MeshImporter.h"
 
@@ -18,7 +18,7 @@ namespace Editor {
 
 	void FileNode::Save() {
 		if(Engine::AssetLoader::SaveProjectAsset(m_Asset.get(), m_PathStr.c_str())) {
-			LOG("FileNode::Save %s", GetPathStr().c_str());
+			PRINT("FileNode::Save %s", GetPathStr().c_str());
 		}
 	}
 
@@ -138,7 +138,7 @@ namespace Editor {
 				}
 			}
 		}
-		LOG("AssetManager::GetFile failed: %s", path.string().c_str());
+		PRINT("AssetManager::GetFile failed: %s", path.string().c_str());
 		return nullptr;
 	}
 

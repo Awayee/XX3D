@@ -2,7 +2,7 @@
 #include "RHIVKResources.h"
 
 VkFormat ToVkFormat(ERHIFormat f) {
-	static VkFormat s_FormatMap[ERHIFormat::FORMAT_MAX_ENUM] = {
+	static VkFormat s_FormatMap[(uint32)ERHIFormat::FORMAT_MAX_ENUM] = {
 		VK_FORMAT_UNDEFINED,
 		VK_FORMAT_R8_UNORM,
 		VK_FORMAT_R8_SNORM,
@@ -50,7 +50,7 @@ VkFormat ToVkFormat(ERHIFormat f) {
 		VK_FORMAT_D24_UNORM_S8_UINT,
 		VK_FORMAT_D32_SFLOAT
 	};
-	return s_FormatMap[f];
+	return s_FormatMap[(uint32)f];
 }
 
 VkImageLayout ToVkImageLayout(RImageLayout layout) {
@@ -86,7 +86,7 @@ VkImageLayout ToVkImageLayout(RImageLayout layout) {
 }
 
 inline VkBufferUsageFlags ToBufferUsage(EBufferFlags flags) {
-	VkBufferUsageFlags usage;
+	VkBufferUsageFlags usage {0};
 	if (flags & EBufferFlagBit::BUFFER_FLAG_CPY_SRC) {
 		usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 	}
@@ -235,7 +235,7 @@ VkShaderStageFlags ToVkShaderStageFlags(EShaderStageFlags flags) {
 	return vkFlags;
 }
 
-VkDescriptorType ToBindingType(EBindingType type) {
+VkDescriptorType ToVkDescriptorType(EBindingType type) {
 	switch (type) {
 	case EBindingType::Texture: return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 	case EBindingType::Sampler: return VK_DESCRIPTOR_TYPE_SAMPLER;
@@ -391,4 +391,23 @@ VkPipelineColorBlendAttachmentState ToAttachmentBlendState(const RHIBlendState& 
 	state.alphaBlendOp = ToVkBlendOp(blendState.AlphaBlendOp);
 	state.colorWriteMask = blendState.ColorWriteMask;
 	return state;
+}
+
+VkAttachmentLoadOp ToVkAttachmentLoadOp(ERTLoadOp op) {
+	switch(op) {
+	case ERTLoadOp::EClear: return VK_ATTACHMENT_LOAD_OP_CLEAR;
+	case ERTLoadOp::ELoad: return VK_ATTACHMENT_LOAD_OP_LOAD;
+	case ERTLoadOp::ENoAction: return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	}
+	return VK_ATTACHMENT_LOAD_OP_MAX_ENUM;
+}
+
+VkAttachmentStoreOp ToVkAttachmentStoreOp(ERTStoreOp op) {
+	switch(op) {
+	case ERTStoreOp::EStore:
+		return VK_ATTACHMENT_STORE_OP_STORE;
+	case ERTStoreOp::ENoAction:
+		return VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	}
+	return VK_ATTACHMENT_STORE_OP_MAX_ENUM;
 }

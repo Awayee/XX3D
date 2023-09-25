@@ -48,7 +48,7 @@ namespace Engine {
 
 	class TextureMgr : public TSingleton<TextureMgr> {
 	private:
-		const static Engine::ERHIFormat FORMAT = Engine::FORMAT_R8G8B8A8_SRGB;
+		const static Engine::ERHIFormat FORMAT = Engine::ERHIFormat::R8G8B8A8_SRGB;
 		const static Engine::RImageUsageFlags USAGE = Engine::IMAGE_USAGE_SAMPLED_BIT | Engine::IMAGE_USAGE_TRANSFER_DST_BIT;
 		const static int CHANNELS = 4;
 		const static uint32 DEFAULT_SIZE = 2;

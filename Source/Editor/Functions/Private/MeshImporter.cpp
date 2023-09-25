@@ -1,5 +1,5 @@
 #include "Functions/Public/MeshImporter.h"
-#include "Core/Public/macro.h"
+#include "Core/Public/Defines.h"
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #define TINYGLTF_IMPLEMENTATION
@@ -230,7 +230,7 @@ bool MeshImporter::ImportGLB(const char* file) {
 	XXString warning;
 	XXString fullPath(file);
 	if (!gltfContext.LoadBinaryFromFile(&gltfModel, &error, &warning, fullPath)) {
-		LOG("Failed to load GLTF mesh: %s", file);
+		PRINT("Failed to load GLTF mesh: %s", file);
 		return false;
 	}
 	const tinygltf::Scene& scene = gltfModel.scenes[gltfModel.defaultScene > -1 ? gltfModel.defaultScene : 0];
@@ -253,7 +253,7 @@ bool MeshImporter::ImportFBX(const char* file) {
 	Assimp::Importer importer;
 	const aiScene* aScene = importer.ReadFile(fullPath.string().c_str(), aiProcess_Triangulate | aiProcess_FlipUVs);
 	if (!aScene || aScene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !aScene->mRootNode) {
-		PRINT("ASSIMP ERROR: %s", importer.GetErrorString());
+		PRINT_DEBUG("ASSIMP ERROR: %s", importer.GetErrorString());
 		return false;
 	}
 	// 先获取总面数

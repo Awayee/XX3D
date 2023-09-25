@@ -1,5 +1,5 @@
 #include "Asset/Public/AssetLoader.h"
-#include "Core/Public/macro.h"
+#include "Core/Public/Defines.h"
 
 namespace Engine {
 
@@ -22,13 +22,13 @@ namespace Engine {
 		filePath.append(file);
 		File::Read in(filePath.string().c_str(), BinaryFile(file) ? (std::ios::in) : (std::ios::in | std::ios::binary));
 		if (!in.is_open()) {
-			LOG("[AssetLoader::LoadProjectAsset] Failed to read file: %s", filePath.string().c_str());
+			PRINT("[AssetLoader::LoadProjectAsset] Failed to read file: %s", filePath.string().c_str());
 			return false;
 		}
 
 		bool ok = asset->Load(in);
 		if (!ok) {
-			LOG("[AssetLoader::LoadProjectAsset] Failed to load asset: %s", file);
+			PRINT("[AssetLoader::LoadProjectAsset] Failed to load asset: %s", file);
 		}
 		return ok;
 	}
@@ -38,13 +38,13 @@ namespace Engine {
 		filePath.append(file);
 		File::Read in(filePath.string().c_str(), BinaryFile(file) ? (std::ios::in) : (std::ios::in | std::ios::binary));
 		if (!in.is_open()) {
-			LOG("[AssetLoader::LoadEngineAsset] Failed to read file: %s", filePath.string().c_str());
+			PRINT("[AssetLoader::LoadEngineAsset] Failed to read file: %s", filePath.string().c_str());
 			return false;
 		}
 
 		bool ok = asset->Load(in);
 		if (!ok) {
-			LOG("[AssetLoader::LoadEngineAsset] Failed to load asset: %s", file);
+			PRINT("[AssetLoader::LoadEngineAsset] Failed to load asset: %s", file);
 		}
 		return ok;
 	}
@@ -54,13 +54,13 @@ namespace Engine {
 		filePath.append(file);
 		File::Write out(filePath.string().c_str(), BinaryFile(file) ? (std::ios::out) : (std::ios::out | std::ios::binary));
 		if (!out.is_open()) {
-			LOG("[AssetLoader::SaveProjectAsset] Failed to write file: %s", filePath.string().c_str());
+			PRINT("[AssetLoader::SaveProjectAsset] Failed to write file: %s", filePath.string().c_str());
 			return false;
 		}
 
 		bool ok = asset->Save(out);
 		if (!ok) {
-			LOG("[AssetLoader::SaveProjectAsset] Failed to save asseet: %s", file);
+			PRINT("[AssetLoader::SaveProjectAsset] Failed to save asseet: %s", file);
 		}
 		return ok;
 	}

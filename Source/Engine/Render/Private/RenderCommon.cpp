@@ -4,7 +4,7 @@
 #include "Core/Public/TSingleton.h"
 #include "Render/Public/RenderReses.h"
 #include "Resource/Public/Shaders.h"
-#include "Core/Public/macro.h"
+#include "Core/Public/Defines.h"
 #include "Asset/Public/AssetLoader.h"
 #include "Asset/Public/TextureAsset.h"
 
@@ -205,8 +205,8 @@ namespace Engine {
 		// create attachments
 		m_Attachments.Resize(ATTACHMENT_COLOR_KHR);
 		m_Attachments[ATTACHMENT_DEPTH].Create(rhi->GetDepthFormat(), width, height, Engine::IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT|Engine::IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
-		m_Attachments[ATTACHMENT_NORMAL].Create(Engine::FORMAT_R8G8B8A8_UNORM, width, height, Engine::IMAGE_USAGE_COLOR_ATTACHMENT_BIT|Engine::IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
-		m_Attachments[ATTACHMENT_ALBEDO].Create(Engine::FORMAT_R8G8B8A8_UNORM, width, height, Engine::IMAGE_USAGE_COLOR_ATTACHMENT_BIT|Engine::IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
+		m_Attachments[ATTACHMENT_NORMAL].Create(Engine::ERHIFormat::R8G8B8A8_UNORM, width, height, Engine::IMAGE_USAGE_COLOR_ATTACHMENT_BIT|Engine::IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
+		m_Attachments[ATTACHMENT_ALBEDO].Create(Engine::ERHIFormat::R8G8B8A8_UNORM, width, height, Engine::IMAGE_USAGE_COLOR_ATTACHMENT_BIT|Engine::IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
 		
 		TVector<Engine::RSAttachment> attachments(ATTACHMENT_COUNT);
 		// depth
@@ -215,7 +215,7 @@ namespace Engine {
 		attachments[ATTACHMENT_DEPTH].FinalLayout = Engine::IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 		attachments[ATTACHMENT_DEPTH].Clear = { 1.0, 0 };
 		// g buffer normal
-		attachments[ATTACHMENT_NORMAL].Format = Engine::FORMAT_R8G8B8A8_UNORM;
+		attachments[ATTACHMENT_NORMAL].Format = Engine::ERHIFormat::R8G8B8A8_UNORM;
 		attachments[ATTACHMENT_NORMAL].InitialLayout = Engine::IMAGE_LAYOUT_UNDEFINED;
 		attachments[ATTACHMENT_NORMAL].FinalLayout = Engine::IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		attachments[ATTACHMENT_NORMAL].Clear = { 0.0f, 0.0f, 0.0f, 0.0f };

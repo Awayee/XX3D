@@ -6,15 +6,16 @@
 	if(!(x))throw s
 
 #ifdef _DEBUG
-#define PRINT(...)\
+#define PRINT_DEBUG(...)\
 	printf(__VA_ARGS__); std::cout << std::endl
 #else
-#define PRINT(...)
+#define PRINT_DEBUG(...)
 #endif
 
-#define LOG(...)\
+#define PRINT(...)\
 	printf(__VA_ARGS__); std::cout << std::endl
 
 #define ERROR(...)\
 	printf(__VA_ARGS__); std::cout << std::endl; ASSERT(0, "")
-	
+
+#define XX_NODISCARD [[nodiscard]]

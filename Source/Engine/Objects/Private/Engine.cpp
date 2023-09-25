@@ -4,7 +4,7 @@
 #include "Core/Public/TPtr.h"
 #include "Objects/Public/Engine.h"
 #include "Objects/Public/EngineContext.h"
-#include "Core/Public/macro.h"
+#include "Core/Public/Defines.h"
 #include "Resource/Public/Config.h"
 
 namespace Engine {
@@ -22,21 +22,21 @@ namespace Engine {
 		}
 		// init rhi
 		{
-			Engine::RSInitInfo rhiInfo;
-			rhiInfo.ApplicationName = PROJECT_NAME;
+			RHIInitDesc desc;
+			desc.AppName = PROJECT_NAME;
+			desc.EnableDebug =
 #ifdef _DEBUG
-			rhiInfo.EnableDebug = true;
+				true;
 #else
-			rhiInfo.EnableDebug = false
+				false;
 #endif
-			rhiInfo.WindowSize = context->m_Window->GetWindowSize();
-			rhiInfo.WindowHandle = context->m_Window->GetWindowHandle();
-			rhiInfo.MaxFramesInFlight = 3;
-			RHI::Instance()->Initialize(&rhiInfo);
+			desc.WindowHandle = context->m_Window->GetWindowHandle();
+			desc.RHIType = GetConfig().RHIType;
+			RHI::Initialize(desc);
 		}
 		// init renderer
 		context->m_Renderer.reset(new Renderer(context->Window()));
-		PRINT("Engine Initialized.");
+		PRINT_DEBUG("Engine Initialized.");
 	}
 	XXEngine::~XXEngine() {
 		auto* context = Context();

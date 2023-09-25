@@ -10,8 +10,8 @@ namespace Engine {
 		ID3D11RenderTargetView* m_RenderTargetView{ nullptr };
 		D3D11_VIEWPORT          m_Viewport{};
 		USize2D                 m_SwapchainExtent{};
-		ERHIFormat                 m_SwapchainFormat{ FORMAT_B8G8R8A8_UNORM };
-		ERHIFormat                 m_DepthFormat{ FORMAT_D24_UNORM_S8_UINT };
+		ERHIFormat                 m_SwapchainFormat{ERHIFormat::B8G8R8A8_UNORM };
+		ERHIFormat                 m_DepthFormat{ERHIFormat::D24_UNORM_S8_UINT };
 		void CreateDeviceContext();
 		void CreateSwapchain(HWND wnd);
 		void OnResized();

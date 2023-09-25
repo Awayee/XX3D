@@ -32,6 +32,6 @@ namespace Engine {
 	void RCommandBufferD3D11::BindIndexBuffer(RBuffer* buffer, uint64 offset) {
 	}
 
-	void RCommandBufferD3D11::ClearAttachment(RImageAspectFlags aspect, const float* color, const URect& rect) {
+	void RCommandBufferD3D11::ClearAttachment(EImageAspectFlags aspect, const float* color, const URect& rect) {
 	}
 }

@@ -2,58 +2,36 @@
 #include "RHIVulkan/RHIVulkan.h"
 #include "RHID3D11/RHID3D11.h"
 #include "Resource/Public/Config.h"
-#include "Core/Public/macro.h"
+#include "Core/Public/Defines.h"
 #include "Core/Public/TPtr.h"
 #include "Core/Public/Concurrency.h"
 
-namespace Engine{
+RHI* RHI::s_Instance = nullptr;
 
-	RHI* RHI::s_Instance = nullptr;
+RHI* RHI::Instance() {
+	return s_Instance;
+}
 
-	RHI* RHI::Instance() {
-		return s_Instance;
-		static TUniquePtr<RHI> s_Instance;
-		static Mutex s_InstanceMutex;
+void RHI::Initialize(const RHIInitDesc& desc) {
+	static Mutex s_InstanceMutex;
 
-		if(nullptr == s_Instance) {
-			MutexLock lock(s_InstanceMutex);
-			if(nullptr == s_Instance) {
-				ERHIType rhiType = GetConfig().RHIType;
-				if(RHI_VULKAN == rhiType) {
-					s_Instance.reset(new RHIVulkan());
-				}
-				else if (RHI_DX11 == rhiType) {
-					//s_Instance.reset(new RHIDX11());
-				}
-				else {
-					ERROR("Failed to initialize RHI!");
-				}
-			}
-		}
-
-		return s_Instance.get();
-	}
-
-	void RHI::Initialize(const RSInitInfo* initInfo) {
-		static Mutex s_InstanceMutex;
-
-		if (nullptr == s_Instance) {
-			MutexLock lock(s_InstanceMutex);
-			if (nullptr == s_Instance) {
-				ERHIType rhiType = GetConfig().RHIType;
-				if (RHI_VULKAN == rhiType) {
-					s_Instance = new RHIVulkan(initInfo));
-				}
-				else if (RHI_DX11 == rhiType) {
-					//s_Instance.reset(new RHIDX11());
-				}
-				else {
-					ERROR("Failed to initialize RHI!");
-				}
+	if (!s_Instance) {
+		MutexLock lock(s_InstanceMutex);
+		if (!s_Instance) {
+			switch(desc.RHIType) {
+			case ERHIType::Vulkan:
+				s_Instance = new RHIVulkan(desc);
+				break;
+			case ERHIType::DX12:
+			case ERHIType::DX11:
+			case ERHIType::OpenGL:
+			default:
+				ERROR("Failed to initialize RHI!");
 			}
 		}
 	}
+}
 
-	void RHI::Release() {
-	}
+void RHI::Release() {
+	delete s_Instance;
 }

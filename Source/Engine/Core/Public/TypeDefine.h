@@ -31,6 +31,4 @@ typedef unsigned long long	uint64;
 #define UINT16_CAST(val) static_cast<uint16>((val) > 0 ? (val) : 0)
 #define UINT32_CAST(val) static_cast<uint32>((val) > 0 ? (val) : 0)
 #define UINT64_CAST(val) static_cast<uint64>((val) > 0 ? (val) : 0)
-
-#define XX_NODISCARD [[nodiscard]]
 	

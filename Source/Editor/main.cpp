@@ -1,4 +1,4 @@
-#include "Core/Public/macro.h"
+#include "Core/Public/Defines.h"
 #include "Context/Public/Editor.h"
 #include "Objects/Public/Engine.h"
 #include "SPVCompiler/SPVCompiler.h"
@@ -12,7 +12,7 @@ int main() {
 	}
 	//Run Editor
 	{
-		LOG("Editor Mode");
+		PRINT("Editor Mode");
 		Engine::XXEngine engine{};
 		Editor::XXEditor editor(&engine);
 		editor.EditorRun();

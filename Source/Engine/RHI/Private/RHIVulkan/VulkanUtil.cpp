@@ -1,5 +1,4 @@
 #include "VulkanUtil.h"
-#include "VulkanFuncs.h"
 #include "Core/Public/Container.h"
 
 void GetPipelineBarrierStage(VkImageLayout oldLayout, VkImageLayout newLayout, VkAccessFlags& srcAccessMask, VkAccessFlags& dstAccessMask, VkPipelineStageFlags& srcStage, VkPipelineStageFlags& dstStage) {

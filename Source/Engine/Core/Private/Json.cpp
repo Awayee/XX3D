@@ -1,6 +1,6 @@
 #include <writer.h>
 #include <prettywriter.h>
-#include "Core/Public/macro.h"
+#include "Core/Public/Defines.h"
 #include "Core/Public/Json.h"
 namespace Json {
 	bool ReadFile(const char* file, Document& doc) {
@@ -23,7 +23,7 @@ namespace Json {
 		out.open(file, std::ios::out);
 
 		if (!out.good()) {
-			LOG("Failed to write json file: %s", file);
+			PRINT("Failed to write json file: %s", file);
 			return false;
 		}
 		bool ok = WriteFile(out, doc, pretty);

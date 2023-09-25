@@ -1,229 +1,282 @@
 #pragma once
 #include "Core/Public/BaseStructs.h"
 #include "Core/Public/TVector.h"
+#include "Core/Public/Defines.h"
 #include "RHIEnum.h"
 
-namespace Engine{
+class RHIResource {
+public:
+	RHIResource& operator=(const RHIResource&) = delete;
+	virtual void SetName(const char* name) = 0;
+	virtual ~RHIResource() = default;
+};
 
-	class RHIResource {
-	public:
-		virtual void SetName(const char* name) = 0;
-		virtual ~RHIResource() = default;
+// swapchain
+
+class RHISwapChain {
+public:
+	virtual ~RHISwapChain() = default;
+	virtual bool Present() = 0;//submit last frame & prepare current frame
+	virtual void Resize(USize2D size) = 0;
+	virtual USize2D GetExtent() = 0;
+};
+
+// buffer
+
+struct RHIBufferDesc {
+	EBufferFlags Flags;
+	size_t ByteSize;
+	size_t Stride;
+};
+
+class RHIBuffer: public RHIResource {
+protected:
+	RHIBufferDesc m_Desc;
+public:
+	RHIBuffer(const RHIBufferDesc& desc): m_Desc(desc){}
+	virtual void UpdateData(const void* data, size_t byteSize) = 0;
+	XX_NODISCARD const RHIBufferDesc& GetDesc() const { return m_Desc; }
+};
+
+// texture
+
+struct RHITextureDesc {
+	ETextureDimension Dimension;
+	ERHIFormat Format;
+	ETextureFlags Flags;
+	USize3D Size;
+	uint16 Depth;
+	uint16 ArraySize;
+	uint8  NumMips;
+	uint8 Samples;
+};
+
+class RHITexture: public RHIResource {
+protected:
+	RHITextureDesc m_Desc;
+public:
+	RHITexture(const RHITextureDesc& desc) : m_Desc(desc) {}
+	XX_NODISCARD const RHITextureDesc& GetDesc() const { return m_Desc; }
+};
+
+// sampler
+
+struct RHISamplerDesc {
+	ESamplerFilter Filter = ESamplerFilter::Point;
+	ESamplerAddressMode AddressU = ESamplerAddressMode::Wrap;
+	ESamplerAddressMode AddressV = ESamplerAddressMode::Wrap;
+	ESamplerAddressMode AddressW = ESamplerAddressMode::Wrap;
+	float LODBias = 0.0f;
+	float MinLOD = 0.0f;
+	float MaxLOD = FLOAT_MAX;
+	float MaxAnisotropy = 0.0f;
+};
+
+class RHISampler: public RHIResource {
+protected:
+	RHISamplerDesc m_Desc;
+public:
+	RHISampler(const RHISamplerDesc& desc): m_Desc(desc){}
+	XX_NODISCARD const RHISamplerDesc& GetDesc() const { return m_Desc; }
+};
+
+struct RHIRenderTargetView {
+	RHITexture* m_Texture;
+	uint32 m_Miplevel;
+	uint32 m_ArrayIdx;
+};
+
+// fence
+class RHIFence: public RHIResource {
+public:
+	virtual ~RHIFence() = default;
+	virtual void Wait() = 0;
+	virtual void Reset() = 0;
+};
+
+class RHIShader : public RHIResource {
+public:
+	RHIShader(EShaderStageFlagBit type) : m_Type(type) {}
+	virtual ~RHIShader() = 0;
+	XX_NODISCARD EShaderStageFlagBit GetStage() const { return m_Type; }
+protected:
+	EShaderStageFlagBit m_Type;
+};
+
+// render pass
+struct RHIRenderPassDesc {
+	struct ColorTargetInfo {
+		RHITexture* Target;
+		uint32 ArrayIndex{ 0 };
+		uint8 MipIndex{ 0 };
+		ERTLoadOp LoadOp{ ERTLoadOp::EClear };
+		ERTStoreOp StoreOp{ ERTStoreOp::EStore };
+		FColor4 ColorClear{ 0.0f, 0.0f, 0.0f, 0.0f };
 	};
-
-	// swapchain
-
-	class RHISwapChain {
-	public:
-		virtual ~RHISwapChain() = default;
-		virtual bool Present() = 0;//submit last frame & prepare current frame
-		virtual void Resize(USize2D size) = 0;
+	struct DepthStencilTargetInfo {
+		RHITexture* Target;
+		ERTLoadOp DepthLoadOp{ ERTLoadOp::EClear };
+		ERTStoreOp DepthStoreOp{ ERTStoreOp::EStore };
+		ERTLoadOp StencilLoadOp{ ERTLoadOp::ENoAction };
+		ERTStoreOp StencilStoreOp{ ERTStoreOp::ENoAction };
+		float DepthClear{ 1.0f };
+		uint32 StencilClear{ 0u };
 	};
+	TVector<ColorTargetInfo> ColorTargets;
+	DepthStencilTargetInfo DepthStencilTarget;
+	USize2D Size;
+};
 
-	// buffer
+class RHIRenderPass : public RHIResource {
+public:
+	RHIRenderPass(const RHIRenderPassDesc& desc) : m_Desc(desc){}
+	virtual ~RHIRenderPass() = 0;
+	const RHIRenderPassDesc& GetDesc() { return m_Desc; }
+protected:
+	RHIRenderPassDesc m_Desc;
+};
 
-	struct RHIBufferDesc {
-		EBufferFlags Flags;
-		size_t ByteSize;
-		size_t Stride;
+struct RHIVertexInput {
+	struct BindingDesc {
+		uint32 Binding;
+		uint32 Stride;
+		bool PerInstance;// per instance or per vertex
 	};
-
-	class RHIBuffer: public RHIResource {
-	protected:
-		RHIBufferDesc m_Desc;
-	public:
-		RHIBuffer(const RHIBufferDesc& desc): m_Desc(desc){}
-		virtual void UpdateData(const void* data, size_t byteSize) = 0;
-		XX_NODISCARD const RHIBufferDesc& GetDesc() const { return m_Desc; }
-	};
-
-	// texture
-
-	struct RHITextureDesc {
-		ETextureDimension Dimension;
+	struct AttributeDesc {
+		uint32 Location;
+		uint32 Binding;
 		ERHIFormat Format;
-		ETextureFlags Flags;
-		USize3D Size;
-		uint16 Depth;
-		uint16 ArraySize;
-		uint8  NumMips;
-		RSampleCountFlags Samples;
+		uint32 Offset;
 	};
+	TVector<BindingDesc> Bindings;
+	TVector<AttributeDesc> Attributes;
+};
 
-	class RHITexture: public RHIResource {
-	protected:
-		RHITextureDesc m_Desc;
-	public:
-		RHITexture(const RHITextureDesc& desc) : m_Desc(desc) {}
-		XX_NODISCARD const RHITextureDesc& GetDesc() const { return m_Desc; }
+struct RHIBlendState {
+	bool Enable;
+	EBlendOption ColorBlendOp;
+	EBlendFactor ColorSrc;
+	EBlendFactor ColorDst;
+	EBlendOption AlphaBlendOp;
+	EBlendFactor AlphaSrc;
+	EBlendFactor AlphaDst;
+	EColorWriteMaskFlags ColorWriteMask;
+};
+
+struct RHIBlendDesc {
+	TVector<RHIBlendState> BlendStates;
+	float BlendConst[4];
+};
+
+struct RHIRasterizerState {
+	ERasterizerFill FillMode;
+	ERasterizerCull CullMode;
+	bool Clockwise{ false };
+	float DepthBias = 0.0f;
+	float SlopeScaleDepthBias = 0.0f;
+};
+
+struct RHIDepthStencilState {
+	struct StencilOpDesc {
+		EStencilOp FailOp;
+		EStencilOp PassOp;
+		EStencilOp DepthFailOp;
+		ECompareType CompareType;
+		uint8 ReadMask;
+		uint8 WriteMask;
 	};
+	bool DepthWrite;
+	ECompareType DepthCompare;
+	bool StencilTest;
+	StencilOpDesc FrontStencil;
+	StencilOpDesc BackStencil;
+};
 
-	// sampler
+// layout
+struct RHIShaderBinding {
+	uint32 Count;
+	EBindingType Type;
+	EShaderStageFlags StageFlags;
+};
+typedef TVector<RHIShaderBinding> RHIShaderBindingLayout;
+typedef TVector<RHIShaderBindingLayout> RHIPipelineLayout;
 
-	struct RHISamplerDesc {
-		ESamplerFilter Filter = ESamplerFilter::Point;
-		ESamplerAddressMode AddressU = ESamplerAddressMode::Wrap;
-		ESamplerAddressMode AddressV = ESamplerAddressMode::Wrap;
-		ESamplerAddressMode AddressW = ESamplerAddressMode::Wrap;
-		float LODBias = 0.0f;
-		float MinLOD = 0.0f;
-		float MaxLOD = FLOAT_MAX;
-		float MaxAnisotropy = 0.0f;
-	};
+// pso
+struct RHIGraphicsPipelineStateDesc {
+	TVector<RHIShader*> Shaders;
+	RHIPipelineLayout Layout;
+	RHIVertexInput VertexInput;
+	RHIBlendDesc BlendDesc;
+	RHIRasterizerState RasterizerState;
+	RHIDepthStencilState DepthStencilState;
+	EPrimitiveTopology PrimitiveTopology;
+	uint8 NumSamples;
+};
 
-	class RHISampler: public RHIResource {
-	protected:
-		RHISamplerDesc m_Desc;
-	public:
-		RHISampler(const RHISamplerDesc& desc): m_Desc(desc){}
-		XX_NODISCARD const RHISamplerDesc& GetDesc() const { return m_Desc; }
-	};
+class RHIGraphicsPipelineState: public RHIResource {
+public:
+	RHIGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) : m_Desc(desc) {}
+	XX_NODISCARD const RHIGraphicsPipelineStateDesc& GetDesc() const { return m_Desc; }
+protected:
+	RHIGraphicsPipelineStateDesc m_Desc;
+};
 
-	struct RHIRenderTargetView {
-		RHITexture* m_Texture;
-		uint32 m_Miplevel;
-		uint32 m_ArrayIdx;
-	};
+// compute pipeline
+struct RHIComputePipelineStateDesc {
+	RHIShader* Shader;
+	RHIPipelineLayout Layout;
+};
 
-	// fence
-	class RHIFence: public RHIResource {
-	public:
-		virtual ~RHIFence() = default;
-		virtual void Wait() = 0;
-		virtual void Reset() = 0;
-	};
-
-	class RHIShader : public RHIResource {
-	public:
-		RHIShader(EShaderStageFlagBit type) : m_Type(type) {}
-		virtual ~RHIShader() = 0;
-		XX_NODISCARD EShaderStageFlagBit GetStage() const { return m_Type; }
-	protected:
-		EShaderStageFlagBit m_Type;
-	};
-
-	// render pass
-	struct RHIRenderPassInfo {
-		struct ColorTargetInfo {
-			RHITexture* Target;
-			uint32 ArrayIndex{ 0 };
-			uint8 MipIndex{ 0 };
-			ERTLoadOp LoadOp{ ERTLoadOp::EClear };
-			ERTStoreOp StoreO{ ERTStoreOp::EStore };
-			FColor4 ColorClear{ 0.0f, 0.0f, 0.0f, 0.0f };
-		};
-		struct DepthStencilTargetInfo {
-			RHITexture* Target;
-			ERTLoadOp DepthLoadOp{ ERTLoadOp::EClear };
-			ERTStoreOp DepthStoreOp{ ERTStoreOp::EStore };
-			ERTLoadOp StencilLoadOp{ ERTLoadOp::ENoAction };
-			ERTLoadOp StencilStoreOp{ ERTLoadOp::ENoAction };
-			float DepthClear{ 1.0f };
-			uint32 StencilClear{ 0u };
-		};
-		TVector<ColorTargetInfo> ColorTargets;
-		DepthStencilTargetInfo DepthStencilTarget;
-	};
-
-	struct RHIVertexInput {
-		struct BindingDesc {
-			uint32 Binding;
-			uint32 Stride;
-			bool PerInstance;// per instance or per vertex
-		};
-		struct AttributeDesc {
-			uint32 Location;
-			uint32 Binding;
-			ERHIFormat Format;
-			uint32 Offset;
-		};
-		TVector<BindingDesc> Bindings;
-		TVector<AttributeDesc> Attributes;
-	};
-
-	struct RHIBlendState {
-		bool Enable;
-		EBlendOption ColorBlendOp;
-		EBlendFactor ColorSrc;
-		EBlendFactor ColorDst;
-		EBlendOption AlphaBlendOp;
-		EBlendFactor AlphaSrc;
-		EBlendFactor AlphaDst;
-		EColorWriteMaskFlags ColorWriteMask;
-	};
-
-	struct RHIBlendDesc {
-		TVector<RHIBlendState> BlendStates;
-		float BlendConst[4];
-	};
-
-	struct RHIRasterizerState {
-		ERasterizerFill FillMode;
-		ERasterizerCull CullMode;
-		bool Clockwise{ false };
-		float DepthBias = 0.0f;
-		float SlopeScaleDepthBias = 0.0f;
-	};
-
-	struct RHIDepthStencilState {
-		struct StencilOpDesc {
-			EStencilOp FailOp;
-			EStencilOp PassOp;
-			EStencilOp DepthFailOp;
-			ECompareType CompareType;
-			uint8 ReadMask;
-			uint8 WriteMask;
-		};
-		bool DepthWrite;
-		ECompareType DepthCompare;
-		bool StencilTest;
-		StencilOpDesc FrontStencil;
-		StencilOpDesc BackStencil;
-	};
+class RHIComputePipelineState: public RHIResource {
+public:
+	RHIComputePipelineState(const RHIComputePipelineStateDesc& desc) : m_Desc(desc) {}
+	XX_NODISCARD const RHIComputePipelineStateDesc& GetDesc() const { return m_Desc; }
+protected:
+	RHIComputePipelineStateDesc m_Desc;
+};
 
 
+struct RHITextureCopyRegion {
+	EImageAspectFlags srcAspect;
+	uint32 srcMipLevel;
+	uint32 srcBaseLayer;
+	uint32 srcLayerCount;
+	UOffset2D srcOffsets[2];
+	EImageAspectFlags dstAspect;
+	uint32 dstMipLevel;
+	uint32 dstBaseLayer;
+	uint32 dstLayerCount;
+	UOffset2D dstOffsets[2];
+};
 
-	// layout
-	struct RHIBinding {
-		uint32 Count;
-		EBindingType Type;
-		EShaderStageFlags StageFlags;
-	};
-	typedef TVector<RHIBinding> RHIBindingLayout;
-	typedef TVector<RHIBindingLayout> RHIPipelineLayout;
+// cmd
+class RHICommandBuffer {
+public:
+	virtual ~RHICommandBuffer() {}
+	virtual void BeginRenderPass(const RHIRenderPassDesc& passInfo) = 0;
+	virtual void EndRenderPass() = 0;
+	virtual void CopyBufferToTexture(RHIBuffer* buffer, RHITexture* texture, uint32 mipLevel, uint32 baseLayer, uint32 layerCount) = 0;
+	virtual void CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RHITextureCopyRegion& region) = 0;
+	virtual void BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) = 0;
+	virtual void BindComputePipeline(RHIComputePipelineState* pipeline) = 0;
+	virtual void BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) = 0;
+	virtual void BindIndexBuffer(RHIBuffer* buffer, uint64 offset) = 0;
+	virtual void Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance) = 0;
+	virtual void DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance) = 0;
+	virtual void Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ) = 0;
+	virtual void ClearAttachment(EImageAspectFlags aspect, const float* color, const IRect& rect) = 0;
+	virtual void CopyBufferToBuffer(RHIBuffer* srcBuffer, RHIBuffer* dstBuffer, uint64 srcOffset, uint64 dstOffset, uint64 size) = 0;
+	virtual void TransitionTextureLayout(RHITexture* texture, RImageLayout oldLayout, RImageLayout newLayout, uint32 baseMipLevel, uint32 levelCount, uint32 layer, uint32 layerCount, EImageAspectFlags aspect) = 0;
+	virtual void GenerateMipmap(RHITexture* texture, uint32 levelCount, EImageAspectFlags aspect, uint32 baseLayer, uint32 layerCount) = 0;
 
-	// pso
-	struct RHIGraphicsPipelineStateDesc {
-		TVector<RHIShader*> Shaders;
-		RHIPipelineLayout Layout;
-		RHIVertexInput VertexInput;
-		RHIBlendDesc BlendDesc;
-		RHIRasterizerState RasterizerState;
-		RHIDepthStencilState DepthStencilState;
-		EPrimitiveTopology PrimitiveTopology;
-		uint8 NumSamples;
-	};
+	virtual void BeginDebugLabel(const char* msg, const float* color) = 0;
+	virtual void EndDebugLabel() = 0;
+};
 
-	class RHIGraphicsPipelineState: public RHIResource {
-	public:
-		RHIGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) : m_Desc(desc) {}
-		XX_NODISCARD const RHIGraphicsPipelineStateDesc& GetDesc() const { return m_Desc; }
-	protected:
-		RHIGraphicsPipelineStateDesc m_Desc;
-	};
-
-	// compute pipeline
-	struct RHIComputePipelineStateDesc {
-		RHIShader* Shader;
-		RHIPipelineLayout Layout;
-	};
-
-	class RHIComputePipelineState: public RHIResource {
-	public:
-		RHIComputePipelineState(const RHIComputePipelineStateDesc& desc) : m_Desc(desc) {}
-		XX_NODISCARD const RHIComputePipelineStateDesc& GetDesc() const { return m_Desc; }
-	protected:
-		RHIComputePipelineStateDesc m_Desc;
-	};
-
-} // namespace RHI
+class RHIShaderParameterSet {
+public:
+	virtual ~RHIShaderParameterSet() = 0;
+	virtual void SetUniformBuffer(uint32 binding, RHIBuffer* buffer) = 0;
+	virtual void SetTexture(uint32 binding, RHITexture* image) = 0;
+	virtual void SetSampler(uint32 binding, RHISampler* sampler) = 0;
+};
