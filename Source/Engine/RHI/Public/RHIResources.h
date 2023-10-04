@@ -124,7 +124,7 @@ struct RHIRenderPassDesc {
 	};
 	TVector<ColorTargetInfo> ColorTargets;
 	DepthStencilTargetInfo DepthStencilTarget;
-	USize2D Size;
+	USize2D RenderSize;
 };
 
 class RHIRenderPass : public RHIResource {
@@ -237,40 +237,14 @@ protected:
 
 
 struct RHITextureCopyRegion {
-	EImageAspectFlags srcAspect;
 	uint32 srcMipLevel;
 	uint32 srcBaseLayer;
 	uint32 srcLayerCount;
 	UOffset2D srcOffsets[2];
-	EImageAspectFlags dstAspect;
 	uint32 dstMipLevel;
 	uint32 dstBaseLayer;
 	uint32 dstLayerCount;
 	UOffset2D dstOffsets[2];
-};
-
-// cmd
-class RHICommandBuffer {
-public:
-	virtual ~RHICommandBuffer() {}
-	virtual void BeginRenderPass(const RHIRenderPassDesc& passInfo) = 0;
-	virtual void EndRenderPass() = 0;
-	virtual void CopyBufferToTexture(RHIBuffer* buffer, RHITexture* texture, uint32 mipLevel, uint32 baseLayer, uint32 layerCount) = 0;
-	virtual void CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RHITextureCopyRegion& region) = 0;
-	virtual void BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) = 0;
-	virtual void BindComputePipeline(RHIComputePipelineState* pipeline) = 0;
-	virtual void BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) = 0;
-	virtual void BindIndexBuffer(RHIBuffer* buffer, uint64 offset) = 0;
-	virtual void Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance) = 0;
-	virtual void DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance) = 0;
-	virtual void Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ) = 0;
-	virtual void ClearAttachment(EImageAspectFlags aspect, const float* color, const IRect& rect) = 0;
-	virtual void CopyBufferToBuffer(RHIBuffer* srcBuffer, RHIBuffer* dstBuffer, uint64 srcOffset, uint64 dstOffset, uint64 size) = 0;
-	virtual void TransitionTextureLayout(RHITexture* texture, RImageLayout oldLayout, RImageLayout newLayout, uint32 baseMipLevel, uint32 levelCount, uint32 layer, uint32 layerCount, EImageAspectFlags aspect) = 0;
-	virtual void GenerateMipmap(RHITexture* texture, uint32 levelCount, EImageAspectFlags aspect, uint32 baseLayer, uint32 layerCount) = 0;
-
-	virtual void BeginDebugLabel(const char* msg, const float* color) = 0;
-	virtual void EndDebugLabel() = 0;
 };
 
 class RHIShaderParameterSet {

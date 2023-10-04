@@ -7,11 +7,9 @@
 #define VK_CHECK(x, s)\
 	if(VK_SUCCESS != x) throw s
 
-	const uint32 VK_API_VER = VK_API_VERSION_1_2;
+const uint32 VK_API_VER = VK_API_VERSION_1_2;
 
 #define VK_FREE(ptr) delete ptr; ptr = nullptr
-
-using namespace Engine;
 
 inline VkPipelineRasterizationStateCreateInfo TranslateVkPipelineRasterizationState(const RGraphicsPipelineCreateInfo& rhiInfo) {
 	VkPipelineRasterizationStateCreateInfo rasterizatonInfo{ VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO, nullptr, 0 };

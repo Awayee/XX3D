@@ -7,7 +7,7 @@ class ContextBuilder {
 public:
 	enum VulkanInitFlags : uint32 {
 		ENABLE_DEBUG=1,
-		INTEGRATED_GPU=2,//Discrete GPU is default, use integrated if this enabled
+		INTEGRATED_GPU=2,//Discrete GPU is default, use integrated GPU if this flag is enabled
 	};
 	uint32 Flags;
 	XXString AppName{};

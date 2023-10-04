@@ -22,25 +22,25 @@ namespace Engine {
 	class DescsMgr: public TSingleton<DescsMgr> {
 
 	private:
-		TVector<Engine::RDescriptorSetLayout*> m_Layouts;
+		TVector<RDescriptorSetLayout*> m_Layouts;
 	public:
 		DescsMgr();
 		~DescsMgr();
-		static Engine::RDescriptorSetLayout* Get(EDescsType type) { return Instance()->m_Layouts[type]; }
+		static RDescriptorSetLayout* Get(EDescsType type) { return Instance()->m_Layouts[type]; }
 	};
 
 	class SamplerMgr: public TSingleton<SamplerMgr> {
 	private:
-		TVector<Engine::RHISampler*> m_Samplers;
+		TVector<RHISampler*> m_Samplers;
 	public:
 		SamplerMgr();
 		~SamplerMgr();
-		static Engine::RHISampler* Get(ESamplerType type) { return Instance()->m_Samplers[type]; }
+		static RHISampler* Get(ESamplerType type) { return Instance()->m_Samplers[type]; }
 	};
 
 	struct TextureCommon {
-		Engine::RHITexture* Texture{ nullptr };
-		void Create(Engine::ERHIFormat format, uint32 width, uint32 height, Engine::ETextureFlags flags);
+		RHITexture* Texture{ nullptr };
+		void Create(ERHIFormat format, uint32 width, uint32 height, ETextureFlags flags);
 		void UpdatePixels(void* pixels, int channels);
 		void Release();
 		~TextureCommon() { Release(); }
@@ -48,8 +48,7 @@ namespace Engine {
 
 	class TextureMgr : public TSingleton<TextureMgr> {
 	private:
-		const static Engine::ERHIFormat FORMAT = Engine::ERHIFormat::R8G8B8A8_SRGB;
-		const static Engine::RImageUsageFlags USAGE = Engine::IMAGE_USAGE_SAMPLED_BIT | Engine::IMAGE_USAGE_TRANSFER_DST_BIT;
+		const static ERHIFormat FORMAT = ERHIFormat::R8G8B8A8_SRGB;
 		const static int CHANNELS = 4;
 		const static uint32 DEFAULT_SIZE = 2;
 
@@ -74,34 +73,34 @@ namespace Engine {
 	};
 
 	struct BufferCommon {
-		Engine::RHIBuffer* Buffer;
+		RHIBuffer* Buffer;
 		uint64 Size{ 0u };
-		Engine::EBufferFlags Flags{0};
+		EBufferFlags Flags{0};
 	public:
 		BufferCommon() = default;
 		BufferCommon(const BufferCommon&) = default;
 		BufferCommon(BufferCommon&&) = default;
-		BufferCommon(uint64 size, Engine::EBufferFlags usage, void* pData) { Create(size, usage, pData); }
-		void Create(uint64 size, Engine::EBufferFlags usage, void* pData);
+		BufferCommon(uint64 size, EBufferFlags usage, void* pData) { Create(size, usage, pData); }
+		void Create(uint64 size, EBufferFlags usage, void* pData);
 		void UpdateData(void* pData);
 		void Release();
 		~BufferCommon() { Release(); }
 
 		// vertex buffer
 		void CreateForVertex(uint64 size){
-			Create(size, Engine::BUFFER_FLAG_VERTEX | Engine::BUFFER_FLAG_TPY_DST,nullptr);
+			Create(size, BUFFER_FLAG_VERTEX | BUFFER_FLAG_TPY_DST,nullptr);
 		};
 		// index buffer
 		void CreateForIndex(uint64 size){
-			Create(size, Engine::BUFFER_FLAG_INDEX | Engine::BUFFER_FLAG_TPY_DST, nullptr);
+			Create(size, BUFFER_FLAG_INDEX | BUFFER_FLAG_TPY_DST, nullptr);
 		};
 		// staging buffer
 		void CreateForTransfer(uint64 size, void* pData){
-			Create(size, Engine::BUFFER_FLAG_CPY_SRC, pData);
+			Create(size, BUFFER_FLAG_CPY_SRC, pData);
 		};
 		// uniform buffer
 		void CreateForUniform(uint64 size, void* pData){
-			Create(size, Engine::BUFFER_FLAG_UNIFORM, pData);
+			Create(size, BUFFER_FLAG_UNIFORM, pData);
 		};
 		/*
 		// vertex buffer
@@ -125,26 +124,26 @@ namespace Engine {
 
 	class RenderPassCommon {
 	protected:
-		Engine::RRenderPass* m_RHIPass{nullptr};
-		Engine::RFramebuffer* m_Framebuffer{nullptr};
+		RRenderPass* m_RHIPass{nullptr};
+		RFramebuffer* m_Framebuffer{nullptr};
 		TVector<TextureCommon> m_Attachments;
 		TVector<TVector<TextureCommon*>> m_ColorAttachments;
 		TVector<TextureCommon*> m_DepthAttachments;
 	public:
 		virtual ~RenderPassCommon();
-		Engine::RRenderPass* GetRHIPass() const { return m_RHIPass; }
-		Engine::RFramebuffer* GetFramebuffer() const { return m_Framebuffer; }
+		RRenderPass* GetRHIPass() const { return m_RHIPass; }
+		RFramebuffer* GetFramebuffer() const { return m_Framebuffer; }
 		uint32 GetAttachmentCount() const { return m_Attachments.Size(); }
-		Engine::RImageView* GetAttachment(uint32 attachmentIdx) const;
+		RImageView* GetAttachment(uint32 attachmentIdx) const;
 		uint32 GetColorAttachmentCount(uint32 subpass) const { ASSERT(subpass < m_ColorAttachments.Size()); return m_ColorAttachments[subpass].Size(); }
-		Engine::RImageView* GetColorAttachment(uint32 subpass, uint32 idx) const { return m_ColorAttachments[subpass][idx]->View; }
-		Engine::RImageView* GetDepthAttachment(uint32 subpass) const { return m_DepthAttachments[subpass]->View; }
-		virtual void Begin(Engine::RHICommandBuffer* cmd);
+		RImageView* GetColorAttachment(uint32 subpass, uint32 idx) const { return m_ColorAttachments[subpass][idx]->View; }
+		RImageView* GetDepthAttachment(uint32 subpass) const { return m_DepthAttachments[subpass]->View; }
+		virtual void Begin(RHICommandBuffer* cmd);
 	};
 
 	class DeferredLightingPass final: public RenderPassCommon {
 	private:
-		TVector<Engine::RFramebuffer*> m_SwapchainFramebuffers;
+		TVector<RFramebuffer*> m_SwapchainFramebuffers;
 	public:
 		enum {
 			ATTACHMENT_DEPTH,
@@ -166,12 +165,12 @@ namespace Engine {
 
 	class GraphicsPipelineCommon {
 	protected:
-		Engine::RPipelineLayout* m_Layout;
-		Engine::RPipeline* m_Pipeline;
+		RPipelineLayout* m_Layout;
+		RPipeline* m_Pipeline;
 	public:
 		virtual ~GraphicsPipelineCommon();
-		Engine::RPipelineLayout* GetLayout()const { return m_Layout; }
-		void Bind(Engine::RHICommandBuffer* cmd);
+		RPipelineLayout* GetLayout()const { return m_Layout; }
+		void Bind(RHICommandBuffer* cmd);
 	};
 
 	class GBufferPipeline: public GraphicsPipelineCommon {

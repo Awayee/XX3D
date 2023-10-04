@@ -5,8 +5,10 @@
 #include "RHI/Public/RHIResources.h"
 
 // descriptor set manager
-class VulkanDSMgr : public TSingleton<VulkanDSMgr>{
+class VulkanDSMgr{
 public:
+	explicit VulkanDSMgr(VkDevice device);
+	~VulkanDSMgr();
 	VkDescriptorSetLayout GetLayoutHandle(const RHIShaderBindingLayout& bindingLayout);
 	VkDescriptorSet AllocatDS(VkDescriptorSetLayout layout);
 private:
@@ -14,7 +16,5 @@ private:
 	VkDevice m_Device;
 	TUnorderedMap<size_t, VkDescriptorSetLayout> m_LayoutMap;
 	TVector<VkDescriptorPool> m_Pools;
-	explicit VulkanDSMgr(VkDevice device);
-	~VulkanDSMgr() override;
 	void AddPool();
 };

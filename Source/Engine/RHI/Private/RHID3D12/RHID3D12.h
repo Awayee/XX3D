@@ -44,7 +44,7 @@ namespace Engine {
 		typedef std::function<void(ID3D12GraphicsCommandList* cmdList)> CmdFunc;
 		void InternalImmediateCommit(CmdFunc&& func);
 	public:
-		explicit RHID3D12(const RSInitInfo* initInfo);
+		explicit RHID3D12(const RHIInitDesc& desc);
 		~RHID3D12() override;
 
 		ID3D12Device* Device() { return m_Device; }

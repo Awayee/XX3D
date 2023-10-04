@@ -272,12 +272,12 @@ namespace Engine {
 		FlushCommandQueue();
 	}
 
-	RHID3D12::RHID3D12(const RSInitInfo* initInfo) {
+	RHID3D12::RHID3D12(const RHIInitDesc& desc) {
 		CreateDeviceContext();
 		CreateCommandObjects();
 
-		m_SwapchainExtent = initInfo->WindowSize;
-		HWND wnd = reinterpret_cast<HWND>(initInfo->WindowHandle);
+		m_SwapchainExtent = desc.WindowSize;
+		HWND wnd = reinterpret_cast<HWND>(desc.WindowHandle);
 		CreateSwapchain(wnd);
 		CreateInternalDescriptorHeaps();
 		OnResized();

@@ -240,6 +240,7 @@ VkDescriptorType ToVkDescriptorType(EBindingType type) {
 	case EBindingType::Texture: return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 	case EBindingType::Sampler: return VK_DESCRIPTOR_TYPE_SAMPLER;
 	case EBindingType::TextureSampler: return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	case EBindingType::StorageTexture: return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 	case EBindingType::UniformBuffer: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	case EBindingType::StorageBuffer: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	}

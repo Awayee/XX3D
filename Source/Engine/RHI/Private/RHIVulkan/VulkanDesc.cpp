@@ -28,6 +28,7 @@ VkDescriptorSetLayout VulkanDSMgr::GetLayoutHandle(const RHIShaderBindingLayout&
 	VkDescriptorSetLayout layoutHandle;
 	vkCreateDescriptorSetLayout(m_Device, &info, nullptr, &layoutHandle);
 	m_LayoutMap.emplace(hs, layoutHandle);
+	return layoutHandle;
 }
 
 VkDescriptorSet VulkanDSMgr::AllocatDS(VkDescriptorSetLayout layout) {

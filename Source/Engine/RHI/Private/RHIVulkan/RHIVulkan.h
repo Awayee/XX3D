@@ -1,12 +1,12 @@
 #pragma once
 #include "RHI/Public/RHI.h"
-#include "RHI/Public/RHIClasses.h"
 #include "Core/Public/Container.h"
 #include "Core/Public/TPtr.h"
-#include "VulkanMemory.h"
 #include "VulkanCommon.h"
-#include "RHIVKClasses.h"
 #include "RHIVKResources.h"
+#include "VulkanMemory.h"
+#include "VulkanCommand.h"
+#include "VulkanDesc.h"
 
 class RHIVulkan final: public RHI {
 public:
@@ -32,7 +32,6 @@ public:
 	//void FreeDescriptorSets(uint32 count, RDescriptorSet** descriptorSets) override;
 	void FreeDescriptorSet(RDescriptorSet* descriptorSet) override;
 
-	RHICommandBuffer* AllocateCommandBuffer(RCommandBufferLevel level)override;
 	void ImmediateSubmit(const CommandBufferFunc& func) override;
 	void SubmitCommandBuffer(const RHICommandBuffer* cmd, RHIFence* fence, RHISwapChain* swapChain) override;
 	int QueueSubmitPresent(RHICommandBuffer* cmd, uint8 frameIndex, RHIFence* fence) override;
@@ -45,11 +44,14 @@ public:
 	RHIGraphicsPipelineState* CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) override;
 	RHIComputePipelineState* CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) override;
 	RHIRenderPass* CreateRenderPass(const RHIRenderPassDesc& desc) override;
+	RHICommandBuffer* CreateCommandBuffer()override;
 private:
 	uint8 m_MaxFramesInFlight{ 3 };
 	VulkanContext m_Context;
 	TUniquePtr<VulkanMemMgr> m_MemMgr;
 	TUniquePtr<RHIVulkanSwapChain> m_SwapChain;
+	TUniquePtr<VulkanCommandMgr> m_CmdMgr;
+	TUniquePtr<VulkanDSMgr> m_DSMgr;
 	VkCommandPool m_RHICommandPool;
 
 private:

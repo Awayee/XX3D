@@ -83,25 +83,6 @@ enum ETextureFlagBit {
 };
 typedef uint32 ETextureFlags;
 
-enum EImageAspectFlagBits {
-    IMAGE_ASPECT_COLOR_BIT = 0x00000001,
-    IMAGE_ASPECT_DEPTH_BIT = 0x00000002,
-    IMAGE_ASPECT_STENCIL_BIT = 0x00000004,
-    IMAGE_ASPECT_METADATA_BIT = 0x00000008,
-    IMAGE_ASPECT_PLANE_0_BIT = 0x00000010,
-    IMAGE_ASPECT_PLANE_1_BIT = 0x00000020,
-    IMAGE_ASPECT_PLANE_2_BIT = 0x00000040,
-    IMAGE_ASPECT_MEMORY_PLANE_0_BIT_EXT = 0x00000080,
-    IMAGE_ASPECT_MEMORY_PLANE_1_BIT_EXT = 0x00000100,
-    IMAGE_ASPECT_MEMORY_PLANE_2_BIT_EXT = 0x00000200,
-    IMAGE_ASPECT_MEMORY_PLANE_3_BIT_EXT = 0x00000400,
-    IMAGE_ASPECT_PLANE_0_BIT_KHR = IMAGE_ASPECT_PLANE_0_BIT,
-    IMAGE_ASPECT_PLANE_1_BIT_KHR = IMAGE_ASPECT_PLANE_1_BIT,
-    IMAGE_ASPECT_PLANE_2_BIT_KHR = IMAGE_ASPECT_PLANE_2_BIT,
-    IMAGE_ASPECT_FLAG_BITS_MAX_ENUM = 0x7FFFFFFF
-};
-typedef uint32 EImageAspectFlags;
-
 enum class ESamplerFilter : uint8 {
     Point=0,
     Bilinear,
@@ -151,6 +132,7 @@ enum class EBindingType : uint8 {
     Sampler,
     TextureSampler,
     Texture,
+    StorageTexture,
     UniformBuffer,
     StorageBuffer,
     MaxNum
@@ -223,4 +205,14 @@ enum class EStencilOp: uint8 {
     Invert,
     Increment,
     Decrement,
+};
+
+enum class EResourceState : uint8 {
+    RenderTarget,
+    DepthStencil,
+    ShaderResourceView,
+    UnorderedAccessView,
+    TransferSrc,
+    TransferDst,
+    Present
 };

@@ -1,6 +1,6 @@
 #pragma once
 #include "Core/Public/TypeDefine.h"
-#include "VUlkanCommon.h"
+#include "VulkanCommon.h"
 
 enum class EMemoryType : uint8 {
 	CPU,

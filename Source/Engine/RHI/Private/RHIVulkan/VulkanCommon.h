@@ -3,6 +3,11 @@
 #include <vk_mem_alloc.h>
 #include "Core/Public/TypeDefine.h"
 
+#define VK_CHECK(x, s)\
+	if(VK_SUCCESS != x) throw s
+
+const uint32 VK_API_VER = VK_API_VERSION_1_2;
+
 constexpr uint32 INVALID_IDX = UINT32_MAX;
 
 struct VulkanQueue {

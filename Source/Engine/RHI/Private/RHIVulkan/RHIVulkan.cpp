@@ -41,8 +41,12 @@ RHIVulkan::RHIVulkan(const RHIInitDesc& desc) {
 	// create memory manager
 	m_MemMgr.reset(new VulkanMemMgr(&m_Context));
 
-	CreateCommandPools();
-	VulkanDSMgr::Initialize(m_Context.Device);
+	// create command manager
+	m_CmdMgr.reset(new VulkanCommandMgr(&m_Context));
+
+	// create descriptor set manager
+	m_DSMgr.reset(new VulkanDSMgr(m_Context.Device));
+
 	PRINT("RHI: Vulkan initialized successfully!");
 }
 
@@ -266,19 +270,6 @@ void RHIVulkan::FreeDescriptorSet(RDescriptorSet* descriptorSet) {
 	delete descirptorSetVk;
 }
 
-RHICommandBuffer* RHIVulkan::AllocateCommandBuffer(RCommandBufferLevel level) {
-	VkCommandBufferAllocateInfo allocateInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-	allocateInfo.pNext = nullptr;
-	allocateInfo.commandPool = m_RHICommandPool;
-	allocateInfo.level = (VkCommandBufferLevel)level;
-	allocateInfo.commandBufferCount = 1;
-	VkCommandBuffer handle;
-	if(VK_SUCCESS != vkAllocateCommandBuffers(GetDevice(), &allocateInfo, &handle)){
-		return nullptr;
-	}
-	return new RHIVulkanCommandBuffer(handle, allocateInfo.commandPool);
-}
-
 void RHIVulkan::ImmediateSubmit(const CommandBufferFunc& func) {
 	// allocate
 	VkCommandBufferAllocateInfo allocateInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
@@ -446,4 +437,13 @@ RHIComputePipelineState* RHIVulkan::CreateComputePipelineState(const RHIComputeP
 }
 
 RHIRenderPass* RHIVulkan::CreateRenderPass(const RHIRenderPassDesc& desc) {
+	return new RHIVulkanRenderPass(desc);
+}
+
+RHICommandBuffer* RHIVulkan::CreateCommandBuffer() {
+	VkCommandBuffer handle = m_CmdMgr->NewCmd();
+	if(VK_NULL_HANDLE == handle) {
+		return nullptr;
+	}
+	return new RHIVulkanCommandBuffer(handle, m_CmdMgr.get());
 }

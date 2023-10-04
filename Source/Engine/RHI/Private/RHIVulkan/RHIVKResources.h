@@ -143,43 +143,13 @@ public:
 	explicit RHIVulkanRenderPass(const RHIRenderPassDesc& desc);
 	~RHIVulkanRenderPass() override;
 	void SetName(const char* name) override;
+	VkRenderPass GetRenderPass() { return m_RenderPass; }
+	VkFramebuffer GetFramebuffer() { return m_Framebuffer; }
 private:
 	VkRenderPass m_RenderPass;
 	VkFramebuffer m_Framebuffer;
 	void DestroyHandle();
 	void CreateHandle(const VulkanLayoutMgr& layoutMgr);
-};
-
-
-
-class RHIVulkanCommandBuffer : public RHICommandBuffer {
-public:
-	RHIVulkanCommandBuffer(VkCommandBuffer cmd, VkCommandPool pool);
-	~RHIVulkanCommandBuffer() override;
-	void BeginRenderPass(const RHIRenderPassDesc& passInfo) override;
-	void EndRenderPass() override;
-	void CopyBufferToBuffer(RHIBuffer* srcBuffer, RHIBuffer* dstBuffer, uint64 srcOffset, uint64 dstOffset, uint64 size) override;
-	void CopyBufferToTexture(RHIBuffer* buffer, RHITexture* texture, uint32 mipLevel, uint32 baseLayer, uint32 layerCount) override;
-	void CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RHITextureCopyRegion& region) override;
-	void TransitionTextureLayout(RHITexture* texture, RImageLayout oldLayout, RImageLayout newLayout, uint32 baseMipLevel, uint32 levelCount, uint32 baseLayer, uint32 layerCount, EImageAspectFlags aspect) override;
-	void GenerateMipmap(RHITexture* texture, uint32 levelCount, EImageAspectFlags aspect, uint32 baseLayer, uint32 layerCount) override;
-	void BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) override;
-	void BindComputePipeline(RHIComputePipelineState* pipeline) override;
-	void BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) override;
-	void BindIndexBuffer(RHIBuffer* buffer, uint64 offset) override;
-	void Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance) override;
-	void DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance) override;
-	void Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ) override;
-	void ClearAttachment(EImageAspectFlags aspect, const float* color, const IRect& rect) override;
-	void BeginDebugLabel(const char* msg, const float* color) override;
-	void EndDebugLabel() override;
-private:
-	void CmdBegin();
-	VkCommandBuffer m_VkCmd{ VK_NULL_HANDLE };
-	VkCommandPool m_Pool{ VK_NULL_HANDLE };
-	VkRenderPass m_CurrentPass{ VK_NULL_HANDLE };
-	uint32 m_SubPass{ 0 };
-	bool m_IsBegin{ false };
 };
 
 class RHIVulkanShaderParameterSet: public RHIShaderParameterSet {
