@@ -4,11 +4,47 @@
 #include "VulkanUtil.h"
 #include "Core/Public/TempArray.h"
 
+SemaphoreMgr::~SemaphoreMgr() {
+	Clear();
+}
+
+void SemaphoreMgr::Initialize(VkDevice device, uint32 maxSize) {
+	m_Device = device;
+}
+
+uint32 SemaphoreMgr::Allocate() {
+	if(m_CurIndex >= m_Semaphores.Size()) {
+		VkSemaphore handle;
+		VkSemaphoreCreateInfo info{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0 };
+		VK_CHECK(vkCreateSemaphore(m_Device, &info, nullptr, &handle), "vkCreateSemaphore");
+		m_Semaphores.PushBack(handle);
+	}
+	return m_CurIndex++;
+}
+
+VkSemaphore& SemaphoreMgr::Get(uint32 idx) {
+	ASSERT(idx < m_Semaphores.Size(), "");
+	return m_Semaphores[idx];
+}
+
+void SemaphoreMgr::Reset() {
+	m_CurIndex = 0;
+}
+
+void SemaphoreMgr::Clear() {
+	for (VkSemaphore smp : m_Semaphores) {
+		vkDestroySemaphore(m_Device, smp, nullptr);
+	}
+	m_Semaphores.Clear();
+	m_CurIndex = 0;
+}
+
 VulkanCommandMgr::VulkanCommandMgr(const VulkanContext* context): m_ContextPtr(context), m_Pool(VK_NULL_HANDLE) {
 	VkCommandPoolCreateInfo commandPoolCreateInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr };
 	commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 	commandPoolCreateInfo.queueFamilyIndex = m_ContextPtr->GraphicsQueue.FamilyIndex;
 	VK_CHECK(vkCreateCommandPool(m_ContextPtr->Device, &commandPoolCreateInfo, nullptr, &m_Pool), "VkCreateCommandPool");
+	m_SmpMgr.Initialize(m_ContextPtr->Device, 512);
 }
 
 VulkanCommandMgr::~VulkanCommandMgr() {
@@ -28,28 +64,66 @@ VkCommandBuffer VulkanCommandMgr::NewCmd() {
 }
 
 void VulkanCommandMgr::FreeCmd(VkCommandBuffer handle) {
-	m_ToFree.PushBack(handle);
+	m_CmdsToFree.PushBack(handle);
 }
 
-void VulkanCommandMgr::Submit(VkCommandBuffer cmd) {
-	m_ToSubmit.PushBack(cmd);
+void VulkanCommandMgr::SubmitGraphicsCommand(uint32 count, const VkCommandBuffer* handles) {
+	// create a submit info
+	uint32 preSmpIdx;
+	if(m_SubmitInfos.Empty()) {
+		preSmpIdx = INVALID_IDX;
+	}
+	else {
+		SubmitInfo& preInfo = m_SubmitInfos.Back();
+		preSmpIdx = m_SmpMgr.Allocate();
+		preInfo.SignalSmpIdx = preSmpIdx;
+	}
+	SubmitInfo& submitInfo = m_SubmitInfos.EmplaceBack();
+	submitInfo.CmdStartIdx = m_CmdsToSubmit.Size();
+	submitInfo.CmdCount = count;
+	submitInfo.WaitSmpIdx = preSmpIdx;
+	submitInfo.SignalSmpIdx = INVALID_IDX;
+	m_CmdsToSubmit.PushBack(count, handles);
 }
 
-void VulkanCommandMgr::SubmitInternal() {
-	// check deleted command buffers
-	VkSubmitInfo info{ VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr };
-	info.waitSemaphoreCount = 0;
-	info.pWaitSemaphores = nullptr;
-	info.pWaitDstStageMask = nullptr;
-	info.commandBufferCount = m_ToSubmit.Size();
-	info.pCommandBuffers = m_ToSubmit.Data();
-	info.signalSemaphoreCount = 0;
-	info.pSignalSemaphores = nullptr;
-	vkQueueSubmit(m_ContextPtr->GraphicsQueue.Handle, 1, &info, nullptr);
-	m_ToSubmit.Clear();
+void VulkanCommandMgr::SubmitGraphicsCommand(VkCommandBuffer cmd) {
+	SubmitGraphicsCommand(1, &cmd);
+}
 
-	vkFreeCommandBuffers(m_ContextPtr->Device, m_Pool, m_ToFree.Size(), m_ToFree.Data());
-	m_ToFree.Clear();
+void VulkanCommandMgr::Update() {
+	TempArray<VkSubmitInfo> infos(m_SubmitInfos.Size());
+	for (uint32 i = 0; i < m_SubmitInfos.Size(); ++i) {
+		const SubmitInfo& submitInfo = m_SubmitInfos[i];
+		VkSubmitInfo& info = infos[i];
+		info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		info.pNext = nullptr;
+		// wait smp
+		if(INVALID_IDX != submitInfo.WaitSmpIdx) {
+			info.waitSemaphoreCount = 1;
+			info.pWaitSemaphores = &m_SmpMgr.Get(submitInfo.WaitSmpIdx);
+		}
+		else {
+			info.waitSemaphoreCount = 0;
+			info.pWaitSemaphores = nullptr;
+		}
+
+		// signal smp
+		if(INVALID_IDX != submitInfo.SignalSmpIdx) {
+			info.signalSemaphoreCount = 1;
+			info.pSignalSemaphores = &m_SmpMgr.Get(submitInfo.SignalSmpIdx);
+		}
+		else {
+			info.signalSemaphoreCount = 0;
+			info.pSignalSemaphores = nullptr;
+		}
+		info.commandBufferCount = submitInfo.CmdCount;
+		info.pCommandBuffers = &m_CmdsToSubmit[submitInfo.CmdStartIdx];
+	}
+	vkQueueSubmit(m_ContextPtr->GraphicsQueue.Handle, m_SubmitInfos.Size(), infos.Data(), VK_NULL_HANDLE); // todo Insert a fence.
+	m_CmdsToSubmit.Clear();
+
+	vkFreeCommandBuffers(m_ContextPtr->Device, m_Pool, m_CmdsToFree.Size(), m_CmdsToFree.Data());
+	m_CmdsToFree.Clear();
 }
 
 

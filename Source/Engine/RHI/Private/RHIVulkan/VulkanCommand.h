@@ -4,23 +4,50 @@
 #include "Core/Public/TypeDefine.h"
 #include "Core/Public/TVector.h"
 
+class SemaphoreMgr {
+public:
+	SemaphoreMgr() = default;
+	~SemaphoreMgr();
+	void Initialize(VkDevice device, uint32 maxSize);
+	uint32 Allocate(); // return index of a semaphore in array
+	VkSemaphore Get(uint32 idx);
+	void Reset(); // reset allocates
+	void Clear(); // clear all semaphores
+private:
+	VkDevice m_Device {VK_NULL_HANDLE};
+	TVector<VkSemaphore> m_Semaphores;
+	uint32 m_CurIndex {0};
+};
+
 class VulkanCommandMgr {
 public:
 	explicit VulkanCommandMgr(const VulkanContext* context);
 	~VulkanCommandMgr();
 	VkCommandBuffer NewCmd();
-	// Add a command buffer to a list, will be submitted util call SubmitInternal.
-	void Submit(VkCommandBuffer handle);
-	// Add a command buffer to a list, will be freed after call SubmitInternal.
+	// Add a command buffer to a list, will be submitted util Update.
+	// a batch of Commands in a calling will run parallel, multi batch of commands will run in order of calling.
+	void SubmitGraphicsCommand(uint32 count, const VkCommandBuffer* handles);
+	void SubmitGraphicsCommand(VkCommandBuffer handle);
+	// Add a command buffer to a list, will be freed after Update.
 	void FreeCmd(VkCommandBuffer handle);
 private:
 	friend class RHIVulkan;
 	const VulkanContext* m_ContextPtr;
 	VkCommandPool m_Pool;
-	TVector<VkCommandBuffer> m_ToSubmit;
-	TVector<VkCommandBuffer> m_ToFree;
-	TVector<VkSemaphore> m_Semaphores;
-	void SubmitInternal();
+	SemaphoreMgr m_SmpMgr;
+	TVector<VkCommandBuffer> m_CmdsToFree;
+	TVector<VkCommandBuffer> m_CmdsToSubmit;
+
+	// record cmd commit info
+	struct SubmitInfo {
+		uint32 WaitSmpIdx;
+		uint32 SignalSmpIdx;
+		uint32 CmdStartIdx;
+		uint32 CmdCount;
+	};
+	TVector<SubmitInfo> m_SubmitInfos;
+
+	void Update();
 };
 
 class RHIVulkanCommandBuffer : public RHICommandBuffer {

@@ -35,6 +35,10 @@ public:
 
 	void PushBack(const T& ele) { Base::push_back(ele); }
 
+	void PushBack(uint32 count, const T* pEle) {
+		Base::insert(Base::end(), count, pEle);
+	}
+
 	template<typename ...Args>
 	T& EmplaceBack(Args&&...args) { return Base::emplace_back(std::forward<Args>(args)...); }
 
