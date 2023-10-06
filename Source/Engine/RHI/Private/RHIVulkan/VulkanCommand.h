@@ -10,7 +10,7 @@ public:
 	~SemaphoreMgr();
 	void Initialize(VkDevice device, uint32 maxSize);
 	uint32 Allocate(); // return index of a semaphore in array
-	VkSemaphore Get(uint32 idx);
+	VkSemaphore& Get(uint32 idx);
 	void Reset(); // reset allocates
 	void Clear(); // clear all semaphores
 private:
