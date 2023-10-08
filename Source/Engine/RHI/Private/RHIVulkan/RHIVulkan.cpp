@@ -117,9 +117,6 @@ void RHIVulkan::ImmediateSubmit(const CommandBufferFunc& func) {
 	vkQueueWaitIdle(m_Context.GraphicsQueue.Handle);
 }
 
-void RHIVulkan::SubmitCommandBuffer(const RHICommandBuffer* cmd, RHIFence* fence, RHISwapChain* swapChain) {
-}
-
 int RHIVulkan::QueueSubmitPresent(RHICommandBuffer* cmd, uint8 frameIndex, RHIFence* fence) {
 	// submit command buffer
 	//VkSemaphore semaphores[2] = { m_ImageAvaliableForTextureCopySemaphores[m_CurrentFrame], m_PresentationFinishSemaphores[m_CurrentFrame] };
@@ -263,7 +260,7 @@ RHICommandBuffer* RHIVulkan::CreateCommandBuffer() {
 	return new RHIVulkanCommandBuffer(handle, m_CmdMgr.get());
 }
 
-void RHIVulkan::SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds) {
+void RHIVulkan::SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence) {
 	TempArray<VkCommandBuffer> vkHandles(cmds.Size());
 	for(uint32 i=0; i<cmds.Size(); ++i) {
 		vkHandles[i] = dynamic_cast<RHIVulkanCommandBuffer*>(cmds[i])->GetHandle();

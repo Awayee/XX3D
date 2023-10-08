@@ -26,8 +26,8 @@ public:
 	VkCommandBuffer NewCmd();
 	// Add a command buffer to a list, will be submitted util Update.
 	// a batch of Commands in a calling will run parallel, multi batch of commands will run in order of calling.
-	void SubmitGraphicsCommand(uint32 count, const VkCommandBuffer* handles);
-	void SubmitGraphicsCommand(VkCommandBuffer handle);
+	void SubmitGraphicsCommand(uint32 count, const VkCommandBuffer* handles, VkFence fence);
+	void SubmitGraphicsCommand(VkCommandBuffer handle, VkFence fence);
 	// Add a command buffer to a list, will be freed after Update.
 	void FreeCmd(VkCommandBuffer handle);
 private:
