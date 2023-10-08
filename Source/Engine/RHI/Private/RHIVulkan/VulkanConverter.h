@@ -28,3 +28,4 @@ inline VkBlendOp ToVkBlendOp(EBlendOption op);
 inline VkPipelineColorBlendAttachmentState ToAttachmentBlendState(const RHIBlendState& blendState);
 inline VkAttachmentLoadOp ToVkAttachmentLoadOp(ERTLoadOp op);
 inline VkAttachmentStoreOp ToVkAttachmentStoreOp(ERTStoreOp op);
+inline VkImageLayout ToImageLayout(EResourceState state);

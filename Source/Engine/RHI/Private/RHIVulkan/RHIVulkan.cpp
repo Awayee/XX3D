@@ -1,5 +1,4 @@
 #include "RHIVulkan.h"
-#include "VulkanUtil.h"
 #include "VulkanConverter.h"
 #include "VulkanBuilder.h"
 #include "Math/Public/MathBase.h"
@@ -55,21 +54,8 @@ RHIVulkan::~RHIVulkan() {
 	m_MemMgr.reset();
 	m_SwapChain.reset();
 	vkDestroyCommandPool(GetDevice(), m_RHICommandPool, nullptr);
-	VulkanDSMgr::Release();
 	ContextBuilder initializer(m_Context);
 	initializer.Release();
-}
-
-RSVkImGuiInitInfo RHIVulkan::GetImGuiInitInfo() {
-	RSVkImGuiInitInfo info;
-	info.windowHandle = m_Context.WindowHandle;
-	info.instance = m_Context.Instance;
-	info.device = m_Context.Device;
-	info.physicalDevice = m_Context.PhysicalDevice;
-	info.queueIndex = m_Context.GraphicsQueue.FamilyIndex;
-	info.queue = m_Context.GraphicsQueue.Handle;
-	info.descriptorPool = m_DescriptorPool;
-	return info;
 }
 
 RHISwapChain* RHIVulkan::GetSwapChain() {
@@ -99,177 +85,6 @@ RHIVulkan* RHIVulkan::InstanceVulkan() {
 	return dynamic_cast<RHIVulkan*>(Instance());
 }
 
-RRenderPass* RHIVulkan::CreateRenderPass(TConstArrayView<RSAttachment> attachments, TConstArrayView<RSubPassInfo> subpasses, TConstArrayView<RSubpassDependency> dependencies) {
-	uint32 i;
-	TempArray<VkAttachmentDescription> attachmentsVk(attachments.Size());
-	for(i=0; i<attachments.Size(); ++i) {
-		attachmentsVk[i] = ResolveAttachmentDesc(attachments[i]);
-	}
-
-	TempArray<VkSubpassDescription> subpassesVk(subpasses.Size());
-	TempArray<TVector<VkAttachmentReference>> inputAttachments(subpasses.Size());
-	TempArray<TVector<VkAttachmentReference>> colorAttachments(subpasses.Size());
-	TempArray<VkAttachmentReference> depthAttachments(subpasses.Size());
-
-	for(i=0; i< subpasses.Size(); ++i) {
-		subpassesVk[i].flags = 0;
-		subpassesVk[i].pipelineBindPoint = (VkPipelineBindPoint)subpasses[i].Type;
-		uint32 j;
-		for (j = 0; j < subpasses[i].InputAttachments.Size(); ++j) {
-			inputAttachments[i].PushBack({ subpasses[i].InputAttachments[j].Index, ToVkImageLayout(subpasses[i].InputAttachments[j].Layout)});
-		}
-		subpassesVk[i].inputAttachmentCount = inputAttachments[i].Size();
-		subpassesVk[i].pInputAttachments = inputAttachments[i].Data();
-		for (j = 0; j < subpasses[i].ColorAttachments.Size(); ++j) {
-			colorAttachments[i].PushBack({ subpasses[i].ColorAttachments[j].Index, ToVkImageLayout(subpasses[i].ColorAttachments[j].Layout)});
-		}
-		subpassesVk[i].colorAttachmentCount = colorAttachments[i].Size();
-		subpassesVk[i].pColorAttachments = colorAttachments[i].Data();
-		if(IMAGE_LAYOUT_UNDEFINED != subpasses[i].DepthStencilAttachment.Layout) {
-			depthAttachments[i] = { subpasses[i].DepthStencilAttachment.Index, ToVkImageLayout(subpasses[i].DepthStencilAttachment.Layout)};
-			subpassesVk[i].pDepthStencilAttachment = &depthAttachments[i];
-		}
-		else {
-			subpassesVk[i].pDepthStencilAttachment = VK_NULL_HANDLE;
-		}
-		// empty resolve
-		subpassesVk[i].preserveAttachmentCount = 0;
-		subpassesVk[i].pPreserveAttachments = nullptr;
-		subpassesVk[i].pResolveAttachments = nullptr;
-	}
-
-	TempArray<VkSubpassDependency> dependenciesVk(dependencies.Size());
-	for(i=0; i<dependencies.Size();++i) {
-		dependenciesVk[i] = ResolveSubpassDependency(dependencies[i]);
-	}
-
-	VkRenderPassCreateInfo info{ VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr };
-	info.attachmentCount = attachments.Size();
-	info.pAttachments = attachmentsVk.Data();
-	info.subpassCount = subpasses.Size();
-	info.pSubpasses= subpassesVk.Data();
-	info.dependencyCount = dependencies.Size();
-	info.pDependencies = dependenciesVk.Data();
-	VkRenderPass handle;
-	if(VK_SUCCESS!=vkCreateRenderPass(GetDevice(), &info, nullptr, &handle)){
-		return nullptr;
-	}
-	RRenderPassVk* pass = new RRenderPassVk;
-	pass->handle = handle;
-	pass->m_Clears.Resize(attachments.Size());
-	for(i=0; i< pass->m_Clears.Size(); ++i) {
-		pass->m_Clears[i] = ResolveClearValue(attachments[i].Clear);
-	}
-	return pass;
-}
-
-RRenderPass* RHIVulkan::CreateRenderPass(TConstArrayView<RSAttachment> colorAttachments, const RSAttachment* depthAttachment) {
-	uint32 i;
-	uint32 attachmentCount = colorAttachments.Size() + (nullptr != depthAttachment);
-	TempArray<VkAttachmentDescription> attachmentsVk(attachmentCount);
-	TempArray<VkAttachmentReference> colorAttachmentRef(colorAttachments.Size());
-	for (i = 0; i < colorAttachments.Size(); ++i) {
-		attachmentsVk[i] = ResolveAttachmentDesc(colorAttachments[i]);
-		colorAttachmentRef[i] = { i, ToVkImageLayout(colorAttachments[i].FinalLayout) };
-	}
-	VkAttachmentReference depthAttachmentRef;
-	if(nullptr != depthAttachment) {
-		depthAttachmentRef.attachment = colorAttachments.Size();
-		depthAttachmentRef.layout = ToVkImageLayout(depthAttachment->FinalLayout);
-		attachmentsVk[colorAttachments.Size()] = ResolveAttachmentDesc(*depthAttachment);
-	}
-	VkSubpassDescription subpass;
-	subpass.flags = 0;
-	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpass.inputAttachmentCount = 0;
-	subpass.pInputAttachments = nullptr;
-	subpass.colorAttachmentCount = colorAttachments.Size();
-	subpass.pColorAttachments = colorAttachmentRef.Data();
-	subpass.pResolveAttachments = nullptr;
-	subpass.preserveAttachmentCount = 0;
-	subpass.pPreserveAttachments = nullptr;
-	subpass.pDepthStencilAttachment = (nullptr != depthAttachment) ? &depthAttachmentRef : nullptr;
-
-	VkSubpassDependency dependency{};
-	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-	dependency.dstSubpass = 0;
-	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-	dependency.srcAccessMask = 0;
-	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-	VkRenderPassCreateInfo info{ VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr };
-	info.attachmentCount = attachmentCount;
-	info.pAttachments = attachmentsVk.Data();
-	info.subpassCount = 1;
-	info.pSubpasses = &subpass;
-	info.dependencyCount = 1;
-	info.pDependencies = &dependency;
-
-	VkRenderPass handle;
-	if (VK_SUCCESS != vkCreateRenderPass(GetDevice(), &info, nullptr, &handle)) {
-		return nullptr;
-	}
-	RRenderPassVk* pass = new RRenderPassVk;
-	pass->handle = handle;
-	return static_cast<RRenderPass*>(pass);
-
-}
-
-void RHIVulkan::DestroyRenderPass(RRenderPass* pass) {
-	RRenderPassVk* vkPass = static_cast<RRenderPassVk*>(pass);
-	vkDestroyRenderPass(GetDevice(), vkPass->handle, nullptr);
-	delete vkPass;
-}
-RDescriptorSetLayout* RHIVulkan::CreateDescriptorSetLayout(TConstArrayView<RSDescriptorSetLayoutBinding> bindings) {
-	VkDescriptorSetLayoutCreateInfo info{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-	info.pNext = nullptr;
-	info.flags = 0;
-	info.bindingCount = bindings.Size();
-	TempArray<VkDescriptorSetLayoutBinding> bindingsVk(bindings.Size());
-	for(uint32 i=0; i< bindings.Size(); ++i) {
-		bindingsVk[i].binding = i;
-		bindingsVk[i].descriptorType = (VkDescriptorType)bindings[i].descriptorType;
-		bindingsVk[i].descriptorCount = bindings[i].descriptorCount;
-		bindingsVk[i].stageFlags = (VkShaderStageFlags)bindings[i].stageFlags;
-		bindingsVk[i].pImmutableSamplers = nullptr;
-	}
-	info.pBindings = bindingsVk.Data();
-	VkDescriptorSetLayout handle;
-	if(VK_SUCCESS != vkCreateDescriptorSetLayout(GetDevice(), &info, nullptr, &handle)) {
-		return nullptr;
-	}
-	RDescriptorSetLayoutVk* descriptorSetLayout = new RDescriptorSetLayoutVk;
-	descriptorSetLayout->handle = handle;
-	return descriptorSetLayout;
-
-}
-
-void RHIVulkan::DestroyDescriptorSetLayout(RDescriptorSetLayout* descriptorSetLayout) {
-	vkDestroyDescriptorSetLayout(GetDevice(), ((RDescriptorSetLayoutVk*)descriptorSetLayout)->handle, nullptr);
-}
-
-RDescriptorSet* RHIVulkan::AllocateDescriptorSet(const RDescriptorSetLayout* layout) {
-	VkDescriptorSetAllocateInfo info{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-	info.pNext = nullptr;
-	info.descriptorPool = m_DescriptorPool;
-	info.descriptorSetCount = 1;
-	info.pSetLayouts = &((RDescriptorSetLayoutVk*)layout)->handle;
-	VkDescriptorSet handle;
-	if (VK_SUCCESS != vkAllocateDescriptorSets(GetDevice(), &info, &handle)) {
-		return nullptr;
-	}
-	RDescriptorSetVk* descriptorSet = new RDescriptorSetVk;
-	descriptorSet->handle = handle;
-	return descriptorSet;
-}
-
-void RHIVulkan::FreeDescriptorSet(RDescriptorSet* descriptorSet) {
-	RDescriptorSetVk* descirptorSetVk = (RDescriptorSetVk*)descriptorSet;
-	vkFreeDescriptorSets(GetDevice(), m_DescriptorPool, 1, &descirptorSetVk->handle);
-	delete descirptorSetVk;
-}
-
 void RHIVulkan::ImmediateSubmit(const CommandBufferFunc& func) {
 	// allocate
 	VkCommandBufferAllocateInfo allocateInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
@@ -279,7 +94,7 @@ void RHIVulkan::ImmediateSubmit(const CommandBufferFunc& func) {
 	allocateInfo.commandBufferCount = 1;
 	VkCommandBuffer cmd;
 	VK_CHECK(vkAllocateCommandBuffers(GetDevice(), &allocateInfo, &cmd), "Failed to allocate command buffers!");
-	RHIVulkanCommandBuffer rhiCmd(cmd, allocateInfo.commandPool);
+	RHIVulkanCommandBuffer rhiCmd(cmd, m_CmdMgr.get());
 
 	// begin
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
@@ -446,4 +261,12 @@ RHICommandBuffer* RHIVulkan::CreateCommandBuffer() {
 		return nullptr;
 	}
 	return new RHIVulkanCommandBuffer(handle, m_CmdMgr.get());
+}
+
+void RHIVulkan::SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds) {
+	TempArray<VkCommandBuffer> vkHandles(cmds.Size());
+	for(uint32 i=0; i<cmds.Size(); ++i) {
+		vkHandles[i] = dynamic_cast<RHIVulkanCommandBuffer*>(cmds[i])->GetHandle();
+	}
+	m_CmdMgr->SubmitGraphicsCommand(cmds.Size(), vkHandles.Data());
 }

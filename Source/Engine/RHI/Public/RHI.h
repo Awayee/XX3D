@@ -10,8 +10,6 @@ public:
 	virtual ~RHICommandBuffer() {}
 	virtual void BeginRenderPass(RHIRenderPass* pass) = 0;
 	virtual void EndRenderPass() = 0;
-	virtual void CopyBufferToTexture(RHIBuffer* buffer, RHITexture* texture, uint32 mipLevel, uint32 baseLayer, uint32 layerCount) = 0;
-	virtual void CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RHITextureCopyRegion& region) = 0;
 	virtual void BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) = 0;
 	virtual void BindComputePipeline(RHIComputePipelineState* pipeline) = 0;
 	virtual void BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) = 0;
@@ -20,7 +18,10 @@ public:
 	virtual void DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance) = 0;
 	virtual void Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ) = 0;
 	virtual void ClearColorAttachment(const float* color, const IRect& rect) = 0;
+	virtual void CopyBufferToTexture(RHIBuffer* buffer, RHITexture* texture, uint32 mipLevel, uint32 baseLayer, uint32 layerCount) = 0;
+	virtual void CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RHITextureCopyRegion& region) = 0;
 	virtual void CopyBufferToBuffer(RHIBuffer* srcBuffer, RHIBuffer* dstBuffer, uint64 srcOffset, uint64 dstOffset, uint64 size) = 0;
+	virtual void TextureBarrier(RHITexture* texture, RHITextureSubDesc subDesc, EResourceState stateBefore, EResourceState stateAfter) = 0;
 	virtual void GenerateMipmap(RHITexture* texture, uint32 levelCount, uint32 baseLayer, uint32 layerCount) = 0;
 
 	virtual void BeginDebugLabel(const char* msg, const float* color) = 0;
@@ -58,7 +59,6 @@ public:
 	virtual RHISwapChain* GetSwapChain() = 0;
 
 	// cmd
-	virtual void SubmitCommandBuffer(const RHICommandBuffer* cmd, RHIFence* fence, RHISwapChain* swapChain) = 0;
 	virtual void ImmediateSubmit(const CommandBufferFunc& func) = 0;
 	virtual int QueueSubmitPresent(RHICommandBuffer* cmd, uint8 frameIndex, RHIFence* fence) = 0; // return -1 if out of date
 
@@ -72,7 +72,7 @@ public:
 	virtual RHIRenderPass* CreateRenderPass(const RHIRenderPassDesc& desc) = 0;
 
 	virtual RHICommandBuffer* CreateCommandBuffer() = 0;
-	virtual RHICommandBuffer* SubmitCommandBuffer(const RHICommandBuffer* cmd, RHIFence* fence) = 0;
+	virtual void SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence) = 0;
 
 	RHI() = default;
 	RHI(const RHI&) = delete;

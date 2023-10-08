@@ -1,5 +1,5 @@
 #include "VulkanConverter.h"
-#include "RHIVKResources.h"
+#include "VulkanResources.h"
 
 VkFormat ToVkFormat(ERHIFormat f) {
 	static VkFormat s_FormatMap[(uint32)ERHIFormat::FORMAT_MAX_ENUM] = {
@@ -381,7 +381,7 @@ inline VkBlendFactor ToBlendFactor(EBlendFactor factor) {
 	return VK_BLEND_FACTOR_MAX_ENUM;
 }
 
-VkPipelineColorBlendAttachmentState ToAttachmentBlendState(const RHIBlendState& blendState) {
+inline VkPipelineColorBlendAttachmentState ToAttachmentBlendState(const RHIBlendState& blendState) {
 	VkPipelineColorBlendAttachmentState state;
 	state.blendEnable = blendState.Enable;
 	state.srcColorBlendFactor = ToBlendFactor(blendState.ColorSrc);
@@ -394,7 +394,7 @@ VkPipelineColorBlendAttachmentState ToAttachmentBlendState(const RHIBlendState& 
 	return state;
 }
 
-VkAttachmentLoadOp ToVkAttachmentLoadOp(ERTLoadOp op) {
+inline VkAttachmentLoadOp ToVkAttachmentLoadOp(ERTLoadOp op) {
 	switch(op) {
 	case ERTLoadOp::EClear: return VK_ATTACHMENT_LOAD_OP_CLEAR;
 	case ERTLoadOp::ELoad: return VK_ATTACHMENT_LOAD_OP_LOAD;
@@ -403,7 +403,7 @@ VkAttachmentLoadOp ToVkAttachmentLoadOp(ERTLoadOp op) {
 	return VK_ATTACHMENT_LOAD_OP_MAX_ENUM;
 }
 
-VkAttachmentStoreOp ToVkAttachmentStoreOp(ERTStoreOp op) {
+inline VkAttachmentStoreOp ToVkAttachmentStoreOp(ERTStoreOp op) {
 	switch(op) {
 	case ERTStoreOp::EStore:
 		return VK_ATTACHMENT_STORE_OP_STORE;
@@ -411,4 +411,24 @@ VkAttachmentStoreOp ToVkAttachmentStoreOp(ERTStoreOp op) {
 		return VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	}
 	return VK_ATTACHMENT_STORE_OP_MAX_ENUM;
+}
+
+inline VkImageLayout ToImageLayout(EResourceState state) {
+	switch(state) {
+	case EResourceState::RenderTarget:
+		return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	case EResourceState::DepthStencil:
+		return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	case EResourceState::ShaderResourceView:
+		return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	case EResourceState::UnorderedAccessView:
+		return VK_IMAGE_LAYOUT_GENERAL;
+	case EResourceState::TransferSrc:
+		return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+	case EResourceState::TransferDst:
+		return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	case EResourceState::Present:
+		return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	}
+	return VK_IMAGE_LAYOUT_UNDEFINED;
 }

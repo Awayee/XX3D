@@ -44,6 +44,7 @@ private:
 		uint32 SignalSmpIdx;
 		uint32 CmdStartIdx;
 		uint32 CmdCount;
+		VkFence Fence;
 	};
 	TVector<SubmitInfo> m_SubmitInfos;
 
@@ -54,12 +55,9 @@ class RHIVulkanCommandBuffer : public RHICommandBuffer {
 public:
 	RHIVulkanCommandBuffer(VkCommandBuffer handle, VulkanCommandMgr* mgr);
 	~RHIVulkanCommandBuffer() override;
+	XX_NODISCARD VkCommandBuffer GetHandle() const { return m_Handle; }
 	void BeginRenderPass(RHIRenderPass* pass) override;
 	void EndRenderPass() override;
-	void CopyBufferToBuffer(RHIBuffer* srcBuffer, RHIBuffer* dstBuffer, uint64 srcOffset, uint64 dstOffset, uint64 size) override;
-	void CopyBufferToTexture(RHIBuffer* buffer, RHITexture* texture, uint32 mipLevel, uint32 baseLayer, uint32 layerCount) override;
-	void CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RHITextureCopyRegion& region) override;
-	void GenerateMipmap(RHITexture* texture, uint32 levelCount, uint32 baseLayer, uint32 layerCount) override;
 	void BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) override;
 	void BindComputePipeline(RHIComputePipelineState* pipeline) override;
 	void BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) override;
@@ -68,6 +66,11 @@ public:
 	void DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance) override;
 	void Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ) override;
 	void ClearColorAttachment(const float* color, const IRect& rect) override;
+	void CopyBufferToBuffer(RHIBuffer* srcBuffer, RHIBuffer* dstBuffer, uint64 srcOffset, uint64 dstOffset, uint64 size) override;
+	void CopyBufferToTexture(RHIBuffer* buffer, RHITexture* texture, uint32 mipLevel, uint32 baseLayer, uint32 layerCount) override;
+	void CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RHITextureCopyRegion& region) override;
+	void TextureBarrier(RHITexture* texture, RHITextureSubDesc subDesc, EResourceState stateBefore, EResourceState stateAfter) override;
+	void GenerateMipmap(RHITexture* texture, uint32 levelCount, uint32 baseLayer, uint32 layerCount) override;
 
 	void BeginDebugLabel(const char* msg, const float* color) override;
 	void EndDebugLabel() override;

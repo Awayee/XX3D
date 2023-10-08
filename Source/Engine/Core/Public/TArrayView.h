@@ -28,6 +28,7 @@ class TArrayView {
 private:
 	T* m_Data;
 	const SizeType m_Size;
+public:
 	TArrayView() : m_Data(nullptr), m_Size(0) {}
 	TArrayView(T* data, const SizeType size): m_Data(data), m_Size(size){}
 	TArrayView(TVector<T>& vec): m_Data(vec.m_Data), m_Size(vec.m_Size()){}

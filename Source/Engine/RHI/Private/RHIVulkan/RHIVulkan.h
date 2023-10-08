@@ -3,7 +3,7 @@
 #include "Core/Public/Container.h"
 #include "Core/Public/TPtr.h"
 #include "VulkanCommon.h"
-#include "RHIVKResources.h"
+#include "VulkanResources.h"
 #include "VulkanMemory.h"
 #include "VulkanCommand.h"
 #include "VulkanDesc.h"
@@ -15,25 +15,10 @@ public:
 	~RHIVulkan()override;
 	static RHIVulkan* InstanceVulkan();
 	static VkDevice GetDevice();
-
-	RSVkImGuiInitInfo GetImGuiInitInfo();
 	RHISwapChain* GetSwapChain() override;
 	ERHIFormat GetDepthFormat() override;
-	RRenderPass* CreateRenderPass(TConstArrayView<RSAttachment> attachments, TConstArrayView<RSubPassInfo> subpasses, TConstArrayView<RSubpassDependency> dependencies) override;
-	RRenderPass* CreateRenderPass(TConstArrayView<RSAttachment> colorAttachments, const RSAttachment* depthAttachment) override;
-
-	void DestroyRenderPass(RRenderPass* pass) override;
-
-	// descriptor set
-	RDescriptorSetLayout* CreateDescriptorSetLayout(TConstArrayView<RSDescriptorSetLayoutBinding> bindings) override;
-	void DestroyDescriptorSetLayout(RDescriptorSetLayout* descriptorSetLayout) override;
-	RDescriptorSet* AllocateDescriptorSet(const RDescriptorSetLayout* layout) override;
-	//void AllocateDescriptorSets(uint32 count, const RDescriptorSetLayout* const* layouts, RDescriptorSet* const* descriptorSets)override;
-	//void FreeDescriptorSets(uint32 count, RDescriptorSet** descriptorSets) override;
-	void FreeDescriptorSet(RDescriptorSet* descriptorSet) override;
 
 	void ImmediateSubmit(const CommandBufferFunc& func) override;
-	void SubmitCommandBuffer(const RHICommandBuffer* cmd, RHIFence* fence, RHISwapChain* swapChain) override;
 	int QueueSubmitPresent(RHICommandBuffer* cmd, uint8 frameIndex, RHIFence* fence) override;
 
 	RHIBuffer* CreateBuffer(const RHIBufferDesc& desc) override;
@@ -45,8 +30,8 @@ public:
 	RHIComputePipelineState* CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) override;
 	RHIRenderPass* CreateRenderPass(const RHIRenderPassDesc& desc) override;
 	RHICommandBuffer* CreateCommandBuffer()override;
+	void SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence) override;
 private:
-	uint8 m_MaxFramesInFlight{ 3 };
 	VulkanContext m_Context;
 	TUniquePtr<VulkanMemMgr> m_MemMgr;
 	TUniquePtr<RHIVulkanSwapChain> m_SwapChain;

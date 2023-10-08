@@ -1,8 +1,151 @@
 #include "VulkanCommand.h"
-#include "RHIVKResources.h"
+#include "VulkanResources.h"
 #include "VulkanConverter.h"
-#include "VulkanUtil.h"
 #include "Core/Public/TempArray.h"
+
+namespace {
+	void GetPipelineBarrierStage(VkImageLayout oldLayout, VkImageLayout newLayout, VkAccessFlags& srcAccessMask, VkAccessFlags& dstAccessMask, VkPipelineStageFlags& srcStage, VkPipelineStageFlags& dstStage) {
+		if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+			srcAccessMask = 0;
+			dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+			dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		}
+		else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+			srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+			dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		}
+		// for getGuidAndDepthOfMouseClickOnRenderSceneForUI() get depthimage
+		else if (oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
+			srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+			srcStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+			dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		}
+		else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+			srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+			dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+			dstStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+		}
+		// for generating mipmapped image
+		else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
+			srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+			srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+			dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		}
+		else
+		{
+			ERROR("unsupported layout transition!");
+		}
+	}
+
+
+	void GenerateMipMap(VkCommandBuffer cmd, VkImage image, uint32 levelCount, uint32 width, uint32 height, VkImageAspectFlags aspect, uint32 baseLayer, uint32 layerCount) {
+		for (uint32 i = 1; i < levelCount; i++)
+		{
+			VkImageBlit imageBlit{};
+			imageBlit.srcSubresource.aspectMask = aspect;
+			imageBlit.srcSubresource.baseArrayLayer = baseLayer;
+			imageBlit.srcSubresource.layerCount = layerCount;
+			imageBlit.srcSubresource.mipLevel = i - 1;
+			imageBlit.srcOffsets[1].x = std::max((int32_t)(width >> (i - 1)), 1);
+			imageBlit.srcOffsets[1].y = std::max((int32_t)(height >> (i - 1)), 1);
+			imageBlit.srcOffsets[1].z = 1;
+
+			imageBlit.dstSubresource.aspectMask = aspect;
+			imageBlit.dstSubresource.layerCount = layerCount;
+			imageBlit.dstSubresource.mipLevel = i;
+			imageBlit.dstOffsets[1].x = std::max((int32_t)(width >> i), 1);
+			imageBlit.dstOffsets[1].y = std::max((int32_t)(height >> i), 1);
+			imageBlit.dstOffsets[1].z = 1;
+
+			VkImageSubresourceRange mipSubRange{};
+			mipSubRange.aspectMask = aspect;
+			mipSubRange.baseMipLevel = i;
+			mipSubRange.levelCount = 1;
+			mipSubRange.layerCount = layerCount;
+
+			VkImageMemoryBarrier barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+			barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			barrier.srcAccessMask = 0;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.image = image;
+			barrier.subresourceRange = mipSubRange;
+
+			vkCmdPipelineBarrier(cmd,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				0,
+				0,
+				nullptr,
+				0,
+				nullptr,
+				1,
+				&barrier);
+
+			vkCmdBlitImage(cmd,
+				image,
+				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				image,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				1,
+				&imageBlit,
+				VK_FILTER_LINEAR);
+
+			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+			vkCmdPipelineBarrier(cmd,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				0,
+				0,
+				nullptr,
+				0,
+				nullptr,
+				1,
+				&barrier);
+		}
+
+		VkImageSubresourceRange mipSubRange{};
+		mipSubRange.aspectMask = aspect;
+		mipSubRange.baseMipLevel = 0;
+		mipSubRange.levelCount = levelCount;
+		mipSubRange.baseArrayLayer = baseLayer;
+		mipSubRange.layerCount = layerCount;
+
+		VkImageMemoryBarrier barrier{};
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.image = image;
+		barrier.subresourceRange = mipSubRange;
+
+		vkCmdPipelineBarrier(cmd,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			0,
+			0,
+			nullptr,
+			0,
+			nullptr,
+			1,
+			&barrier);
+	}
+}
 
 SemaphoreMgr::~SemaphoreMgr() {
 	Clear();
@@ -67,7 +210,7 @@ void VulkanCommandMgr::FreeCmd(VkCommandBuffer handle) {
 	m_CmdsToFree.PushBack(handle);
 }
 
-void VulkanCommandMgr::SubmitGraphicsCommand(uint32 count, const VkCommandBuffer* handles) {
+void VulkanCommandMgr::SubmitGraphicsCommand(uint32 count, const VkCommandBuffer* handles, VkFence fence) {
 	// create a submit info
 	uint32 preSmpIdx;
 	if(m_SubmitInfos.Empty()) {
@@ -83,44 +226,56 @@ void VulkanCommandMgr::SubmitGraphicsCommand(uint32 count, const VkCommandBuffer
 	submitInfo.CmdCount = count;
 	submitInfo.WaitSmpIdx = preSmpIdx;
 	submitInfo.SignalSmpIdx = INVALID_IDX;
+	submitInfo.Fence = fence;
 	m_CmdsToSubmit.PushBack(count, handles);
 }
 
-void VulkanCommandMgr::SubmitGraphicsCommand(VkCommandBuffer cmd) {
-	SubmitGraphicsCommand(1, &cmd);
+void VulkanCommandMgr::SubmitGraphicsCommand(VkCommandBuffer cmd, VkFence fence) {
+	SubmitGraphicsCommand(1, &cmd, fence);
 }
 
 void VulkanCommandMgr::Update() {
 	TempArray<VkSubmitInfo> infos(m_SubmitInfos.Size());
+	uint32 submitIdx = 0;
+	VkFence tempFence = VK_NULL_HANDLE;
 	for (uint32 i = 0; i < m_SubmitInfos.Size(); ++i) {
 		const SubmitInfo& submitInfo = m_SubmitInfos[i];
-		VkSubmitInfo& info = infos[i];
-		info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		info.pNext = nullptr;
+		if(0 == i) {
+			tempFence = submitInfo.Fence;
+		}
+		// check whether fence is same, or submit
+		if(tempFence != submitInfo.Fence) {
+			vkQueueSubmit(m_ContextPtr->GraphicsQueue.Handle, submitIdx, infos.Data(), tempFence);
+			submitIdx = 0;
+			tempFence = submitInfo.Fence;
+		}
+		VkSubmitInfo& vkSubmitInfo = infos[submitIdx++];
+		vkSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		vkSubmitInfo.pNext = nullptr;
 		// wait smp
 		if(INVALID_IDX != submitInfo.WaitSmpIdx) {
-			info.waitSemaphoreCount = 1;
-			info.pWaitSemaphores = &m_SmpMgr.Get(submitInfo.WaitSmpIdx);
+			vkSubmitInfo.waitSemaphoreCount = 1;
+			vkSubmitInfo.pWaitSemaphores = &m_SmpMgr.Get(submitInfo.WaitSmpIdx);
 		}
 		else {
-			info.waitSemaphoreCount = 0;
-			info.pWaitSemaphores = nullptr;
+			vkSubmitInfo.waitSemaphoreCount = 0;
+			vkSubmitInfo.pWaitSemaphores = nullptr;
 		}
 
 		// signal smp
 		if(INVALID_IDX != submitInfo.SignalSmpIdx) {
-			info.signalSemaphoreCount = 1;
-			info.pSignalSemaphores = &m_SmpMgr.Get(submitInfo.SignalSmpIdx);
+			vkSubmitInfo.signalSemaphoreCount = 1;
+			vkSubmitInfo.pSignalSemaphores = &m_SmpMgr.Get(submitInfo.SignalSmpIdx);
 		}
 		else {
-			info.signalSemaphoreCount = 0;
-			info.pSignalSemaphores = nullptr;
+			vkSubmitInfo.signalSemaphoreCount = 0;
+			vkSubmitInfo.pSignalSemaphores = nullptr;
 		}
-		info.commandBufferCount = submitInfo.CmdCount;
-		info.pCommandBuffers = &m_CmdsToSubmit[submitInfo.CmdStartIdx];
+		vkSubmitInfo.commandBufferCount = submitInfo.CmdCount;
+		vkSubmitInfo.pCommandBuffers = &m_CmdsToSubmit[submitInfo.CmdStartIdx];
 	}
-	vkQueueSubmit(m_ContextPtr->GraphicsQueue.Handle, m_SubmitInfos.Size(), infos.Data(), VK_NULL_HANDLE); // todo Insert a fence.
-	m_CmdsToSubmit.Clear();
+	// the last batch
+	vkQueueSubmit(m_ContextPtr->GraphicsQueue.Handle, submitIdx, infos.Data(), tempFence);
 
 	vkFreeCommandBuffers(m_ContextPtr->Device, m_Pool, m_CmdsToFree.Size(), m_CmdsToFree.Data());
 	m_CmdsToFree.Clear();
@@ -172,71 +327,6 @@ void RHIVulkanCommandBuffer::EndRenderPass() {
 	vkCmdEndRenderPass(m_Handle);
 }
 
-void RHIVulkanCommandBuffer::CopyBufferToBuffer(RHIBuffer* srcBuffer, RHIBuffer* dstBuffer, uint64 srcOffset, uint64 dstOffset, uint64 size) {
-	VkBufferCopy copy{ srcOffset, dstOffset, size };
-	vkCmdCopyBuffer(m_Handle, dynamic_cast<RHIVkBuffer*>(srcBuffer)->GetBuffer(), dynamic_cast<RHIVkBuffer*>(dstBuffer)->GetBuffer(), 1, &copy);
-}
-
-void RHIVulkanCommandBuffer::CopyBufferToTexture(RHIBuffer* buffer, RHITexture* texture, uint32 mipLevel, uint32 baseLayer, uint32 layerCount) {
-	RHIVkTexture* vkTex = dynamic_cast<RHIVkTexture*>(texture);
-	VkBufferImageCopy region;
-	region.bufferOffset = 0;
-	region.bufferRowLength = 0;
-	region.bufferImageHeight = 0;
-	region.imageSubresource.aspectMask = ToImageAspectFlags(texture->GetDesc().Flags);
-	region.imageSubresource.mipLevel = mipLevel;
-	region.imageSubresource.baseArrayLayer = 0;
-	region.imageSubresource.layerCount = layerCount;
-	region.imageOffset = { 0, 0, 0 };
-	const USize3D size = vkTex->GetDesc().Size;
-	region.imageExtent = { size.w, size.h, size.d };
-	vkCmdCopyBufferToImage(m_Handle, ((RHIVkBuffer*)buffer)->GetBuffer(), vkTex->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-}
-
-void RHIVulkanCommandBuffer::CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RHITextureCopyRegion& region)
-{
-	VkImageAspectFlags srcAsp = ToImageAspectFlags(srcTex->GetDesc().Flags);
-	VkImageAspectFlags dstAsp = ToImageAspectFlags(dstTex->GetDesc().Flags);
-	ASSERT(srcAsp == dstAsp, "");
-	VkImageBlit blit{};
-	blit.srcSubresource.aspectMask = srcAsp;
-	blit.srcSubresource.baseArrayLayer = region.srcBaseLayer;
-	blit.srcSubresource.layerCount = region.srcLayerCount;
-	memcpy(blit.srcOffsets, region.srcOffsets, sizeof(VkOffset3D) * 2);
-	blit.dstSubresource.aspectMask = dstAsp;
-	blit.dstSubresource.baseArrayLayer = region.dstBaseLayer;
-	blit.dstSubresource.layerCount = region.dstLayerCount;
-	memcpy(blit.dstOffsets, region.dstOffsets, sizeof(VkOffset3D) * 2);
-	vkCmdBlitImage(m_Handle, ((RHIVkTexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, ((RHIVkTexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
-}
-
-void RHIVulkanCommandBuffer::TransitionTextureLayout(RHITexture* texture, RImageLayout oldLayout, RImageLayout newLayout, uint32 baseMipLevel, uint32 levelCount, uint32 baseLayer, uint32 layerCount, EImageAspectFlags aspect) {
-	RHIVkTexture* vkTex = dynamic_cast<RHIVkTexture*>(texture);
-	VkImageMemoryBarrier barrier{};
-	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	barrier.oldLayout = (VkImageLayout)oldLayout;
-	barrier.newLayout = (VkImageLayout)newLayout;
-	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.image = vkTex->GetImage();
-	barrier.subresourceRange.aspectMask = aspect;
-	barrier.subresourceRange.baseMipLevel = baseMipLevel;
-	barrier.subresourceRange.levelCount = levelCount;
-	barrier.subresourceRange.baseArrayLayer = baseLayer;
-	barrier.subresourceRange.layerCount = layerCount;
-	VkPipelineStageFlags srcStage;
-	VkPipelineStageFlags dstStage;
-	GetPipelineBarrierStage(barrier.oldLayout, barrier.newLayout, barrier.srcAccessMask, barrier.dstAccessMask, srcStage, dstStage);
-	vkCmdPipelineBarrier(m_Handle, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-}
-
-void RHIVulkanCommandBuffer::GenerateMipmap(RHITexture* texture, uint32 levelCount, uint32 baseLayer, uint32 layerCount) {
-	RHIVkTexture* vkTex = dynamic_cast<RHIVkTexture*>(texture);
-	USize3D size = vkTex->GetDesc().Size;
-	const VkImageAspectFlags aspect = ToImageAspectFlags(vkTex->GetDesc().Flags);
-	GenerateMipMap(m_Handle, vkTex->GetImage(), levelCount, size.w, size.h, aspect, baseLayer, layerCount);
-}
-
 void RHIVulkanCommandBuffer::BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) {
 	RHIVulkanGraphicsPipelineState* vkPipeline = dynamic_cast<RHIVulkanGraphicsPipelineState*>(pipeline);
 	vkCmdBindPipeline(m_Handle, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipeline->GetPipelineHandle(m_CurrentPass, m_SubPass));
@@ -283,6 +373,71 @@ void RHIVulkanCommandBuffer::ClearColorAttachment(const float* color, const IRec
 	clearRect.baseArrayLayer = 0;
 	clearRect.layerCount = 1;
 	vkCmdClearAttachments(m_Handle, 1, &clearAttachment, 1, &clearRect);
+}
+
+void RHIVulkanCommandBuffer::CopyBufferToBuffer(RHIBuffer* srcBuffer, RHIBuffer* dstBuffer, uint64 srcOffset, uint64 dstOffset, uint64 size) {
+	VkBufferCopy copy{ srcOffset, dstOffset, size };
+	vkCmdCopyBuffer(m_Handle, dynamic_cast<RHIVkBuffer*>(srcBuffer)->GetBuffer(), dynamic_cast<RHIVkBuffer*>(dstBuffer)->GetBuffer(), 1, &copy);
+}
+
+void RHIVulkanCommandBuffer::CopyBufferToTexture(RHIBuffer* buffer, RHITexture* texture, uint32 mipLevel, uint32 baseLayer, uint32 layerCount) {
+	RHIVkTexture* vkTex = dynamic_cast<RHIVkTexture*>(texture);
+	VkBufferImageCopy region;
+	region.bufferOffset = 0;
+	region.bufferRowLength = 0;
+	region.bufferImageHeight = 0;
+	region.imageSubresource.aspectMask = ToImageAspectFlags(texture->GetDesc().Flags);
+	region.imageSubresource.mipLevel = mipLevel;
+	region.imageSubresource.baseArrayLayer = 0;
+	region.imageSubresource.layerCount = layerCount;
+	region.imageOffset = { 0, 0, 0 };
+	const USize3D size = vkTex->GetDesc().Size;
+	region.imageExtent = { size.w, size.h, size.d };
+	vkCmdCopyBufferToImage(m_Handle, ((RHIVkBuffer*)buffer)->GetBuffer(), vkTex->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+}
+
+void RHIVulkanCommandBuffer::CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RHITextureCopyRegion& region)
+{
+	VkImageAspectFlags srcAsp = ToImageAspectFlags(srcTex->GetDesc().Flags);
+	VkImageAspectFlags dstAsp = ToImageAspectFlags(dstTex->GetDesc().Flags);
+	ASSERT(srcAsp == dstAsp, "");
+	VkImageBlit blit{};
+	blit.srcSubresource.aspectMask = srcAsp;
+	blit.srcSubresource.baseArrayLayer = region.srcBaseLayer;
+	blit.srcSubresource.layerCount = region.srcLayerCount;
+	memcpy(blit.srcOffsets, region.srcOffsets, sizeof(VkOffset3D) * 2);
+	blit.dstSubresource.aspectMask = dstAsp;
+	blit.dstSubresource.baseArrayLayer = region.dstBaseLayer;
+	blit.dstSubresource.layerCount = region.dstLayerCount;
+	memcpy(blit.dstOffsets, region.dstOffsets, sizeof(VkOffset3D) * 2);
+	vkCmdBlitImage(m_Handle, ((RHIVkTexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, ((RHIVkTexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
+}
+
+void RHIVulkanCommandBuffer::TextureBarrier(RHITexture* texture, RHITextureSubDesc subDesc, EResourceState stateBefore, EResourceState stateAfter) {
+	RHIVkTexture* vkTex = dynamic_cast<RHIVkTexture*>(texture);
+	VkImageMemoryBarrier barrier{};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.oldLayout = ToImageLayout(stateBefore);
+	barrier.newLayout = ToImageLayout(stateAfter);
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.image = vkTex->GetImage();
+	barrier.subresourceRange.aspectMask = ToImageAspectFlags(vkTex->GetDesc().Flags);
+	barrier.subresourceRange.baseMipLevel = subDesc.BaseMip;
+	barrier.subresourceRange.levelCount = subDesc.NumMips;
+	barrier.subresourceRange.baseArrayLayer = subDesc.BaseLayer;
+	barrier.subresourceRange.layerCount = subDesc.NumLayers;
+	VkPipelineStageFlags srcStage;
+	VkPipelineStageFlags dstStage;
+	GetPipelineBarrierStage(barrier.oldLayout, barrier.newLayout, barrier.srcAccessMask, barrier.dstAccessMask, srcStage, dstStage);
+	vkCmdPipelineBarrier(m_Handle, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+}
+
+void RHIVulkanCommandBuffer::GenerateMipmap(RHITexture* texture, uint32 levelCount, uint32 baseLayer, uint32 layerCount) {
+	RHIVkTexture* vkTex = dynamic_cast<RHIVkTexture*>(texture);
+	USize3D size = vkTex->GetDesc().Size;
+	const VkImageAspectFlags aspect = ToImageAspectFlags(vkTex->GetDesc().Flags);
+	GenerateMipMap(m_Handle, vkTex->GetImage(), levelCount, size.w, size.h, aspect, baseLayer, layerCount);
 }
 
 void RHIVulkanCommandBuffer::BeginDebugLabel(const char* msg, const float* color) {

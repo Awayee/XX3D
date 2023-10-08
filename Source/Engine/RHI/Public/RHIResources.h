@@ -51,6 +51,13 @@ struct RHITextureDesc {
 	uint8 Samples;
 };
 
+struct RHITextureSubDesc {
+	uint8 BaseMip;
+	uint8 NumMips;
+	uint8 BaseLayer;
+	uint8 NumLayers;
+};
+
 class RHITexture: public RHIResource {
 protected:
 	RHITextureDesc m_Desc;
