@@ -2,7 +2,7 @@
 #include "VulkanConverter.h"
 #include "VulkanBuilder.h"
 #include "Math/Public/MathBase.h"
-#include "VulkanDesc.h"
+#include "VulkanDescriptorSet.h"
 
 #define RETURN_RHI_PTR(cls, hd)\
 cls##Vk* cls##Ptr = new cls##Vk;\
@@ -231,9 +231,11 @@ RHIFence* RHIVulkan::CreateFence(bool sig) {
 	info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	info.pNext = nullptr;
 	info.flags = sig ? VK_FENCE_CREATE_SIGNALED_BIT : 0; // the fence is initialized as signaled
-	RHIVkFence* fenceVk = new RHIVkFence;
-	vkCreateFence(GetDevice(), &info, nullptr, &fenceVk->m_Handle);
-	return static_cast<RHIFence*>(fenceVk);
+	VkFence fence;
+	if(VK_SUCCESS == vkCreateFence(GetDevice(), &info, nullptr, &fence)) {
+		return new RHIVkFence(fence);
+	}
+	return nullptr;
 }
 
 RHIShader* RHIVulkan::CreateShader(EShaderStageFlagBit type, const char* codeData, size_t codeSize, const char* entryFunc) {
@@ -252,6 +254,14 @@ RHIRenderPass* RHIVulkan::CreateRenderPass(const RHIRenderPassDesc& desc) {
 	return new RHIVulkanRenderPass(desc);
 }
 
+RHIShaderParameterSet* RHIVulkan::CreateShaderParameterSet(const RHIShaderParemeterLayout& layout) {
+	DescriptorSetHandle handle = m_DSMgr->AllocateDS(layout);
+	if(handle.IsValid()) {
+		return new RHIVulkanShaderParameterSet(m_DSMgr.get(), handle);
+	}
+	return nullptr;
+}
+
 RHICommandBuffer* RHIVulkan::CreateCommandBuffer() {
 	VkCommandBuffer handle = m_CmdMgr->NewCmd();
 	if(VK_NULL_HANDLE == handle) {
@@ -262,8 +272,9 @@ RHICommandBuffer* RHIVulkan::CreateCommandBuffer() {
 
 void RHIVulkan::SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence) {
 	TempArray<VkCommandBuffer> vkHandles(cmds.Size());
+	RHIVkFence* vkFence = dynamic_cast<RHIVkFence*>(fence);
 	for(uint32 i=0; i<cmds.Size(); ++i) {
 		vkHandles[i] = dynamic_cast<RHIVulkanCommandBuffer*>(cmds[i])->GetHandle();
 	}
-	m_CmdMgr->SubmitGraphicsCommand(cmds.Size(), vkHandles.Data());
+	m_CmdMgr->SubmitGraphicsCommand(cmds.Size(), vkHandles.Data(), vkFence->GetFence());
 }

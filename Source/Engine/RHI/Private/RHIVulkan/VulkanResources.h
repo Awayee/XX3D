@@ -83,14 +83,15 @@ public:
 
 class RHIVkFence : public RHIFence {
 public:
+	explicit RHIVkFence(VkFence fence);
 	~RHIVkFence() override;
 	void Wait() override;
 	void Reset() override;
 	void SetName(const char* name) override;
+	VkFence GetFence() const { return m_Handle; }
 private:
-	friend RHIVulkan;
 	static constexpr uint32 WAIT_MAX = 0xffff;
-	VkFence m_Handle;
+	VkFence m_Handle{VK_NULL_HANDLE};
 };
 
 class RHIVulkanShader: public RHIShader {
@@ -150,13 +151,4 @@ private:
 	VkFramebuffer m_Framebuffer;
 	void DestroyHandle();
 	void CreateHandle(const VulkanLayoutMgr& layoutMgr);
-};
-
-class RHIVulkanShaderParameterSet: public RHIShaderParameterSet {
-public:
-	explicit RHIVulkanShaderParameterSet(const RHIShaderBindingLayout& layout);
-	~RHIVulkanShaderParameterSet() override;
-	void SetUniformBuffer(uint32 binding, RHIBuffer* buffer) override;
-	void SetSampler(uint32 binding, RHISampler* sampler) override;
-	void SetTexture(uint32 binding, RHITexture* image) override;
 };

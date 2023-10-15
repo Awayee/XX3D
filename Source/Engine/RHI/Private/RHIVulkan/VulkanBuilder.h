@@ -9,7 +9,7 @@ public:
 		ENABLE_DEBUG=1,
 		INTEGRATED_GPU=2,//Discrete GPU is default, use integrated GPU if this flag is enabled
 	};
-	uint32 Flags;
+	uint32 Flags {0};
 	XXString AppName{};
 	void* WindowHandle;
 	TVector<char const*> ValidationLayers{ "VK_LAYER_KHRONOS_validation" };

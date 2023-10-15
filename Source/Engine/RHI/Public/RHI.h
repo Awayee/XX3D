@@ -21,7 +21,7 @@ public:
 	virtual void CopyBufferToTexture(RHIBuffer* buffer, RHITexture* texture, uint32 mipLevel, uint32 baseLayer, uint32 layerCount) = 0;
 	virtual void CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RHITextureCopyRegion& region) = 0;
 	virtual void CopyBufferToBuffer(RHIBuffer* srcBuffer, RHIBuffer* dstBuffer, uint64 srcOffset, uint64 dstOffset, uint64 size) = 0;
-	virtual void TextureBarrier(RHITexture* texture, RHITextureSubDesc subDesc, EResourceState stateBefore, EResourceState stateAfter) = 0;
+	virtual void ResourceBarrier(RHITexture* texture, RHITextureSubDesc subDesc, EResourceState stateBefore, EResourceState stateAfter) = 0;
 	virtual void GenerateMipmap(RHITexture* texture, uint32 levelCount, uint32 baseLayer, uint32 layerCount) = 0;
 
 	virtual void BeginDebugLabel(const char* msg, const float* color) = 0;
@@ -70,6 +70,7 @@ public:
 	virtual RHIGraphicsPipelineState* CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) = 0;
 	virtual RHIComputePipelineState* CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) = 0;
 	virtual RHIRenderPass* CreateRenderPass(const RHIRenderPassDesc& desc) = 0;
+	virtual RHIShaderParameterSet* CreateShaderParameterSet(const RHIShaderParemeterLayout& layout) = 0;
 
 	virtual RHICommandBuffer* CreateCommandBuffer() = 0;
 	virtual void SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence) = 0;

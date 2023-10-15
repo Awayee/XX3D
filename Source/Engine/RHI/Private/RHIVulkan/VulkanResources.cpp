@@ -1,7 +1,8 @@
 #include "VulkanResources.h"
 #include "RHIVulkan.h"
 #include "VulkanBuilder.h"
-#include "VulkanDesc.h"
+#include "VulkanConverter.h"
+#include "VulkanDescriptorSet.h"
 #define VK_SET_OBJECT_NAME(type, handle, name) do{\
 VkDebugUtilsObjectNameInfoEXT info{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, nullptr, type, reinterpret_cast<uint64>(handle), name};\
 vkSetDebugUtilsObjectNameEXT(RHIVulkan::GetDevice(), &info);\
@@ -88,6 +89,9 @@ RHIVkSampler::~RHIVkSampler() {
 
 void RHIVkSampler::SetName(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_SAMPLER, m_Sampler, name);
+}
+
+RHIVkFence::RHIVkFence(VkFence fence): m_Handle(fence) {
 }
 
 
@@ -414,10 +418,4 @@ void RHIVulkanRenderPass::CreateHandle(const VulkanLayoutMgr& layoutMgr) {
 	framebufferInfo.height = m_Desc.RenderSize.h;
 	framebufferInfo.layers = 1;//TODO multi sampling
 	vkCreateFramebuffer(RHIVulkan::GetDevice(), &framebufferInfo, nullptr, &m_Framebuffer);
-}
-
-RHIVulkanShaderParameterSet::RHIVulkanShaderParameterSet(const RHIShaderBindingLayout& layout) {
-	VkDescriptorSetLayout layoutHandle = VulkanDSMgr::Instance()->GetLayoutHandle(layout);
-	VkDevice device = RHIVulkan::GetDevice();
-	VkDescriptorSetAllocateInfo info{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr };
 }

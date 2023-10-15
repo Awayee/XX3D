@@ -205,8 +205,8 @@ struct RHIShaderBinding {
 	EBindingType Type;
 	EShaderStageFlags StageFlags;
 };
-typedef TVector<RHIShaderBinding> RHIShaderBindingLayout;
-typedef TVector<RHIShaderBindingLayout> RHIPipelineLayout;
+typedef TVector<RHIShaderBinding> RHIShaderParemeterLayout;
+typedef TVector<RHIShaderParemeterLayout> RHIPipelineLayout;
 
 // pso
 struct RHIGraphicsPipelineStateDesc {
@@ -258,6 +258,8 @@ class RHIShaderParameterSet {
 public:
 	virtual ~RHIShaderParameterSet() = 0;
 	virtual void SetUniformBuffer(uint32 binding, RHIBuffer* buffer) = 0;
+	virtual void SetStorageBuffer(uint32 binding, RHIBuffer* buffer) = 0;
+	virtual void SetUnorderedAccessView(uint32 binding, RHITexture* buffer) = 0;
 	virtual void SetTexture(uint32 binding, RHITexture* image) = 0;
 	virtual void SetSampler(uint32 binding, RHISampler* sampler) = 0;
 };

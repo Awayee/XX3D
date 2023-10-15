@@ -6,7 +6,7 @@
 #include "VulkanResources.h"
 #include "VulkanMemory.h"
 #include "VulkanCommand.h"
-#include "VulkanDesc.h"
+#include "VulkanDescriptorSet.h"
 
 class RHIVulkan final: public RHI {
 public:
@@ -29,6 +29,7 @@ public:
 	RHIGraphicsPipelineState* CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) override;
 	RHIComputePipelineState* CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) override;
 	RHIRenderPass* CreateRenderPass(const RHIRenderPassDesc& desc) override;
+	RHIShaderParameterSet* CreateShaderParameterSet(const RHIShaderParemeterLayout& layout) override;
 	RHICommandBuffer* CreateCommandBuffer()override;
 	void SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence) override;
 private:
