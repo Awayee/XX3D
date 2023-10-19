@@ -3,7 +3,7 @@
 
 namespace Engine {
 
-	bool ALevelAsset::Load(File::Read& in) {
+	bool ALevelAsset::Load(File::RFile& in) {
 		Json::Document doc;
 		if (!Json::ReadFile(in, doc)) {
 			return false;
@@ -32,7 +32,7 @@ namespace Engine {
 		return true;
 	}
 
-	bool ALevelAsset::Save(File::Write& out) {
+	bool ALevelAsset::Save(File::WFile& out) {
 		Json::Document doc;
 		doc.SetObject();
 		// camera

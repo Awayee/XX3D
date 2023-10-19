@@ -1,12 +1,12 @@
 #pragma once
 #include "RHI/Public/RHI.h"
-#include "Core/Public/Container.h"
 #include "Core/Public/TPtr.h"
 #include "VulkanCommon.h"
 #include "VulkanResources.h"
 #include "VulkanMemory.h"
 #include "VulkanCommand.h"
 #include "VulkanDescriptorSet.h"
+#include "VulkanSwapchain.h"
 
 class RHIVulkan final: public RHI {
 public:
@@ -17,9 +17,6 @@ public:
 	static VkDevice GetDevice();
 	RHISwapChain* GetSwapChain() override;
 	ERHIFormat GetDepthFormat() override;
-
-	void ImmediateSubmit(const CommandBufferFunc& func) override;
-	int QueueSubmitPresent(RHICommandBuffer* cmd, uint8 frameIndex, RHIFence* fence) override;
 
 	RHIBuffer* CreateBuffer(const RHIBufferDesc& desc) override;
 	RHITexture* CreateTexture(const RHITextureDesc& desc) override;
@@ -32,10 +29,11 @@ public:
 	RHIShaderParameterSet* CreateShaderParameterSet(const RHIShaderParemeterLayout& layout) override;
 	RHICommandBuffer* CreateCommandBuffer()override;
 	void SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence) override;
+	void Present() override;
 private:
 	VulkanContext m_Context;
 	TUniquePtr<VulkanMemMgr> m_MemMgr;
-	TUniquePtr<RHIVulkanSwapChain> m_SwapChain;
+	TUniquePtr<VulkanSwapchain> m_SwapChain;
 	TUniquePtr<VulkanCommandMgr> m_CmdMgr;
 	TUniquePtr<VulkanDSMgr> m_DSMgr;
 	VkCommandPool m_RHICommandPool;

@@ -58,10 +58,6 @@ public:
 	virtual ERHIFormat GetDepthFormat() = 0;
 	virtual RHISwapChain* GetSwapChain() = 0;
 
-	// cmd
-	virtual void ImmediateSubmit(const CommandBufferFunc& func) = 0;
-	virtual int QueueSubmitPresent(RHICommandBuffer* cmd, uint8 frameIndex, RHIFence* fence) = 0; // return -1 if out of date
-
 	virtual RHIBuffer* CreateBuffer(const RHIBufferDesc& desc) = 0;
 	virtual RHITexture* CreateTexture(const RHITextureDesc& desc) = 0;
 	virtual RHISampler* CreateSampler(const RHISamplerDesc& desc) = 0;
@@ -74,6 +70,7 @@ public:
 
 	virtual RHICommandBuffer* CreateCommandBuffer() = 0;
 	virtual void SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence) = 0;
+	virtual void Present() = 0;
 
 	RHI() = default;
 	RHI(const RHI&) = delete;

@@ -28,7 +28,7 @@ namespace Engine {
 		}
 	};
 
-	bool AMeshAsset::Load(File::Read& in) {
+	bool AMeshAsset::Load(File::RFile& in) {
 		Json::Document doc;
 		if (!Json::ReadFile(in, doc)) {
 			return false;
@@ -55,7 +55,7 @@ namespace Engine {
 		return true;
 	}
 
-	bool AMeshAsset::Save(File::Write& out) {
+	bool AMeshAsset::Save(File::WFile& out) {
 		Json::Document doc;
 		doc.SetObject();
 
@@ -78,7 +78,7 @@ namespace Engine {
 	}
 	bool AMeshAsset::LoadPrimitiveFile(const char* file, TVector<FVertex>& vertices, TVector<IndexType>& indices) {
 		PARSE_PROJECT_ASSET(file);
-		File::Read f(file, std::ios::binary);
+		File::RFile f(file, std::ios::binary);
 		if (!f.is_open()) {
 			PRINT("Failed to open file: %s", file);
 			return false;
@@ -136,7 +136,7 @@ namespace Engine {
 		}
 
 		PARSE_PROJECT_ASSET(file);
-		File::Write f(file, std::ios::binary | std::ios::out);
+		File::WFile f(file, std::ios::binary | std::ios::out);
 		if (!f.is_open()) {
 			PRINT("Failed to open file: %s", file);
 			return false;

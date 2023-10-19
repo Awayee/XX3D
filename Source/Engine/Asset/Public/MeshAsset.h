@@ -31,10 +31,10 @@ namespace Engine {
 		AMeshAsset() = default;
 
 		//load with primitive binaries
-		bool Load(File::Read& in) override;
+		bool Load(File::RFile& in) override;
 
 		//save without primitives
-		bool Save(File::Write& out) override;
+		bool Save(File::WFile& out) override;
 
 		//load a packed primitive file
 		static bool LoadPrimitiveFile(const char* file, TVector<FVertex>& vertices, TVector<IndexType>& indices);

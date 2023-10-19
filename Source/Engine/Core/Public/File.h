@@ -3,12 +3,11 @@
 #include <filesystem>
 #include <functional>
 #include "TVector.h"
-#include "String.h"
 
 namespace File {
-	typedef std::ofstream Write;
-	typedef std::ifstream Read;
-	typedef std::fstream  FStream;
+	typedef std::ofstream WFile;
+	typedef std::ifstream RFile;
+	typedef std::fstream  RWFile;
 	typedef std::filesystem::path FPath;
 	typedef std::filesystem::directory_entry FPathEntry;
 	typedef std::filesystem::directory_iterator FPathIterator;

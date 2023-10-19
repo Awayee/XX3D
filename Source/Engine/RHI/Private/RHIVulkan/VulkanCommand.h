@@ -24,14 +24,17 @@ public:
 	explicit VulkanCommandMgr(const VulkanContext* context);
 	~VulkanCommandMgr();
 	VkCommandBuffer NewCmd();
-	// Add a command buffer to a list, will be submitted util Update.
+	// Add a command buffer to a list, will be submitted util Submit is called.
 	// a batch of Commands in a calling will run parallel, multi batch of commands will run in order of calling.
-	void SubmitGraphicsCommand(uint32 count, const VkCommandBuffer* handles, VkFence fence);
-	void SubmitGraphicsCommand(VkCommandBuffer handle, VkFence fence);
+	void AddGraphicsSubmit(uint32 count, const VkCommandBuffer* cmds, VkFence fence);
+	void AddGraphicsSubmit(VkCommandBuffer cmd, VkFence fence);
 	// Add a command buffer to a list, will be freed after Update.
 	void FreeCmd(VkCommandBuffer handle);
+	// Get semaphores signaled by the last submitted cmds;
+	void GetLastSignalSmps(TVector<VkSemaphore>& smps);
+	// submit cmds every frame
+	void Submit();
 private:
-	friend class RHIVulkan;
 	const VulkanContext* m_ContextPtr;
 	VkCommandPool m_Pool;
 	SemaphoreMgr m_SmpMgr;
@@ -41,14 +44,13 @@ private:
 	// record cmd commit info
 	struct SubmitInfo {
 		uint32 WaitSmpIdx;
+		// a cmd mast have signal semaphore
 		uint32 SignalSmpIdx;
 		uint32 CmdStartIdx;
 		uint32 CmdCount;
 		VkFence Fence;
 	};
 	TVector<SubmitInfo> m_SubmitInfos;
-
-	void Update();
 };
 
 class RHIVulkanCommandBuffer : public RHICommandBuffer {

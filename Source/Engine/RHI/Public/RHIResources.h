@@ -16,7 +16,6 @@ public:
 class RHISwapChain {
 public:
 	virtual ~RHISwapChain() = default;
-	virtual bool Present() = 0;//submit last frame & prepare current frame
 	virtual void Resize(USize2D size) = 0;
 	virtual USize2D GetExtent() = 0;
 };
@@ -47,7 +46,7 @@ struct RHITextureDesc {
 	USize3D Size;
 	uint16 Depth;
 	uint16 ArraySize;
-	uint8  NumMips;
+	uint8 NumMips;
 	uint8 Samples;
 };
 
@@ -259,7 +258,6 @@ public:
 	virtual ~RHIShaderParameterSet() = 0;
 	virtual void SetUniformBuffer(uint32 binding, RHIBuffer* buffer) = 0;
 	virtual void SetStorageBuffer(uint32 binding, RHIBuffer* buffer) = 0;
-	virtual void SetUnorderedAccessView(uint32 binding, RHITexture* buffer) = 0;
 	virtual void SetTexture(uint32 binding, RHITexture* image) = 0;
 	virtual void SetSampler(uint32 binding, RHISampler* sampler) = 0;
 };

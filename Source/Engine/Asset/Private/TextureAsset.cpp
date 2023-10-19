@@ -12,7 +12,7 @@ namespace Engine {
 
 	const ETexCompressMode COMPRESS_MODE = ETexCompressMode::LZ4;
 
-	bool ATextureAsset::Load(File::Read& in) {
+	bool ATextureAsset::Load(File::RFile& in) {
 		in.seekg(0);
 		in.read(BYTE_PTR(&Width), sizeof(uint32));
 		in.read(BYTE_PTR(&Height), sizeof(uint32));
@@ -39,7 +39,7 @@ namespace Engine {
 
 		return true;
 	}
-	bool ATextureAsset::Save(File::Write& out) {
+	bool ATextureAsset::Save(File::WFile& out) {
 		ETexCompressMode compressMode = COMPRESS_MODE;
 
 		out.write(CBYTE_PTR(&Width), sizeof(uint32));

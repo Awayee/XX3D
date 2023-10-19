@@ -2,9 +2,11 @@
 #include <prettywriter.h>
 #include "Core/Public/Defines.h"
 #include "Core/Public/Json.h"
+#include "Core/Public/String.h"
+
 namespace Json {
 	bool ReadFile(const char* file, Document& doc) {
-		File::Read in(file, std::ios::binary);
+		File::RFile in(file, std::ios::binary);
 		if(!in.is_open()) {
 			return false;
 		}
@@ -13,13 +15,13 @@ namespace Json {
 		return ok;
 	}
 
-	bool ReadFile( File::Read& in, Document& doc) {
+	bool ReadFile( File::RFile& in, Document& doc) {
 		const XXString content{ std::istream_iterator<char>(in), std::istream_iterator<char>() };
 		return !doc.Parse(content.c_str()).HasParseError();
 	}
 
 	bool WriteFile(const char* file, const Document& doc, bool pretty) {
-		File::Write out;
+		File::WFile out;
 		out.open(file, std::ios::out);
 
 		if (!out.good()) {
@@ -32,7 +34,7 @@ namespace Json {
 
 	}
 
-	bool WriteFile(File::Write& out, const Document& doc, bool pretty) {
+	bool WriteFile(File::WFile& out, const Document& doc, bool pretty) {
 		rapidjson::StringBuffer buffer;
 		if (pretty) {
 			rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);

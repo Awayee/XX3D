@@ -23,6 +23,10 @@ inline XXString ToString(T val) {
 	return std::to_string(val);
 }
 
+inline void StrCopy(char* dst, const char* src) {
+	std::strcpy(dst, src);
+}
+
 inline void StrAppend(char* str0, const char* str1) {
 	std::strcat(str0, str1);
 }

@@ -210,7 +210,13 @@ void VulkanCommandMgr::FreeCmd(VkCommandBuffer handle) {
 	m_CmdsToFree.PushBack(handle);
 }
 
-void VulkanCommandMgr::SubmitGraphicsCommand(uint32 count, const VkCommandBuffer* handles, VkFence fence) {
+void VulkanCommandMgr::GetLastSignalSmps(TVector<VkSemaphore>& smps) {
+	SubmitInfo& info = m_SubmitInfos.Back();
+	VkSemaphore smp = m_SmpMgr.Get(info.SignalSmpIdx);
+	smps.PushBack(smp);
+}
+
+void VulkanCommandMgr::AddGraphicsSubmit(uint32 count, const VkCommandBuffer* cmds, VkFence fence) {
 	// create a submit info
 	uint32 preSmpIdx;
 	if(m_SubmitInfos.Empty()) {
@@ -218,23 +224,22 @@ void VulkanCommandMgr::SubmitGraphicsCommand(uint32 count, const VkCommandBuffer
 	}
 	else {
 		SubmitInfo& preInfo = m_SubmitInfos.Back();
-		preSmpIdx = m_SmpMgr.Allocate();
-		preInfo.SignalSmpIdx = preSmpIdx;
+		preSmpIdx = preInfo.SignalSmpIdx;
 	}
 	SubmitInfo& submitInfo = m_SubmitInfos.EmplaceBack();
 	submitInfo.CmdStartIdx = m_CmdsToSubmit.Size();
 	submitInfo.CmdCount = count;
 	submitInfo.WaitSmpIdx = preSmpIdx;
-	submitInfo.SignalSmpIdx = INVALID_IDX;
+	submitInfo.SignalSmpIdx = m_SmpMgr.Allocate();
 	submitInfo.Fence = fence;
-	m_CmdsToSubmit.PushBack(count, handles);
+	m_CmdsToSubmit.PushBack(count, cmds);
 }
 
-void VulkanCommandMgr::SubmitGraphicsCommand(VkCommandBuffer cmd, VkFence fence) {
-	SubmitGraphicsCommand(1, &cmd, fence);
+void VulkanCommandMgr::AddGraphicsSubmit(VkCommandBuffer cmd, VkFence fence) {
+	AddGraphicsSubmit(1, &cmd, fence);
 }
 
-void VulkanCommandMgr::Update() {
+void VulkanCommandMgr::Submit() {
 	TempArray<VkSubmitInfo> infos(m_SubmitInfos.Size());
 	uint32 submitIdx = 0;
 	VkFence tempFence = VK_NULL_HANDLE;
@@ -276,7 +281,9 @@ void VulkanCommandMgr::Update() {
 	}
 	// the last batch
 	vkQueueSubmit(m_ContextPtr->GraphicsQueue.Handle, submitIdx, infos.Data(), tempFence);
-
+	m_CmdsToSubmit.Clear();
+	m_SmpMgr.Reset();
+	// need to free
 	vkFreeCommandBuffers(m_ContextPtr->Device, m_Pool, m_CmdsToFree.Size(), m_CmdsToFree.Data());
 	m_CmdsToFree.Clear();
 }

@@ -2,38 +2,9 @@
 #include "RHI/Public/RHIResources.h"
 #include "VulkanMemory.h"
 #include "Core/Public/String.h"
+#include "Core/Public/TArrayView.h"
 
 class RHIVulkan;
-
-class RHIVulkanSwapChain : public RHISwapChain {
-public:
-	explicit RHIVulkanSwapChain(const VulkanContext* context);
-	~RHIVulkanSwapChain() override;
-	bool Present() override;
-	void Resize(USize2D size) override;
-	USize2D GetExtent() override;
-private:
-	enum : uint32 {
-		WAIT_MAX = 0xff,
-		MAX_FRAME_COUNT = 3,
-	};
-	const VulkanContext* m_ContextPtr;
-	uint32 m_Width;
-	uint32 m_Height;
-	VkSwapchainKHR m_Handle;
-	TVector<VkImage> m_Images;
-	TVector<VkImageView> m_Views;
-	uint8 m_CurFrame{ 0 };
-	bool m_Prepared = false;
-	struct FrameResource {
-		uint32 ImageIdx;
-		VkSemaphore ImageAvailableSmp{ VK_NULL_HANDLE };
-		VkSemaphore PreparePresentSmp{ VK_NULL_HANDLE };
-	};
-	TVector<FrameResource> m_FrameRes;
-	void CreateSwapChain();
-	void ClearSwapChain();
-};
 
 class RHIVkBuffer: public RHIBuffer {
 private:
@@ -41,11 +12,11 @@ private:
 	VkBuffer m_Buffer;
 	VulkanMem m_Mem;
 public:
-	using RHIBuffer::RHIBuffer;
+	RHIVkBuffer(const RHIBufferDesc& desc, VkBuffer buffer, VulkanMem&& mem);
 	~RHIVkBuffer()override;
 	void SetName(const char* name) override;
 	void UpdateData(const void* data, size_t byteSize) override;
-	VkBuffer GetBuffer() { return m_Buffer; }
+	VkBuffer GetBuffer() const { return m_Buffer; }
 };
 
 class RHIVkTexture: public RHITexture {
@@ -54,10 +25,10 @@ protected:
 	VkImage m_Image;
 	VkImageView m_View;
 public:
-	using RHITexture::RHITexture;
+	RHIVkTexture(const RHITextureDesc& desc, VkImage image, VkImageView view);
 	virtual ~RHIVkTexture() override;
-	VkImage GetImage() { return m_Image; }
-	VkImageView GetView() { return m_View; }
+	VkImage GetImage() const { return m_Image; }
+	VkImageView GetView() const { return m_View; }
 	void SetName(const char* name) override;
 };
 
@@ -66,7 +37,7 @@ private:
 	friend RHIVulkan;
 	VulkanMem m_Mem;
 public:
-	using RHIVkTexture::RHIVkTexture;
+	RHIVkTextureWithMem(const RHITextureDesc& desc, VkImage image, VkImageView view, VulkanMem&& memory);
 	~RHIVkTextureWithMem() override;
 };
 
@@ -75,7 +46,7 @@ private:
 	friend RHIVulkan;
 	VkSampler m_Sampler;
 public:
-	using RHISampler::RHISampler;
+	RHIVkSampler(const RHISamplerDesc& desc, VkSampler sampler);
 	~RHIVkSampler()override;
 	VkSampler GetSampler() { return m_Sampler; }
 	void SetName(const char* name) override;

@@ -1,13 +1,14 @@
-#include <memory>
-#include <string>
-#include <mutex>
 #include "Resource/Public/Config.h"
 #include "Core/Public/Defines.h"
 #include "Core/Public/Container.h"
 #include "Core/Public/TVector.h"
+#include "Core/Public/String.h"
+#include "Core/Public/TPtr.h"
+#include "Core/Public/Concurrency.h"
+#include "Core/Public/File.h"
 
 #define PARSE_CONFIG_FILE(f)\
-	char __s[128]; strcpy(__s, PROJECT_CONFIG); strcat(__s, f); f=__s
+	char __s[128]; StrCopy(__s, PROJECT_CONFIG); strcat(__s, f); f=__s
 
 
 #define ENGINE_CONFIG_FILE "EngineConfig.ini"
@@ -53,7 +54,7 @@ namespace Engine {
 	// lod .ini file
 
 	bool LoadIniFile(const char* file, TUnorderedMap<XXString, XXString>& configMap) {
-		std::ifstream configFile(file);
+		File::RFile configFile(file);
 		if (!configFile.is_open()) {
 			PRINT("Failed to load file: %s", file);
 			return false;
@@ -64,7 +65,7 @@ namespace Engine {
 			if (fileLine.empty() || fileLine[0] == '#') {
 				continue;
 			}
-			uint32 separate = fileLine.find_first_of('=');
+			const size_t separate = fileLine.find_first_of('=');
 			if (separate > 0 && separate < fileLine.length() - 1) {
 				XXString name = fileLine.substr(0, separate);
 				XXString value = fileLine.substr(separate + 1, fileLine.length() - separate - 1);
@@ -91,10 +92,10 @@ namespace Engine {
 	}
 
 	const ConfigData& GetConfig() {
-		static std::unique_ptr<ConfigManager> s_ConfigManager;
-		static std::mutex s_ConfigManagerMutex;
+		static TUniquePtr<ConfigManager> s_ConfigManager;
+		static Mutex s_ConfigManagerMutex;
 		if (nullptr == s_ConfigManager) {
-			std::lock_guard<std::mutex> lock(s_ConfigManagerMutex);
+			MutexLock lock(s_ConfigManagerMutex);
 			if (nullptr == s_ConfigManager) {
 				const char* configFile = ENGINE_CONFIG_FILE;
 				PARSE_CONFIG_FILE(configFile);

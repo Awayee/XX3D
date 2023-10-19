@@ -1,7 +1,6 @@
 #pragma once
 #include "VulkanCommon.h"
 #include "Core/Public/Container.h"
-#include "Core/Public/TSingleton.h"
 #include "RHI/Public/RHIResources.h"
 
 // a descriptor set handle, with pool
@@ -21,8 +20,8 @@ public:
 	DescriptorSetHandle AllocateDS(const RHIShaderParemeterLayout& layout);
 	void FreeDS(DescriptorSetHandle handle);
 	VkDevice GetDevice() const { return m_Device; }
+	void Update();
 private:
-	friend TSingleton<VulkanDSMgr>;
 	VkDevice m_Device;
 	TUnorderedMap<size_t, VkDescriptorSetLayout> m_LayoutMap;
 	TVector<VkDescriptorPool> m_Pools;
@@ -36,7 +35,6 @@ public:
 	~RHIVulkanShaderParameterSet() override;
 	void SetUniformBuffer(uint32 binding, RHIBuffer* buffer) override;
 	void SetStorageBuffer(uint32 binding, RHIBuffer* buffer) override;
-	void SetUnorderedAccessView(uint32 binding, RHITexture* texture) override;
 	void SetTexture(uint32 binding, RHITexture* texture) override;
 	void SetSampler(uint32 binding, RHISampler* sampler) override;
 private:

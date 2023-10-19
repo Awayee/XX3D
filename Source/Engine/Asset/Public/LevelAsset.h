@@ -21,7 +21,7 @@ namespace Engine {
 			Math::FVector3 Up;
 			float Near, Far, Fov;
 		}CameraParam;
-		bool Load(File::Read& in) override;
-		bool Save(File::Write& out) override;
+		bool Load(File::RFile& in) override;
+		bool Save(File::WFile& out) override;
 	};
 }

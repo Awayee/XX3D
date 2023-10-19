@@ -48,6 +48,9 @@ void VulkanDSMgr::FreeDS(DescriptorSetHandle handle) {
 	vkFreeDescriptorSets(m_Device, handle.Pool, 1, &handle.Set);
 }
 
+void VulkanDSMgr::Update() {
+}
+
 VulkanDSMgr::VulkanDSMgr(VkDevice device): m_Device(device) {
 	AddPool();
 }
@@ -118,10 +121,6 @@ void RHIVulkanShaderParameterSet::SetStorageBuffer(uint32 binding, RHIBuffer* bu
 		nullptr
 	};
 	vkUpdateDescriptorSets(m_Mgr->GetDevice(), 1, &write, 0, nullptr);
-}
-
-void RHIVulkanShaderParameterSet::SetUnorderedAccessView(uint32 binding, RHITexture* texture) {
-	SetTexture(binding, texture);
 }
 
 void RHIVulkanShaderParameterSet::SetTexture(uint32 binding, RHITexture* texture) {

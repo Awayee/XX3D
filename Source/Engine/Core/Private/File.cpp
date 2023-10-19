@@ -5,7 +5,7 @@
 namespace File {
 
 	void LoadFileCode(const char* file, TVector<char>& code) {
-		std::ifstream f(file, std::ios::ate | std::ios::binary);
+		RFile f(file, std::ios::ate | std::ios::binary);
 		ASSERT(f.is_open(), "file load failed!");
 
 		uint32 fileSize = (uint32)f.tellg();

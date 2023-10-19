@@ -1,5 +1,4 @@
 #pragma once
-#include "Core/Public/TypeDefine.h"
 #include "VulkanCommon.h"
 
 enum class EMemoryType : uint8 {

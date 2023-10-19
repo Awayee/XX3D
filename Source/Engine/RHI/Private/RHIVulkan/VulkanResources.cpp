@@ -8,48 +8,8 @@ VkDebugUtilsObjectNameInfoEXT info{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INF
 vkSetDebugUtilsObjectNameEXT(RHIVulkan::GetDevice(), &info);\
 }while(0)
 
-RHIVulkanSwapChain::RHIVulkanSwapChain(const VulkanContext* context) : m_ContextPtr(context) {
-	ASSERT(m_ContextPtr, "");
-	CreateSwapChain();
-
-	// Create semaphores
-	m_FrameRes.Resize(MAX_FRAME_COUNT);
-	VkSemaphoreCreateInfo smpInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr };
-	for (FrameResource& res : m_FrameRes) {
-		vkCreateSemaphore(m_ContextPtr->Device, &smpInfo, nullptr, &res.ImageAvailableSmp);
-		vkCreateSemaphore(m_ContextPtr->Device, &smpInfo, nullptr, &res.PreparePresentSmp);
-	}
-}
-
-RHIVulkanSwapChain::~RHIVulkanSwapChain() {
-	ClearSwapChain();
-	for (FrameResource& res : m_FrameRes) {
-		vkDestroySemaphore(m_ContextPtr->Device, res.ImageAvailableSmp, nullptr);
-		vkDestroySemaphore(m_ContextPtr->Device, res.PreparePresentSmp, nullptr);
-	}
-}
-
-bool RHIVulkanSwapChain::Present() {
-	if (m_Prepared) {
-		VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr };
-		FrameResource& lastFrame = m_FrameRes[m_CurFrame];
-		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = &lastFrame.PreparePresentSmp;
-		presentInfo.swapchainCount = 1;
-		presentInfo.pSwapchains = &m_Handle;
-		presentInfo.pImageIndices = &m_FrameRes[m_CurFrame].ImageIdx;
-		vkQueuePresentKHR(m_ContextPtr->PresentQueue.Handle, &presentInfo);
-		m_CurFrame = (m_CurFrame + 1) % m_FrameRes.Size();
-		m_Prepared = false;
-	}
-	FrameResource& currentFrame = m_FrameRes[m_CurFrame];
-	VkResult res = vkAcquireNextImageKHR(m_ContextPtr->Device, m_Handle, WAIT_MAX, currentFrame.ImageAvailableSmp, VK_NULL_HANDLE, &currentFrame.ImageIdx);
-	if (VK_SUCCESS == res) {
-		m_Prepared = true;
-		return true;
-	}
-	return false;
-}
+RHIVkBuffer::RHIVkBuffer(const RHIBufferDesc& desc, VkBuffer buffer, VulkanMem&& mem):
+RHIBuffer(desc), m_Buffer(buffer), m_Mem(std::forward<VulkanMem>(mem)) {}
 
 RHIVkBuffer::~RHIVkBuffer() {
 	VkDevice device = RHIVulkan::GetDevice();
@@ -67,6 +27,9 @@ void RHIVkBuffer::UpdateData(const void* data, size_t byteSize) {
 	m_Mem.Unmap();
 }
 
+RHIVkTexture::RHIVkTexture(const RHITextureDesc& desc, VkImage image, VkImageView view): RHITexture(desc), m_Image(image), m_View(view) {
+}
+
 RHIVkTexture::~RHIVkTexture() {
 	VkDevice device = RHIVulkan::GetDevice();
 	vkDestroyImage(device, m_Image, nullptr);
@@ -78,9 +41,14 @@ void RHIVkTexture::SetName(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_IMAGE_VIEW, m_View, name);
 }
 
+RHIVkTextureWithMem::RHIVkTextureWithMem(const RHITextureDesc& desc, VkImage image, VkImageView view, VulkanMem&& memory):
+RHIVkTexture(desc, image, view), m_Mem(std::forward<VulkanMem>(memory)){}
+
 RHIVkTextureWithMem::~RHIVkTextureWithMem() {
 	m_Mem.Free();
 }
+
+RHIVkSampler::RHIVkSampler(const RHISamplerDesc& desc, VkSampler sampler): RHISampler(desc), m_Sampler(sampler){}
 
 RHIVkSampler::~RHIVkSampler() {
 	VkDevice device = RHIVulkan::GetDevice();
@@ -110,32 +78,6 @@ void RHIVkFence::Reset() {
 
 void RHIVkFence::SetName(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_FENCE, m_Handle, name);
-}
-
-void RHIVulkanSwapChain::Resize(USize2D size) {
-	ClearSwapChain();
-	CreateSwapChain();
-}
-
-USize2D RHIVulkanSwapChain::GetExtent() {
-	return { m_Width, m_Height };
-}
-
-void RHIVulkanSwapChain::CreateSwapChain() {
-	SwapChainBuilder initializer(m_Handle, m_Images, m_Views);
-	initializer.Extent = { m_Width, m_Height };
-	initializer.SetContext(*m_ContextPtr);
-	initializer.Build();
-}
-
-void RHIVulkanSwapChain::ClearSwapChain() {
-	VkDevice device = RHIVulkan::GetDevice();
-	vkDestroySwapchainKHR(device, m_Handle, nullptr);
-	for (VkImage image : m_Images) {
-		vkDestroyImage(device, image, nullptr);
-	}for (VkImageView view : m_Views) {
-		vkDestroyImageView(device, view, nullptr);
-	}
 }
 
 RHIVulkanShader::RHIVulkanShader(EShaderStageFlagBit type, const char* code, size_t codeSize, const char* funcName): RHIShader(type) {

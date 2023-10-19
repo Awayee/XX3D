@@ -10,8 +10,8 @@ namespace Engine {
 		TVector<uint8> Pixels;
 	public:
 		ATextureAsset() = default;
-		bool Load(File::Read& in) override;
-		bool Save(File::Write& out) override;
+		bool Load(File::RFile& in) override;
+		bool Save(File::WFile& out) override;
 		~ATextureAsset() override;
 	};
 	

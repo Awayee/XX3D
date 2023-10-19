@@ -53,7 +53,8 @@ RHIVulkan::~RHIVulkan() {
 	//vma
 	m_MemMgr.reset();
 	m_SwapChain.reset();
-	vkDestroyCommandPool(GetDevice(), m_RHICommandPool, nullptr);
+	m_CmdMgr.reset();
+	m_DSMgr.reset();
 	ContextBuilder initializer(m_Context);
 	initializer.Release();
 }
@@ -85,59 +86,6 @@ RHIVulkan* RHIVulkan::InstanceVulkan() {
 	return dynamic_cast<RHIVulkan*>(Instance());
 }
 
-void RHIVulkan::ImmediateSubmit(const CommandBufferFunc& func) {
-	// allocate
-	VkCommandBufferAllocateInfo allocateInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-	allocateInfo.pNext = nullptr;
-	allocateInfo.commandPool = m_RHICommandPool;
-	allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocateInfo.commandBufferCount = 1;
-	VkCommandBuffer cmd;
-	VK_CHECK(vkAllocateCommandBuffers(GetDevice(), &allocateInfo, &cmd), "Failed to allocate command buffers!");
-	RHIVulkanCommandBuffer rhiCmd(cmd, m_CmdMgr.get());
-
-	// begin
-	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-	beginInfo.pNext = nullptr;
-	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	beginInfo.pInheritanceInfo = nullptr;
-	VK_CHECK(vkBeginCommandBuffer(cmd, &beginInfo), "Failed to begin command buffer!");
-
-	// run
-	func(&rhiCmd);
-
-	// end
-	vkEndCommandBuffer(cmd);
-
-	// submit
-	VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &cmd;
-	vkQueueSubmit(m_Context.GraphicsQueue.Handle, 1, &submitInfo, VK_NULL_HANDLE);
-	vkQueueWaitIdle(m_Context.GraphicsQueue.Handle);
-}
-
-int RHIVulkan::QueueSubmitPresent(RHICommandBuffer* cmd, uint8 frameIndex, RHIFence* fence) {
-	// submit command buffer
-	//VkSemaphore semaphores[2] = { m_ImageAvaliableForTextureCopySemaphores[m_CurrentFrame], m_PresentationFinishSemaphores[m_CurrentFrame] };
-	VkSemaphore semaphores[1] = { m_PresentationFinishSemaphores[frameIndex] };
-	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-	VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-	VkCommandBuffer vkCmd = dynamic_cast<RHIVulkanCommandBuffer*>(cmd)->m_VkCmd;
-	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = &m_ImageAvaliableSemaphores[frameIndex];
-	submitInfo.pWaitDstStageMask = waitStages;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &vkCmd;
-	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pSignalSemaphores = semaphores;
-	const RHIVkFence* fenceVk = dynamic_cast<RHIVkFence*>(fence);
-	VK_CHECK(vkQueueSubmit(m_Context.GraphicsQueue.Handle, 1, &submitInfo, fenceVk->m_Handle), "Failed to submit graphics queue!");
-
-	// present
-	m_SwapChain->Present();
-}
-
 RHIBuffer* RHIVulkan::CreateBuffer(const RHIBufferDesc& desc) {
 	VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, nullptr, 0 };
 	bufferInfo.usage = ToBufferUsage(desc.Flags);
@@ -153,10 +101,7 @@ RHIBuffer* RHIVulkan::CreateBuffer(const RHIBufferDesc& desc) {
 		vkDestroyBuffer(GetDevice(), buffer, nullptr);
 		return nullptr;
 	}
-	RHIVkBuffer* rhiBuffer = new RHIVkBuffer(desc);
-	rhiBuffer->m_Buffer = buffer;
-	rhiBuffer->m_Mem = std::move(mem);
-	return rhiBuffer;
+	return new RHIVkBuffer(desc, buffer, std::move(mem));
 }
 
 RHITexture* RHIVulkan::CreateTexture(const RHITextureDesc& desc) {
@@ -194,11 +139,7 @@ RHITexture* RHIVulkan::CreateTexture(const RHITextureDesc& desc) {
 	VkImageView viewHandle;
 	vkCreateImageView(GetDevice(), &imageViewCreateInfo, nullptr, &viewHandle);
 
-	RHIVkTextureWithMem* textureVk = new RHIVkTextureWithMem(desc);
-	textureVk->m_Image = imageHandle;
-	textureVk->m_View = viewHandle;
-	textureVk->m_Mem = mem;
-	return textureVk;
+	return new RHIVkTextureWithMem(desc, imageHandle, viewHandle, std::move(mem));
 }
 
 RHISampler* RHIVulkan::CreateSampler(const RHISamplerDesc& desc) {
@@ -276,5 +217,14 @@ void RHIVulkan::SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence
 	for(uint32 i=0; i<cmds.Size(); ++i) {
 		vkHandles[i] = dynamic_cast<RHIVulkanCommandBuffer*>(cmds[i])->GetHandle();
 	}
-	m_CmdMgr->SubmitGraphicsCommand(cmds.Size(), vkHandles.Data(), vkFence->GetFence());
+	m_CmdMgr->AddGraphicsSubmit(cmds.Size(), vkHandles.Data(), vkFence->GetFence());
+}
+
+void RHIVulkan::Present() {
+	m_DSMgr->Update();
+
+	TVector<VkSemaphore> smps;
+	m_CmdMgr->GetLastSignalSmps(smps);
+	m_CmdMgr->Submit();
+	m_SwapChain->Present({ smps });
 }
