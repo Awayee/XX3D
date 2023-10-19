@@ -2,10 +2,10 @@
 #include "VulkanCommon.h"
 #include "VulkanResources.h"
 
-class RHIVulkanSwapChain : public RHISwapChain {
+class VulkanSwapchain : public RHISwapChain {
 public:
-	explicit RHIVulkanSwapChain(const VulkanContext* context);
-	~RHIVulkanSwapChain() override;
+	explicit VulkanSwapchain(const VulkanContext* context);
+	~VulkanSwapchain() override;
 	bool Present(TConstArrayView<VkSemaphore> smps);
 	void Resize(USize2D size) override;
 	USize2D GetExtent() override;

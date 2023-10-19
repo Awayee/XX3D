@@ -35,7 +35,7 @@ RHIVulkan::RHIVulkan(const RHIInitDesc& desc) {
 	initializer.Build();
 
 	// create swap chain
-	m_SwapChain.reset(new RHIVulkanSwapChain(&m_Context));
+	m_SwapChain.reset(new VulkanSwapchain(&m_Context));
 
 	// create memory manager
 	m_MemMgr.reset(new VulkanMemMgr(&m_Context));
@@ -162,9 +162,7 @@ RHISampler* RHIVulkan::CreateSampler(const RHISamplerDesc& desc) {
 	if (VK_SUCCESS != vkCreateSampler(GetDevice(), &info, nullptr, &samplerHandle)) {
 		return nullptr;
 	}
-	RHIVkSampler* sampler = new RHIVkSampler(desc);
-	sampler->m_Sampler = samplerHandle;
-	return sampler;
+	return new RHIVkSampler(desc, samplerHandle);
 }
 
 RHIFence* RHIVulkan::CreateFence(bool sig) {
