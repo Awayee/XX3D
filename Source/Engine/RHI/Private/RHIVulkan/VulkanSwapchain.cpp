@@ -28,14 +28,14 @@ bool VulkanSwapchain::Present(TConstArrayView<VkSemaphore> smps) {
 		presentInfo.waitSemaphoreCount = smps.Size();
 		presentInfo.pWaitSemaphores = smps.Data();
 		presentInfo.swapchainCount = 1;
-		presentInfo.pSwapchains = &m_Handle;
+		presentInfo.pSwapchains = &m_Swapchain;
 		presentInfo.pImageIndices = &m_FrameRes[m_CurFrame].ImageIdx;
 		vkQueuePresentKHR(m_ContextPtr->PresentQueue.Handle, &presentInfo);
 		m_CurFrame = (m_CurFrame + 1) % m_FrameRes.Size();
 		m_Prepared = false;
 	}
 	FrameResource& currentFrame = m_FrameRes[m_CurFrame];
-	VkResult res = vkAcquireNextImageKHR(m_ContextPtr->Device, m_Handle, WAIT_MAX, currentFrame.ImageAvailableSmp, VK_NULL_HANDLE, &currentFrame.ImageIdx);
+	VkResult res = vkAcquireNextImageKHR(m_ContextPtr->Device, m_Swapchain, WAIT_MAX, currentFrame.ImageAvailableSmp, VK_NULL_HANDLE, &currentFrame.ImageIdx);
 	if (VK_SUCCESS == res) {
 		m_Prepared = true;
 		return true;
@@ -53,20 +53,28 @@ USize2D VulkanSwapchain::GetExtent() {
 }
 
 void VulkanSwapchain::CreateSwapChain() {
-	SwapChainBuilder initializer(m_Handle, m_Images, m_Views);
-	initializer.Extent = { m_Width, m_Height };
-	initializer.SetContext(*m_ContextPtr);
+	TVector<VkImage> images; TVector<VkImageView> views;
+	SwapChainBuilder initializer(m_Swapchain, images, views);
+	initializer.Desc = SwapChainBuilder::SDesc(*m_ContextPtr);
+	initializer.Desc.Extent = { m_Width, m_Height };
 	initializer.Build();
+
+	// create swapchain textures
+	RHITextureDesc desc;
+	desc.Dimension = ETextureDimension::Tex2D;
+	desc.Format = ERHIFormat::B8G8R8A8_SRGB;
+	desc.Flags = TEXTURE_FLAG_PRESENT;
+	desc.Size = { m_Width, m_Height, 1 };
+	desc.ArraySize = 1;
+	desc.NumMips = 1;
+	desc.Samples = 1;
+	m_Textures.Reserve(images.Size());
+	for(uint32 i=0; i<images.Size(); ++i) {
+		m_Textures.PushBack(RHIVkTexture{ desc, images[i], views[i] });
+	}
 }
 
 void VulkanSwapchain::ClearSwapChain() {
-	VkDevice device = m_ContextPtr->Device;
-	vkDestroySwapchainKHR(device, m_Handle, nullptr);
-	for (VkImage image : m_Images) {
-		vkDestroyImage(device, image, nullptr);
-	}for (VkImageView view : m_Views) {
-		vkDestroyImageView(device, view, nullptr);
-	}
-	m_Images.Clear();
-	m_Views.Clear();
+	m_Textures.Clear();
+	vkDestroySwapchainKHR(m_ContextPtr->Device, m_Swapchain, nullptr);
 }

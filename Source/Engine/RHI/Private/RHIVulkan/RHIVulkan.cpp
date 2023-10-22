@@ -22,16 +22,15 @@ void RHIVulkan::CreateCommandPools() {
 }
 
 RHIVulkan::RHIVulkan(const RHIInitDesc& desc) {
+	ERHIFormat swapchainFormat = ERHIFormat::B8G8R8A8_SRGB;
+
 	// initialize context
 	ContextBuilder initializer(m_Context);
-	initializer.AppName = desc.AppName;
-	initializer.WindowHandle = desc.WindowHandle;
-	if (desc.IntegratedGPU){
-		initializer.Flags |= ContextBuilder::INTEGRATED_GPU;
-	}
-	if (desc.EnableDebug) {
-		initializer.Flags |= ContextBuilder::ENABLE_DEBUG;
-	}
+	initializer.Desc.AppName = desc.AppName;
+	initializer.Desc.WindowHandle = desc.WindowHandle;
+	initializer.Desc.IntegratedGPU = desc.IntegratedGPU;
+	initializer.Desc.EnableDebug = desc.EnableDebug;
+	initializer.Desc.SurfaceFormat = { ToVkFormat(swapchainFormat), VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
 	initializer.Build();
 
 	// create swap chain
@@ -182,11 +181,14 @@ RHIShader* RHIVulkan::CreateShader(EShaderStageFlagBit type, const char* codeDat
 }
 
 RHIGraphicsPipelineState* RHIVulkan::CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) {
-	return new RHIVulkanGraphicsPipelineState(desc);
+	VkPipelineLayout layout = CreatePipelineLayout(desc.Layout);
+	return layout ? new RHIVulkanGraphicsPipelineState(desc, layout) : nullptr;
 }
 
+
 RHIComputePipelineState* RHIVulkan::CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) {
-	return new RHIVulkanComputePipelineState(desc);
+	VkPipelineLayout layout = CreatePipelineLayout(desc.Layout);
+	return layout ? new RHIVulkanComputePipelineState(desc, layout) : nullptr;
 }
 
 RHIRenderPass* RHIVulkan::CreateRenderPass(const RHIRenderPassDesc& desc) {
@@ -225,4 +227,20 @@ void RHIVulkan::Present() {
 	m_CmdMgr->GetLastSignalSmps(smps);
 	m_CmdMgr->Submit();
 	m_SwapChain->Present({ smps });
+}
+
+VkPipelineLayout RHIVulkan::CreatePipelineLayout(const RHIPipelineLayout& rhiLayout) {
+	uint32 layoutCount = rhiLayout.Size();
+	TempArray<VkDescriptorSetLayout> layouts(layoutCount);
+	for (uint32 i = 0; i < layoutCount; ++i) {
+		layouts[i] = m_DSMgr->GetLayoutHandle(rhiLayout[i]);
+	}
+	VkPipelineLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0 };
+	layoutInfo.setLayoutCount = layoutCount;
+	layoutInfo.pSetLayouts = layouts.Data();
+	VkPipelineLayout layoutHandle;
+	if(VK_SUCCESS == vkCreatePipelineLayout(m_Context.Device, &layoutInfo, nullptr, &layoutHandle)) {
+		return layoutHandle;
+	}
+	return VK_NULL_HANDLE;
 }

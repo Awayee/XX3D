@@ -17,9 +17,9 @@ private:
 	const VulkanContext* m_ContextPtr;
 	uint32 m_Width;
 	uint32 m_Height;
-	VkSwapchainKHR m_Handle;
-	TVector<VkImage> m_Images;
-	TVector<VkImageView> m_Views;
+	VkSurfaceFormatKHR m_SurfaceFormat;
+	VkSwapchainKHR m_Swapchain;
+	TVector<RHIVkTexture> m_Textures;
 	uint8 m_CurFrame{ 0 };
 	bool m_Prepared = false;
 	struct FrameResource {

@@ -6,7 +6,12 @@
 
 class RHIVulkan;
 
-class RHIVkBuffer: public RHIBuffer {
+class RHIVulkanResource: public RHIResource {
+protected:
+	VkDevice m_DeviceHandle{VK_NULL_HANDLE};
+};
+
+class RHIVkBuffer: public RHIBuffer, public RHIVulkanResource {
 private:
 	friend RHIVulkan;
 	VkBuffer m_Buffer;
@@ -78,7 +83,7 @@ private:
 
 class RHIVulkanGraphicsPipelineState : public RHIGraphicsPipelineState {
 public:
-	explicit RHIVulkanGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc);
+	explicit RHIVulkanGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc, VkPipelineLayout layout);
 	~RHIVulkanGraphicsPipelineState() override;
 	void SetName(const char* name) override;
 	VkPipeline GetPipelineHandle(VkRenderPass pass, uint32 subPass);
@@ -92,7 +97,7 @@ private:
 
 class RHIVulkanComputePipelineState: public RHIComputePipelineState {
 public:
-	explicit RHIVulkanComputePipelineState(const RHIComputePipelineStateDesc& desc);
+	explicit RHIVulkanComputePipelineState(const RHIComputePipelineStateDesc& desc, VkPipelineLayout layout);
 	~RHIVulkanComputePipelineState() override;
 	void SetName(const char* name) override;
 	VkPipeline GetPipelineHandle() const { return m_Pipeline; }

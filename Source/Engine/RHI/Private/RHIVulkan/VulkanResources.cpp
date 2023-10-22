@@ -105,23 +105,8 @@ VkPipelineShaderStageCreateInfo RHIVulkanShader::GetShaderStageInfo() const {
 	return info;
 }
 
-inline VkPipelineLayout CreatePipelineLayout(const RHIPipelineLayout& rhiLayout) {
-	VkDevice device = RHIVulkan::GetDevice();
-	uint32 layoutCount = rhiLayout.Size();
-	TempArray<VkDescriptorSetLayout> layouts(layoutCount);
-	for (uint32 i = 0; i < layoutCount; ++i) {
-		layouts[i] = VulkanDSMgr::Instance()->GetLayoutHandle(rhiLayout[i]);
-	}
-	VkPipelineLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0 };
-	layoutInfo.setLayoutCount = layoutCount;
-	layoutInfo.pSetLayouts = layouts.Data();
-	VkPipelineLayout handle;
-	vkCreatePipelineLayout(device, &layoutInfo, nullptr, &handle);
-	return handle;
-}
-
-RHIVulkanGraphicsPipelineState::RHIVulkanGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc):RHIGraphicsPipelineState(desc) {
-	m_PipelineLayout = CreatePipelineLayout(desc.Layout);
+RHIVulkanGraphicsPipelineState::RHIVulkanGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc, VkPipelineLayout layout):RHIGraphicsPipelineState(desc) {
+	m_PipelineLayout = layout;
 }
 
 RHIVulkanGraphicsPipelineState::~RHIVulkanGraphicsPipelineState() {
@@ -237,9 +222,9 @@ void RHIVulkanGraphicsPipelineState::CreatePipelineHandle(VkRenderPass pass, uin
 	VK_CHECK(vkCreateGraphicsPipelines(RHIVulkan::GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_Pipeline), "vkCreateGraphicsPipelines");
 }
 
-RHIVulkanComputePipelineState::RHIVulkanComputePipelineState(const RHIComputePipelineStateDesc& desc): RHIComputePipelineState(desc) {
+RHIVulkanComputePipelineState::RHIVulkanComputePipelineState(const RHIComputePipelineStateDesc& desc, VkPipelineLayout layout): RHIComputePipelineState(desc) {
 	// create layout
-	m_PipelineLayout = CreatePipelineLayout(desc.Layout);
+	m_PipelineLayout = layout;
 
 	// create pipeline
 	VkComputePipelineCreateInfo pipelineInfo{ VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, nullptr, 0 };

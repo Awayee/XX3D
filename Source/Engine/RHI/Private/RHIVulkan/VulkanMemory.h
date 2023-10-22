@@ -8,6 +8,8 @@ enum class EMemoryType : uint8 {
 	GPU2CPU,
 };
 
+
+
 class VulkanMem {
 private:
 	friend class VulkanMemMgr;

@@ -29,6 +29,7 @@ struct VulkanContext {
 	VulkanQueue ComputeQueue;
 	VulkanQueue TransferQueue;
 	VkPhysicalDeviceProperties DeviceProperties{};
+	VkSurfaceFormatKHR SwapchainFormat;
 	VkFormat DepthFormat{ VK_FORMAT_UNDEFINED };
 };
 

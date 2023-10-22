@@ -5,15 +5,16 @@
 
 class ContextBuilder {
 public:
-	enum VulkanInitFlags : uint32 {
-		ENABLE_DEBUG=1,
-		INTEGRATED_GPU=2,//Discrete GPU is default, use integrated GPU if this flag is enabled
+	struct SDesc {
+		XXString AppName{};
+		bool EnableDebug{ false };
+		bool IntegratedGPU{ false };//Discrete GPU is default, use integrated GPU if this flag is enabled
+		void* WindowHandle{ nullptr };
+		VkSurfaceFormatKHR SurfaceFormat{ VK_FORMAT_R8G8B8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
+		TVector<char const*> ValidationLayers{ "VK_LAYER_KHRONOS_validation" };
+		TVector<char const*> DeviceExtensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 	};
-	uint32 Flags {0};
-	XXString AppName{};
-	void* WindowHandle;
-	TVector<char const*> ValidationLayers{ "VK_LAYER_KHRONOS_validation" };
-	TVector<char const*> DeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	SDesc Desc;
 	explicit ContextBuilder(VulkanContext& context);
 	~ContextBuilder() = default;
 	void Build();
@@ -30,14 +31,19 @@ private:
 
 class SwapChainBuilder {
 public:
-	VkPhysicalDevice PhysicalDevice{ VK_NULL_HANDLE };
-	VkSurfaceKHR Surface{ VK_NULL_HANDLE };
-	VkDevice Device{ VK_NULL_HANDLE };
-	uint32 GraphicsIdx{ INVALID_IDX };
-	uint32 PresentIdx{ INVALID_IDX };
-	VkExtent2D Extent{ 0, 0 };
+	struct SDesc {
+		VkPhysicalDevice PhysicalDevice{ VK_NULL_HANDLE };
+		VkSurfaceKHR Surface{ VK_NULL_HANDLE };
+		VkDevice Device{ VK_NULL_HANDLE };
+		uint32 GraphicsIdx{ INVALID_IDX };
+		uint32 PresentIdx{ INVALID_IDX };
+		VkSurfaceFormatKHR SwapchainFormat{ VK_FORMAT_R8G8B8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
+		VkExtent2D Extent{ 0, 0 };
+		SDesc() = default;
+		SDesc(const VulkanContext& context);
+	};
+	SDesc Desc;
 	SwapChainBuilder(VkSwapchainKHR& handle, TVector<VkImage>& images, TVector<VkImageView>& imageViews);
-	void SetContext(const VulkanContext& context);
 	void Build();
 private:
 	VkSwapchainKHR& m_Handle;

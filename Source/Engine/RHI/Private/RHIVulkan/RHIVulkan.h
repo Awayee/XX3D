@@ -31,6 +31,7 @@ public:
 	void SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence) override;
 	void Present() override;
 private:
+	VkPipelineLayout CreatePipelineLayout(const RHIPipelineLayout& rhiLayout);
 	VulkanContext m_Context;
 	TUniquePtr<VulkanMemMgr> m_MemMgr;
 	TUniquePtr<VulkanSwapchain> m_SwapChain;

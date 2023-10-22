@@ -6,7 +6,7 @@
 constexpr uint32 INVALID_INDEX = UINT32_MAX;
 
 struct DeviceInfo {
-	int Score{ -1 };
+	uint32 Score{ 0 };
 	uint32 m_GraphicsIdx{ INVALID_INDEX };
 	uint32 m_PresentIdx{ INVALID_INDEX };
 	uint32 ComputeIndex{ INVALID_INDEX };
@@ -44,7 +44,7 @@ bool CheckValidationLayerSupport(const TVector<const char*>& validationLayers)
 	return true;
 }
 
-inline bool CheckExtensionsIsSupported(VkPhysicalDevice device, TConstArrayView<const char*>& extensions) {
+inline bool CheckExtensionsIsSupported(VkPhysicalDevice device, TConstArrayView<const char*> extensions) {
 	uint32 extensionCount;
 	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 	TVector<VkExtensionProperties> availableExtensions(extensionCount);
@@ -90,17 +90,17 @@ void FindQueueFamilyIndex(const VkPhysicalDevice& device, const VkSurfaceKHR& su
 	}
 }
 
-inline VkSurfaceFormatKHR FindSurfaceFormat(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) {
-	static const VkSurfaceFormatKHR s_SupportedFormat{ VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
+inline VkSurfaceFormatKHR CheckSurfaceFormat(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, VkSurfaceFormatKHR desiredFormat) {
 	uint32 formatCount;
 	VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr), "vkGetPhysicalDeviceSurfaceFormatsKHR");
 	TVector<VkSurfaceFormatKHR> formats(formatCount);
 	VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, formats.Data()), "vkGetPhysicalDeviceSurfaceFormatsKHR");
 	for (const auto& format : formats) {
-		if (format.format == s_SupportedFormat.format && format.colorSpace == s_SupportedFormat.colorSpace) {
+		if (format.format == desiredFormat.format && format.colorSpace == desiredFormat.colorSpace) {
 			return format;
 		}
 	}
+	ERROR("Could not find swapchain format (%i, %i)", desiredFormat.format, desiredFormat.colorSpace);
 	return { VK_FORMAT_UNDEFINED, VK_COLOR_SPACE_MAX_ENUM_KHR };
 }
 
@@ -134,9 +134,9 @@ inline VkPresentModeKHR FindPresentMode(VkPhysicalDevice physicalDevice, VkSurfa
 	return VK_PRESENT_MODE_MAX_ENUM_KHR;
 }
 
-inline DeviceInfo GetPhysicalDeviceInfo(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, TConstArrayView<const char*> extensions, bool isIntegrateGPU) {
+inline DeviceInfo GetPhysicalDeviceInfo(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, const ContextBuilder::SDesc& desc) {
 	DeviceInfo info;
-	if (!CheckExtensionsIsSupported(physicalDevice, extensions)) {
+	if (!CheckExtensionsIsSupported(physicalDevice, desc.DeviceExtensions)) {
 		return info;
 	}
 	// query family index
@@ -147,7 +147,7 @@ inline DeviceInfo GetPhysicalDeviceInfo(VkPhysicalDevice physicalDevice, VkSurfa
 
 	// query swapchain info
 	// format
-	info.SwapchainFormat = FindSurfaceFormat(physicalDevice, surface);
+	info.SwapchainFormat = CheckSurfaceFormat(physicalDevice, surface, desc.SurfaceFormat);
 	//present mode
 	info.SwapchainPresentMode = FindPresentMode(physicalDevice, surface);
 
@@ -161,7 +161,7 @@ inline DeviceInfo GetPhysicalDeviceInfo(VkPhysicalDevice physicalDevice, VkSurfa
 	vkGetPhysicalDeviceProperties(physicalDevice, &properties);
 
 	// discrete gpu is first
-	VkPhysicalDeviceType preferredType = isIntegrateGPU ? VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU : VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+	VkPhysicalDeviceType preferredType = desc.IntegratedGPU ? VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU : VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
 	if (properties.deviceType == preferredType) {
 		info.Score += 100;
 	}
@@ -243,7 +243,7 @@ TVector<const char*> ContextBuilder::GetInstanceExtensions() {
 	const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 	TVector<const char*> extensions(glfwExtensionCount);
 	memcpy(extensions.Data(), glfwExtensions, glfwExtensionCount * sizeof(const char*));
-	if(Flags & ENABLE_DEBUG){
+	if(Desc.EnableDebug){
 		extensions.PushBack(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 	}
 	return extensions;
@@ -251,16 +251,15 @@ TVector<const char*> ContextBuilder::GetInstanceExtensions() {
 
 void ContextBuilder::CreateInstance() {
 	InitializeInstanceProcAddr();
-	bool bEnableValidationLayers = Flags & ENABLE_DEBUG;
-	if(bEnableValidationLayers) {
-		ASSERT(CheckValidationLayerSupport(ValidationLayers), "validation layers requested, but not available!");
+	if(Desc.EnableDebug) {
+		ASSERT(CheckValidationLayerSupport(Desc.ValidationLayers), "validation layers requested, but not available!");
 	}
 	// app info
 	VkApplicationInfo appInfo{};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	appInfo.pApplicationName = AppName.c_str();
+	appInfo.pApplicationName = Desc.AppName.c_str();
 	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.pEngineName = AppName.c_str();
+	appInfo.pEngineName = Desc.AppName.c_str();
 	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
 	appInfo.apiVersion = VK_API_VERSION_1_2;
 
@@ -274,9 +273,9 @@ void ContextBuilder::CreateInstance() {
 	createInfo.ppEnabledExtensionNames = extensions.Data();
 
 	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
-	if (bEnableValidationLayers) {
-		createInfo.enabledLayerCount = static_cast<uint32>(ValidationLayers.Size());
-		createInfo.ppEnabledLayerNames = ValidationLayers.Data();
+	if (Desc.EnableDebug) {
+		createInfo.enabledLayerCount = static_cast<uint32>(Desc.ValidationLayers.Size());
+		createInfo.ppEnabledLayerNames = Desc.ValidationLayers.Data();
 		SetDebugInfo(debugCreateInfo);
 		debugCreateInfo.pUserData = (void*)this;
 		createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
@@ -292,7 +291,7 @@ void ContextBuilder::CreateInstance() {
 }
 
 void ContextBuilder::InitializeDebugger() {
-	if(Flags & ENABLE_DEBUG) {
+	if(Desc.EnableDebug) {
 		VkDebugUtilsMessengerCreateInfoEXT createInfo{};
 		SetDebugInfo(createInfo);
 		createInfo.pUserData = (void*)this;
@@ -301,8 +300,8 @@ void ContextBuilder::InitializeDebugger() {
 }
 
 void ContextBuilder::CreateWindowSurface() {
-	m_Context.WindowHandle = WindowHandle;
-	VK_CHECK(glfwCreateWindowSurface(m_Context.Instance, static_cast<GLFWwindow*>(WindowHandle), nullptr, &m_Context.Surface), "vk create window surface");
+	m_Context.WindowHandle = Desc.WindowHandle;
+	VK_CHECK(glfwCreateWindowSurface(m_Context.Instance, static_cast<GLFWwindow*>(Desc.WindowHandle), nullptr, &m_Context.Surface), "vk create window surface");
 }
 
 void ContextBuilder::PickGPU() {
@@ -310,13 +309,15 @@ void ContextBuilder::PickGPU() {
 	VK_CHECK(vkEnumeratePhysicalDevices(m_Context.Instance, &deviceCount, nullptr), "no avaliable physical device");
 	TVector<VkPhysicalDevice> devices(deviceCount);
 	VK_CHECK(vkEnumeratePhysicalDevices(m_Context.Instance, &deviceCount, devices.Data()), "no avaliable physical device");
-	bool isIntegratedGPU = Flags & INTEGRATED_GPU;
 	TVector<TPair<VkPhysicalDevice, DeviceInfo>> devicesInfo;
 	for (auto& device : devices) {
-		auto deviceInfo = GetPhysicalDeviceInfo(device, m_Context.Surface, DeviceExtensions, isIntegratedGPU);
+		auto deviceInfo = GetPhysicalDeviceInfo(device, m_Context.Surface, Desc);
 		if (deviceInfo.Score > 0) {
 			devicesInfo.PushBack({ device, std::move(deviceInfo) });
 		}
+	}
+	if(devicesInfo.Empty()) {
+		ERROR("Could not pick a GPU!");
 	}
 	devicesInfo.Sort([](const TPair<VkPhysicalDevice, DeviceInfo> p1, const TPair<VkPhysicalDevice, DeviceInfo> p2) {return p1.second.Score > p2.second.Score; });
 	m_Context.PhysicalDevice = devicesInfo[0].first;
@@ -326,6 +327,7 @@ void ContextBuilder::PickGPU() {
 	m_Context.GraphicsQueue.FamilyIndex = deviceInfo.m_GraphicsIdx;
 	m_Context.PresentQueue.FamilyIndex = deviceInfo.m_PresentIdx;
 	m_Context.ComputeQueue.FamilyIndex = deviceInfo.ComputeIndex;
+	m_Context.SwapchainFormat =deviceInfo.SwapchainFormat;//record
 }
 
 void ContextBuilder::CreateDevice() {
@@ -350,8 +352,8 @@ void ContextBuilder::CreateDevice() {
 	deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.Data();
 	deviceCreateInfo.queueCreateInfoCount = static_cast<uint32>(queueCreateInfos.Size());
 	deviceCreateInfo.pEnabledFeatures = &features;
-	deviceCreateInfo.enabledExtensionCount = static_cast<uint32>(DeviceExtensions.Size());
-	deviceCreateInfo.ppEnabledExtensionNames = DeviceExtensions.Data();
+	deviceCreateInfo.enabledExtensionCount = static_cast<uint32>(Desc.DeviceExtensions.Size());
+	deviceCreateInfo.ppEnabledExtensionNames = Desc.DeviceExtensions.Data();
 	deviceCreateInfo.enabledLayerCount = 0;
 
 	VK_CHECK(vkCreateDevice(m_Context.PhysicalDevice, &deviceCreateInfo, nullptr, &m_Context.Device), "vkCreateDevice");
@@ -364,27 +366,29 @@ void ContextBuilder::CreateDevice() {
 	m_Context.DepthFormat = FindDepthFormat(m_Context.PhysicalDevice);
 }
 
-SwapChainBuilder::SwapChainBuilder(VkSwapchainKHR& handle, TVector<VkImage>& images, TVector<VkImageView>& imageViews):
-m_Handle(handle), m_Images(images), m_Views(imageViews) {}
-
-void SwapChainBuilder::SetContext(const VulkanContext& context) {
+SwapChainBuilder::SDesc::SDesc(const VulkanContext& context) {
 	PhysicalDevice = context.PhysicalDevice;
 	Surface = context.Surface;
 	Device = context.Device;
 	GraphicsIdx = context.GraphicsQueue.FamilyIndex;
 	PresentIdx = context.PresentQueue.FamilyIndex;
+	SwapchainFormat = context.SwapchainFormat;
 }
+
+
+SwapChainBuilder::SwapChainBuilder(VkSwapchainKHR& handle, TVector<VkImage>& images, TVector<VkImageView>& imageViews):
+m_Handle(handle), m_Images(images), m_Views(imageViews) {}
 
 void SwapChainBuilder::Build() {
 	//extent
 	VkSurfaceCapabilitiesKHR capabilities;
-	VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PhysicalDevice, Surface, &capabilities), "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
-	if(0 == Extent.width || 0 == Extent.height) {
+	VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(Desc.PhysicalDevice, Desc.Surface, &capabilities), "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
+	if(0 == Desc.Extent.width || 0 == Desc.Extent.height) {
 		if (capabilities.currentExtent.width != UINT32_MAX) {
-			Extent = capabilities.currentExtent;
+			Desc.Extent = capabilities.currentExtent;
 		}
 		else {
-			Extent = capabilities.maxImageExtent;
+			Desc.Extent = capabilities.maxImageExtent;
 		}
 	}
 
@@ -392,19 +396,19 @@ void SwapChainBuilder::Build() {
 	if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount) {
 		imageCount = capabilities.maxImageCount;
 	}
-	VkSurfaceFormatKHR surfaceFormat = FindSurfaceFormat(PhysicalDevice, Surface);
+	VkSurfaceFormatKHR surfaceFormat = CheckSurfaceFormat(Desc.PhysicalDevice, Desc.Surface, Desc.SwapchainFormat);
 	VkSwapchainCreateInfoKHR createInfo{ VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, nullptr };
-	createInfo.surface = Surface;
+	createInfo.surface = Desc.Surface;
 	createInfo.minImageCount = imageCount;
 	createInfo.imageFormat = surfaceFormat.format;
 	createInfo.imageColorSpace = surfaceFormat.colorSpace;
-	createInfo.imageExtent = Extent;
+	createInfo.imageExtent = Desc.Extent;
 	createInfo.imageArrayLayers = 1;
 	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-	if (GraphicsIdx != PresentIdx)
+	if (Desc.GraphicsIdx != Desc.PresentIdx)
 	{
-		uint32 queueFamilyIndices[] = { GraphicsIdx, PresentIdx };
+		uint32 queueFamilyIndices[] = { Desc.GraphicsIdx, Desc.PresentIdx };
 		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 		createInfo.queueFamilyIndexCount = 2;
 		createInfo.pQueueFamilyIndices = queueFamilyIndices;
@@ -415,15 +419,15 @@ void SwapChainBuilder::Build() {
 	}
 	createInfo.preTransform = capabilities.currentTransform;
 	createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-	createInfo.presentMode = FindPresentMode(PhysicalDevice, Surface);
+	createInfo.presentMode = FindPresentMode(Desc.PhysicalDevice, Desc.Surface);
 	createInfo.clipped = VK_TRUE;
 	createInfo.oldSwapchain = VK_NULL_HANDLE;
-	VK_CHECK(vkCreateSwapchainKHR(Device, &createInfo, nullptr, &m_Handle), "CreateSwapchain");
+	VK_CHECK(vkCreateSwapchainKHR(Desc.Device, &createInfo, nullptr, &m_Handle), "CreateSwapchain");
 
 	// swapchain images
-	vkGetSwapchainImagesKHR(Device, m_Handle, &imageCount, nullptr);
+	vkGetSwapchainImagesKHR(Desc.Device, m_Handle, &imageCount, nullptr);
 	m_Images.Resize(imageCount);
-	vkGetSwapchainImagesKHR(Device, m_Handle, &imageCount, m_Images.Data());
+	vkGetSwapchainImagesKHR(Desc.Device, m_Handle, &imageCount, m_Images.Data());
 	m_Views.Resize(imageCount);
 
 	// create imageview (one for each this time) for all swapchain images
@@ -438,6 +442,6 @@ void SwapChainBuilder::Build() {
 		imageViewCreateInfo.subresourceRange.levelCount = 1;
 		imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
 		imageViewCreateInfo.subresourceRange.layerCount = 1;
-		VK_CHECK(vkCreateImageView(Device, &imageViewCreateInfo, nullptr, &m_Views[i]), "Create SwapChain, ImageView");
+		VK_CHECK(vkCreateImageView(Desc.Device, &imageViewCreateInfo, nullptr, &m_Views[i]), "Create SwapChain, ImageView");
 	}
 }
