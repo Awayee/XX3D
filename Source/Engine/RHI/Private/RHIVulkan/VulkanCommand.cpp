@@ -170,7 +170,7 @@ VkSemaphore& SemaphoreMgr::Get(uint32 idx) {
 	return m_Semaphores[idx];
 }
 
-void SemaphoreMgr::Reset() {
+void SemaphoreMgr::ResetSmps() {
 	m_CurIndex = 0;
 }
 
@@ -210,13 +210,10 @@ void VulkanCommandMgr::FreeCmd(VkCommandBuffer handle) {
 	m_CmdsToFree.PushBack(handle);
 }
 
-void VulkanCommandMgr::GetLastSignalSmps(TVector<VkSemaphore>& smps) {
-	SubmitInfo& info = m_SubmitInfos.Back();
-	VkSemaphore smp = m_SmpMgr.Get(info.SignalSmpIdx);
-	smps.PushBack(smp);
+VkSemaphore VulkanCommandMgr::GetAllCompleteSmp() {
 }
 
-void VulkanCommandMgr::AddGraphicsSubmit(uint32 count, const VkCommandBuffer* cmds, VkFence fence) {
+void VulkanCommandMgr::AddGraphicsSubmit(TConstArrayView<VkCommandBuffer> cmds, VkFence fence, bool needPresent) {
 	// create a submit info
 	uint32 preSmpIdx;
 	if(m_SubmitInfos.Empty()) {
@@ -228,18 +225,17 @@ void VulkanCommandMgr::AddGraphicsSubmit(uint32 count, const VkCommandBuffer* cm
 	}
 	SubmitInfo& submitInfo = m_SubmitInfos.EmplaceBack();
 	submitInfo.CmdStartIdx = m_CmdsToSubmit.Size();
-	submitInfo.CmdCount = count;
+	submitInfo.CmdCount = cmds.Size();
 	submitInfo.WaitSmpIdx = preSmpIdx;
+	submitInfo.WaitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;// a graphics cmd must with render pass
 	submitInfo.SignalSmpIdx = m_SmpMgr.Allocate();
+	submitInfo.NeedPresent = needPresent;
 	submitInfo.Fence = fence;
-	m_CmdsToSubmit.PushBack(count, cmds);
+	m_CmdsToSubmit.PushBack(cmds.Size(), cmds.Data());
 }
 
-void VulkanCommandMgr::AddGraphicsSubmit(VkCommandBuffer cmd, VkFence fence) {
-	AddGraphicsSubmit(1, &cmd, fence);
-}
-
-void VulkanCommandMgr::Submit() {
+VkSemaphore VulkanCommandMgr::Submit(VkSemaphore bufferAvailableSmp) {
+	// TODO wait current back buffer available
 	TempArray<VkSubmitInfo> infos(m_SubmitInfos.Size());
 	uint32 submitIdx = 0;
 	VkFence tempFence = VK_NULL_HANDLE;
@@ -261,6 +257,7 @@ void VulkanCommandMgr::Submit() {
 		if(INVALID_IDX != submitInfo.WaitSmpIdx) {
 			vkSubmitInfo.waitSemaphoreCount = 1;
 			vkSubmitInfo.pWaitSemaphores = &m_SmpMgr.Get(submitInfo.WaitSmpIdx);
+			vkSubmitInfo.pWaitDstStageMask = &submitInfo.WaitStage;
 		}
 		else {
 			vkSubmitInfo.waitSemaphoreCount = 0;
@@ -280,12 +277,16 @@ void VulkanCommandMgr::Submit() {
 		vkSubmitInfo.pCommandBuffers = &m_CmdsToSubmit[submitInfo.CmdStartIdx];
 	}
 	// the last batch
+	VkSemaphore completeSmp = *infos[submitIdx - 1].pSignalSemaphores;
 	vkQueueSubmit(m_ContextPtr->GraphicsQueue.Handle, submitIdx, infos.Data(), tempFence);
 	m_CmdsToSubmit.Clear();
-	m_SmpMgr.Reset();
+	m_SubmitInfos.Clear();
+	m_SmpMgr.ResetSmps();
 	// need to free
 	vkFreeCommandBuffers(m_ContextPtr->Device, m_Pool, m_CmdsToFree.Size(), m_CmdsToFree.Data());
 	m_CmdsToFree.Clear();
+
+	return completeSmp;
 }
 
 

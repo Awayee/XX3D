@@ -22,18 +22,26 @@ VulkanSwapchain::~VulkanSwapchain() {
 	}
 }
 
-bool VulkanSwapchain::Present(TConstArrayView<VkSemaphore> smps) {
+bool VulkanSwapchain::Present(VkSemaphore readySmp) {
+	bool bRes = false;
 	if (m_Prepared) {
 		VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr };
-		presentInfo.waitSemaphoreCount = smps.Size();
-		presentInfo.pWaitSemaphores = smps.Data();
+		presentInfo.waitSemaphoreCount = 1;
+		presentInfo.pWaitSemaphores = &readySmp;
 		presentInfo.swapchainCount = 1;
 		presentInfo.pSwapchains = &m_Swapchain;
 		presentInfo.pImageIndices = &m_FrameRes[m_CurFrame].ImageIdx;
-		vkQueuePresentKHR(m_ContextPtr->PresentQueue.Handle, &presentInfo);
+		bRes = VK_SUCCESS == vkQueuePresentKHR(m_ContextPtr->PresentQueue.Handle, &presentInfo);
 		m_CurFrame = (m_CurFrame + 1) % m_FrameRes.Size();
 		m_Prepared = false;
 	}
+	else {
+		PRINT_DEBUG("VulkanSwapchain::Present image is not available!");
+	}
+	return bRes;
+}
+
+bool VulkanSwapchain::AcquireImage() {
 	FrameResource& currentFrame = m_FrameRes[m_CurFrame];
 	VkResult res = vkAcquireNextImageKHR(m_ContextPtr->Device, m_Swapchain, WAIT_MAX, currentFrame.ImageAvailableSmp, VK_NULL_HANDLE, &currentFrame.ImageIdx);
 	if (VK_SUCCESS == res) {
@@ -46,6 +54,10 @@ bool VulkanSwapchain::Present(TConstArrayView<VkSemaphore> smps) {
 void VulkanSwapchain::Resize(USize2D size) {
 	ClearSwapChain();
 	CreateSwapChain();
+}
+
+VkSemaphore VulkanSwapchain::GetBufferAvailableSmp() const {
+	return m_Prepared ? m_FrameRes[m_CurFrame].ImageAvailableSmp : VK_NULL_HANDLE;
 }
 
 USize2D VulkanSwapchain::GetExtent() {

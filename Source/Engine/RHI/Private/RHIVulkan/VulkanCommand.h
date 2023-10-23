@@ -11,7 +11,7 @@ public:
 	void Initialize(VkDevice device, uint32 maxSize);
 	uint32 Allocate(); // return index of a semaphore in array
 	VkSemaphore& Get(uint32 idx);
-	void Reset(); // reset allocates
+	void ResetSmps(); // reset allocates
 	void Clear(); // clear all semaphores
 private:
 	VkDevice m_Device {VK_NULL_HANDLE};
@@ -26,14 +26,13 @@ public:
 	VkCommandBuffer NewCmd();
 	// Add a command buffer to a list, will be submitted util Submit is called.
 	// a batch of Commands in a calling will run parallel, multi batch of commands will run in order of calling.
-	void AddGraphicsSubmit(uint32 count, const VkCommandBuffer* cmds, VkFence fence);
-	void AddGraphicsSubmit(VkCommandBuffer cmd, VkFence fence);
+	void AddGraphicsSubmit(TConstArrayView<VkCommandBuffer> cmds, VkFence fence, bool needPresent=false);
 	// Add a command buffer to a list, will be freed after Update.
 	void FreeCmd(VkCommandBuffer handle);
 	// Get semaphores signaled by the last submitted cmds;
-	void GetLastSignalSmps(TVector<VkSemaphore>& smps);
-	// submit cmds every frame
-	void Submit();
+	VkSemaphore GetAllCompleteSmp();
+	// submit cmds every frame, return a semaphore of completing all cmds
+	VkSemaphore Submit(VkSemaphore bufferAvailableSmp);
 private:
 	const VulkanContext* m_ContextPtr;
 	VkCommandPool m_Pool;
@@ -44,10 +43,12 @@ private:
 	// record cmd commit info
 	struct SubmitInfo {
 		uint32 WaitSmpIdx;
+		VkPipelineStageFlags WaitStage;
 		// a cmd mast have signal semaphore
 		uint32 SignalSmpIdx;
 		uint32 CmdStartIdx;
 		uint32 CmdCount;
+		bool NeedPresent;
 		VkFence Fence;
 	};
 	TVector<SubmitInfo> m_SubmitInfos;

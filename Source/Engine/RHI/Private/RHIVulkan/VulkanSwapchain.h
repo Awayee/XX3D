@@ -6,8 +6,10 @@ class VulkanSwapchain : public RHISwapChain {
 public:
 	explicit VulkanSwapchain(const VulkanContext* context);
 	~VulkanSwapchain() override;
-	bool Present(TConstArrayView<VkSemaphore> smps);
+	bool Present(VkSemaphore readySmp);
+	bool AcquireImage();
 	void Resize(USize2D size) override;
+	VkSemaphore GetBufferAvailableSmp() const;
 	USize2D GetExtent() override;
 private:
 	enum : uint32 {

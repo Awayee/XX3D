@@ -217,16 +217,20 @@ void RHIVulkan::SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence
 	for(uint32 i=0; i<cmds.Size(); ++i) {
 		vkHandles[i] = dynamic_cast<RHIVulkanCommandBuffer*>(cmds[i])->GetHandle();
 	}
-	m_CmdMgr->AddGraphicsSubmit(cmds.Size(), vkHandles.Data(), vkFence->GetFence());
+	m_CmdMgr->AddGraphicsSubmit({ vkHandles.Data(), cmds.Size() }, vkFence->GetFence());
 }
 
 void RHIVulkan::Present() {
 	m_DSMgr->Update();
-
-	TVector<VkSemaphore> smps;
-	m_CmdMgr->GetLastSignalSmps(smps);
-	m_CmdMgr->Submit();
-	m_SwapChain->Present({ smps });
+	if(!m_SwapChain->AcquireImage()) {
+		PRINT_DEBUG("RHIVulkan::Present Could not acquire a image!");
+		return;
+	}
+	VkSemaphore bufferAvailableSmp = m_SwapChain->GetBufferAvailableSmp();
+	VkSemaphore completeCmdSmp = m_CmdMgr->Submit(bufferAvailableSmp);
+	if(!m_SwapChain->Present(completeCmdSmp)) {
+		PRINT_DEBUG("RHIVulkan::Present Could not present!");
+	}
 }
 
 VkPipelineLayout RHIVulkan::CreatePipelineLayout(const RHIPipelineLayout& rhiLayout) {
