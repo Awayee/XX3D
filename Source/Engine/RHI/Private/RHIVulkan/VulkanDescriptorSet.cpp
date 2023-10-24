@@ -94,7 +94,7 @@ RHIVulkanShaderParameterSet::~RHIVulkanShaderParameterSet() {
 
 void RHIVulkanShaderParameterSet::SetUniformBuffer(uint32 binding, RHIBuffer* buffer) {
 	// TODO use large buffer
-	RHIVkBuffer* vkBuffer = dynamic_cast<RHIVkBuffer*>(buffer);
+	RHIVulkanBuffer* vkBuffer = dynamic_cast<RHIVulkanBuffer*>(buffer);
 	VkDescriptorBufferInfo bufferInfo{ vkBuffer->GetBuffer(), 0, vkBuffer->GetDesc().ByteSize };
 	VkWriteDescriptorSet write{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr,
 		m_Handle.Set, binding,
@@ -109,7 +109,7 @@ void RHIVulkanShaderParameterSet::SetUniformBuffer(uint32 binding, RHIBuffer* bu
 }
 
 void RHIVulkanShaderParameterSet::SetStorageBuffer(uint32 binding, RHIBuffer* buffer) {
-	RHIVkBuffer* vkBuffer = dynamic_cast<RHIVkBuffer*>(buffer);
+	RHIVulkanBuffer* vkBuffer = dynamic_cast<RHIVulkanBuffer*>(buffer);
 	VkDescriptorBufferInfo bufferInfo{ vkBuffer->GetBuffer(), 0, vkBuffer->GetDesc().ByteSize };
 	VkWriteDescriptorSet write{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr,
 		m_Handle.Set, binding,
@@ -124,7 +124,7 @@ void RHIVulkanShaderParameterSet::SetStorageBuffer(uint32 binding, RHIBuffer* bu
 }
 
 void RHIVulkanShaderParameterSet::SetTexture(uint32 binding, RHITexture* texture) {
-	RHIVkTexture* vkTexture = dynamic_cast<RHIVkTexture*>(texture);
+	RHIVulkanTexture* vkTexture = dynamic_cast<RHIVulkanTexture*>(texture);
 	VkDescriptorImageInfo imageInfo{ VK_NULL_HANDLE, vkTexture->GetView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 	VkWriteDescriptorSet write{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr,
 	m_Handle.Set, binding,
@@ -139,7 +139,7 @@ void RHIVulkanShaderParameterSet::SetTexture(uint32 binding, RHITexture* texture
 }
 
 void RHIVulkanShaderParameterSet::SetSampler(uint32 binding, RHISampler* sampler) {
-	RHIVkSampler *vkSampler = dynamic_cast<RHIVkSampler*>(sampler);
+	RHIVulkanSampler *vkSampler = dynamic_cast<RHIVulkanSampler*>(sampler);
 	VkDescriptorImageInfo imageInfo{ vkSampler->GetSampler(), VK_NULL_HANDLE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
 	VkWriteDescriptorSet write{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr,
 	m_Handle.Set, binding,

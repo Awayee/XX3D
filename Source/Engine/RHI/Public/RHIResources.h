@@ -17,7 +17,7 @@ class RHISwapChain {
 public:
 	virtual ~RHISwapChain() = default;
 	virtual void Resize(USize2D size) = 0;
-	virtual USize2D GetExtent() = 0;
+	virtual USize2D GetSize() = 0;
 };
 
 // buffer

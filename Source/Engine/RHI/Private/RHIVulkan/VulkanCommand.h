@@ -26,13 +26,11 @@ public:
 	VkCommandBuffer NewCmd();
 	// Add a command buffer to a list, will be submitted util Submit is called.
 	// a batch of Commands in a calling will run parallel, multi batch of commands will run in order of calling.
-	void AddGraphicsSubmit(TConstArrayView<VkCommandBuffer> cmds, VkFence fence, bool needPresent=false);
+	void AddGraphicsSubmit(TConstArrayView<VkCommandBuffer> cmds, VkFence fence, bool toPresent=false);
 	// Add a command buffer to a list, will be freed after Update.
 	void FreeCmd(VkCommandBuffer handle);
-	// Get semaphores signaled by the last submitted cmds;
-	VkSemaphore GetAllCompleteSmp();
 	// submit cmds every frame, return a semaphore of completing all cmds
-	VkSemaphore Submit(VkSemaphore bufferAvailableSmp);
+	VkSemaphore Submit(VkSemaphore presentWaitSmp);
 private:
 	const VulkanContext* m_ContextPtr;
 	VkCommandPool m_Pool;
@@ -48,7 +46,7 @@ private:
 		uint32 SignalSmpIdx;
 		uint32 CmdStartIdx;
 		uint32 CmdCount;
-		bool NeedPresent;
+		bool ToPresent;
 		VkFence Fence;
 	};
 	TVector<SubmitInfo> m_SubmitInfos;

@@ -8,75 +8,75 @@ VkDebugUtilsObjectNameInfoEXT info{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INF
 vkSetDebugUtilsObjectNameEXT(RHIVulkan::GetDevice(), &info);\
 }while(0)
 
-RHIVkBuffer::RHIVkBuffer(const RHIBufferDesc& desc, VkBuffer buffer, VulkanMem&& mem):
+RHIVulkanBuffer::RHIVulkanBuffer(const RHIBufferDesc& desc, VkBuffer buffer, VulkanMem&& mem):
 RHIBuffer(desc), m_Buffer(buffer), m_Mem(std::forward<VulkanMem>(mem)) {}
 
-RHIVkBuffer::~RHIVkBuffer() {
+RHIVulkanBuffer::~RHIVulkanBuffer() {
 	VkDevice device = RHIVulkan::GetDevice();
 	vkDestroyBuffer(device, m_Buffer, nullptr);
 	m_Mem.Free();
 }
 
-void RHIVkBuffer::SetName(const char* name) {
+void RHIVulkanBuffer::SetName(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_BUFFER, m_Buffer, name);
 }
 
-void RHIVkBuffer::UpdateData(const void* data, size_t byteSize) {
+void RHIVulkanBuffer::UpdateData(const void* data, size_t byteSize) {
 	void* mappedData = m_Mem.Map();
 	memcpy(mappedData, data, byteSize);
 	m_Mem.Unmap();
 }
 
-RHIVkTexture::RHIVkTexture(const RHITextureDesc& desc, VkImage image, VkImageView view): RHITexture(desc), m_Image(image), m_View(view) {
+RHIVulkanTexture::RHIVulkanTexture(const RHITextureDesc& desc, VkImage image, VkImageView view): RHITexture(desc), m_Image(image), m_View(view) {
 }
 
-RHIVkTexture::~RHIVkTexture() {
+RHIVulkanTexture::~RHIVulkanTexture() {
 	VkDevice device = RHIVulkan::GetDevice();
 	vkDestroyImage(device, m_Image, nullptr);
 	vkDestroyImageView(device, m_View, nullptr);
 }
 
-void RHIVkTexture::SetName(const char* name) {
+void RHIVulkanTexture::SetName(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_IMAGE, m_Image, name);
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_IMAGE_VIEW, m_View, name);
 }
 
-RHIVkTextureWithMem::RHIVkTextureWithMem(const RHITextureDesc& desc, VkImage image, VkImageView view, VulkanMem&& memory):
-RHIVkTexture(desc, image, view), m_Mem(std::forward<VulkanMem>(memory)){}
+RHIVulkanTextureWithMem::RHIVulkanTextureWithMem(const RHITextureDesc& desc, VkImage image, VkImageView view, VulkanMem&& memory):
+RHIVulkanTexture(desc, image, view), m_Mem(std::forward<VulkanMem>(memory)){}
 
-RHIVkTextureWithMem::~RHIVkTextureWithMem() {
+RHIVulkanTextureWithMem::~RHIVulkanTextureWithMem() {
 	m_Mem.Free();
 }
 
-RHIVkSampler::RHIVkSampler(const RHISamplerDesc& desc, VkSampler sampler): RHISampler(desc), m_Sampler(sampler){}
+RHIVulkanSampler::RHIVulkanSampler(const RHISamplerDesc& desc, VkSampler sampler): RHISampler(desc), m_Sampler(sampler){}
 
-RHIVkSampler::~RHIVkSampler() {
+RHIVulkanSampler::~RHIVulkanSampler() {
 	VkDevice device = RHIVulkan::GetDevice();
 	vkDestroySampler(device, m_Sampler, nullptr);
 }
 
-void RHIVkSampler::SetName(const char* name) {
+void RHIVulkanSampler::SetName(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_SAMPLER, m_Sampler, name);
 }
 
-RHIVkFence::RHIVkFence(VkFence fence): m_Handle(fence) {
+RHIVulkanFence::RHIVulkanFence(VkFence fence): m_Handle(fence) {
 }
 
 
-RHIVkFence::~RHIVkFence() {
+RHIVulkanFence::~RHIVulkanFence() {
 	VkDevice device = RHIVulkan::GetDevice();
 	vkDestroyFence(device, m_Handle, nullptr);
 }
 
-void RHIVkFence::Wait() {
+void RHIVulkanFence::Wait() {
 	vkWaitForFences(RHIVulkan::GetDevice(), 1, &m_Handle, 1, WAIT_MAX);
 }
 
-void RHIVkFence::Reset() {
+void RHIVulkanFence::Reset() {
 	vkResetFences(RHIVulkan::GetDevice(), 1, &m_Handle);
 }
 
-void RHIVkFence::SetName(const char* name) {
+void RHIVulkanFence::SetName(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_FENCE, m_Handle, name);
 }
 
@@ -285,7 +285,7 @@ void RHIVulkanRenderPass::CreateHandle(const VulkanLayoutMgr& layoutMgr) {
 		attachmentDescs[i].finalLayout = layoutMgr.GetFinalLayout(rtInfo.Target);
 		colorRefs.PushBack({ i, attachmentDescs[i].initialLayout });
 
-		RHIVkTexture* vkTex = dynamic_cast<RHIVkTexture*>(rtInfo.Target);
+		RHIVulkanTexture* vkTex = dynamic_cast<RHIVulkanTexture*>(rtInfo.Target);
 		attachments[i] = vkTex->GetView();
 	}
 
@@ -302,7 +302,7 @@ void RHIVulkanRenderPass::CreateHandle(const VulkanLayoutMgr& layoutMgr) {
 		attachmentDescs[i].initialLayout = layoutMgr.GetCurrentLayout(depthInfo.Target);
 		attachmentDescs[i].finalLayout = layoutMgr.GetFinalLayout(depthInfo.Target);
 		depthRef = { i, attachmentDescs[i].initialLayout };
-		RHIVkTexture* vkTex = dynamic_cast<RHIVkTexture*>(depthInfo.Target);
+		RHIVulkanTexture* vkTex = dynamic_cast<RHIVulkanTexture*>(depthInfo.Target);
 		attachments[i] = vkTex->GetView();
 		++i;
 	}

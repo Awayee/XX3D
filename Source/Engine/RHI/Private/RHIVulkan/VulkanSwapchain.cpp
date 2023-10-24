@@ -8,26 +8,35 @@ VulkanSwapchain::VulkanSwapchain(const VulkanContext* context) : m_ContextPtr(co
 	// Create semaphores
 	m_FrameRes.Resize(MAX_FRAME_COUNT);
 	VkSemaphoreCreateInfo smpInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr };
-	for (FrameResource& res : m_FrameRes) {
+	for (FrameImage& res : m_FrameRes) {
 		vkCreateSemaphore(m_ContextPtr->Device, &smpInfo, nullptr, &res.ImageAvailableSmp);
-		vkCreateSemaphore(m_ContextPtr->Device, &smpInfo, nullptr, &res.PreparePresentSmp);
 	}
 }
 
 VulkanSwapchain::~VulkanSwapchain() {
 	ClearSwapChain();
-	for (FrameResource& res : m_FrameRes) {
+	for (FrameImage& res : m_FrameRes) {
 		vkDestroySemaphore(m_ContextPtr->Device, res.ImageAvailableSmp, nullptr);
-		vkDestroySemaphore(m_ContextPtr->Device, res.PreparePresentSmp, nullptr);
 	}
 }
 
-bool VulkanSwapchain::Present(VkSemaphore readySmp) {
+VkSemaphore VulkanSwapchain::AcquireImage() {
+	FrameImage& currentFrame = m_FrameRes[m_CurFrame];
+	VkSemaphore signalSmp = currentFrame.ImageAvailableSmp;
+	VkResult res = vkAcquireNextImageKHR(m_ContextPtr->Device, m_Swapchain, WAIT_MAX, signalSmp, VK_NULL_HANDLE, &currentFrame.ImageIdx);
+	if (VK_SUCCESS == res) {
+		m_Prepared = true;
+		return signalSmp;
+	}
+	return VK_NULL_HANDLE;
+}
+
+bool VulkanSwapchain::Present(VkSemaphore waitSmp) {
 	bool bRes = false;
 	if (m_Prepared) {
 		VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr };
 		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = &readySmp;
+		presentInfo.pWaitSemaphores = &waitSmp;
 		presentInfo.swapchainCount = 1;
 		presentInfo.pSwapchains = &m_Swapchain;
 		presentInfo.pImageIndices = &m_FrameRes[m_CurFrame].ImageIdx;
@@ -41,26 +50,12 @@ bool VulkanSwapchain::Present(VkSemaphore readySmp) {
 	return bRes;
 }
 
-bool VulkanSwapchain::AcquireImage() {
-	FrameResource& currentFrame = m_FrameRes[m_CurFrame];
-	VkResult res = vkAcquireNextImageKHR(m_ContextPtr->Device, m_Swapchain, WAIT_MAX, currentFrame.ImageAvailableSmp, VK_NULL_HANDLE, &currentFrame.ImageIdx);
-	if (VK_SUCCESS == res) {
-		m_Prepared = true;
-		return true;
-	}
-	return false;
-}
-
 void VulkanSwapchain::Resize(USize2D size) {
 	ClearSwapChain();
 	CreateSwapChain();
 }
 
-VkSemaphore VulkanSwapchain::GetBufferAvailableSmp() const {
-	return m_Prepared ? m_FrameRes[m_CurFrame].ImageAvailableSmp : VK_NULL_HANDLE;
-}
-
-USize2D VulkanSwapchain::GetExtent() {
+USize2D VulkanSwapchain::GetSize() {
 	return USize2D{ m_Width, m_Height };
 }
 
@@ -82,7 +77,7 @@ void VulkanSwapchain::CreateSwapChain() {
 	desc.Samples = 1;
 	m_Textures.Reserve(images.Size());
 	for(uint32 i=0; i<images.Size(); ++i) {
-		m_Textures.PushBack(RHIVkTexture{ desc, images[i], views[i] });
+		m_Textures.PushBack(RHIVulkanTexture{ desc, images[i], views[i] });
 	}
 }
 

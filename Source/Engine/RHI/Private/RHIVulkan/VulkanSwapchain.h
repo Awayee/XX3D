@@ -6,11 +6,10 @@ class VulkanSwapchain : public RHISwapChain {
 public:
 	explicit VulkanSwapchain(const VulkanContext* context);
 	~VulkanSwapchain() override;
-	bool Present(VkSemaphore readySmp);
-	bool AcquireImage();
+	VkSemaphore AcquireImage();// acquire an available image, return VK_NULL_HANDLE if failed
+	bool Present(VkSemaphore waitSmp);// return false if failed
 	void Resize(USize2D size) override;
-	VkSemaphore GetBufferAvailableSmp() const;
-	USize2D GetExtent() override;
+	USize2D GetSize() override;
 private:
 	enum : uint32 {
 		WAIT_MAX = 0xff,
@@ -21,15 +20,14 @@ private:
 	uint32 m_Height;
 	VkSurfaceFormatKHR m_SurfaceFormat;
 	VkSwapchainKHR m_Swapchain;
-	TVector<RHIVkTexture> m_Textures;
+	TVector<RHIVulkanTexture> m_Textures;
 	uint8 m_CurFrame{ 0 };
 	bool m_Prepared = false;
-	struct FrameResource {
+	struct FrameImage {
 		uint32 ImageIdx;
 		VkSemaphore ImageAvailableSmp{ VK_NULL_HANDLE };
-		VkSemaphore PreparePresentSmp{ VK_NULL_HANDLE };
 	};
-	TVector<FrameResource> m_FrameRes;
+	TVector<FrameImage> m_FrameRes;
 	void CreateSwapChain();
 	void ClearSwapChain();
 };

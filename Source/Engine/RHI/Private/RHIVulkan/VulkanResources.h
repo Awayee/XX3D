@@ -11,56 +11,55 @@ protected:
 	VkDevice m_DeviceHandle{VK_NULL_HANDLE};
 };
 
-class RHIVkBuffer: public RHIBuffer, public RHIVulkanResource {
+class RHIVulkanBuffer: public RHIBuffer, public RHIVulkanResource {
 private:
 	friend RHIVulkan;
 	VkBuffer m_Buffer;
 	VulkanMem m_Mem;
 public:
-	RHIVkBuffer(const RHIBufferDesc& desc, VkBuffer buffer, VulkanMem&& mem);
-	~RHIVkBuffer()override;
+	RHIVulkanBuffer(const RHIBufferDesc& desc, VkBuffer buffer, VulkanMem&& mem);
+	~RHIVulkanBuffer()override;
 	void SetName(const char* name) override;
 	void UpdateData(const void* data, size_t byteSize) override;
 	VkBuffer GetBuffer() const { return m_Buffer; }
 };
 
-class RHIVkTexture: public RHITexture {
+class RHIVulkanTexture: public RHITexture {
 protected:
-	friend RHIVulkan;
 	VkImage m_Image;
 	VkImageView m_View;
 public:
-	RHIVkTexture(const RHITextureDesc& desc, VkImage image, VkImageView view);
-	virtual ~RHIVkTexture() override;
+	RHIVulkanTexture(const RHITextureDesc& desc, VkImage image, VkImageView view);
+	RHIVulkanTexture(const RHIVulkanTexture&) = delete;
+	virtual ~RHIVulkanTexture() override;
 	VkImage GetImage() const { return m_Image; }
 	VkImageView GetView() const { return m_View; }
 	void SetName(const char* name) override;
 };
 
-class RHIVkTextureWithMem: public RHIVkTexture {
+class RHIVulkanTextureWithMem: public RHIVulkanTexture {
 private:
-	friend RHIVulkan;
 	VulkanMem m_Mem;
 public:
-	RHIVkTextureWithMem(const RHITextureDesc& desc, VkImage image, VkImageView view, VulkanMem&& memory);
-	~RHIVkTextureWithMem() override;
+	RHIVulkanTextureWithMem(const RHITextureDesc& desc, VkImage image, VkImageView view, VulkanMem&& memory);
+	~RHIVulkanTextureWithMem() override;
 };
 
-class RHIVkSampler: public RHISampler{
+class RHIVulkanSampler: public RHISampler{
 private:
 	friend RHIVulkan;
 	VkSampler m_Sampler;
 public:
-	RHIVkSampler(const RHISamplerDesc& desc, VkSampler sampler);
-	~RHIVkSampler()override;
+	RHIVulkanSampler(const RHISamplerDesc& desc, VkSampler sampler);
+	~RHIVulkanSampler()override;
 	VkSampler GetSampler() { return m_Sampler; }
 	void SetName(const char* name) override;
 };
 
-class RHIVkFence : public RHIFence {
+class RHIVulkanFence : public RHIFence {
 public:
-	explicit RHIVkFence(VkFence fence);
-	~RHIVkFence() override;
+	explicit RHIVulkanFence(VkFence fence);
+	~RHIVulkanFence() override;
 	void Wait() override;
 	void Reset() override;
 	void SetName(const char* name) override;

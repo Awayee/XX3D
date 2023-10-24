@@ -82,4 +82,4 @@ private:
 	static RHI* s_Instance;
 };
 
-#define GET_RHI(x) Engine::RHI* x = Engine::RHI::Instance()
+#define GET_RHI(x) RHI* x = RHI::Instance()

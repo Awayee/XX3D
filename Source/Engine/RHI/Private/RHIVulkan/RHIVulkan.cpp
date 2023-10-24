@@ -100,7 +100,7 @@ RHIBuffer* RHIVulkan::CreateBuffer(const RHIBufferDesc& desc) {
 		vkDestroyBuffer(GetDevice(), buffer, nullptr);
 		return nullptr;
 	}
-	return new RHIVkBuffer(desc, buffer, std::move(mem));
+	return new RHIVulkanBuffer(desc, buffer, std::move(mem));
 }
 
 RHITexture* RHIVulkan::CreateTexture(const RHITextureDesc& desc) {
@@ -138,7 +138,7 @@ RHITexture* RHIVulkan::CreateTexture(const RHITextureDesc& desc) {
 	VkImageView viewHandle;
 	vkCreateImageView(GetDevice(), &imageViewCreateInfo, nullptr, &viewHandle);
 
-	return new RHIVkTextureWithMem(desc, imageHandle, viewHandle, std::move(mem));
+	return new RHIVulkanTextureWithMem(desc, imageHandle, viewHandle, std::move(mem));
 }
 
 RHISampler* RHIVulkan::CreateSampler(const RHISamplerDesc& desc) {
@@ -161,7 +161,7 @@ RHISampler* RHIVulkan::CreateSampler(const RHISamplerDesc& desc) {
 	if (VK_SUCCESS != vkCreateSampler(GetDevice(), &info, nullptr, &samplerHandle)) {
 		return nullptr;
 	}
-	return new RHIVkSampler(desc, samplerHandle);
+	return new RHIVulkanSampler(desc, samplerHandle);
 }
 
 RHIFence* RHIVulkan::CreateFence(bool sig) {
@@ -171,7 +171,7 @@ RHIFence* RHIVulkan::CreateFence(bool sig) {
 	info.flags = sig ? VK_FENCE_CREATE_SIGNALED_BIT : 0; // the fence is initialized as signaled
 	VkFence fence;
 	if(VK_SUCCESS == vkCreateFence(GetDevice(), &info, nullptr, &fence)) {
-		return new RHIVkFence(fence);
+		return new RHIVulkanFence(fence);
 	}
 	return nullptr;
 }
@@ -213,7 +213,7 @@ RHICommandBuffer* RHIVulkan::CreateCommandBuffer() {
 
 void RHIVulkan::SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence) {
 	TempArray<VkCommandBuffer> vkHandles(cmds.Size());
-	RHIVkFence* vkFence = dynamic_cast<RHIVkFence*>(fence);
+	RHIVulkanFence* vkFence = dynamic_cast<RHIVulkanFence*>(fence);
 	for(uint32 i=0; i<cmds.Size(); ++i) {
 		vkHandles[i] = dynamic_cast<RHIVulkanCommandBuffer*>(cmds[i])->GetHandle();
 	}
@@ -222,12 +222,12 @@ void RHIVulkan::SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence
 
 void RHIVulkan::Present() {
 	m_DSMgr->Update();
-	if(!m_SwapChain->AcquireImage()) {
+	VkSemaphore imageAvailableSmp = m_SwapChain->AcquireImage();
+	if(VK_NULL_HANDLE == imageAvailableSmp) {
 		PRINT_DEBUG("RHIVulkan::Present Could not acquire a image!");
 		return;
 	}
-	VkSemaphore bufferAvailableSmp = m_SwapChain->GetBufferAvailableSmp();
-	VkSemaphore completeCmdSmp = m_CmdMgr->Submit(bufferAvailableSmp);
+	VkSemaphore completeCmdSmp = m_CmdMgr->Submit(imageAvailableSmp);
 	if(!m_SwapChain->Present(completeCmdSmp)) {
 		PRINT_DEBUG("RHIVulkan::Present Could not present!");
 	}

@@ -210,10 +210,7 @@ void VulkanCommandMgr::FreeCmd(VkCommandBuffer handle) {
 	m_CmdsToFree.PushBack(handle);
 }
 
-VkSemaphore VulkanCommandMgr::GetAllCompleteSmp() {
-}
-
-void VulkanCommandMgr::AddGraphicsSubmit(TConstArrayView<VkCommandBuffer> cmds, VkFence fence, bool needPresent) {
+void VulkanCommandMgr::AddGraphicsSubmit(TConstArrayView<VkCommandBuffer> cmds, VkFence fence, bool toPresent) {
 	// create a submit info
 	uint32 preSmpIdx;
 	if(m_SubmitInfos.Empty()) {
@@ -229,56 +226,54 @@ void VulkanCommandMgr::AddGraphicsSubmit(TConstArrayView<VkCommandBuffer> cmds, 
 	submitInfo.WaitSmpIdx = preSmpIdx;
 	submitInfo.WaitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;// a graphics cmd must with render pass
 	submitInfo.SignalSmpIdx = m_SmpMgr.Allocate();
-	submitInfo.NeedPresent = needPresent;
+	submitInfo.ToPresent = toPresent;
 	submitInfo.Fence = fence;
 	m_CmdsToSubmit.PushBack(cmds.Size(), cmds.Data());
 }
 
-VkSemaphore VulkanCommandMgr::Submit(VkSemaphore bufferAvailableSmp) {
-	// TODO wait current back buffer available
-	TempArray<VkSubmitInfo> infos(m_SubmitInfos.Size());
-	uint32 submitIdx = 0;
-	VkFence tempFence = VK_NULL_HANDLE;
-	for (uint32 i = 0; i < m_SubmitInfos.Size(); ++i) {
-		const SubmitInfo& submitInfo = m_SubmitInfos[i];
-		if(0 == i) {
-			tempFence = submitInfo.Fence;
-		}
-		// check whether fence is same, or submit
-		if(tempFence != submitInfo.Fence) {
-			vkQueueSubmit(m_ContextPtr->GraphicsQueue.Handle, submitIdx, infos.Data(), tempFence);
-			submitIdx = 0;
-			tempFence = submitInfo.Fence;
-		}
-		VkSubmitInfo& vkSubmitInfo = infos[submitIdx++];
-		vkSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		vkSubmitInfo.pNext = nullptr;
-		// wait smp
+VkSemaphore VulkanCommandMgr::Submit(VkSemaphore presentWaitSmp) {
+	if(m_SubmitInfos.Empty()) {
+		return VK_NULL_HANDLE;
+	}
+	uint32 signalSmpIdx = 0;
+	for(const SubmitInfo& submitInfo: m_SubmitInfos) {
+		VkSubmitInfo vkSubmitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr };
+		vkSubmitInfo.commandBufferCount = submitInfo.CmdCount;
+		vkSubmitInfo.pCommandBuffers = &m_CmdsToSubmit[submitInfo.CmdStartIdx];
+		//wait
+		TempArray<VkSemaphore> waitSmps(2);
+		TempArray<VkPipelineStageFlags> waitStages(2);
+		uint32 waitSmpCount = 0;
 		if(INVALID_IDX != submitInfo.WaitSmpIdx) {
-			vkSubmitInfo.waitSemaphoreCount = 1;
-			vkSubmitInfo.pWaitSemaphores = &m_SmpMgr.Get(submitInfo.WaitSmpIdx);
-			vkSubmitInfo.pWaitDstStageMask = &submitInfo.WaitStage;
+			waitSmps[0] = m_SmpMgr.Get(submitInfo.WaitSmpIdx);
+			waitStages[0] = submitInfo.WaitStage;
+			++waitSmpCount;
 		}
-		else {
-			vkSubmitInfo.waitSemaphoreCount = 0;
-			vkSubmitInfo.pWaitSemaphores = nullptr;
+		if(submitInfo.ToPresent) {
+			waitSmps[1] = presentWaitSmp;
+			waitStages[1] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			++waitSmpCount;
 		}
+		vkSubmitInfo.waitSemaphoreCount = waitSmpCount;
+		vkSubmitInfo.pWaitSemaphores = waitSmpCount ? waitSmps.Data() : nullptr;
 
-		// signal smp
+		// signal
 		if(INVALID_IDX != submitInfo.SignalSmpIdx) {
 			vkSubmitInfo.signalSemaphoreCount = 1;
 			vkSubmitInfo.pSignalSemaphores = &m_SmpMgr.Get(submitInfo.SignalSmpIdx);
+			if(submitInfo.SignalSmpIdx > signalSmpIdx) {
+				signalSmpIdx = submitInfo.SignalSmpIdx;
+			}
 		}
 		else {
 			vkSubmitInfo.signalSemaphoreCount = 0;
 			vkSubmitInfo.pSignalSemaphores = nullptr;
 		}
-		vkSubmitInfo.commandBufferCount = submitInfo.CmdCount;
-		vkSubmitInfo.pCommandBuffers = &m_CmdsToSubmit[submitInfo.CmdStartIdx];
+		vkQueueSubmit(m_ContextPtr->GraphicsQueue.Handle, 1, &vkSubmitInfo, submitInfo.Fence);
 	}
-	// the last batch
-	VkSemaphore completeSmp = *infos[submitIdx - 1].pSignalSemaphores;
-	vkQueueSubmit(m_ContextPtr->GraphicsQueue.Handle, submitIdx, infos.Data(), tempFence);
+
+	// free
+	VkSemaphore completeSmp = m_SmpMgr.Get(signalSmpIdx);
 	m_CmdsToSubmit.Clear();
 	m_SubmitInfos.Clear();
 	m_SmpMgr.ResetSmps();
@@ -288,7 +283,6 @@ VkSemaphore VulkanCommandMgr::Submit(VkSemaphore bufferAvailableSmp) {
 
 	return completeSmp;
 }
-
 
 RHIVulkanCommandBuffer::RHIVulkanCommandBuffer(VkCommandBuffer handle, VulkanCommandMgr* mgr) : m_Handle(handle), m_Mgr(mgr), m_IsBegin(false) {
 }
@@ -346,12 +340,12 @@ void RHIVulkanCommandBuffer::BindComputePipeline(RHIComputePipelineState* pipeli
 }
 
 void RHIVulkanCommandBuffer::BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) {
-	VkBuffer vkBuffer = dynamic_cast<RHIVkBuffer*>(buffer)->GetBuffer();
+	VkBuffer vkBuffer = dynamic_cast<RHIVulkanBuffer*>(buffer)->GetBuffer();
 	vkCmdBindVertexBuffers(m_Handle, first, 1, &vkBuffer, &offset);
 }
 
 void RHIVulkanCommandBuffer::BindIndexBuffer(RHIBuffer* buffer, uint64 offset) {
-	vkCmdBindIndexBuffer(m_Handle, dynamic_cast<RHIVkBuffer*>(buffer)->GetBuffer(), offset, VK_INDEX_TYPE_UINT32);
+	vkCmdBindIndexBuffer(m_Handle, dynamic_cast<RHIVulkanBuffer*>(buffer)->GetBuffer(), offset, VK_INDEX_TYPE_UINT32);
 }
 
 void RHIVulkanCommandBuffer::Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance) {
@@ -385,11 +379,11 @@ void RHIVulkanCommandBuffer::ClearColorAttachment(const float* color, const IRec
 
 void RHIVulkanCommandBuffer::CopyBufferToBuffer(RHIBuffer* srcBuffer, RHIBuffer* dstBuffer, uint64 srcOffset, uint64 dstOffset, uint64 size) {
 	VkBufferCopy copy{ srcOffset, dstOffset, size };
-	vkCmdCopyBuffer(m_Handle, dynamic_cast<RHIVkBuffer*>(srcBuffer)->GetBuffer(), dynamic_cast<RHIVkBuffer*>(dstBuffer)->GetBuffer(), 1, &copy);
+	vkCmdCopyBuffer(m_Handle, dynamic_cast<RHIVulkanBuffer*>(srcBuffer)->GetBuffer(), dynamic_cast<RHIVulkanBuffer*>(dstBuffer)->GetBuffer(), 1, &copy);
 }
 
 void RHIVulkanCommandBuffer::CopyBufferToTexture(RHIBuffer* buffer, RHITexture* texture, uint32 mipLevel, uint32 baseLayer, uint32 layerCount) {
-	RHIVkTexture* vkTex = dynamic_cast<RHIVkTexture*>(texture);
+	RHIVulkanTexture* vkTex = dynamic_cast<RHIVulkanTexture*>(texture);
 	VkBufferImageCopy region;
 	region.bufferOffset = 0;
 	region.bufferRowLength = 0;
@@ -401,7 +395,7 @@ void RHIVulkanCommandBuffer::CopyBufferToTexture(RHIBuffer* buffer, RHITexture* 
 	region.imageOffset = { 0, 0, 0 };
 	const USize3D size = vkTex->GetDesc().Size;
 	region.imageExtent = { size.w, size.h, size.d };
-	vkCmdCopyBufferToImage(m_Handle, ((RHIVkBuffer*)buffer)->GetBuffer(), vkTex->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+	vkCmdCopyBufferToImage(m_Handle, ((RHIVulkanBuffer*)buffer)->GetBuffer(), vkTex->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
 void RHIVulkanCommandBuffer::CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RHITextureCopyRegion& region)
@@ -418,11 +412,11 @@ void RHIVulkanCommandBuffer::CopyTextureToTexture(RHITexture* srcTex, RHITexture
 	blit.dstSubresource.baseArrayLayer = region.dstBaseLayer;
 	blit.dstSubresource.layerCount = region.dstLayerCount;
 	memcpy(blit.dstOffsets, region.dstOffsets, sizeof(VkOffset3D) * 2);
-	vkCmdBlitImage(m_Handle, ((RHIVkTexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, ((RHIVkTexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
+	vkCmdBlitImage(m_Handle, ((RHIVulkanTexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, ((RHIVulkanTexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 }
 
 void RHIVulkanCommandBuffer::ResourceBarrier(RHITexture* texture, RHITextureSubDesc subDesc, EResourceState stateBefore, EResourceState stateAfter) {
-	RHIVkTexture* vkTex = dynamic_cast<RHIVkTexture*>(texture);
+	RHIVulkanTexture* vkTex = dynamic_cast<RHIVulkanTexture*>(texture);
 	VkImageMemoryBarrier barrier{};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 	barrier.oldLayout = ToImageLayout(stateBefore);
@@ -442,7 +436,7 @@ void RHIVulkanCommandBuffer::ResourceBarrier(RHITexture* texture, RHITextureSubD
 }
 
 void RHIVulkanCommandBuffer::GenerateMipmap(RHITexture* texture, uint32 levelCount, uint32 baseLayer, uint32 layerCount) {
-	RHIVkTexture* vkTex = dynamic_cast<RHIVkTexture*>(texture);
+	RHIVulkanTexture* vkTex = dynamic_cast<RHIVulkanTexture*>(texture);
 	USize3D size = vkTex->GetDesc().Size;
 	const VkImageAspectFlags aspect = ToImageAspectFlags(vkTex->GetDesc().Flags);
 	GenerateMipMap(m_Handle, vkTex->GetImage(), levelCount, size.w, size.h, aspect, baseLayer, layerCount);
