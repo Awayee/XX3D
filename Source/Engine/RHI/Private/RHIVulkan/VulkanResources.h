@@ -107,7 +107,7 @@ private:
 };
 
 // layout manager in one pass
-// TODO move to cmd
+// TODO move to cmd 
 class VulkanLayoutMgr {
 public:
 	VkImageLayout GetCurrentLayout(VkImage handle) const;
