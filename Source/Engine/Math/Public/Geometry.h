@@ -9,7 +9,9 @@ namespace Math {
 		FVector3 Extent {0.0f, 0.0f, 0.0f};
 		AABB();
 		AABB(const FVector3& center, const FVector3& extent);
-		void Contain(const FVector3& newPoint);
+		FVector3 Min() const;
+		FVector3 Max() const;
+		void Include(const FVector3& newPoint);
 		void Merge(const AABB& box);
 	};
 }

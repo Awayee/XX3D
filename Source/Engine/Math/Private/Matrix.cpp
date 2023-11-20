@@ -3,6 +3,7 @@
 #include "Math/Public/MathBase.h"
 
 namespace Math {
+#define MATH_GENERIC template<typename T>
     // matrix 3x3
     MATH_GENERIC Matrix3x3<T>::Matrix3x3(T** arr)
 	{

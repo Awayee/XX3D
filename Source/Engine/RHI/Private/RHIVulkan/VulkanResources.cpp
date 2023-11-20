@@ -110,9 +110,7 @@ RHIVulkanGraphicsPipelineState::RHIVulkanGraphicsPipelineState(const RHIGraphics
 }
 
 RHIVulkanGraphicsPipelineState::~RHIVulkanGraphicsPipelineState() {
-	VkDevice device = RHIVulkan::GetDevice();
-	vkDestroyPipelineLayout(device, m_PipelineLayout, nullptr);
-	vkDestroyPipeline(device, m_Pipeline, nullptr);
+	Release();
 }
 
 void RHIVulkanGraphicsPipelineState::SetName(const char* name) {
@@ -120,9 +118,13 @@ void RHIVulkanGraphicsPipelineState::SetName(const char* name) {
 }
 
 VkPipeline RHIVulkanGraphicsPipelineState::GetPipelineHandle(VkRenderPass pass, uint32 subPass) {
-	if (VK_NULL_HANDLE == m_Pipeline) {
-		CreatePipelineHandle(pass, subPass);
+	if(m_TargetRenderPass == pass && m_TargetSubPass == subPass && m_Pipeline) {
+		return m_Pipeline;
 	}
+	if(m_Pipeline) {
+		Release();
+	}
+	CreatePipelineHandle(pass, subPass);
 	return m_Pipeline;
 }
 
@@ -220,6 +222,15 @@ void RHIVulkanGraphicsPipelineState::CreatePipelineHandle(VkRenderPass pass, uin
 	pipelineInfo.renderPass = pass;
 	pipelineInfo.subpass = subPass;
 	VK_CHECK(vkCreateGraphicsPipelines(RHIVulkan::GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_Pipeline), "vkCreateGraphicsPipelines");
+
+	m_TargetRenderPass = pass;
+	m_TargetSubPass = subPass;
+}
+
+void RHIVulkanGraphicsPipelineState::Release() {
+	VkDevice device = RHIVulkan::GetDevice();
+	vkDestroyPipelineLayout(device, m_PipelineLayout, nullptr);
+	vkDestroyPipeline(device, m_Pipeline, nullptr);
 }
 
 RHIVulkanComputePipelineState::RHIVulkanComputePipelineState(const RHIComputePipelineStateDesc& desc, VkPipelineLayout layout): RHIComputePipelineState(desc) {

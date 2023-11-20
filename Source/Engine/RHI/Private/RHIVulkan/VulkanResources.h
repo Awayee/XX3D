@@ -86,10 +86,13 @@ public:
 	~RHIVulkanGraphicsPipelineState() override;
 	void SetName(const char* name) override;
 	VkPipeline GetPipelineHandle(VkRenderPass pass, uint32 subPass);
-	void CreatePipelineHandle(VkRenderPass pass, uint32 subPass);
 private:
+	void CreatePipelineHandle(VkRenderPass pass, uint32 subPass);
+	void Release();
 	friend RHIVulkan;
 	XXString m_Name;
+	VkRenderPass m_TargetRenderPass{VK_NULL_HANDLE};
+	uint32 m_TargetSubPass{0};
 	VkPipelineLayout m_PipelineLayout{VK_NULL_HANDLE};
 	VkPipeline m_Pipeline{VK_NULL_HANDLE};
 };
@@ -107,7 +110,7 @@ private:
 };
 
 // layout manager in one pass
-// TODO move to cmd 
+// TODO move to cmd
 class VulkanLayoutMgr {
 public:
 	VkImageLayout GetCurrentLayout(VkImage handle) const;

@@ -110,7 +110,7 @@ inline VkPresentModeKHR FindPresentMode(VkPhysicalDevice physicalDevice, VkSurfa
 	TVector<VkPresentModeKHR> presentModes(presentModeCount);
 	vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes.Data());
 	if (!presentModes.Empty()) {
-		static const TArray<VkPresentModeKHR> s_PresentModePriorities{
+		static const TVector<VkPresentModeKHR> s_PresentModePriorities{
 			VK_PRESENT_MODE_IMMEDIATE_KHR,
 			VK_PRESENT_MODE_MAILBOX_KHR,
 			VK_PRESENT_MODE_FIFO_KHR,

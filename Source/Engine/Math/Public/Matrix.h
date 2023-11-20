@@ -3,7 +3,7 @@
 #include "Quaternion.h"
 
 namespace Math {
-    MATH_GENERIC struct Matrix3x3 {
+    template<typename T> struct Matrix3x3 {
 		T m_mat[3][3];
 		Matrix3x3() = default;
         explicit Matrix3x3(T** arr);
@@ -46,12 +46,11 @@ namespace Math {
     typedef Matrix3x3<double> DMatrix3x3;
     typedef Matrix3x3<int>    IMatrix3x3;
 
-    MATH_GENERIC void MatrixToQuaternion(const Matrix3x3<T>& m, Quaternion<T>& q);
+    template<typename T> void MatrixToQuaternion(const Matrix3x3<T>& m, Quaternion<T>& q);
 
-    MATH_GENERIC void QuaternionToMatrix(const Quaternion<T>& q, Matrix3x3<T>& m);
+    template<typename T> void QuaternionToMatrix(const Quaternion<T>& q, Matrix3x3<T>& m);
 
-
-    MATH_GENERIC struct Matrix4x4
+    template<typename T> struct Matrix4x4
     {
         /// The matrix entries, indexed by [row][col]
         T m_mat[4][4];

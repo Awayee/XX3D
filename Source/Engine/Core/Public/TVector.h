@@ -31,6 +31,8 @@ public:
 
 	uint32 Size() const { return static_cast<uint32>(Base::size()); }
 
+	uint32 ByteSize() const { return static_cast<uint32>(Base::size() * sizeof(T)); }
+
 	void PushBack(T&& ele) { Base::push_back(std::forward<T>(ele)); }
 
 	void PushBack(const T& ele) { Base::push_back(ele); }

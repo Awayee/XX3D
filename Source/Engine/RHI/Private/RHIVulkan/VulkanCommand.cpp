@@ -1,7 +1,7 @@
 #include "VulkanCommand.h"
 #include "VulkanResources.h"
 #include "VulkanConverter.h"
-#include "Core/Public/TempArray.h"
+#include "Core/Public/TArray.h"
 
 namespace {
 	void GetPipelineBarrierStage(VkImageLayout oldLayout, VkImageLayout newLayout, VkAccessFlags& srcAccessMask, VkAccessFlags& dstAccessMask, VkPipelineStageFlags& srcStage, VkPipelineStageFlags& dstStage) {

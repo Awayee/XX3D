@@ -1,15 +1,9 @@
 #pragma once
 
 namespace Math {
-#define MATH_GENERIC template<typename T>
-
-#define MATH_GENERIC_INSTANCE (x)\
-    template struct x<float>;\
-    template struct x<double>;\
-    template struct x<int>
 
     // Vectors
-    MATH_GENERIC struct Vector2 {
+    template <typename T> struct Vector2 {
         T x{ 0.f };
     	T y{ 0.f };
         Vector2() = default;
@@ -121,7 +115,7 @@ namespace Math {
 
     };
      
-    MATH_GENERIC struct Vector3 {
+    template <typename T> struct Vector3 {
         T x{ 0.0f };
         T y{ 0.0f };
     	T z{ 0.0f };
@@ -217,10 +211,14 @@ namespace Math {
         static Vector3<T> Cross(const Vector3<T>& v0, const Vector3<T>& v1) { return Vector3<T>(v0.y * v1.z - v0.z * v1.y, v0.z * v1.x - v0.x * v1.z, v0.x * v1.y - v0.y * v1.x); }
         static Vector3<T> Max(const Vector3<T>& v0, const Vector3<T>& v1);
         static Vector3<T> Min(const Vector3<T>& v0, const Vector3<T>& v1);
+        static Vector3<T> Abs(const Vector3<T>& v);
+        static bool AllLess(const Vector3<T>& v0, const Vector3<T>& v1);
+        static bool AllLessOrEqual(const Vector3<T>& v0, const Vector3<T>& v1);
+        static bool AllGreater(const Vector3<T>& v0, const Vector3<T>& v1);
+        static bool AllGreaterOrEqual(const Vector3<T>& v0, const Vector3<T>& v1);
     };
 
-    template<typename T>
-    struct Vector4 {
+    template <typename T> struct Vector4 {
         T x{ 0.f };
         T y{ 0.f };
         T z{ 0.f };

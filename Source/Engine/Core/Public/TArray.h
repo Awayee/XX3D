@@ -164,3 +164,48 @@ public:
 		return *this;
 	}
 };
+
+template <typename T, uint32 L>
+class TFixedArray {
+public:
+	~TFixedArray() = default;
+	TFixedArray() = default;
+	TFixedArray(const TFixedArray& rhs) {
+		m_Data = rhs.m_Data;
+	}
+	TFixedArray(TFixedArray&& rhs) noexcept {
+		m_Data = rhs.m_Data;
+	}
+
+	constexpr uint32 Size() const {
+		return L;
+	}
+
+	constexpr uint32 ByteSize() const {
+		return L * sizeof(T);
+	}
+
+	T& operator[](uint32 i) {
+		return m_Data[i];
+	}
+
+	const T& operator[](uint32 i)const {
+		return m_Data[i];
+	}
+
+	bool operator == (const TFixedArray& rhs) const {
+		return 0 ==memcmp(m_Data, rhs.m_Data, L);
+	}
+
+	// for-each loop
+	T* begin()const {
+		return m_Data;
+	}
+
+	T* end()const {
+		return m_Data + L;
+	}
+
+private:
+	T m_Data[L];
+};
