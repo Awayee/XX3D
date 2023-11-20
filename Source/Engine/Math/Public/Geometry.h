@@ -12,6 +12,8 @@ namespace Math {
 		FVector3 Min() const;
 		FVector3 Max() const;
 		void Include(const FVector3& newPoint);
-		void Merge(const AABB& box);
+		void Merge(const AABB& aabb);
+		bool Contain(const FVector3& point) const;
+		bool Intersect(const AABB& aabb) const;
 	};
 }

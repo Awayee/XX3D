@@ -1,7 +1,7 @@
 #pragma once
 #include "Vector.h"
 namespace Math {
-	MATH_GENERIC class Quaternion {
+	template<typename T> class Quaternion {
 	public:
 		T x{ 0.0f };
 		T y{ 0.0f };
