@@ -1,6 +1,5 @@
 #pragma once
 #include "Core/Public/TypeDefine.h"
-
 #include <initializer_list>
 
 // a simple array just contains data
@@ -166,15 +165,31 @@ public:
 };
 
 template <typename T, uint32 L>
-class TFixedArray {
+class TStaticArray{
 public:
-	~TFixedArray() = default;
-	TFixedArray() = default;
-	TFixedArray(const TFixedArray& rhs) {
-		m_Data = rhs.m_Data;
+	~TStaticArray() = default;
+	TStaticArray() = default;
+	TStaticArray(const TStaticArray& rhs) {
+		memcpy(m_Data, rhs.m_Data, ByteSize());
 	}
-	TFixedArray(TFixedArray&& rhs) noexcept {
-		m_Data = rhs.m_Data;
+	TStaticArray(TStaticArray&& rhs) noexcept {
+		memcpy(m_Data, rhs.m_Data, ByteSize());
+	}
+	TStaticArray(std::initializer_list<T> params) {
+		static_assert(L == params.size());
+		memcpy(m_Data, params.begin(), ByteSize());
+	}
+
+	TStaticArray& operator =(const TStaticArray& rhs) {
+		if(this != &rhs) {
+			memcpy(m_Data, rhs.m_Data, ByteSize());
+		}
+		return *this;
+	}
+
+	TStaticArray& operator=(TStaticArray&& rhs) noexcept {
+		memcpy(m_Data, rhs.m_Data, ByteSize());
+		return *this;
 	}
 
 	constexpr uint32 Size() const {
@@ -193,7 +208,10 @@ public:
 		return m_Data[i];
 	}
 
-	bool operator == (const TFixedArray& rhs) const {
+	bool operator == (const TStaticArray& rhs) const {
+		if(m_Data == rhs.m_Data) {
+			return true;
+		}
 		return 0 ==memcmp(m_Data, rhs.m_Data, L);
 	}
 
