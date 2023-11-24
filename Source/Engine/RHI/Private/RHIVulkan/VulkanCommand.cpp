@@ -241,8 +241,8 @@ VkSemaphore VulkanCommandMgr::Submit(VkSemaphore presentWaitSmp) {
 		vkSubmitInfo.commandBufferCount = submitInfo.CmdCount;
 		vkSubmitInfo.pCommandBuffers = &m_CmdsToSubmit[submitInfo.CmdStartIdx];
 		//wait
-		TempArray<VkSemaphore> waitSmps(2);
-		TempArray<VkPipelineStageFlags> waitStages(2);
+		TFixedArray<VkSemaphore> waitSmps(2);
+		TFixedArray<VkPipelineStageFlags> waitStages(2);
 		uint32 waitSmpCount = 0;
 		if(INVALID_IDX != submitInfo.WaitSmpIdx) {
 			waitSmps[0] = m_SmpMgr.Get(submitInfo.WaitSmpIdx);
@@ -285,6 +285,7 @@ VkSemaphore VulkanCommandMgr::Submit(VkSemaphore presentWaitSmp) {
 }
 
 RHIVulkanCommandBuffer::RHIVulkanCommandBuffer(VkCommandBuffer handle, VulkanCommandMgr* mgr) : m_Handle(handle), m_Mgr(mgr), m_IsBegin(false) {
+	m_ImageLayoutMgr.Reset(new VulkanImageLayoutMgr());
 }
 
 RHIVulkanCommandBuffer::~RHIVulkanCommandBuffer() {
@@ -298,16 +299,19 @@ RHIVulkanCommandBuffer::~RHIVulkanCommandBuffer() {
 
 void RHIVulkanCommandBuffer::BeginRenderPass(RHIRenderPass* pass) {
 	RHIVulkanRenderPass* vkPass = dynamic_cast<RHIVulkanRenderPass*>(pass);
-	VkRenderPassBeginInfo info{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr };
-	info.renderPass = vkPass->GetRenderPass();
-	info.framebuffer = vkPass->GetFramebuffer();
+	vkPass->ResolveImageLayout(m_ImageLayoutMgr.Get());
+	VkRenderPass passHandle = vkPass->GetRenderPass();
+	VkFramebuffer fbHandle = vkPass->GetFramebuffer();
 	auto& desc = pass->GetDesc();
+	VkRenderPassBeginInfo info{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr };
+	info.renderPass = passHandle;
+	info.framebuffer = fbHandle;
 	info.renderArea.extent.width = desc.RenderSize.w;
 	info.renderArea.extent.height = desc.RenderSize.h;
 	info.renderArea.offset.x = 0;
 	info.renderArea.offset.y = 0;
 	uint32 attachmentCount = desc.ColorTargets.Size() + !!desc.DepthStencilTarget.Target;
-	TempArray<VkClearValue> clearValues(attachmentCount);
+	TFixedArray<VkClearValue> clearValues(attachmentCount);
 	uint32 i = 0;
 	for (; i < desc.ColorTargets.Size(); ++i) {
 		const auto& color = desc.ColorTargets[i].ColorClear;
@@ -322,7 +326,7 @@ void RHIVulkanCommandBuffer::BeginRenderPass(RHIRenderPass* pass) {
 	info.pClearValues = clearValues.Data();
 	vkCmdBeginRenderPass(m_Handle, &info, VK_SUBPASS_CONTENTS_INLINE);
 
-	m_CurrentPass = vkPass->GetRenderPass();
+	m_CurrentPass = passHandle;
 }
 
 void RHIVulkanCommandBuffer::EndRenderPass() {
@@ -417,10 +421,16 @@ void RHIVulkanCommandBuffer::CopyTextureToTexture(RHITexture* srcTex, RHITexture
 
 void RHIVulkanCommandBuffer::ResourceBarrier(RHITexture* texture, RHITextureSubDesc subDesc, EResourceState stateBefore, EResourceState stateAfter) {
 	RHIVulkanTexture* vkTex = dynamic_cast<RHIVulkanTexture*>(texture);
+	const VkImageLayout oldLayout = ToImageLayout(stateBefore);
+	const VkImageLayout newLayout = ToImageLayout(stateAfter);
+	// record
+	VulkanImageLayoutWrap* wrap = m_ImageLayoutMgr->GetLayout(texture);
+	wrap->CurrentLayout = newLayout;
+
 	VkImageMemoryBarrier barrier{};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	barrier.oldLayout = ToImageLayout(stateBefore);
-	barrier.newLayout = ToImageLayout(stateAfter);
+	barrier.oldLayout = oldLayout;
+	barrier.newLayout = newLayout;
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.image = vkTex->GetImage();

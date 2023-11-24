@@ -110,12 +110,19 @@ private:
 };
 
 // layout manager in one pass
-// TODO move to cmd
-class VulkanLayoutMgr {
+struct VulkanImageLayoutWrap {
+	VkImageLayout InitialLayout{ VK_IMAGE_LAYOUT_UNDEFINED };
+	VkImageLayout CurrentLayout{ VK_IMAGE_LAYOUT_UNDEFINED };
+	VkImageLayout FinalLayout{ VK_IMAGE_LAYOUT_UNDEFINED };
+};
+class VulkanImageLayoutMgr {
 public:
-	VkImageLayout GetCurrentLayout(VkImage handle) const;
-	VkImageLayout GetCurrentLayout(const RHITexture* texture) const;
-	VkImageLayout GetFinalLayout(const RHITexture* texture) const;
+	VulkanImageLayoutMgr() = default;
+	~VulkanImageLayoutMgr() = default;
+	VulkanImageLayoutWrap* GetLayout(RHITexture* tex);
+	const VulkanImageLayoutWrap* GetLayout(RHITexture* tex) const;
+private:
+	std::unordered_map<VkImage, VulkanImageLayoutWrap> m_ImageLayoutMap;
 };
 
 class RHIVulkanRenderPass: public RHIRenderPass {
@@ -123,11 +130,13 @@ public:
 	explicit RHIVulkanRenderPass(const RHIRenderPassDesc& desc);
 	~RHIVulkanRenderPass() override;
 	void SetName(const char* name) override;
-	VkRenderPass GetRenderPass() { return m_RenderPass; }
-	VkFramebuffer GetFramebuffer() { return m_Framebuffer; }
+	void ResolveImageLayout(const VulkanImageLayoutMgr* layoutMgr);
+	VkRenderPass GetRenderPass() const { return m_RenderPass; }
+	VkFramebuffer GetFramebuffer() const { return m_Framebuffer; }
 private:
 	VkRenderPass m_RenderPass;
 	VkFramebuffer m_Framebuffer;
+	const VulkanImageLayoutMgr* m_ImageLayoutMgr;
 	void DestroyHandle();
-	void CreateHandle(const VulkanLayoutMgr& layoutMgr);
+	void CreateHandle();
 };

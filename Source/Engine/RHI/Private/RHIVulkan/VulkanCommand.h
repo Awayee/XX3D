@@ -3,6 +3,9 @@
 #include "VulkanCommon.h"
 #include "Core/Public/TypeDefine.h"
 #include "Core/Public/TVector.h"
+#include "Core/Public/TUniquePtr.h"
+
+class VulkanImageLayoutMgr;
 
 class SemaphoreMgr {
 public:
@@ -79,8 +82,8 @@ private:
 	void CmdBegin();
 	VulkanCommandMgr* m_Mgr;
 	VkCommandBuffer m_Handle{ VK_NULL_HANDLE };
-	VkCommandPool m_Pool{ VK_NULL_HANDLE };
 	VkRenderPass m_CurrentPass{ VK_NULL_HANDLE };
+	TUniquePtr<VulkanImageLayoutMgr> m_ImageLayoutMgr;
 	uint32 m_SubPass{ 0 };
 	bool m_IsBegin{ false };
 };

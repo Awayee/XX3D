@@ -134,7 +134,7 @@ void RHIVulkanGraphicsPipelineState::CreatePipelineHandle(VkRenderPass pass, uin
 
 	auto& shaders = m_Desc.Shaders;
 	uint32 shaderCount = shaders.Size();
-	TempArray<VkPipelineShaderStageCreateInfo> shaderStages(shaderCount);
+	TFixedArray<VkPipelineShaderStageCreateInfo> shaderStages(shaderCount);
 	for(uint32 i=0; i<shaderCount; ++i) {
 		RHIVulkanShader* vkShader = dynamic_cast<RHIVulkanShader*>(shaders[i]);
 		shaderStages[i] = vkShader->GetShaderStageInfo();
@@ -144,7 +144,7 @@ void RHIVulkanGraphicsPipelineState::CreatePipelineHandle(VkRenderPass pass, uin
 	auto& vertexInput = m_Desc.VertexInput;
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO, nullptr, 0 };
 	const uint32 attrCount = vertexInput.Attributes.Size();
-	TempArray<VkVertexInputAttributeDescription> viAttrs(attrCount);
+	TFixedArray<VkVertexInputAttributeDescription> viAttrs(attrCount);
 	for (uint32 i = 0; i < attrCount; ++i) {
 		viAttrs[i].format = ToVkFormat(vertexInput.Attributes[i].Format);
 		viAttrs[i].binding = vertexInput.Attributes[i].Binding;
@@ -154,7 +154,7 @@ void RHIVulkanGraphicsPipelineState::CreatePipelineHandle(VkRenderPass pass, uin
 	vertexInputInfo.vertexAttributeDescriptionCount = attrCount;
 	vertexInputInfo.pVertexAttributeDescriptions = viAttrs.Data();
 	const uint32 bindingCount = vertexInput.Bindings.Size();
-	TempArray<VkVertexInputBindingDescription> viBindings(bindingCount);
+	TFixedArray<VkVertexInputBindingDescription> viBindings(bindingCount);
 	for(uint32 i=0; i<bindingCount; ++i) {
 		viBindings[i].binding = i;
 		viBindings[i].inputRate = vertexInput.Bindings[i].PerInstance ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
@@ -193,7 +193,7 @@ void RHIVulkanGraphicsPipelineState::CreatePipelineHandle(VkRenderPass pass, uin
 	colorBlendInfo.logicOpEnable = false;
 	colorBlendInfo.logicOp = VK_LOGIC_OP_COPY;
 	uint32 blendStateCount = blendDesc.BlendStates.Size();
-	TempArray<VkPipelineColorBlendAttachmentState> states(blendStateCount);
+	TFixedArray<VkPipelineColorBlendAttachmentState> states(blendStateCount);
 	for(uint32 i=0; i<blendStateCount; ++i) {
 		states[i] = ToAttachmentBlendState(blendDesc.BlendStates[i]);
 	}
@@ -256,8 +256,22 @@ void RHIVulkanComputePipelineState::SetName(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_PIPELINE, m_Pipeline, name);
 }
 
-RHIVulkanRenderPass::RHIVulkanRenderPass(const RHIRenderPassDesc& desc): RHIRenderPass(desc),
-m_RenderPass(VK_NULL_HANDLE), m_Framebuffer(VK_NULL_HANDLE){}
+
+VulkanImageLayoutWrap* VulkanImageLayoutMgr::GetLayout(RHITexture* tex) {
+	const VkImage image = dynamic_cast<RHIVulkanTexture*>(tex)->GetImage();
+	return &m_ImageLayoutMap[image];
+}
+
+const VulkanImageLayoutWrap* VulkanImageLayoutMgr::GetLayout(RHITexture* tex) const {
+	VkImage image = dynamic_cast<RHIVulkanTexture*>(tex)->GetImage();
+	if(auto iter = m_ImageLayoutMap.find(image); iter!=m_ImageLayoutMap.end()) {
+		return &iter->second;
+	}
+	return nullptr;
+}
+
+
+RHIVulkanRenderPass::RHIVulkanRenderPass(const RHIRenderPassDesc& desc): RHIRenderPass(desc), m_RenderPass(VK_NULL_HANDLE), m_Framebuffer(VK_NULL_HANDLE){}
 
 RHIVulkanRenderPass::~RHIVulkanRenderPass() {
 	DestroyHandle();
@@ -265,6 +279,14 @@ RHIVulkanRenderPass::~RHIVulkanRenderPass() {
 
 void RHIVulkanRenderPass::SetName(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_RENDER_PASS, m_RenderPass, name);
+}
+
+void RHIVulkanRenderPass::ResolveImageLayout(const VulkanImageLayoutMgr* layoutMgr) {
+	if(m_ImageLayoutMgr != layoutMgr) {
+		m_ImageLayoutMgr = layoutMgr;
+		DestroyHandle();
+		CreateHandle();
+	}
 }
 
 
@@ -276,11 +298,12 @@ void RHIVulkanRenderPass::DestroyHandle() {
 	}
 }
 
-void RHIVulkanRenderPass::CreateHandle(const VulkanLayoutMgr& layoutMgr) {
+void RHIVulkanRenderPass::CreateHandle() {
+	ASSERT(m_ImageLayoutMgr, "RHIVulkanRenderPass::CreateHandle() null image layout mgr!");
 	VkRenderPassCreateInfo passInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0 };
 	uint32 attachmentCount = m_Desc.ColorTargets.Size() + !!m_Desc.DepthStencilTarget.Target;
-	TempArray<VkAttachmentDescription> attachmentDescs(attachmentCount);
-	TempArray<VkImageView> attachments(attachmentCount);
+	TFixedArray<VkAttachmentDescription> attachmentDescs(attachmentCount);
+	TFixedArray<VkImageView> attachments(attachmentCount);
 	TVector<VkAttachmentReference> colorRefs;
 	uint32 i = 0;
 	for (; i < m_Desc.ColorTargets.Size(); ++i) {
@@ -292,8 +315,10 @@ void RHIVulkanRenderPass::CreateHandle(const VulkanLayoutMgr& layoutMgr) {
 		attachmentDescs[i].samples = ToVkMultiSampleCount(1);//TODO
 		attachmentDescs[i].loadOp = ToVkAttachmentLoadOp(rtInfo.LoadOp);
 		attachmentDescs[i].storeOp = ToVkAttachmentStoreOp(rtInfo.StoreOp);
-		attachmentDescs[i].initialLayout = layoutMgr.GetCurrentLayout(rtInfo.Target);
-		attachmentDescs[i].finalLayout = layoutMgr.GetFinalLayout(rtInfo.Target);
+		const auto* layoutWarp = m_ImageLayoutMgr->GetLayout(rtInfo.Target);
+		ASSERT(layoutWarp, "");
+		attachmentDescs[i].initialLayout = layoutWarp->CurrentLayout;
+		attachmentDescs[i].finalLayout = layoutWarp->FinalLayout;
 		colorRefs.PushBack({ i, attachmentDescs[i].initialLayout });
 
 		RHIVulkanTexture* vkTex = dynamic_cast<RHIVulkanTexture*>(rtInfo.Target);
@@ -310,8 +335,10 @@ void RHIVulkanRenderPass::CreateHandle(const VulkanLayoutMgr& layoutMgr) {
 		attachmentDescs[i].storeOp = ToVkAttachmentStoreOp(depthInfo.DepthStoreOp);
 		attachmentDescs[i].stencilLoadOp = ToVkAttachmentLoadOp(depthInfo.StencilLoadOp);
 		attachmentDescs[i].stencilStoreOp = ToVkAttachmentStoreOp(depthInfo.StencilStoreOp);
-		attachmentDescs[i].initialLayout = layoutMgr.GetCurrentLayout(depthInfo.Target);
-		attachmentDescs[i].finalLayout = layoutMgr.GetFinalLayout(depthInfo.Target);
+		const auto* layoutWarp = m_ImageLayoutMgr->GetLayout(depthInfo.Target);
+		ASSERT(layoutWarp, "");
+		attachmentDescs[i].initialLayout = layoutWarp->CurrentLayout;
+		attachmentDescs[i].finalLayout = layoutWarp->FinalLayout;
 		depthRef = { i, attachmentDescs[i].initialLayout };
 		RHIVulkanTexture* vkTex = dynamic_cast<RHIVulkanTexture*>(depthInfo.Target);
 		attachments[i] = vkTex->GetView();
