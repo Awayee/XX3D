@@ -4,14 +4,14 @@
 
 // a simple array just contains data
 template<typename T, typename SizeType=uint32>
-class TempArray {
+class TFixedArray {
 private:
 	T* data;
 public:
-	TempArray(SizeType size) {
+	TFixedArray(SizeType size) {
 		data = new T[size];
 	}
-	~TempArray() {
+	~TFixedArray() {
 		delete[] data;
 	}
 	T& operator[](SizeType i) {

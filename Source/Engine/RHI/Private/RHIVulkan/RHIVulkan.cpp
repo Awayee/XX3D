@@ -212,7 +212,7 @@ RHICommandBuffer* RHIVulkan::CreateCommandBuffer() {
 }
 
 void RHIVulkan::SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence) {
-	TempArray<VkCommandBuffer> vkHandles(cmds.Size());
+	TFixedArray<VkCommandBuffer> vkHandles(cmds.Size());
 	RHIVulkanFence* vkFence = dynamic_cast<RHIVulkanFence*>(fence);
 	for(uint32 i=0; i<cmds.Size(); ++i) {
 		vkHandles[i] = dynamic_cast<RHIVulkanCommandBuffer*>(cmds[i])->GetHandle();
@@ -235,7 +235,7 @@ void RHIVulkan::Present() {
 
 VkPipelineLayout RHIVulkan::CreatePipelineLayout(const RHIPipelineLayout& rhiLayout) {
 	uint32 layoutCount = rhiLayout.Size();
-	TempArray<VkDescriptorSetLayout> layouts(layoutCount);
+	TFixedArray<VkDescriptorSetLayout> layouts(layoutCount);
 	for (uint32 i = 0; i < layoutCount; ++i) {
 		layouts[i] = m_DSMgr->GetLayoutHandle(rhiLayout[i]);
 	}

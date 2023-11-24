@@ -19,7 +19,7 @@ VkDescriptorSetLayout VulkanDSMgr::GetLayoutHandle(const RHIShaderParemeterLayou
 
 	VkDescriptorSetLayoutCreateInfo info{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0 };
 	uint32 bindingCount = layout.Size();
-	TempArray<VkDescriptorSetLayoutBinding> bindings(bindingCount);
+	TFixedArray<VkDescriptorSetLayoutBinding> bindings(bindingCount);
 	for(uint32 i=0; i<bindingCount; ++i) {
 		bindings[i].binding = i;
 		bindings[i].descriptorType = ToVkDescriptorType(layout[i].Type);
