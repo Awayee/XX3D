@@ -122,7 +122,7 @@ VkPipeline RHIVulkanGraphicsPipelineState::GetPipelineHandle(VkRenderPass pass, 
 		return m_Pipeline;
 	}
 	if(m_Pipeline) {
-		Release();
+		vkDestroyPipeline(RHIVulkan::GetDevice(), m_Pipeline, nullptr);
 	}
 	CreatePipelineHandle(pass, subPass);
 	return m_Pipeline;

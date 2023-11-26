@@ -12,6 +12,7 @@ public:
 	virtual void EndRenderPass() = 0;
 	virtual void BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) = 0;
 	virtual void BindComputePipeline(RHIComputePipelineState* pipeline) = 0;
+	virtual void BindShaderParameterSet(uint32 index, RHIShaderParameterSet* set) = 0;
 	virtual void BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) = 0;
 	virtual void BindIndexBuffer(RHIBuffer* buffer, uint64 offset) = 0;
 	virtual void Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance) = 0;
@@ -69,6 +70,7 @@ public:
 	virtual RHIShaderParameterSet* CreateShaderParameterSet(const RHIShaderParemeterLayout& layout) = 0;
 
 	virtual RHICommandBuffer* CreateCommandBuffer() = 0;
+	virtual void SubmitCommandBuffer(RHICommandBuffer* cmd, RHIFence* fence) = 0;
 	virtual void SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence) = 0;
 	virtual void Present() = 0;
 

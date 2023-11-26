@@ -1,5 +1,5 @@
 #pragma once
-#include "Core/Public/TPtr.h"
+#include "Core/Public/TUniquePtr.h"
 #include "Objects/Public/Engine.h"
 
 namespace Editor {

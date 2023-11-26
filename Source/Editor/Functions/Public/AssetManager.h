@@ -1,7 +1,7 @@
 #pragma once
 #include "AssetManager.h"
 #include "Core/Public/String.h"
-#include "Core/Public/TPtr.h"
+#include "Core/Public/TUniquePtr.h"
 #include "Core/Public/Typedefine.h"
 #include "Core/Public/File.h"
 #include "Core/Public/Func.h"
@@ -56,11 +56,11 @@ namespace Editor {
 	public:
 		FileNode(const File::FPath& path, NodeID id, NodeID parent): PathNode(path, id, parent){}
 		template<typename T> T* GetAsset() {
-			if (!m_Asset.get()) {//lazy load
-				m_Asset.reset(new T);
-				Engine::AssetLoader::LoadProjectAsset(m_Asset.get(), m_Path.string().c_str());
+			if (!m_Asset.Get()) {//lazy load
+				m_Asset.Reset(new T);
+				Engine::AssetLoader::LoadProjectAsset(m_Asset.Get(), m_Path.string().c_str());
 			}
-			return dynamic_cast<T*>(m_Asset.get());
+			return dynamic_cast<T*>(m_Asset.Get());
 		}
 		void Save();
 	};

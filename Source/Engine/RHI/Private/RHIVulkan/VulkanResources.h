@@ -86,6 +86,7 @@ public:
 	~RHIVulkanGraphicsPipelineState() override;
 	void SetName(const char* name) override;
 	VkPipeline GetPipelineHandle(VkRenderPass pass, uint32 subPass);
+	VkPipelineLayout GetLayoutHandle() const { return m_PipelineLayout; }
 private:
 	void CreatePipelineHandle(VkRenderPass pass, uint32 subPass);
 	void Release();
@@ -103,6 +104,7 @@ public:
 	~RHIVulkanComputePipelineState() override;
 	void SetName(const char* name) override;
 	VkPipeline GetPipelineHandle() const { return m_Pipeline; }
+	VkPipelineLayout GetLayoutHandle() const { return m_PipelineLayout; }
 private:
 	friend RHIVulkan;
 	VkPipelineLayout m_PipelineLayout{ VK_NULL_HANDLE };

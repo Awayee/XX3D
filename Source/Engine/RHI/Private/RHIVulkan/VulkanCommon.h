@@ -72,6 +72,7 @@ extern PFN_vkFreeCommandBuffers                       vkFreeCommandBuffers;
 extern PFN_vkCmdBeginRenderPass                       vkCmdBeginRenderPass;
 extern PFN_vkCmdCopyBufferToImage                     vkCmdCopyBufferToImage;
 extern PFN_vkCmdBlitImage                             vkCmdBlitImage;
+extern PFN_vkCmdCopyImage                             vkCmdCopyImage;
 extern PFN_vkCmdNextSubpass                           vkCmdNextSubpass;
 extern PFN_vkCmdEndRenderPass                         vkCmdEndRenderPass;
 extern PFN_vkCmdBindPipeline                          vkCmdBindPipeline;

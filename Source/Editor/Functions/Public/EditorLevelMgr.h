@@ -1,7 +1,6 @@
 #pragma once
 #include "Asset/Public/LevelAsset.h"
 #include "Asset/Public/MeshAsset.h"
-#include "Core/Public/TPtr.h"
 #include "Functions/Public/EditorLevel.h"
 
 namespace Editor {

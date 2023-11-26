@@ -1,6 +1,6 @@
 #pragma once
 #include "RHI/Public/RHI.h"
-#include "Core/Public/TPtr.h"
+#include "Core/Public/TUniquePtr.h"
 #include "VulkanCommon.h"
 #include "VulkanResources.h"
 #include "VulkanMemory.h"
@@ -28,6 +28,7 @@ public:
 	RHIRenderPass* CreateRenderPass(const RHIRenderPassDesc& desc) override;
 	RHIShaderParameterSet* CreateShaderParameterSet(const RHIShaderParemeterLayout& layout) override;
 	RHICommandBuffer* CreateCommandBuffer()override;
+	void SubmitCommandBuffer(RHICommandBuffer* cmd, RHIFence* fence) override;
 	void SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence) override;
 	void Present() override;
 private:

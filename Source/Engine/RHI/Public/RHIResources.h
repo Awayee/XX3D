@@ -57,11 +57,25 @@ struct RHITextureSubDesc {
 	uint8 NumLayers;
 };
 
+struct RHITextureOffset {
+	uint32 MipLevel;
+	uint32 BaseLayer;
+	uint32 LayerCount;
+	UOffset3D Offset;
+};
+
+struct RHITextureCopyRegion {
+	RHITextureOffset SrcSub;
+	RHITextureOffset DstSub;
+	USize3D Extent;
+};
+
 class RHITexture: public RHIResource {
 protected:
 	RHITextureDesc m_Desc;
 public:
 	RHITexture(const RHITextureDesc& desc) : m_Desc(desc) {}
+	virtual void UpdateData(const RHITextureOffset& region, const USize3D& extent, const void* data) = 0;
 	XX_NODISCARD const RHITextureDesc& GetDesc() const { return m_Desc; }
 };
 
@@ -239,18 +253,6 @@ public:
 	XX_NODISCARD const RHIComputePipelineStateDesc& GetDesc() const { return m_Desc; }
 protected:
 	RHIComputePipelineStateDesc m_Desc;
-};
-
-
-struct RHITextureCopyRegion {
-	uint32 srcMipLevel;
-	uint32 srcBaseLayer;
-	uint32 srcLayerCount;
-	UOffset2D srcOffsets[2];
-	uint32 dstMipLevel;
-	uint32 dstBaseLayer;
-	uint32 dstLayerCount;
-	UOffset2D dstOffsets[2];
 };
 
 class RHIShaderParameterSet {

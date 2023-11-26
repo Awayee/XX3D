@@ -3,7 +3,6 @@
 #include "RHID3D11/RHID3D11.h"
 #include "Resource/Public/Config.h"
 #include "Core/Public/Defines.h"
-#include "Core/Public/TPtr.h"
 #include "Core/Public/Concurrency.h"
 
 RHI* RHI::s_Instance = nullptr;

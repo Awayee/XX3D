@@ -1,7 +1,7 @@
 #pragma once
 #include "Functions/Public/AssetManager.h"
 #include "Asset/Public/MeshAsset.h"
-#include "Core/Public/TPtr.h"
+#include "Core/Public/TUniquePtr.h"
 #include "Asset/Public/TextureAsset.h"
 #include "Asset/Public/LevelAsset.h"
 
@@ -77,14 +77,14 @@ namespace Editor {
 	inline TUniquePtr<AssetViewBase> CreateAssetView(FileNode* node) {
 		const XXString& ext = node->GetPath().extension().string();
 		if(ext == ".mesh") {
-			return MakeUniquePtr<MeshAssetView>(node);
+			return TUniquePtr<MeshAssetView>(node);
 		}
 		if(ext == ".texture") {
-			return MakeUniquePtr<TextureAssetView>(node);
+			return TUniquePtr<TextureAssetView>(node);
 		}
 		if(ext == ".level") {
-			return MakeUniquePtr<LevelAssetView>(node);
+			return TUniquePtr<LevelAssetView>(node);
 		}
-		return MakeUniquePtr<FileAssetView>(node);
+		return TUniquePtr<FileAssetView>(node);
 	}
 }

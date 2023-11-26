@@ -3,7 +3,7 @@
 #include "Core/Public/Container.h"
 #include "Core/Public/TVector.h"
 #include "Core/Public/String.h"
-#include "Core/Public/TPtr.h"
+#include "Core/Public/TUniquePtr.h"
 #include "Core/Public/Concurrency.h"
 #include "Core/Public/File.h"
 
@@ -92,14 +92,15 @@ namespace Engine {
 	}
 
 	const ConfigData& GetConfig() {
+		// TODO intialize when program start instead of mutex
 		static TUniquePtr<ConfigManager> s_ConfigManager;
 		static Mutex s_ConfigManagerMutex;
-		if (nullptr == s_ConfigManager) {
+		if (s_ConfigManager) {
 			MutexLock lock(s_ConfigManagerMutex);
-			if (nullptr == s_ConfigManager) {
+			if (s_ConfigManager) {
 				const char* configFile = ENGINE_CONFIG_FILE;
 				PARSE_CONFIG_FILE(configFile);
-				s_ConfigManager.reset(new ConfigManager(configFile));
+				s_ConfigManager.Reset(new ConfigManager(configFile));
 			}
 		}
 		return s_ConfigManager->GetData();

@@ -38,6 +38,7 @@ PFN_vkFreeCommandBuffers                       vkFreeCommandBuffers{ nullptr };
 PFN_vkCmdBeginRenderPass                       vkCmdBeginRenderPass{ nullptr };
 PFN_vkCmdCopyBufferToImage                     vkCmdCopyBufferToImage{ nullptr };
 PFN_vkCmdBlitImage                             vkCmdBlitImage{ nullptr };
+PFN_vkCmdCopyImage							   vkCmdCopyImage{ nullptr };
 PFN_vkCmdNextSubpass                           vkCmdNextSubpass{ nullptr };
 PFN_vkCmdEndRenderPass                         vkCmdEndRenderPass{ nullptr };
 PFN_vkCmdBindPipeline                          vkCmdBindPipeline{ nullptr };
@@ -157,6 +158,7 @@ void LoadDeviceFunctions(VkDevice device) {
 	LOAD_DEVICE_PROC_ADDR(vkCmdBeginRenderPass);
 	LOAD_DEVICE_PROC_ADDR(vkCmdCopyBufferToImage);
 	LOAD_DEVICE_PROC_ADDR(vkCmdBlitImage);
+	LOAD_DEVICE_PROC_ADDR(vkCmdCopyImage);
 	LOAD_DEVICE_PROC_ADDR(vkCmdNextSubpass);
 	LOAD_DEVICE_PROC_ADDR(vkCmdEndRenderPass);
 	LOAD_DEVICE_PROC_ADDR(vkCmdBindPipeline);

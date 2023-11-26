@@ -1,5 +1,4 @@
 #pragma once
-#include "Core/Public/TPtr.h"
 #include "Render/Public/RenderReses.h"
 #include "Asset/Public/LevelAsset.h"
 
@@ -40,8 +39,8 @@ namespace Engine {
 	public:
 		static TUniquePtr<RenderScene> s_Default;
 		static RenderScene* GetDefaultScene(); // TODO TEST
-		static void Clear() { if (s_Default) s_Default.reset(); }
-		Camera* GetMainCamera() { return m_Camera.get(); }
+		static void Clear() { if (s_Default) s_Default.Reset(); }
+		Camera* GetMainCamera() { return m_Camera.Get(); }
 
 		RenderScene();
 		~RenderScene();

@@ -2,6 +2,37 @@
 #include "Concurrency.h"
 template<typename T>
 class TSingleton {
+public:
+	template <typename...Args>
+	static void Initialize(Args...args) {
+		if(s_Instance) {
+			MutexLock lock(s_Mutex);
+			if (s_Instance) {
+				delete s_Instance;
+			}
+		}
+		if(!s_Instance) {
+			MutexLock lock(s_Mutex);
+			if(!s_Instance) {
+				s_Instance = new T(args...);
+			}
+		}
+	}
+	static void Release() {
+		if (nullptr != s_Instance) {
+			delete s_Instance;
+			s_Instance = nullptr;
+		}
+	}
+	static T* Instance() {
+		if (nullptr == s_Instance) {
+			Initialize();
+		}
+		return s_Instance;
+	}
+	static T* Get() {
+		return s_Instance;
+	}
 protected:
 	static T* s_Instance;
 	static Mutex s_Mutex;
@@ -9,28 +40,6 @@ protected:
 	TSingleton(TSingleton<T>&&) = delete;
 	TSingleton() = default;
 	virtual ~TSingleton() = default;
-public:
-
-	template <typename...Args>
-	static void Initialize(Args...args) {
-		MutexLock lock(s_Mutex);
-		if(nullptr != s_Instance) {
-			delete s_Instance;
-		}
-		s_Instance = new T(args...);
-	}
-	static void Release() {
-		if(nullptr != s_Instance) {
-			delete s_Instance;
-			s_Instance = nullptr;
-		}
-	}
-	static T* Instance() {
-		if(nullptr == s_Instance) {
-			Initialize();
-		}
-		return s_Instance;
-	}
 };
 
 template<typename T> T* TSingleton<T>::s_Instance{ nullptr };

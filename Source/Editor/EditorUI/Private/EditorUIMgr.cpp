@@ -88,7 +88,7 @@ namespace Editor {
 
 	EditorWndBase* EditorUIMgr::AddWindow(const char* name, Func<void()>&& func, ImGuiWindowFlags flags) {
 		auto wndPtr = MakeUniquePtr<EditorFuncWnd>(name, func, flags);
-		EditorWndBase* ptr = wndPtr.get();
+		EditorWndBase* ptr = wndPtr.Get();
 		m_Widgets.PushBack(std::move(wndPtr));
 		return ptr;
 	}
@@ -104,7 +104,7 @@ namespace Editor {
 
 	EditorPopup* EditorUIMgr::AddPopUp(Func<void()>&& func) {
 		auto popPtr = MakeUniquePtr<EditorPopup>(func);
-		EditorPopup* ptr = popPtr.get();
+		EditorPopup* ptr = popPtr.Get();
 		m_Widgets.PushBack(std::move(popPtr));
 		return ptr;
 	}

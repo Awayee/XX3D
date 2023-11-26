@@ -37,6 +37,7 @@ public:
 	void SetStorageBuffer(uint32 binding, RHIBuffer* buffer) override;
 	void SetTexture(uint32 binding, RHITexture* texture) override;
 	void SetSampler(uint32 binding, RHISampler* sampler) override;
+	VkDescriptorSet GetHandle() const { return m_Handle.Set; }
 private:
 	VulkanDSMgr* m_Mgr {nullptr};
 	DescriptorSetHandle m_Handle;

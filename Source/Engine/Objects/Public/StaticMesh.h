@@ -1,6 +1,6 @@
 #pragma once
 #include "Math/Public/Math.h"
-#include "Core/Public/TPtr.h"
+#include "Core/Public/TSharedPtr.h"
 #include "Asset/Public/MeshAsset.h"
 #include "RenderObject3D.h"
 

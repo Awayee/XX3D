@@ -34,32 +34,32 @@ RHIVulkan::RHIVulkan(const RHIInitDesc& desc) {
 	initializer.Build();
 
 	// create swap chain
-	m_SwapChain.reset(new VulkanSwapchain(&m_Context));
+	m_SwapChain.Reset(new VulkanSwapchain(&m_Context));
 
 	// create memory manager
-	m_MemMgr.reset(new VulkanMemMgr(&m_Context));
+	m_MemMgr.Reset(new VulkanMemMgr(&m_Context));
 
 	// create command manager
-	m_CmdMgr.reset(new VulkanCommandMgr(&m_Context));
+	m_CmdMgr.Reset(new VulkanCommandMgr(&m_Context));
 
 	// create descriptor set manager
-	m_DSMgr.reset(new VulkanDSMgr(m_Context.Device));
+	m_DSMgr.Reset(new VulkanDSMgr(m_Context.Device));
 
 	PRINT("RHI: Vulkan initialized successfully!");
 }
 
 RHIVulkan::~RHIVulkan() {
 	//vma
-	m_MemMgr.reset();
-	m_SwapChain.reset();
-	m_CmdMgr.reset();
-	m_DSMgr.reset();
+	m_MemMgr.Reset();
+	m_SwapChain.Reset();
+	m_CmdMgr.Reset();
+	m_DSMgr.Reset();
 	ContextBuilder initializer(m_Context);
 	initializer.Release();
 }
 
 RHISwapChain* RHIVulkan::GetSwapChain() {
-	return static_cast<RHISwapChain*>(m_SwapChain.get());
+	return static_cast<RHISwapChain*>(m_SwapChain.Get());
 }
 
 ERHIFormat RHIVulkan::GetDepthFormat() {
@@ -198,7 +198,7 @@ RHIRenderPass* RHIVulkan::CreateRenderPass(const RHIRenderPassDesc& desc) {
 RHIShaderParameterSet* RHIVulkan::CreateShaderParameterSet(const RHIShaderParemeterLayout& layout) {
 	DescriptorSetHandle handle = m_DSMgr->AllocateDS(layout);
 	if(handle.IsValid()) {
-		return new RHIVulkanShaderParameterSet(m_DSMgr.get(), handle);
+		return new RHIVulkanShaderParameterSet(m_DSMgr.Get(), handle);
 	}
 	return nullptr;
 }
@@ -208,7 +208,13 @@ RHICommandBuffer* RHIVulkan::CreateCommandBuffer() {
 	if(VK_NULL_HANDLE == handle) {
 		return nullptr;
 	}
-	return new RHIVulkanCommandBuffer(handle, m_CmdMgr.get());
+	return new RHIVulkanCommandBuffer(handle, m_CmdMgr.Get());
+}
+
+void RHIVulkan::SubmitCommandBuffer(RHICommandBuffer* cmd, RHIFence* fence) {
+	VkCommandBuffer cmdHandle = dynamic_cast<RHIVulkanCommandBuffer*>(cmd)->GetHandle();
+	VkFence fenceHandle = dynamic_cast<RHIVulkanFence*>(fence)->GetFence();
+	m_CmdMgr->AddGraphicsSubmit({&cmdHandle, 1}, fenceHandle);
 }
 
 void RHIVulkan::SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence) {

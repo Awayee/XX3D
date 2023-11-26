@@ -1,5 +1,4 @@
 #pragma once
-#include "Core/Public/TPtr.h"
 #include "Core/Public/BaseStructs.h"
 #include "RHI/Public/RHI.h"
 #include "Render/Public/RenderReses.h"

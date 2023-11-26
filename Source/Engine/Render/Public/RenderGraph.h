@@ -2,7 +2,7 @@
 #include "RHI/Public/RHI.h"
 #include "Core/Public/Func.h"
 #include "Core/Public/TVector.h"
-#include "Core/Public/TPtr.h"
+#include "Core/Public/TUNiquePtr.h"
 #include "Render/Public/RenderGraphNode.h"
 #include "Render/Public/RenderGraphResource.h"
 
@@ -18,7 +18,7 @@ namespace Engine {
 		template<class T, class...Args>
 		T* CreateNode(XXString&& name, Args&&...args) {
 			TUniquePtr<T> nodePtr = MakeUniquePtr<T>(std::forward<Args>(args)...);
-			T* node = nodePtr.get();
+			T* node = nodePtr.Get();
 			RGNodeBase* nodeBase = static_cast<RGNodeBase>(node);
 			ASSERT(nodeBase, "");
 			nodeBase->m_Name = std::move(name);

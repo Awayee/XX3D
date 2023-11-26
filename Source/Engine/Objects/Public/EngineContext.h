@@ -1,5 +1,5 @@
 #pragma once
-#include "Core/Public/TPtr.h"
+#include "Core/Public/TUniquePtr.h"
 
 namespace Engine {
 	class Wnd;
@@ -16,7 +16,7 @@ namespace Engine {
 		TUniquePtr<Renderer> m_Renderer;
 	public:
 		Engine::Wnd* Window() { return m_Window; }
-		Renderer* Renderer() { return m_Renderer.get(); }
+		Renderer* Renderer() { return m_Renderer.Get(); }
 	};
 
 	EngineContext* Context();

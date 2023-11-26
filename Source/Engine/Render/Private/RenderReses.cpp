@@ -12,14 +12,14 @@ namespace Engine {
 		}
 		GET_RHI(rhi);
 		uint32 bufferSize = m_VertexCount * sizeof(FVertex);
-		m_Vertex.reset(new BufferCommon); m_Vertex->CreateForVertex(bufferSize);
+		m_Vertex.Reset(new BufferCommon); m_Vertex->CreateForVertex(bufferSize);
 
 		BufferCommon vertexStaging;
 		vertexStaging.CreateForTransfer(bufferSize, (void*)vertices.Data());
 
 		if (m_IndexCount > 0) {
 			bufferSize = m_IndexCount * sizeof(IndexType);
-			m_Index.reset(new BufferCommon); m_Index->CreateForIndex(bufferSize);
+			m_Index.Reset(new BufferCommon); m_Index->CreateForIndex(bufferSize);
 
 			BufferCommon indexStaging;
 			indexStaging.CreateForTransfer(bufferSize, (void*)indices.Data());

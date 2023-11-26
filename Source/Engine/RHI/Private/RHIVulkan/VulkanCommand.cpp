@@ -1,6 +1,7 @@
 #include "VulkanCommand.h"
 #include "VulkanResources.h"
 #include "VulkanConverter.h"
+#include "VulkanDescriptorSet.h"
 #include "Core/Public/TArray.h"
 
 namespace {
@@ -206,10 +207,6 @@ VkCommandBuffer VulkanCommandMgr::NewCmd() {
 	return handle;
 }
 
-void VulkanCommandMgr::FreeCmd(VkCommandBuffer handle) {
-	m_CmdsToFree.PushBack(handle);
-}
-
 void VulkanCommandMgr::AddGraphicsSubmit(TConstArrayView<VkCommandBuffer> cmds, VkFence fence, bool toPresent) {
 	// create a submit info
 	uint32 preSmpIdx;
@@ -229,6 +226,10 @@ void VulkanCommandMgr::AddGraphicsSubmit(TConstArrayView<VkCommandBuffer> cmds, 
 	submitInfo.ToPresent = toPresent;
 	submitInfo.Fence = fence;
 	m_CmdsToSubmit.PushBack(cmds.Size(), cmds.Data());
+}
+
+void VulkanCommandMgr::FreeCmd(VkCommandBuffer handle) {
+	m_CmdsToFree.PushBack(handle);
 }
 
 VkSemaphore VulkanCommandMgr::Submit(VkSemaphore presentWaitSmp) {
@@ -284,7 +285,7 @@ VkSemaphore VulkanCommandMgr::Submit(VkSemaphore presentWaitSmp) {
 	return completeSmp;
 }
 
-RHIVulkanCommandBuffer::RHIVulkanCommandBuffer(VkCommandBuffer handle, VulkanCommandMgr* mgr) : m_Handle(handle), m_Mgr(mgr), m_IsBegin(false) {
+RHIVulkanCommandBuffer::RHIVulkanCommandBuffer(VkCommandBuffer handle, VulkanCommandMgr* mgr) : m_Handle(handle), m_Owner(mgr), m_IsBegin(false) {
 	m_ImageLayoutMgr.Reset(new VulkanImageLayoutMgr());
 }
 
@@ -292,8 +293,8 @@ RHIVulkanCommandBuffer::~RHIVulkanCommandBuffer() {
 	if (m_IsBegin) {
 		vkEndCommandBuffer(m_Handle);
 	}
-	if(m_Mgr) {
-		m_Mgr->FreeCmd(m_Handle);
+	if(m_Owner) {
+		m_Owner->FreeCmd(m_Handle);
 	}
 }
 
@@ -335,12 +336,24 @@ void RHIVulkanCommandBuffer::EndRenderPass() {
 
 void RHIVulkanCommandBuffer::BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) {
 	RHIVulkanGraphicsPipelineState* vkPipeline = dynamic_cast<RHIVulkanGraphicsPipelineState*>(pipeline);
-	vkCmdBindPipeline(m_Handle, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipeline->GetPipelineHandle(m_CurrentPass, m_SubPass));
+	m_CurrentPipeline = vkPipeline->GetPipelineHandle(m_CurrentPass, m_SubPass);
+	m_CurrentPipelineLayout = vkPipeline->GetLayoutHandle();
+	m_CurrentPipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	vkCmdBindPipeline(m_Handle, m_CurrentPipelineBindPoint, m_CurrentPipeline);
 }
 
 void RHIVulkanCommandBuffer::BindComputePipeline(RHIComputePipelineState* pipeline) {
 	RHIVulkanComputePipelineState* vkPipeline = dynamic_cast<RHIVulkanComputePipelineState*>(pipeline);
-	vkCmdBindPipeline(m_Handle, VK_PIPELINE_BIND_POINT_COMPUTE, vkPipeline->GetPipelineHandle());
+	m_CurrentPipeline = vkPipeline->GetPipelineHandle();
+	m_CurrentPipelineLayout = vkPipeline->GetLayoutHandle();
+	m_CurrentPipelineBindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
+	vkCmdBindPipeline(m_Handle, m_CurrentPipelineBindPoint, m_CurrentPipeline);
+}
+
+void RHIVulkanCommandBuffer::BindShaderParameterSet(uint32 index, RHIShaderParameterSet* set) {
+	RHIVulkanShaderParameterSet* vkSet = dynamic_cast<RHIVulkanShaderParameterSet*>(set);
+	const VkDescriptorSet dsHandle = vkSet->GetHandle();
+	vkCmdBindDescriptorSets(m_Handle, m_CurrentPipelineBindPoint, m_CurrentPipelineLayout, index, 1, &dsHandle, 0, nullptr);
 }
 
 void RHIVulkanCommandBuffer::BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) {
@@ -407,16 +420,16 @@ void RHIVulkanCommandBuffer::CopyTextureToTexture(RHITexture* srcTex, RHITexture
 	VkImageAspectFlags srcAsp = ToImageAspectFlags(srcTex->GetDesc().Flags);
 	VkImageAspectFlags dstAsp = ToImageAspectFlags(dstTex->GetDesc().Flags);
 	ASSERT(srcAsp == dstAsp, "");
-	VkImageBlit blit{};
-	blit.srcSubresource.aspectMask = srcAsp;
-	blit.srcSubresource.baseArrayLayer = region.srcBaseLayer;
-	blit.srcSubresource.layerCount = region.srcLayerCount;
-	memcpy(blit.srcOffsets, region.srcOffsets, sizeof(VkOffset3D) * 2);
-	blit.dstSubresource.aspectMask = dstAsp;
-	blit.dstSubresource.baseArrayLayer = region.dstBaseLayer;
-	blit.dstSubresource.layerCount = region.dstLayerCount;
-	memcpy(blit.dstOffsets, region.dstOffsets, sizeof(VkOffset3D) * 2);
-	vkCmdBlitImage(m_Handle, ((RHIVulkanTexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, ((RHIVulkanTexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
+	VkImageCopy copy{};
+	copy.srcSubresource.aspectMask = srcAsp;
+	copy.srcSubresource.baseArrayLayer = region.SrcSub.BaseLayer;
+	copy.srcSubresource.layerCount = region.SrcSub.LayerCount;
+	memcpy(&copy.srcOffset, &region.SrcSub.Offset, sizeof(VkOffset3D));
+	copy.dstSubresource.aspectMask = dstAsp;
+	copy.dstSubresource.baseArrayLayer = region.DstSub.BaseLayer;
+	copy.dstSubresource.layerCount = region.DstSub.LayerCount;
+	memcpy(&copy.dstOffset, &region.DstSub.Offset, sizeof(VkOffset3D));
+	vkCmdCopyImage(m_Handle, ((RHIVulkanTexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, ((RHIVulkanTexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
 }
 
 void RHIVulkanCommandBuffer::ResourceBarrier(RHITexture* texture, RHITextureSubDesc subDesc, EResourceState stateBefore, EResourceState stateAfter) {

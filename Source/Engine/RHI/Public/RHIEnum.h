@@ -64,11 +64,12 @@ enum EBufferFlagBit {
 typedef uint32 EBufferFlags;
 
 enum class ETextureDimension : uint8 {
-    Tex2D,
+    Tex2D=0,
     Tex2DArray,
     TexCube,
     TexCubeArray,
     Tex3D,
+    MaxNum,
 };
 
 enum ETextureFlagBit {

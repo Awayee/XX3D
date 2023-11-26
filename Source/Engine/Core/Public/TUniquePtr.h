@@ -44,6 +44,11 @@ public:
 		return *m_Ptr;
 	}
 
+	template<class Ty>
+	bool operator == (Ty* rhs) const {
+		return m_Ptr == rhs;
+	}
+
 	T* Get() {
 		return m_Ptr;
 	}
@@ -57,10 +62,14 @@ public:
 		return TUniquePtr<T>(new T(args...));
 	}
 
-	void Reset(T* ptr) {
-		if(nullptr != m_Ptr) {
+	void Reset() {
+		if (nullptr != m_Ptr) {
 			_Free();
-		}
+		}		
+	}
+
+	void Reset(T* ptr) {
+		Reset();
 		m_Ptr = ptr;
 	}
 

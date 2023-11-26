@@ -64,6 +64,7 @@ public:
 	void EndRenderPass() override;
 	void BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) override;
 	void BindComputePipeline(RHIComputePipelineState* pipeline) override;
+	void BindShaderParameterSet(uint32 index, RHIShaderParameterSet* set) override;
 	void BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) override;
 	void BindIndexBuffer(RHIBuffer* buffer, uint64 offset) override;
 	void Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance) override;
@@ -80,10 +81,16 @@ public:
 	void EndDebugLabel() override;
 private:
 	void CmdBegin();
-	VulkanCommandMgr* m_Mgr;
+	VulkanCommandMgr* m_Owner;
 	VkCommandBuffer m_Handle{ VK_NULL_HANDLE };
-	VkRenderPass m_CurrentPass{ VK_NULL_HANDLE };
 	TUniquePtr<VulkanImageLayoutMgr> m_ImageLayoutMgr;
+	// pass info
+	VkRenderPass m_CurrentPass{ VK_NULL_HANDLE };
 	uint32 m_SubPass{ 0 };
+	// pipeline info
+	VkPipeline m_CurrentPipeline{VK_NULL_HANDLE};
+	VkPipelineLayout m_CurrentPipelineLayout{VK_NULL_HANDLE};
+	VkPipelineBindPoint m_CurrentPipelineBindPoint;
+
 	bool m_IsBegin{ false };
 };

@@ -1,7 +1,6 @@
 #include "Window/Public/Wnd.h"
 #include "Objects/Public/Renderer.h"
 #include "Core/Public/Time.h"
-#include "Core/Public/TPtr.h"
 #include "Objects/Public/Engine.h"
 #include "Objects/Public/EngineContext.h"
 #include "Core/Public/Defines.h"
@@ -35,12 +34,12 @@ namespace Engine {
 			RHI::Initialize(desc);
 		}
 		// init renderer
-		context->m_Renderer.reset(new Renderer(context->Window()));
+		context->m_Renderer.Reset(new Renderer(context->Window()));
 		PRINT_DEBUG("Engine Initialized.");
 	}
 	XXEngine::~XXEngine() {
 		auto* context = Context();
-		context->m_Renderer.reset();
+		context->m_Renderer.Reset();
 		RHI::Instance()->Release();
 		Wnd::Instance()->Release();
 	}
