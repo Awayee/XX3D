@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/Public/String.h"
 #include "Core/Public/TArrayView.h"
+#include "Core/Public/TVector.h"
 #include "VulkanCommon.h"
 
 class ContextBuilder {

@@ -1,27 +1,5 @@
 #pragma once
-#include "TVector.h"
 #include "Defines.h"
-template <typename T, typename SizeType=uint32>
-class TConstArrayView{
-private:
-	const T* m_Data;
-	const SizeType m_Size;
-public:
-	TConstArrayView(): m_Data(nullptr), m_Size(0){}
-	TConstArrayView(const T* data, const SizeType size): m_Data(data), m_Size(size){}
-	TConstArrayView(const TVector<T>& vec): m_Data(vec.Data()), m_Size(vec.Size()){}
-	TConstArrayView(const TVector<T>& vec, SizeType start, SizeType size) : m_Data(&vec[start]), m_Size(size){}
-
-	operator bool() const { return m_Data && m_Size; }
-
-	const T* begin() const { return m_Data; }
-	const T* end() const { return m_Data + m_Size; }
-
-	const T& operator[](SizeType i)const { ASSERT(i < m_Size, "Index out of range"); return m_Data[i]; }
-
-	SizeType Size()const { return m_Size; }
-	const T* Data()const { return m_Data; }
-};
 
 template<typename T, typename SizeType=uint32>
 class TArrayView {
@@ -30,9 +8,23 @@ private:
 	const SizeType m_Size;
 public:
 	TArrayView() : m_Data(nullptr), m_Size(0) {}
+	TArrayView(const TArrayView& rhs): m_Data(rhs.m_Data), m_Size(rhs.m_Size){}
+	TArrayView(TArrayView&& rhs) noexcept: m_Data(rhs.m_Data), m_Size(rhs.m_Size){}
 	TArrayView(T* data, const SizeType size): m_Data(data), m_Size(size){}
-	TArrayView(TVector<T>& vec): m_Data(vec.m_Data), m_Size(vec.m_Size()){}
-	TArrayView(TVector<T>& vec, SizeType start, SizeType size): m_Data(&vec[start]), m_Size(size){}
+	TArrayView& operator = (const TArrayView& rhs) {
+		m_Data = rhs.m_Data;
+		m_Size = rhs.m_Size;
+		return *this;
+	}
+	TArrayView& operator=(TArrayView&& rhs) {
+		m_Data = rhs.m_Data;
+		m_Size = rhs.m_Size;
+		return *this;
+	}
+
+	bool operator==(const TArrayView& rhs) {
+		return m_Data == rhs.m_Data && m_Size == rhs.m_Size;
+	}
 
 	operator bool() const { return m_Data && m_Size; }
 	T* begin() { return m_Data; }
@@ -46,6 +38,8 @@ public:
 	T* Data() { return m_Data; }
 	const T* Data() const { return m_Data; }
 	SizeType Size() const { return m_Size; }
-
+	SizeType ByteSize() const { return m_Size * sizeof(T); }
 };
+
+template<typename T, typename SizeType=uint32> using TConstArrayView = TArrayView<const T, SizeType>;
 	

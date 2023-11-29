@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Public/TypeDefine.h"
+#include "Core/Public/TArrayView.h"
 #include <initializer_list>
 
 // a simple array just contains data
@@ -75,7 +76,7 @@ public:
 		size = p.size();
 		_TArrayAllocate;
 		auto begin = p.begin();
-		for (SizeType i = 0; i < size; i++) {
+		for (SizeType i = 0; i < size; ++i) {
 			data[i] = *(begin + i);
 		}
 	}
@@ -148,7 +149,7 @@ public:
 		}
 	}
 
-	TArray<T>& operator=(const TArray<T>& other) {
+	TArray& operator=(const TArray& other) {
 		if (this != &other) {
 			_TArrayFree;
 			size = other.size;
@@ -190,6 +191,14 @@ public:
 	TStaticArray& operator=(TStaticArray&& rhs) noexcept {
 		memcpy(m_Data, rhs.m_Data, ByteSize());
 		return *this;
+	}
+
+	operator TArrayView<T>() {
+		return TArrayView<T>{m_Data, L};
+	}
+
+	operator TArrayView<T>() const {
+		return TConstArrayView<T>{m_Data, L};
 	}
 
 	constexpr uint32 Size() const {

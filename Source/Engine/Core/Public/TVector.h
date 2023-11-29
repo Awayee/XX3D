@@ -3,6 +3,7 @@
 #include <functional>
 #include "Algorithm.h"
 #include "TypeDefine.h"
+#include "TArrayView.h"
 
 template <class T>
 class TVector : private std::vector<T> {
@@ -28,6 +29,14 @@ public:
 	using Base::operator=;
 	using Base::begin;
 	using Base::end;
+
+	operator TArrayView<T>() {
+		return TArrayView<T>{Data(), Size()};
+	}
+
+	operator TConstArrayView<T>() const {
+		return TConstArrayView{Data(), Size()};
+	}
 
 	uint32 Size() const { return static_cast<uint32>(Base::size()); }
 
