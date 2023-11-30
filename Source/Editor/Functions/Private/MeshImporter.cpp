@@ -67,14 +67,14 @@ void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TVec
 			vertices.Resize(vertexCount);
 
 			for (uint32 v = 0; v < vertexCount; v++) {
-				vertices[v].Position.x = bufferPos[v * posByteStride];
-				vertices[v].Position.y = bufferPos[v * posByteStride + 1];
-				vertices[v].Position.z = bufferPos[v * posByteStride + 2];
-				vertices[v].Normal.x = bufferNormals[v * normByteStride];
-				vertices[v].Normal.y = bufferNormals[v * normByteStride + 1];
-				vertices[v].Normal.z = bufferNormals[v * normByteStride + 2];
-				vertices[v].UV.x = bufferTexCoordSet0[v * uv0ByteStride];
-				vertices[v].UV.y = bufferTexCoordSet0[v * uv0ByteStride + 1];
+				vertices[v].Position.X = bufferPos[v * posByteStride];
+				vertices[v].Position.Y = bufferPos[v * posByteStride + 1];
+				vertices[v].Position.Z = bufferPos[v * posByteStride + 2];
+				vertices[v].Normal.X = bufferNormals[v * normByteStride];
+				vertices[v].Normal.Y = bufferNormals[v * normByteStride + 1];
+				vertices[v].Normal.Z = bufferNormals[v * normByteStride + 2];
+				vertices[v].UV.X = bufferTexCoordSet0[v * uv0ByteStride];
+				vertices[v].UV.Y = bufferTexCoordSet0[v * uv0ByteStride + 1];
 			}
 
 			//indices
@@ -151,16 +151,16 @@ void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TVector<Engine::AMeshAsse
 		// vertices
 		vertices.Resize(aMesh->mNumVertices);
 		for (uint32 i = 0; i < aMesh->mNumVertices; i++) {
-			vertices[i].Position.x = aMesh->mVertices[i].x;
-			vertices[i].Position.y = aMesh->mVertices[i].y;
-			vertices[i].Position.z = aMesh->mVertices[i].z;
+			vertices[i].Position.X = aMesh->mVertices[i].x;
+			vertices[i].Position.Y = aMesh->mVertices[i].y;
+			vertices[i].Position.Z = aMesh->mVertices[i].z;
 
-			vertices[i].Normal.x = aMesh->mNormals[i].x;
-			vertices[i].Normal.y = aMesh->mNormals[i].y;
-			vertices[i].Normal.z = aMesh->mNormals[i].z;
+			vertices[i].Normal.X = aMesh->mNormals[i].x;
+			vertices[i].Normal.Y = aMesh->mNormals[i].y;
+			vertices[i].Normal.Z = aMesh->mNormals[i].z;
 			if (aMesh->mTextureCoords[0]) {
-				vertices[i].UV.x = aMesh->mTextureCoords[0][i].x;
-				vertices[i].UV.y = aMesh->mTextureCoords[0][i].y;
+				vertices[i].UV.X = aMesh->mTextureCoords[0][i].x;
+				vertices[i].UV.Y = aMesh->mTextureCoords[0][i].y;
 			}
 		}
 

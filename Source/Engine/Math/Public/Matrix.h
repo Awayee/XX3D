@@ -4,7 +4,7 @@
 
 namespace Math {
     template<typename T> struct Matrix3x3 {
-		T m_mat[3][3];
+		T Mat[3][3];
 		Matrix3x3() = default;
         explicit Matrix3x3(T** arr);
         Matrix3x3(T* arr);
@@ -15,8 +15,8 @@ namespace Math {
 
         Matrix3x3(const Vector3<T>& row0, const Vector3<T>& row1, const Vector3<T>& row2);
         // assignment and comparison
-        T* operator[](int row_index) { return m_mat[row_index]; }
-        const T* operator[](int row_index) const { return m_mat[row_index]; }
+        T* operator[](int row_index) { return Mat[row_index]; }
+        const T* operator[](int row_index) const { return Mat[row_index]; }
         bool operator==(const Matrix3x3<T>& rhs) const;
         bool operator!=(const Matrix3x3<T>& rhs) const { return !operator==(rhs); }
         // arithmetic operations
@@ -36,7 +36,7 @@ namespace Math {
         Matrix3x3<T> Transpose() const;
 
         float Determinant() const;
-        bool Inverse(Matrix3x3<T>& inv_mat, float fTolerance = 1e-06) const;
+        bool Inverse(Matrix3x3<T>& inv_mat, T fTolerance = 1e-06) const;
 
         Matrix3x3<T> Inverse(T tolerance = 1e-06);
         static const Matrix3x3<T> IDENTITY;
@@ -53,7 +53,7 @@ namespace Math {
     template<typename T> struct Matrix4x4
     {
         /// The matrix entries, indexed by [row][col]
-        T m_mat[4][4];
+        T Mat[4][4];
 
         /** Default constructor.
         @note
@@ -127,7 +127,7 @@ namespace Math {
 
         /** Extracts the translation transformation part of the matrix.
          */
-        Vector3<T> GetTranslate() const { return Vector3<T>(m_mat[0][3], m_mat[1][3], m_mat[2][3]); }
+        Vector3<T> GetTranslate() const { return Vector3<T>(Mat[0][3], Mat[1][3], Mat[2][3]); }
 
         Matrix4x4<T> BuildViewportMatrix(unsigned int width, unsigned int height);
 

@@ -1,41 +1,84 @@
 #include "Math/Public/Geometry.h"
 
 namespace Math {
-	AABB::AABB() = default;
-
-	AABB::AABB(const FVector3& center, const FVector3& extent) : Center(center), Extent(extent) {}
-
-	FVector3 AABB::Min() const {
-		return Center - Extent;
+	AABB2::AABB2() {
 	}
 
-	FVector3 AABB::Max() const {
-		return Center + Extent;
+	AABB2::AABB2(FVector2 min, FVector2 max):Min(min), Max(max){
 	}
 
-	void AABB::Include(const FVector3& newPoint)
+	FVector2 AABB2::Center() const {
+		return 0.5f * (Max + Min);
+	}
+
+	FVector2 AABB2::Extent() const {
+		return 0.5f * (Max - Min);
+	}
+
+	bool AABB2::IsValid() const {
+		const FVector2 size = Max - Min;
+		return size.X > 0 && size.Y > 0;
+	}
+
+	bool AABB2::Contains(FVector2 point) const {
+		return FVector2::AllLessOrEqual(point, Max) && FVector2::AllGreaterOrEqual(point, Min);
+	}
+
+	bool AABB2::Contains(const AABB2& aabb) const {
+		return FVector2::AllLessOrEqual(aabb.Max, Max) && FVector2::AllGreaterOrEqual(aabb.Min, Min);
+	}
+
+	bool AABB2::Intersects(const AABB2& aabb) const {
+		return Contains(aabb.Min) || Contains(aabb.Max);
+	}
+
+	void AABB2::Include(FVector2 newPoint) {
+		Min = FVector2::Min(Min, newPoint);
+		Max = FVector2::Max(Max, newPoint);
+	}
+
+	void AABB2::Merge(const AABB2 aabb) {
+		Min = FVector2::Min(Min, aabb.Min);
+		Max = FVector2::Max(Max, aabb.Max);
+	}
+
+	AABB3::AABB3() = default;
+
+	AABB3::AABB3(const FVector3& min, const FVector3& max) : Min(min), Max(max) {}
+
+	FVector3 AABB3::Center() const {
+		return 0.5f * (Max + Min);
+	}
+
+	FVector3 AABB3::Extent() const {
+		return 0.5f * (Max - Min);
+	}
+
+	bool AABB3::IsValid() const {
+		const FVector3 size = Max - Min;
+		return size.X > 0 && size.Y > 0 && size.Z > 0;
+	}
+
+	bool AABB3::Contains(const FVector3& point) const {
+		return FVector3::AllLessOrEqual(point, Max) && FVector3::AllGreaterOrEqual(point, Min);
+	}
+
+	bool AABB3::Contains(const AABB3& aabb) const {
+		return FVector3::AllLessOrEqual(aabb.Max, Max) && FVector3::AllGreaterOrEqual(aabb.Min, Min);
+	}
+
+	bool AABB3::Intersects(const AABB3& aabb) const {
+		return Contains(aabb.Min) || Contains(aabb.Max);
+	}
+
+	void AABB3::Include(const FVector3& newPoint)
 	{
-		const FVector3 min = FVector3::Min(Min(), newPoint);
-		const FVector3 max = FVector3::Max(Max(), newPoint);
-		Center = (min + max) * 0.5f;
-		Extent = (max - min) * 0.5f;
+		Min = FVector3::Min(Min, newPoint);
+		Max = FVector3::Max(Max, newPoint);
 	}
-	void AABB::Merge(const AABB& aabb)
+	void AABB3::Merge(const AABB3& aabb)
 	{
-		const FVector3 thisMin = FVector3::Min(Min(), aabb.Min());
-		const FVector3 thisMax = FVector3::Max(Max(), aabb.Max());
-		Center = (thisMin + thisMax) * 0.5f;
-		Extent = (thisMax - thisMin) * 0.5f;
-	}
-
-	bool AABB::Contain(const FVector3& point) const {
-		const FVector3 vec = FVector3::Abs(point - Center);
-		return FVector3::AllLessOrEqual(vec, Extent);
-	}
-
-	bool AABB::Intersect(const AABB& aabb) const {
-		const FVector3 vec = FVector3::Abs(aabb.Center - Center);
-		const FVector3 wide = aabb.Extent + Extent;
-		return FVector3::AllLessOrEqual(vec, wide);
+		Min = FVector3::Min(Min, aabb.Min);
+		Max = FVector3::Max(Max, aabb.Max);
 	}
 }

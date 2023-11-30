@@ -13,7 +13,7 @@ namespace Engine {
 		ASSERT(rhi, "");
 		RHITextureDesc desc;
 		desc.Dimension = ETextureDimension::Tex2D;
-		desc.Format = ERHIFormat::R16G16B16A16_UNORM;
+		desc.Format = ERHIFormat::R8G8B8A8_UNORM;
 		desc.Flags = TEXTURE_FLAG_SRV | TEXTURE_FLAG_CPY_SRC;
 		desc.Size = { 1,1,1 };
 		desc.Depth = 1;

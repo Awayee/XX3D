@@ -3,15 +3,15 @@
 namespace Math {
 	template<typename T> class Quaternion {
 	public:
-		T x{ 0.0f };
-		T y{ 0.0f };
-		T z{ 0.0f };
-		T w{ 1.0f };
+		T X{ 0.0f };
+		T Y{ 0.0f };
+		T Z{ 0.0f };
+		T W{ 1.0f };
 		Quaternion() = default;
-		Quaternion(T _x, T _y, T _z, T _w) : x(_x), y(_y), z(_z), w(_w) {}
+		Quaternion(T _x, T _y, T _z, T _w) : X(_x), Y(_y), Z(_z), W(_w) {}
 
-		T* Data() { return &x; }
-		const T* Data() const { return &x; }
+		T* Data() { return &X; }
+		const T* Data() const { return &X; }
 
         static Quaternion<T> AngleAxis(T a, const Vector3<T>& axis);
 		static Quaternion<T> Euler(const Vector3<T>& euler);//z->x->y

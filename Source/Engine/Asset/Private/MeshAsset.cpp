@@ -11,20 +11,20 @@ namespace Engine {
 		uint8 Tangent[3];
 		float UV[2];
 		void Pack(const FVertex& v) {
-			memcpy(Position, &v.Position.x, sizeof(float) * 3);
-			Normal[0] = Math::PackFloat01(v.Normal.x);
-			Normal[1] = Math::PackFloat01(v.Normal.y);
-			Normal[2] = Math::PackFloat01(v.Normal.z);
-			Tangent[0] = Math::PackFloat01(v.Tangent.x);
-			Tangent[1] = Math::PackFloat01(v.Tangent.y);
-			Tangent[2] = Math::PackFloat01(v.Tangent.z);
-			memcpy(UV, &v.UV.x, sizeof(float) * 2);
+			memcpy(Position, &v.Position.X, sizeof(float) * 3);
+			Normal[0] = Math::PackFloat01(v.Normal.X);
+			Normal[1] = Math::PackFloat01(v.Normal.Y);
+			Normal[2] = Math::PackFloat01(v.Normal.Z);
+			Tangent[0] = Math::PackFloat01(v.Tangent.X);
+			Tangent[1] = Math::PackFloat01(v.Tangent.Y);
+			Tangent[2] = Math::PackFloat01(v.Tangent.Z);
+			memcpy(UV, &v.UV.X, sizeof(float) * 2);
 		}
 		void Unpack(FVertex& v) {
-			memcpy(&v.Position.x, Position, sizeof(float) * 3);
+			memcpy(&v.Position.X, Position, sizeof(float) * 3);
 			v.Normal = { Math::UnpackFloat01(Normal[0]), Math::UnpackFloat01(Normal[1]), Math::UnpackFloat01(Normal[2]) };
 			v.Tangent = { Math::UnpackFloat01(Tangent[0]), Math::UnpackFloat01(Tangent[1]), Math::UnpackFloat01(Tangent[2]) };
-			memcpy(&v.UV.x, UV, sizeof(float) * 2);
+			memcpy(&v.UV.X, UV, sizeof(float) * 2);
 		}
 	};
 

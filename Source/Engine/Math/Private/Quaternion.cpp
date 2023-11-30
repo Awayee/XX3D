@@ -6,21 +6,21 @@ namespace Math {
         Quaternion<T> q;
         T hanfA = (T)0.5f * a;
         T sinV = Math::Sin<T>(hanfA);
-        q.w = Math::Cos<T>(hanfA);
-        q.x = axis.x * sinV;
-        q.y = axis.y * sinV;
-        q.z = axis.z * sinV;
+        q.W = Math::Cos<T>(hanfA);
+        q.X = axis.X * sinV;
+        q.Y = axis.Y * sinV;
+        q.Z = axis.Z * sinV;
         return q;
     }
 
     template <typename T>
     Quaternion<T> Quaternion<T>::Euler(const Vector3<T>& euler) {
-        T cosR = Math::Cos(euler.x * 0.5);//roll
-        T sinR = Math::Sin(euler.x * 0.5);
-        T cosP = Math::Cos(euler.y * 0.5);//pitch
-        T sinP = Math::Sin(euler.y * 0.5);
-		T cosY = Math::Cos(euler.z * 0.5);//yaw
-		T sinY = Math::Sin(euler.z * 0.5);
+        T cosR = Math::Cos(euler.X * 0.5);//roll
+        T sinR = Math::Sin(euler.X * 0.5);
+        T cosP = Math::Cos(euler.Y * 0.5);//pitch
+        T sinP = Math::Sin(euler.Y * 0.5);
+		T cosY = Math::Cos(euler.Z * 0.5);//yaw
+		T sinY = Math::Sin(euler.Z * 0.5);
 		return {
 			sinP * sinY * cosR + cosP * cosY * sinR,
 			sinP * cosY * cosR - cosP * sinY * sinR,
@@ -30,15 +30,15 @@ namespace Math {
     }
 
     template <typename T> T Quaternion<T>::Roll() const {
-        return static_cast<T>(Math::ATan2(static_cast<T>(2) * (x * y + w * z), w * w + x * x - y * y - z * z));
+        return static_cast<T>(Math::ATan2(static_cast<T>(2) * (X * Y + W * Z), W * W + X * X - Y * Y - Z * Z));
     }
 
     template <typename T> T Quaternion<T>::Pitch() const {
-        return static_cast<T>(Math::ATan2(static_cast<T>(2) * (y * z + w * x), w * w - x * x - y * y + z * z));
+        return static_cast<T>(Math::ATan2(static_cast<T>(2) * (Y * Z + W * X), W * W - X * X - Y * Y + Z * Z));
     }
 
     template <typename T> T Quaternion<T>::Yaw() const {
-        return Math::ASin<T>(Math::Clamp<T>(static_cast<T>(-2) * (x * z - w * y), static_cast<T>(-1), static_cast<T>(1)));
+        return Math::ASin<T>(Math::Clamp<T>(static_cast<T>(-2) * (X * Z - W * Y), static_cast<T>(-1), static_cast<T>(1)));
     }
 
     template <typename T>
@@ -50,10 +50,10 @@ namespace Math {
     Vector3<T> Quaternion<T>::RotateVector3(const Vector3<T>& v) const{
         // nVidia SDK implementation
         Vector3<T> uv, uuv;
-        Vector3<T> qvec(x, y, z);
+        Vector3<T> qvec(X, Y, Z);
         uv   = Vector3<T>::Cross(qvec, v);
         uuv  = Vector3<T>::Cross(qvec, uv);
-        uv  *=  (2.0f * w);
+        uv  *=  (2.0f * W);
         uuv *=  2.0f;
 
         return v + uv + uuv;
@@ -61,11 +61,11 @@ namespace Math {
 
     template <typename T>
     Quaternion<T> Quaternion<T>::Inverse() const{
-        T norm = w * w + x * x + y * y + z * z;
+        T norm = W * W + X * X + Y * Y + Z * Z;
         if (norm > 0.0)
         {
             T inv_norm = 1.0f / norm;
-            return Quaternion<T>(w * inv_norm, -x * inv_norm, -y * inv_norm, -z * inv_norm);
+            return Quaternion<T>(W * inv_norm, -X * inv_norm, -Y * inv_norm, -Z * inv_norm);
         }
         else
         {
@@ -76,17 +76,17 @@ namespace Math {
 
     template <typename T> Quaternion<T> Quaternion<T>::operator*(const Quaternion<T>& q) const{
         return Quaternion<T>(
-            w * q.x + x * q.w + y * q.z - z * q.y,
-            w * q.y + y * q.w + z * q.x - x * q.z,
-            w * q.z + z * q.w + x * q.y - y * q.x,
-            w * q.w - x * q.x - y * q.y - z * q.z);
+            W * q.X + X * q.W + Y * q.Z - Z * q.Y,
+            W * q.Y + Y * q.W + Z * q.X - X * q.Z,
+            W * q.Z + Z * q.W + X * q.Y - Y * q.X,
+            W * q.W - X * q.X - Y * q.Y - Z * q.Z);
     }
 
     template <typename T> Quaternion<T> Quaternion<T>::operator*= (const Quaternion<T>& q){
-        x = w * q.x + x * q.w + y * q.z - z * q.y;
-        y = w * q.z + z * q.w + x * q.y - y * q.x;
-        z = w * q.z + z * q.w + x * q.y - y * q.x;
-        w = w * q.w - x * q.x - y * q.y - z * q.z;
+        X = W * q.X + X * q.W + Y * q.Z - Z * q.Y;
+        Y = W * q.Z + Z * q.W + X * q.Y - Y * q.X;
+        Z = W * q.Z + Z * q.W + X * q.Y - Y * q.X;
+        W = W * q.W - X * q.X - Y * q.Y - Z * q.Z;
         return *this;
     }
 
