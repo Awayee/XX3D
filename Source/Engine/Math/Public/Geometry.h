@@ -7,7 +7,7 @@ namespace Math {
 		FVector2 Min{0.0f, 0.0f};
 		FVector2 Max{0.0f, 0.0f};
 		AABB2();
-		AABB2(FVector2 min, FVector2 max);
+		AABB2(FVector2 center, FVector2 extent);
 		FVector2 Center() const;
 		FVector2 Extent() const;
 		bool IsValid() const;
@@ -15,7 +15,7 @@ namespace Math {
 		bool Contains(const AABB2& aabb) const;
 		bool Intersects(const AABB2& aabb) const;
 		void Include(FVector2 newPoint);
-		void Merge(const AABB2 aabb);
+		void Merge(const AABB2& aabb);
 	};
 
 	struct AABB3 {

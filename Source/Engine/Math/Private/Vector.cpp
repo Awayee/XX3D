@@ -5,8 +5,8 @@
 namespace Math {
     // vector2
     template<typename T> T Vector2<T>::operator[](int i) const{
-        ASSERT(i < 2);
-        return (i == 0 ? X : Y);
+        ASSERT(i < 2, "Index out of range!");
+        return (i == 0 ? X : Y, "Index out of range!");
     }
 
     template<typename T> T& Vector2<T>::operator[](int i){
@@ -115,19 +115,19 @@ namespace Math {
 
     // vector3
     template<typename T> T Vector3<T>::operator[](int i) const{
-        ASSERT(i < 3);
+        ASSERT(i < 3, "Index out of range!");
         return *(&X + i);
     }
     template<typename T> T& Vector3<T>::operator[](int i){
-        ASSERT(i < 3);
+        ASSERT(i < 3, "Index out of range!");
         return *(&X + i);
     }
     template<typename T> Vector3<T> Vector3<T>::operator/(T scalar) const{
-        ASSERT(scalar != 0.0);
+        ASSERT(scalar != 0.0, "Divide by zero!");
         return Vector3<T>(X / scalar, Y / scalar, Z / scalar);
     }
     template<typename T> Vector3<T> Vector3<T>::operator/(const Vector3<T>& rhs) const{
-        ASSERT((rhs.X != 0 && rhs.Y != 0 && rhs.Z != 0));
+        ASSERT((rhs.X != 0 && rhs.Y != 0 && rhs.Z != 0), "Divide by zero!");
         return Vector3<T>(X / rhs.X, Y / rhs.Y, Z / rhs.Z);
     }
 
