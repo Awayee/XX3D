@@ -4,10 +4,10 @@ template<class T>
 class TUniquePtr {
 public:
 	~TUniquePtr() {
-		_Free();
+		Free();
 	}
 	TUniquePtr() = default;
-	TUniquePtr(T* ptr) {
+	explicit TUniquePtr(T* ptr) {
 		m_Ptr = ptr;
 	}
 	template<class Ty> TUniquePtr(const TUniquePtr<Ty>&) = delete;
@@ -64,8 +64,8 @@ public:
 
 	void Reset() {
 		if (nullptr != m_Ptr) {
-			_Free();
-		}		
+			Free();
+		}
 	}
 
 	void Reset(T* ptr) {
@@ -86,7 +86,7 @@ public:
 private:
 	T* m_Ptr{nullptr};
 
-	inline void _Free() {
+	inline void Free() {
 		if(m_Ptr) {
 			delete m_Ptr;
 			m_Ptr = nullptr;
