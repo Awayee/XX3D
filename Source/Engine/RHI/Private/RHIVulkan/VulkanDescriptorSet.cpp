@@ -94,7 +94,7 @@ RHIVulkanShaderParameterSet::~RHIVulkanShaderParameterSet() {
 
 void RHIVulkanShaderParameterSet::SetUniformBuffer(uint32 binding, RHIBuffer* buffer) {
 	// TODO use large buffer
-	RHIVulkanBuffer* vkBuffer = dynamic_cast<RHIVulkanBuffer*>(buffer);
+	RHIVulkanBufferWithMem* vkBuffer = dynamic_cast<RHIVulkanBufferWithMem*>(buffer);
 	VkDescriptorBufferInfo bufferInfo{ vkBuffer->GetBuffer(), 0, vkBuffer->GetDesc().ByteSize };
 	VkWriteDescriptorSet write{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr,
 		m_Handle.Set, binding,
@@ -109,7 +109,7 @@ void RHIVulkanShaderParameterSet::SetUniformBuffer(uint32 binding, RHIBuffer* bu
 }
 
 void RHIVulkanShaderParameterSet::SetStorageBuffer(uint32 binding, RHIBuffer* buffer) {
-	RHIVulkanBuffer* vkBuffer = dynamic_cast<RHIVulkanBuffer*>(buffer);
+	RHIVulkanBufferWithMem* vkBuffer = dynamic_cast<RHIVulkanBufferWithMem*>(buffer);
 	VkDescriptorBufferInfo bufferInfo{ vkBuffer->GetBuffer(), 0, vkBuffer->GetDesc().ByteSize };
 	VkWriteDescriptorSet write{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr,
 		m_Handle.Set, binding,

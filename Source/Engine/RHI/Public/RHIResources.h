@@ -38,23 +38,22 @@ public:
 };
 
 // texture
-
 struct RHITextureDesc {
 	ETextureDimension Dimension;
 	ERHIFormat Format;
 	ETextureFlags Flags;
 	USize3D Size;
-	uint16 Depth;
-	uint16 ArraySize;
-	uint8 NumMips;
+	uint32 Depth;
+	uint32 ArraySize;
+	uint32 NumMips;
 	uint8 Samples;
 };
 
 struct RHITextureSubDesc {
-	uint8 BaseMip;
-	uint8 NumMips;
-	uint8 BaseLayer;
-	uint8 NumLayers;
+	uint32 BaseMip;
+	uint32 NumMips;
+	uint32 BaseLayer;
+	uint32 NumLayers;
 };
 
 struct RHITextureOffset {
@@ -75,12 +74,10 @@ protected:
 	RHITextureDesc m_Desc;
 public:
 	RHITexture(const RHITextureDesc& desc) : m_Desc(desc) {}
-	virtual void UpdateData(const RHITextureOffset& region, const USize3D& extent, const void* data) = 0;
 	XX_NODISCARD const RHITextureDesc& GetDesc() const { return m_Desc; }
 };
 
 // sampler
-
 struct RHISamplerDesc {
 	ESamplerFilter Filter = ESamplerFilter::Point;
 	ESamplerAddressMode AddressU = ESamplerAddressMode::Wrap;

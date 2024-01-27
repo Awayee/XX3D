@@ -13,7 +13,7 @@ namespace Engine {
 		m_Materials.Resize(m_Primitives.Size());
 		for(uint32 i=0; i< m_Primitives.Size(); ++i) {
 			const auto& primitiveData = meshAsset.Primitives[i];
-			m_Primitives[i].reset(new Primitive(primitiveData.Vertices, primitiveData.Indices));
+			m_Primitives[i].Reset(new Primitive(primitiveData.Vertices, primitiveData.Indices));
 			m_Materials[i] = primitiveData.MaterialFile.empty()? MaterialMgr::GetDefault() : MaterialMgr::Get(primitiveData.MaterialFile.c_str());
 		}
 	}
@@ -23,7 +23,7 @@ namespace Engine {
 		RenderObject3D::DrawCall(cmd, layout);
 		for(uint32 i=0; i< m_Primitives.Size(); ++i) {
 			cmd->BindDescriptorSet(layout, m_Materials[i]->GetDescs(), 2, Engine::PIPELINE_GRAPHICS);
-			DrawPrimitive(cmd, m_Primitives[i].get());
+			DrawPrimitive(cmd, m_Primitives[i].Get());
 		}
 	}
 

@@ -85,7 +85,7 @@ RHIVulkan* RHIVulkan::InstanceVulkan() {
 	return dynamic_cast<RHIVulkan*>(Instance());
 }
 
-RHIBuffer* RHIVulkan::CreateBuffer(const RHIBufferDesc& desc) {
+RHIBuffer* RHIVulkan::CreateBuffer(const RHIBufferDesc& desc, void* defaultData) {
 	VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, nullptr, 0 };
 	bufferInfo.usage = ToBufferUsage(desc.Flags);
 	bufferInfo.size = desc.ByteSize;
@@ -100,10 +100,10 @@ RHIBuffer* RHIVulkan::CreateBuffer(const RHIBufferDesc& desc) {
 		vkDestroyBuffer(GetDevice(), buffer, nullptr);
 		return nullptr;
 	}
-	return new RHIVulkanBuffer(desc, buffer, std::move(mem));
+	return new RHIVulkanBufferWithMem(desc, buffer, std::move(mem));
 }
 
-RHITexture* RHIVulkan::CreateTexture(const RHITextureDesc& desc) {
+RHITexture* RHIVulkan::CreateTexture(const RHITextureDesc& desc, void* defaultData) {
 	VkImageCreateInfo imageInfo{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, 0 };
 	imageInfo.imageType = ToImageType(desc.Dimension);
 	imageInfo.format = ToVkFormat(desc.Format);

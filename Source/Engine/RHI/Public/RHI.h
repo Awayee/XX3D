@@ -59,8 +59,8 @@ public:
 	virtual ERHIFormat GetDepthFormat() = 0;
 	virtual RHISwapChain* GetSwapChain() = 0;
 
-	virtual RHIBuffer* CreateBuffer(const RHIBufferDesc& desc) = 0;
-	virtual RHITexture* CreateTexture(const RHITextureDesc& desc) = 0;
+	virtual RHIBuffer* CreateBuffer(const RHIBufferDesc& desc, void* defaultData) = 0;
+	virtual RHITexture* CreateTexture(const RHITextureDesc& desc, void* defaultData) = 0;
 	virtual RHISampler* CreateSampler(const RHISamplerDesc& desc) = 0;
 	virtual RHIFence* CreateFence(bool sig = true) = 0;
 	virtual RHIShader* CreateShader(EShaderStageFlagBit type, const char* codeData, size_t codeSize, const char* entryFunc) = 0;

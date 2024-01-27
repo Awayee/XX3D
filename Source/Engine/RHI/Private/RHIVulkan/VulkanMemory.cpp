@@ -20,8 +20,9 @@ VulkanMem::~VulkanMem() {
 }
 
 void* VulkanMem::Map() {
-	vmaMapMemory(m_Alloc, m_Handle, &m_DataPtr);
-	return m_DataPtr;
+	void* dataPtr;
+	vmaMapMemory(m_Alloc, m_Handle, &dataPtr);
+	return dataPtr;
 }
 
 void VulkanMem::Unmap() {

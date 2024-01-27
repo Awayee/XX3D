@@ -11,23 +11,25 @@ protected:
 	VkDevice m_DeviceHandle{VK_NULL_HANDLE};
 };
 
-class RHIVulkanBuffer: public RHIBuffer, public RHIVulkanResource {
+class RHIVulkanBuffer: public RHIBuffer {
+private:
+	friend RHIVulkan;
+};
+
+class RHIVulkanBufferWithMem: public RHIBuffer{
+public:
+	RHIVulkanBufferWithMem(const RHIBufferDesc& desc, VkBuffer buffer, VulkanMem&& mem);
+	~RHIVulkanBufferWithMem()override;
+	void SetName(const char* name) override;
+	void UpdateData(const void* data, size_t byteSize) override;
+	VkBuffer GetBuffer() const { return m_Buffer; }
 private:
 	friend RHIVulkan;
 	VkBuffer m_Buffer;
 	VulkanMem m_Mem;
-public:
-	RHIVulkanBuffer(const RHIBufferDesc& desc, VkBuffer buffer, VulkanMem&& mem);
-	~RHIVulkanBuffer()override;
-	void SetName(const char* name) override;
-	void UpdateData(const void* data, size_t byteSize) override;
-	VkBuffer GetBuffer() const { return m_Buffer; }
 };
 
 class RHIVulkanTexture: public RHITexture {
-protected:
-	VkImage m_Image;
-	VkImageView m_View;
 public:
 	RHIVulkanTexture(const RHITextureDesc& desc, VkImage image, VkImageView view);
 	RHIVulkanTexture(const RHIVulkanTexture&) = delete;
@@ -35,14 +37,17 @@ public:
 	VkImage GetImage() const { return m_Image; }
 	VkImageView GetView() const { return m_View; }
 	void SetName(const char* name) override;
+protected:
+	VkImage m_Image;
+	VkImageView m_View;
 };
 
 class RHIVulkanTextureWithMem: public RHIVulkanTexture {
-private:
-	VulkanMem m_Mem;
 public:
 	RHIVulkanTextureWithMem(const RHITextureDesc& desc, VkImage image, VkImageView view, VulkanMem&& memory);
 	~RHIVulkanTextureWithMem() override;
+private:
+	VulkanMem m_Mem;
 };
 
 class RHIVulkanSampler: public RHISampler{

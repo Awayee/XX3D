@@ -8,7 +8,7 @@ namespace Engine {
 	// static mesh
 	class StaticMesh: public RenderObject3D {
 	private:
-		TVector<TSharedPtr<Primitive>> m_Primitives;
+		TVector<TUniquePtr<Primitive>> m_Primitives;
 		TVector<Material*> m_Materials;
 		//RHI::RDescriptorSet* m_DescriptorSet;
 	public:

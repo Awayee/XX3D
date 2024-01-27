@@ -12,25 +12,23 @@ RHI* RHI::Instance() {
 }
 
 void RHI::Initialize(const RHIInitDesc& desc) {
-	static Mutex s_InstanceMutex;
 
 	if (!s_Instance) {
-		MutexLock lock(s_InstanceMutex);
-		if (!s_Instance) {
-			switch(desc.RHIType) {
-			case ERHIType::Vulkan:
-				s_Instance = new RHIVulkan(desc);
-				break;
-			case ERHIType::DX12:
-			case ERHIType::DX11:
-			case ERHIType::OpenGL:
-			default:
-				ERROR("Failed to initialize RHI!");
-			}
+		switch(desc.RHIType) {
+		case ERHIType::Vulkan:
+			s_Instance = new RHIVulkan(desc);
+			break;
+		case ERHIType::DX12:
+		case ERHIType::DX11:
+		case ERHIType::OpenGL:
+		case ERHIType::Invalid:
+			ASSERT(0, "Failed to initialize RHI!");
 		}
 	}
 }
 
 void RHI::Release() {
-	delete s_Instance;
+	if(s_Instance) {
+		delete s_Instance;
+	}
 }

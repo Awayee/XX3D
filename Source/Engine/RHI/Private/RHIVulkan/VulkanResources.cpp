@@ -8,20 +8,20 @@ VkDebugUtilsObjectNameInfoEXT info{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INF
 vkSetDebugUtilsObjectNameEXT(RHIVulkan::GetDevice(), &info);\
 }while(0)
 
-RHIVulkanBuffer::RHIVulkanBuffer(const RHIBufferDesc& desc, VkBuffer buffer, VulkanMem&& mem):
+RHIVulkanBufferWithMem::RHIVulkanBufferWithMem(const RHIBufferDesc& desc, VkBuffer buffer, VulkanMem&& mem):
 RHIBuffer(desc), m_Buffer(buffer), m_Mem(std::forward<VulkanMem>(mem)) {}
 
-RHIVulkanBuffer::~RHIVulkanBuffer() {
+RHIVulkanBufferWithMem::~RHIVulkanBufferWithMem() {
 	VkDevice device = RHIVulkan::GetDevice();
 	vkDestroyBuffer(device, m_Buffer, nullptr);
 	m_Mem.Free();
 }
 
-void RHIVulkanBuffer::SetName(const char* name) {
+void RHIVulkanBufferWithMem::SetName(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_BUFFER, m_Buffer, name);
 }
 
-void RHIVulkanBuffer::UpdateData(const void* data, size_t byteSize) {
+void RHIVulkanBufferWithMem::UpdateData(const void* data, size_t byteSize) {
 	void* mappedData = m_Mem.Map();
 	memcpy(mappedData, data, byteSize);
 	m_Mem.Unmap();

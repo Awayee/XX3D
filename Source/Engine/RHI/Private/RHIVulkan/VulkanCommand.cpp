@@ -357,12 +357,12 @@ void RHIVulkanCommandBuffer::BindShaderParameterSet(uint32 index, RHIShaderParam
 }
 
 void RHIVulkanCommandBuffer::BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) {
-	VkBuffer vkBuffer = dynamic_cast<RHIVulkanBuffer*>(buffer)->GetBuffer();
+	VkBuffer vkBuffer = dynamic_cast<RHIVulkanBufferWithMem*>(buffer)->GetBuffer();
 	vkCmdBindVertexBuffers(m_Handle, first, 1, &vkBuffer, &offset);
 }
 
 void RHIVulkanCommandBuffer::BindIndexBuffer(RHIBuffer* buffer, uint64 offset) {
-	vkCmdBindIndexBuffer(m_Handle, dynamic_cast<RHIVulkanBuffer*>(buffer)->GetBuffer(), offset, VK_INDEX_TYPE_UINT32);
+	vkCmdBindIndexBuffer(m_Handle, dynamic_cast<RHIVulkanBufferWithMem*>(buffer)->GetBuffer(), offset, VK_INDEX_TYPE_UINT32);
 }
 
 void RHIVulkanCommandBuffer::Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance) {
@@ -396,7 +396,7 @@ void RHIVulkanCommandBuffer::ClearColorAttachment(const float* color, const IRec
 
 void RHIVulkanCommandBuffer::CopyBufferToBuffer(RHIBuffer* srcBuffer, RHIBuffer* dstBuffer, uint64 srcOffset, uint64 dstOffset, uint64 size) {
 	VkBufferCopy copy{ srcOffset, dstOffset, size };
-	vkCmdCopyBuffer(m_Handle, dynamic_cast<RHIVulkanBuffer*>(srcBuffer)->GetBuffer(), dynamic_cast<RHIVulkanBuffer*>(dstBuffer)->GetBuffer(), 1, &copy);
+	vkCmdCopyBuffer(m_Handle, dynamic_cast<RHIVulkanBufferWithMem*>(srcBuffer)->GetBuffer(), dynamic_cast<RHIVulkanBufferWithMem*>(dstBuffer)->GetBuffer(), 1, &copy);
 }
 
 void RHIVulkanCommandBuffer::CopyBufferToTexture(RHIBuffer* buffer, RHITexture* texture, uint32 mipLevel, uint32 baseLayer, uint32 layerCount) {
@@ -412,7 +412,7 @@ void RHIVulkanCommandBuffer::CopyBufferToTexture(RHIBuffer* buffer, RHITexture* 
 	region.imageOffset = { 0, 0, 0 };
 	const USize3D size = vkTex->GetDesc().Size;
 	region.imageExtent = { size.w, size.h, size.d };
-	vkCmdCopyBufferToImage(m_Handle, ((RHIVulkanBuffer*)buffer)->GetBuffer(), vkTex->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+	vkCmdCopyBufferToImage(m_Handle, ((RHIVulkanBufferWithMem*)buffer)->GetBuffer(), vkTex->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
 void RHIVulkanCommandBuffer::CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RHITextureCopyRegion& region)

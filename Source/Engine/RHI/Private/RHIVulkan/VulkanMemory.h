@@ -15,7 +15,6 @@ private:
 	friend class VulkanMemMgr;
 	VmaAllocation m_Handle{ VK_NULL_HANDLE };
 	VmaAllocator m_Alloc{ VK_NULL_HANDLE };
-	void* m_DataPtr{nullptr};
 	bool m_Mapped{false};
 public:
 	~VulkanMem();

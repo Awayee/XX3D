@@ -25,17 +25,11 @@ namespace Engine {
 
 	class RGBuffer: public RGResource {
 	public:
-		struct Desc {
-			uint64 Size;
-			RBufferUsageFlags Usage;
-			RMemoryPropertyFlags MemoryFlags;
-			void* pData = nullptr;
-		};
-		RGBuffer(const Desc& desc);
-		explicit RGBuffer(Desc&& desc);
+		RGBuffer(const RHIBufferDesc& desc);
+		explicit RGBuffer(RHIBufferDesc&& desc);
 	private:
-		Desc m_Desc;
-		RBuffer* m_RHIBuffer{nullptr};
+		RHIBufferDesc m_Desc;
+		RHIBuffer* m_RHIBuffer{nullptr};
 	};
 
 	class RGTexture: public RGResource {

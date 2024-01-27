@@ -18,8 +18,8 @@ public:
 	RHISwapChain* GetSwapChain() override;
 	ERHIFormat GetDepthFormat() override;
 
-	RHIBuffer* CreateBuffer(const RHIBufferDesc& desc) override;
-	RHITexture* CreateTexture(const RHITextureDesc& desc) override;
+	RHIBuffer* CreateBuffer(const RHIBufferDesc& desc, void* defaultData) override;
+	RHITexture* CreateTexture(const RHITextureDesc& desc, void* defaultData) override;
 	RHISampler* CreateSampler(const RHISamplerDesc& desc) override;
 	RHIFence* CreateFence(bool sig) override;
 	RHIShader* CreateShader(EShaderStageFlagBit type, const char* codeData, size_t codeSize, const char* entryFunc) override;

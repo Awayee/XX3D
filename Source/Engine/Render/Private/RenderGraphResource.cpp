@@ -6,10 +6,10 @@ namespace Engine {
 		++m_RefCount;
 	}
 
-	RGBuffer::RGBuffer(const Desc& desc) {
+	RGBuffer::RGBuffer(const RHIBufferDesc& desc) : m_Desc(desc) {
 
 	}
 
-	RGBuffer::RGBuffer(Desc&& desc): RGBuffer(desc) {
+	RGBuffer::RGBuffer(RHIBufferDesc&& desc): m_Desc(std::forward<RHIBufferDesc>(desc)) {
 	}
 }
