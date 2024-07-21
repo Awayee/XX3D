@@ -1,55 +1,45 @@
-#include "Window/Public/Wnd.h"
-#include "Core/Public/Time.h"
-#include "Engine/Public/EngineContext.h"
 #include "Engine/Public/Engine.h"
-#include "Core/Public/Defines.h"
 #include "Resource/Public/Config.h"
+#include "Window/Public/EngineWIndow.h"
+#include "RHI/Public/RHI.h"
+#include "Render/Public/RenderModuleInterface.h"
 
 namespace Engine {
-	XXEngine::XXEngine() {
-		auto* context = Context();
-		// init window
-		{
-			WindowInitInfo windowInfo;
-			windowInfo.width = GetConfig().WindowSize.w;
-			windowInfo.height = GetConfig().WindowSize.h;
-			windowInfo.title = PROJECT_NAME;
-			windowInfo.resizeable = true;
-			Wnd::Instance()->Initialize(windowInfo);
-			context->m_Window = Engine::Wnd::Instance();
-		}
-		// init rhi
-		{
-			RHIInitDesc desc;
-			desc.AppName = PROJECT_NAME;
-			desc.EnableDebug =
-#ifdef _DEBUG
-				true;
-#else
-				false;
-#endif
-			desc.WindowHandle = context->m_Window->GetWindowHandle();
-			desc.RHIType = GetConfig().RHIType;
-			RHI::Initialize(desc);
-		}
-		// init renderer
-		//context->m_Renderer.Reset(new Renderer(context->Window()));
-		PRINT_DEBUG("Engine Initialized.");
+
+	XXEngine* s_RunningEngine{ nullptr };
+
+	XXEngine::XXEngine(): m_Running(false) {
+		ASSERT(!s_RunningEngine, "Engine allows only one instance!");
+		ConfigManager::Initialize();
+		EngineWindow::Initialize();
+		RHI::Initialize();
+		Render::Initialize();
+		s_RunningEngine = this;
 	}
+
 	XXEngine::~XXEngine() {
-		auto* context = Context();
-		context->m_Renderer.Reset();
-		RHI::Instance()->Release();
-		Wnd::Instance()->Release();
+		RHI::Release();
+		EngineWindow::Release();
+		Render::Release();
+		s_RunningEngine = nullptr;
 	}
 
-	bool XXEngine::Tick() {
-		if(Context()->Window()->ShouldClose()) {
-			return false;
-		}
+	void XXEngine::Update() {
+		RHI::Instance()->Update();// RHI Update must run at the beginning.
+		EngineWindow::Instance()->Update();
+		Render::Update();
+	}
 
-		Context()->Window()->Tick();
-		//Context()->Renderer()->Tick();
-		return true;
+	void XXEngine::Run() {
+		m_Running = true;
+		while(m_Running) {
+			Update();
+		}
+	}
+
+	void XXEngine::ShutDown() {
+		if(s_RunningEngine) {
+			s_RunningEngine->m_Running = false;
+		}
 	}
 }

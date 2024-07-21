@@ -1,21 +1,21 @@
 #pragma once
 #include "Core/Public/BaseStructs.h"
 #include "Core/Public/TVector.h"
-#include "Core/Public/Defines.h"
+#include "Core/Public/Log.h"
 #include "RHIEnum.h"
 
 class RHIResource {
 public:
 	RHIResource& operator=(const RHIResource&) = delete;
-	virtual void SetName(const char* name) = 0;
+	virtual void SetName(const char* name) {}
 	virtual ~RHIResource() = default;
 };
 
 // swapchain
 
-class RHISwapChain {
+class RHISwapchain {
 public:
-	virtual ~RHISwapChain() = default;
+	virtual ~RHISwapchain() = default;
 	virtual void Resize(USize2D size) = 0;
 	virtual USize2D GetSize() = 0;
 };
@@ -24,8 +24,8 @@ public:
 
 struct RHIBufferDesc {
 	EBufferFlags Flags;
-	size_t ByteSize;
-	size_t Stride;
+	uint32 ByteSize;
+	uint32 Stride;
 };
 
 class RHIBuffer: public RHIResource {
@@ -33,7 +33,7 @@ protected:
 	RHIBufferDesc m_Desc;
 public:
 	RHIBuffer(const RHIBufferDesc& desc): m_Desc(desc){}
-	virtual void UpdateData(const void* data, size_t byteSize) = 0;
+	virtual void UpdateData(const void* data, uint32 byteSize) = 0;
 	XX_NODISCARD const RHIBufferDesc& GetDesc() const { return m_Desc; }
 };
 
@@ -46,20 +46,19 @@ struct RHITextureDesc {
 	uint32 Depth;
 	uint32 ArraySize;
 	uint32 NumMips;
-	uint8 Samples;
+	uint32 Samples;
 };
 
 struct RHITextureSubDesc {
 	uint32 BaseMip;
 	uint32 NumMips;
 	uint32 BaseLayer;
-	uint32 NumLayers;
+	uint32 LayerCount;
 };
 
 struct RHITextureOffset {
 	uint32 MipLevel;
-	uint32 BaseLayer;
-	uint32 LayerCount;
+	uint32 ArrayLayer;
 	UOffset3D Offset;
 };
 
@@ -75,7 +74,8 @@ protected:
 public:
 	RHITexture(const RHITextureDesc& desc) : m_Desc(desc) {}
 	XX_NODISCARD const RHITextureDesc& GetDesc() const { return m_Desc; }
-	virtual void UpdateData(RHITextureOffset offset, USize3D size, const void* data) = 0;
+	virtual void UpdateData(RHITextureOffset offset, uint32 byteSize, const void* data) = 0;
+	uint32 GetPixelByteSize();
 };
 
 // sampler
@@ -125,8 +125,6 @@ protected:
 struct RHIRenderPassDesc {
 	struct ColorTargetInfo {
 		RHITexture* Target;
-		uint32 ArrayIndex{ 0 };
-		uint8 MipIndex{ 0 };
 		ERTLoadOp LoadOp{ ERTLoadOp::EClear };
 		ERTStoreOp StoreOp{ ERTStoreOp::EStore };
 		FColor4 ColorClear{ 0.0f, 0.0f, 0.0f, 0.0f };
@@ -142,7 +140,7 @@ struct RHIRenderPassDesc {
 	};
 	TVector<ColorTargetInfo> ColorTargets;
 	DepthStencilTargetInfo DepthStencilTarget;
-	USize2D RenderSize;
+	IURect RenderArea;
 };
 
 class RHIRenderPass : public RHIResource {
@@ -221,7 +219,6 @@ typedef TVector<RHIShaderParemeterLayout> RHIPipelineLayout;
 
 // pso
 struct RHIGraphicsPipelineStateDesc {
-	TVector<RHIShader*> Shaders;
 	RHIShader* VertexShader;
 	RHIShader* PixelShader;
 	RHIPipelineLayout Layout;
@@ -230,6 +227,8 @@ struct RHIGraphicsPipelineStateDesc {
 	RHIRasterizerState RasterizerState;
 	RHIDepthStencilState DepthStencilState;
 	EPrimitiveTopology PrimitiveTopology;
+	TVector<ERHIFormat> RenderTargetFormats;
+	ERHIFormat DepthStencilFormat;
 	uint8 NumSamples;
 };
 
@@ -257,9 +256,10 @@ protected:
 
 class RHIShaderParameterSet {
 public:
-	virtual ~RHIShaderParameterSet(){};
+	virtual ~RHIShaderParameterSet(){}
 	virtual void SetUniformBuffer(uint32 binding, RHIBuffer* buffer) = 0;
 	virtual void SetStorageBuffer(uint32 binding, RHIBuffer* buffer) = 0;
 	virtual void SetTexture(uint32 binding, RHITexture* image) = 0;
 	virtual void SetSampler(uint32 binding, RHISampler* sampler) = 0;
 };
+

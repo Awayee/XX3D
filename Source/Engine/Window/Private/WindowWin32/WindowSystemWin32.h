@@ -1,5 +1,5 @@
 #pragma once
-#include "Window/Public/Wnd.h"
+#include "Window/Public/EngineWindow.h"
 //#include <WinUser.h>
 //#include <windef.h>
 //#include <d3d11.h>
@@ -9,7 +9,7 @@
 
 
 namespace Engine {
-	class WindowSystemWin32 final: public Wnd {
+	class WindowSystemWin32 final: public EngineWindow {
 	private:
 		static std::unordered_map<int, EKey> s_GLFWKeyCodeMap;
 		static std::unordered_map<int, EBtn> s_GLFWButtonCodeMap;
@@ -36,11 +36,9 @@ namespace Engine {
 		LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam); //window loop func
 		static LRESULT CALLBACK SMainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 	public:
-		WindowSystemWin32() = default;
-		~WindowSystemWin32();
-		void Initialize(const WindowInitInfo& initInfo) override;
-		void Release() override;
-		void Tick() override;
+		explicit WindowSystemWin32(const WindowInitInfo& initInfo);
+		~WindowSystemWin32() override;
+		void Update() override;
 		bool ShouldClose() override;
 		void Close() override;
 		void SetTitle(const char* title) override;

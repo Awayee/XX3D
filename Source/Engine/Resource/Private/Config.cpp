@@ -1,5 +1,5 @@
 #include "Resource/Public/Config.h"
-#include "Core/Public/Defines.h"
+#include "Core/Public/Log.h"
 #include "Core/Public/Container.h"
 #include "Core/Public/TVector.h"
 #include "Core/Public/String.h"
@@ -32,31 +32,31 @@ namespace Engine {
 
 	inline ERenderPath ParseRenderPath(const std::string& renderPathStr) {
 		if ("Deferred" == renderPathStr) {
-			return RENDER_DEFERRED;
+			return ERenderPath::RENDER_DEFERRED;
 		}
 		if ("Forward" == renderPathStr) {
-			return RENDER_FORWARD;
+			return ERenderPath::RENDER_FORWARD;
 		}
-		return RENDER_NONE;
+		return ERenderPath::RENDER_NONE;
 	}
 
 	inline EGPUType ParseGPUType(const std::string& gpuType) {
 		if ("Integrated" == gpuType) {
-			return GPU_INTEGRATED;
+			return EGPUType::GPU_INTEGRATED;
 		}
 		if ("Discrete" == gpuType) {
-			return GPU_DISCRETE;
+			return EGPUType::GPU_DISCRETE;
 		}
-		return GPU_NONE;
+		return EGPUType::GPU_UNKNOWN;
 	}
 
 
 	// lod .ini file
 
-	bool LoadIniFile(const char* file, TUnorderedMap<XXString, XXString>& configMap) {
+	bool LoadIniFile(const char* file, TMap<XXString, XXString>& configMap) {
 		File::RFile configFile(file);
 		if (!configFile.is_open()) {
-			PRINT("Failed to load file: %s", file);
+			LOG_INFO("Failed to load file: %s", file);
 			return false;
 		}
 		XXString fileLine;
@@ -69,41 +69,34 @@ namespace Engine {
 			if (separate > 0 && separate < fileLine.length() - 1) {
 				XXString name = fileLine.substr(0, separate);
 				XXString value = fileLine.substr(separate + 1, fileLine.length() - separate - 1);
-				configMap.insert({ std::move(name), std::move(value) });
+				configMap.insert({ MoveTemp(name), MoveTemp(value) });
 			}
 		}
 		return true;
 	}
 
-	ConfigManager::ConfigManager(const char* file) {
-		TUnorderedMap<XXString, XXString> configMap;
-		if(!LoadIniFile(file,configMap)) {
-			PRINT("Missing necessary ini file: %s", file);
+	ConfigManager ConfigManager::s_Instance;
+
+	void ConfigManager::Initialize() {
+		const char* configFile = ENGINE_CONFIG_FILE;
+		PARSE_CONFIG_FILE(configFile);
+		TMap<XXString, XXString> configMap;
+		if (!LoadIniFile(configFile, configMap)) {
+			LOG_INFO("Missing necessary ini file: %s", configFile);
 			return;
 		}
-		m_Data.DefaultFontPath = configMap["DefaultFont"];
-		m_Data.RHIType = ParseRHIType(configMap["RHIType"]);
-		m_Data.RenderPath = ParseRenderPath(configMap["RenderPath"]);
-		m_Data.GPUType = ParseGPUType(configMap["PreferredGPU"]);
-		m_Data.WindowSize.w = static_cast<uint32>(std::atoi(configMap["WindowWidth"].c_str()));
-		m_Data.WindowSize.h = static_cast<uint32>(std::atoi(configMap["WindowHeight"].c_str()));
-		m_Data.MSAASampleCount = static_cast<uint8>(std::atoi(configMap["MSAA"].c_str()));
-		m_Data.StartLevel = configMap["StartLevel"];
+		auto& data = s_Instance.m_Data;
+		data.DefaultFontPath = configMap["DefaultFont"];
+		data.RHIType = ParseRHIType(configMap["RHIType"]);
+		data.RenderPath = ParseRenderPath(configMap["RenderPath"]);
+		data.GPUType = ParseGPUType(configMap["PreferredGPU"]);
+		data.WindowSize.w = static_cast<uint32>(std::atoi(configMap["WindowWidth"].c_str()));
+		data.WindowSize.h = static_cast<uint32>(std::atoi(configMap["WindowHeight"].c_str()));
+		data.MSAASampleCount = static_cast<uint8>(std::atoi(configMap["MSAA"].c_str()));
+		data.StartLevel = configMap["StartLevel"];
 	}
 
-	const ConfigData& GetConfig() {
-		// TODO intialize when program start instead of mutex
-		static TUniquePtr<ConfigManager> s_ConfigManager;
-		static Mutex s_ConfigManagerMutex;
-		if (s_ConfigManager) {
-			MutexLock lock(s_ConfigManagerMutex);
-			if (s_ConfigManager) {
-				const char* configFile = ENGINE_CONFIG_FILE;
-				PARSE_CONFIG_FILE(configFile);
-				s_ConfigManager.Reset(new ConfigManager(configFile));
-			}
-		}
-		return s_ConfigManager->GetData();
+	const ConfigData& ConfigManager::GetData() {
+		return s_Instance.m_Data;
 	}
-	
 }

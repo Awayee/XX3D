@@ -1,34 +1,41 @@
 #include "RHI/Public/RHI.h"
-#include "RHIVulkan/RHIVulkan.h"
-#include "RHID3D11/RHID3D11.h"
+#include "VulkanRHI/VulkanRHI.h"
 #include "Resource/Public/Config.h"
-#include "Core/Public/Defines.h"
+#include "Core/Public/Log.h"
 #include "Core/Public/Concurrency.h"
+#include "Window/Public/EngineWindow.h"
 
-RHI* RHI::s_Instance = nullptr;
+TUniquePtr<RHI> RHI::s_Instance = nullptr;
 
 RHI* RHI::Instance() {
-	return s_Instance;
+	return s_Instance.Get();
 }
+void RHI::Initialize() {
+	ASSERT(!s_Instance, "");
+	Engine::ERHIType rhiType = Engine::ConfigManager::GetData().RHIType;
 
-void RHI::Initialize(const RHIInitDesc& desc) {
+	RHIInitDesc desc;
+	desc.AppName = PROJECT_NAME;
+#ifdef _DEBUG
+	desc.EnableDebug = true;
+#else
+	desc.EnableDebug = false;
+#endif
+	desc.WindowHandle = Engine::EngineWindow::Instance()->GetWindowHandle();
+	desc.WindowSize = Engine::EngineWindow::Instance()->GetWindowSize();
 
-	if (!s_Instance) {
-		switch(desc.RHIType) {
-		case ERHIType::Vulkan:
-			s_Instance = new RHIVulkan(desc);
-			break;
-		case ERHIType::DX12:
-		case ERHIType::DX11:
-		case ERHIType::OpenGL:
-		case ERHIType::Invalid:
-			ASSERT(0, "Failed to initialize RHI!");
-		}
+	switch(rhiType) {
+	case Engine::ERHIType::Vulkan:
+		s_Instance = new VulkanRHI(desc);
+		break;
+	case Engine::ERHIType::DX12:
+	case Engine::ERHIType::DX11:
+	case Engine::ERHIType::OpenGL:
+	case Engine::ERHIType::Invalid:
+		ASSERT(0, "Failed to initialize RHI!");
 	}
 }
 
 void RHI::Release() {
-	if(s_Instance) {
-		delete s_Instance;
-	}
+	s_Instance.Reset();
 }

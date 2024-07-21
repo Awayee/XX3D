@@ -31,7 +31,7 @@ namespace Editor {
 	}
 
 	EditorFuncWnd::EditorFuncWnd(const char* name, const Func<void()>& func, ImGuiWindowFlags flags): EditorWndBase(name, flags) {
-		m_Func = std::move(func);
+		m_Func = func;
 	}
 
 	void EditorFuncWnd::Update() {

@@ -1,7 +1,7 @@
 #include "Asset/Public/TextureAsset.h"
 #include "lz4.h"
 #include "Core/Public/File.h"
-#include "Core/Public/Defines.h"
+#include "Core/Public/Log.h"
 
 namespace Engine {
 	enum class ETexCompressMode : uint8 {
@@ -33,7 +33,7 @@ namespace Engine {
 			LZ4_decompress_safe(compressedData.Data(), BYTE_PTR(Pixels.Data()), (int)compressedByteSize, (int)byteSize);
 		}
 		else {
-			PRINT("[ATextureAsset::Load] Unknown compress mode %u", compressMode);
+			LOG_INFO("[ATextureAsset::Load] Unknown compress mode %u", compressMode);
 			return false;
 		}
 
@@ -59,7 +59,7 @@ namespace Engine {
 			out.write(compressedData.Data(), compressedSize);
 		}
 		else {
-			PRINT("[ATextureAsset::Save] Unknown compress mode %u", compressMode);
+			LOG_INFO("[ATextureAsset::Save] Unknown compress mode %u", compressMode);
 			return false;
 		}
 		return true;

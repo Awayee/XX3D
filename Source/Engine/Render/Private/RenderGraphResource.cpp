@@ -1,6 +1,6 @@
 #include "Render/Public/RenderGraphResource.h"
 
-namespace Engine {
+namespace Render {
 
 	void RGResource::AddRef() {
 		++m_RefCount;

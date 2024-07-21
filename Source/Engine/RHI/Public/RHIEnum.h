@@ -1,11 +1,11 @@
 #pragma once
-#include "Core/Public/TypeDefine.h"
+#include "Core/Public/Defines.h"
 
 enum class ERHIFormat: uint8 {
     Undefined=0,
     R8_UNORM,
     R8_SNORM,
-    R9_UINT,
+    R8_UINT,
     R8_SINT,
     R8G8_UNORM,
     R8G8_SNORM,
@@ -52,8 +52,8 @@ enum class ERHIFormat: uint8 {
 };
 
 enum EBufferFlagBit {
-    BUFFER_FLAG_CPY_SRC = 1u,
-    BUFFER_FLAG_TPY_DST = 1u << 1,
+    BUFFER_FLAG_COPY_SRC = 1u,
+    BUFFER_FLAG_COPY_DST = 1u << 1,
     BUFFER_FLAG_UNIFORM = 1u << 2,
     BUFFER_FLAG_INDEX = 1u << 3,
     BUFFER_FLAG_VERTEX = 1u << 4,
@@ -209,6 +209,7 @@ enum class EStencilOp: uint8 {
 };
 
 enum class EResourceState : uint8 {
+    Unknown,
     RenderTarget,
     DepthStencil,
     ShaderResourceView,

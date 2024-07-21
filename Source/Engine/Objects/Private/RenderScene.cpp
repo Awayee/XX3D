@@ -53,11 +53,7 @@ namespace Engine {
     }
 
     void RenderScene::CreateDescriptorSets() {
-        GET_RHI(rhi);
-
-
         uint32 bufferSize = sizeof(CameraUBO);
-
         bufferSize = sizeof(SceneUBO);
     }
 

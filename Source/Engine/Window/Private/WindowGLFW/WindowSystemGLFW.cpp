@@ -1,4 +1,5 @@
 #include "WindowSystemGLFW.h"
+#include "Engine/Public/Engine.h"
 
 namespace Engine {
 
@@ -6,14 +7,13 @@ namespace Engine {
 	std::unordered_map<int, EBtn> WindowSystemGLFW::s_GLFWButtonCodeMap;
 	std::unordered_map<int, EInput> WindowSystemGLFW::s_GLFWInputMap;
 
-	void WindowSystemGLFW::Initialize(const WindowInitInfo& initInfo)
-	{
+	WindowSystemGLFW::WindowSystemGLFW(const WindowInitInfo& initInfo) {
 		glfwInit();
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		glfwWindowHint(GLFW_RESIZABLE, initInfo.resizeable);
 		m_Window = glfwCreateWindow(initInfo.width, initInfo.height, initInfo.title, nullptr, nullptr);
 		glfwSetWindowUserPointer(m_Window, (void*)this);
-		if(s_GLFWButtonCodeMap.empty()) {
+		if (s_GLFWButtonCodeMap.empty()) {
 			InitKeyButtonCodeMap();
 		}
 		m_Size.w = static_cast<uint32>(initInfo.width);
@@ -21,14 +21,17 @@ namespace Engine {
 		InitEvents();
 	}
 
-	void WindowSystemGLFW::Release() {
+	WindowSystemGLFW::~WindowSystemGLFW() {
 		glfwDestroyWindow(m_Window);
 		glfwTerminate();
 	}
 
-	void WindowSystemGLFW::Tick()
+	void WindowSystemGLFW::Update()
 	{
 		glfwPollEvents();
+		if(glfwWindowShouldClose(m_Window)) {
+			Engine::XXEngine::ShutDown();
+		}
 	}
 	bool WindowSystemGLFW::ShouldClose()
 	{

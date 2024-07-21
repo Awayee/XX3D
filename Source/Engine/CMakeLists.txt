@@ -11,6 +11,8 @@ file(GLOB_RECURSE CPP_FILES "*.cpp")
 file(GLOB_RECURSE HPP_FILES "*.hpp")
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${H_FILES} ${CPP_FILES} ${HPP_FILES})
 add_library(${TARGET_NAME} STATIC ${H_FILES} ${CPP_FILES} ${HPP_FILES})
+
+target_link_libraries(${TARGET_NAME} PUBLIC "Core")
 target_include_directories(${TARGET_NAME} PUBLIC ${SOURCE_PATH}/Engine)
 
 # #add include files
@@ -34,26 +36,18 @@ target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/DirectX/include
 #glfw
 target_link_libraries(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/glfwWin64/lib-vc2019/glfw3.lib)
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/glfwWin64/include)
-#glm
-target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/glm)
 
 #vulkan
-target_link_libraries(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/VulkanSDK/lib/Win64/vulkan-1.lib)
-target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/VulkanSDK/include)
+target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/Vulkan/include)
 
 #vma
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/VulkanMemoryAllocator/include)
-
-#rapidjson
-target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/rapidjson/include)
 
 #stb image
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/stb_image)
 
 #imgui
 target_link_libraries(${TARGET_NAME} PRIVATE "imgui")
-
-#lz4
 
 #tiny gltf
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/tinygltf)

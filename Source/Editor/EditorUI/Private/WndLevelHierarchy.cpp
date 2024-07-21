@@ -15,7 +15,7 @@ namespace Editor {
 				ImGui::InputText("FilePath", s_FilePath, sizeof(s_FilePath));
 				if (ImGui::Button("Save")) {
 					if (StrEmpty(s_FilePath)) {
-						PRINT("Invalid file path!");
+						LOG_INFO("Invalid file path!");
 					}
 					else {
 						if (!StrEndsWith(s_FilePath, ".level")) {
@@ -35,7 +35,7 @@ namespace Editor {
 					EditorUIMgr::Instance()->DeleteWindow(s_FileSelectWnd);
 				}
 			};
-			s_FileSelectWnd = EditorUIMgr::Instance()->AddWindow("Select a Path", std::move(f), ImGuiWindowFlags_NoDocking);
+			s_FileSelectWnd = EditorUIMgr::Instance()->AddWindow("Select a Path", MoveTemp(f), ImGuiWindowFlags_NoDocking);
 		}
 	}
 

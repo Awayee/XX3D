@@ -1,7 +1,5 @@
 #include "WndViewport.h"
-
 #include "EditorUI/Public/EditorUIMgr.h"
-#include "Objects/Public/EngineContext.h"
 #include "Objects/Public/RenderScene.h"
 #include "Objects/Public/Camera.h"
 

@@ -17,6 +17,6 @@ target_link_libraries("imgui" PRIVATE ${THIRD_PARTY}/glfwWin64/lib-vc2019/glfw3.
 target_include_directories("imgui" PRIVATE ${THIRD_PARTY}/glfwWin64/include)
 
 #vulkan
-target_link_directories("imgui" PRIVATE ${THIRD_PARTY}/VulkanSDK/lib/Win64)
-target_link_libraries("imgui" PRIVATE ${THIRD_PARTY}/VulkanSDK/lib/Win64/vulkan-1.lib)
-target_include_directories("imgui" PRIVATE ${THIRD_PARTY}/VulkanSDK/include)
+target_link_directories("imgui" PRIVATE ${THIRD_PARTY}/Vulkan/lib/Win64)
+target_link_libraries("imgui" PRIVATE ${THIRD_PARTY}/Vulkan/lib/Win64/vulkan-1.lib)
+target_include_directories("imgui" PRIVATE ${THIRD_PARTY}/Vulkan/include)

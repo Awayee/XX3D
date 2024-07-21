@@ -45,7 +45,7 @@ namespace Editor {
 				if (ImGui::BeginDragDropTarget()) {
 					ImGui::Button(primitive.MaterialFile.empty() ? "None" : primitive.MaterialFile.c_str());
 					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("File")) {
-						ASSERT(payload->DataSize == sizeof(FileNode));
+						ASSERT(payload->DataSize == sizeof(FileNode), "");
 						const FileNode* fileNode = reinterpret_cast<const FileNode*>(payload->Data);
 						primitive.MaterialFile = fileNode->GetPathStr();
 						EditorLevelMgr::Instance()->ReloadLevel();

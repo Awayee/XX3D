@@ -1,11 +1,11 @@
 #pragma once
-#include "Window/Public/Wnd.h"
+#include "Window/Public/EngineWindow.h"
 #include <GLFW/glfw3.h>
 #include <unordered_map>
 
 
 namespace Engine {
-	class WindowSystemGLFW final: public Wnd {
+	class WindowSystemGLFW final: public EngineWindow {
 	private:
 		static std::unordered_map<int, EKey> s_GLFWKeyCodeMap;
 		static std::unordered_map<int, EBtn> s_GLFWButtonCodeMap;
@@ -24,11 +24,9 @@ namespace Engine {
 		std::vector<OnWindowSizeFunc>  m_OnWindowSizeFunc;
 		std::vector<OnWindowCloseFunc> m_OnWindowCloseFunc;
 	public:
-		WindowSystemGLFW() = default;
-		~WindowSystemGLFW() = default;
-		void Initialize(const WindowInitInfo& initInfo) override;
-		void Release() override;
-		void Tick() override;
+		explicit WindowSystemGLFW(const WindowInitInfo& initInfo);
+		~WindowSystemGLFW() override;
+		void Update() override;
 		bool ShouldClose() override;
 		void Close() override;
 		void SetTitle(const char* title) override;

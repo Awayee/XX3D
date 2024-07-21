@@ -2,7 +2,7 @@
 #include "Core/Public/TVector.h"
 #include "Core/Public/String.h"
 #include "Math/Public/Vector.h"
-#include "Core/Public/TypeDefine.h"
+#include "Core/Public/Defines.h"
 #include "Core/Public/File.h"
 #include "Core/Public/String.h"
 

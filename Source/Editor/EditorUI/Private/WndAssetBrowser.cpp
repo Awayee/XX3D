@@ -22,7 +22,7 @@ namespace Editor {
 				ProjectAssetMgr::Instance()->ImportAsset(s_SrcFile, s_DstFile);
 			}
 		};
-		EditorUIMgr::Instance()->AddWindow("AssetImporter", std::move(f));
+		EditorUIMgr::Instance()->AddWindow("AssetImporter", MoveTemp(f));
 	}
 
 	TVector<WndAssetBrowser*> WndAssetBrowser::s_Instances;

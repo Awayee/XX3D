@@ -1,11 +1,15 @@
 #pragma once
-
 namespace Engine {
+	// singleton
 	class XXEngine {
-	private:
 	public:
 		XXEngine();
-		~XXEngine();
-		bool Tick();
+		virtual ~XXEngine();
+		void Run();
+		static void ShutDown();
+	protected:
+		bool m_Running;
+		virtual void Update();
 	};
 }
+

@@ -1,7 +1,7 @@
 #include "Asset/Public/MeshAsset.h"
 #include "Core/Public/Json.h"
 #include "Math/Public/MathBase.h"
-#include "Core/Public/Defines.h"
+#include "Core/Public/Log.h"
 #include <lz4.h>
 
 namespace Engine {
@@ -80,7 +80,7 @@ namespace Engine {
 		PARSE_PROJECT_ASSET(file);
 		File::RFile f(file, std::ios::binary);
 		if (!f.is_open()) {
-			PRINT("Failed to open file: %s", file);
+			LOG_INFO("Failed to open file: %s", file);
 			return false;
 		}
 		f.seekg(0);
@@ -131,14 +131,14 @@ namespace Engine {
 
 	bool AMeshAsset::ExportPrimitiveFile(const char* file, const TVector<FVertex>& vertices, const TVector<IndexType>& indices, EMeshCompressMode packMode) {
 		if (vertices.Size() == 0) {
-			PRINT("null primitive!");
+			LOG_INFO("null primitive!");
 			return false;
 		}
 
 		PARSE_PROJECT_ASSET(file);
 		File::WFile f(file, std::ios::binary | std::ios::out);
 		if (!f.is_open()) {
-			PRINT("Failed to open file: %s", file);
+			LOG_INFO("Failed to open file: %s", file);
 			return false;
 		}
 		uint32 vertexCount = vertices.Size();

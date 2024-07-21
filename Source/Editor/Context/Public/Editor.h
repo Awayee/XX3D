@@ -1,17 +1,15 @@
 #pragma once
 #include "Core/Public/TUniquePtr.h"
-#include "Objects/Public/Engine.h"
+#include "Engine/Public/Engine.h"
 
 namespace Editor {
 	class UIController;
-	class XXEditor {
-	private:
-		Engine::XXEngine* m_Engine;
-		TUniquePtr<UIController> m_UIController;
-
+	class XXEditor: public Engine::XXEngine {
 	public:
-		XXEditor(Engine::XXEngine* engine);
-		~XXEditor();
-		void EditorRun();
+		XXEditor();
+		~XXEditor() override;
+		TUniquePtr<UIController> m_UIController;
+	protected:
+		void Update() override;
 	};
 }

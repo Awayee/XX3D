@@ -13,7 +13,7 @@ namespace Engine {
 				staticMesh->SetPosition(mesh.Position);
 				staticMesh->SetScale(mesh.Scale);
 				staticMesh->SetRotation(Math::FQuaternion::Euler(mesh.Rotation));
-				m_Meshes.PushBack(std::move(staticMesh));
+				m_Meshes.PushBack(MoveTemp(staticMesh));
 			}
 		}
 		//camera

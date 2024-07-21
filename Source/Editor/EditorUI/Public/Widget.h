@@ -1,7 +1,7 @@
 #pragma once
-#include "Core/Public/TypeDefine.h"
+#include "Core/Public/Defines.h"
 #include "Window/Public/InputEnum.h"
-#include "Objects/Public/Engine.h"
+#include "Engine/Public/Engine.h"
 
 namespace Editor {
 	typedef uint32 WidgetID;

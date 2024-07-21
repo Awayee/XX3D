@@ -2,7 +2,7 @@
 #include "AssetManager.h"
 #include "Core/Public/String.h"
 #include "Core/Public/TUniquePtr.h"
-#include "Core/Public/Typedefine.h"
+#include "Core/Public/Defines.h"
 #include "Core/Public/File.h"
 #include "Core/Public/Func.h"
 #include "Core/Public/TSingleton.h"

@@ -70,7 +70,7 @@ namespace Editor {
 				EditorLevelMgr::Instance()->ReloadLevel();
 			}
 		};
-		EditorUIMgr::Instance()->AddWindow("MeshViewer", std::move(f), ImGuiWindowFlags_NoDocking);
+		EditorUIMgr::Instance()->AddWindow("MeshViewer", MoveTemp(f), ImGuiWindowFlags_NoDocking);
 	}
 
 	void TextureAssetView::Open() {

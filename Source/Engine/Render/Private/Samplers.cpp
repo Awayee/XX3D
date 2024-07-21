@@ -1,5 +1,5 @@
 #include "Render/Public/Samplers.h"
-namespace Engine {
+namespace Render {
 
 	RHISampler* DefaultSampler::GetSampler(ESamplerFilter filter, ESamplerAddressMode addressMode) {
 		return m_Samplers[(uint8)addressMode][(uint8)filter].Get();

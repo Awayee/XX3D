@@ -30,7 +30,7 @@ namespace Editor {
 				levelMesh.Mesh->SetPosition(levelMesh.Position);
 				levelMesh.Mesh->SetScale(levelMesh.Scale);
 				levelMesh.Mesh->SetRotation(Math::FQuaternion::Euler(levelMesh.Rotation));
-				m_Meshes.PushBack(std::move(levelMesh));
+				m_Meshes.PushBack(levelMesh);
 			}
 		}
 	}
@@ -56,7 +56,7 @@ namespace Editor {
 		mesh.Position = mesh.Mesh->GetPosition();
 		mesh.Scale = mesh.Mesh->GetScale();
 		mesh.Rotation = mesh.Mesh->GetRotation().ToEuler();
-		m_Meshes.PushBack(std::move(mesh));
+		m_Meshes.PushBack(mesh);
 		return &m_Meshes.Back();
 	}
 

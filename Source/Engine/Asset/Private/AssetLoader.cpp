@@ -1,5 +1,5 @@
 #include "Asset/Public/AssetLoader.h"
-#include "Core/Public/Defines.h"
+#include "Core/Public/Log.h"
 
 namespace Engine {
 
@@ -22,13 +22,13 @@ namespace Engine {
 		filePath.append(file);
 		File::RFile in(filePath.string().c_str(), BinaryFile(file) ? (std::ios::in) : (std::ios::in | std::ios::binary));
 		if (!in.is_open()) {
-			PRINT("[AssetLoader::LoadProjectAsset] Failed to read file: %s", filePath.string().c_str());
+			LOG_INFO("[AssetLoader::LoadProjectAsset] Failed to read file: %s", filePath.string().c_str());
 			return false;
 		}
 
 		bool ok = asset->Load(in);
 		if (!ok) {
-			PRINT("[AssetLoader::LoadProjectAsset] Failed to load asset: %s", file);
+			LOG_INFO("[AssetLoader::LoadProjectAsset] Failed to load asset: %s", file);
 		}
 		return ok;
 	}
@@ -38,13 +38,13 @@ namespace Engine {
 		filePath.append(file);
 		File::RFile in(filePath.string().c_str(), BinaryFile(file) ? (std::ios::in) : (std::ios::in | std::ios::binary));
 		if (!in.is_open()) {
-			PRINT("[AssetLoader::LoadEngineAsset] Failed to read file: %s", filePath.string().c_str());
+			LOG_INFO("[AssetLoader::LoadEngineAsset] Failed to read file: %s", filePath.string().c_str());
 			return false;
 		}
 
 		bool ok = asset->Load(in);
 		if (!ok) {
-			PRINT("[AssetLoader::LoadEngineAsset] Failed to load asset: %s", file);
+			LOG_INFO("[AssetLoader::LoadEngineAsset] Failed to load asset: %s", file);
 		}
 		return ok;
 	}
@@ -54,13 +54,13 @@ namespace Engine {
 		filePath.append(file);
 		File::WFile out(filePath.string().c_str(), BinaryFile(file) ? (std::ios::out) : (std::ios::out | std::ios::binary));
 		if (!out.is_open()) {
-			PRINT("[AssetLoader::SaveProjectAsset] Failed to write file: %s", filePath.string().c_str());
+			LOG_INFO("[AssetLoader::SaveProjectAsset] Failed to write file: %s", filePath.string().c_str());
 			return false;
 		}
 
 		bool ok = asset->Save(out);
 		if (!ok) {
-			PRINT("[AssetLoader::SaveProjectAsset] Failed to save asseet: %s", file);
+			LOG_INFO("[AssetLoader::SaveProjectAsset] Failed to save asseet: %s", file);
 		}
 		return ok;
 	}

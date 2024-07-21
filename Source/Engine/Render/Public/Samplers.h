@@ -4,7 +4,7 @@
 #include "Core/Public/TUniquePtr.h"
 #include "RHI/Public/RHI.h"
 
-namespace Engine {
+namespace Render {
 	class DefaultSampler: public TSingleton<DefaultSampler> {
 	public:
 		RHISampler* GetSampler(ESamplerFilter filter, ESamplerAddressMode addressMode);

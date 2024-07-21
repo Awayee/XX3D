@@ -1,5 +1,5 @@
 #include "Functions/Public/TextureImporter.h"
-#include "Core/Public/Defines.h"
+#include "Core/Public/Log.h"
 #include "Asset/Public/AssetLoader.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -9,7 +9,7 @@ bool TextureImporter::Import(const char* fullPath) {
 	constexpr int desiredChannels = STBI_rgb_alpha;
 	uint8* pixels = stbi_load(fullPath, &width, &height, &channels, desiredChannels);
 	if(!pixels) {
-		PRINT("loaded image is empty!");
+		LOG_INFO("loaded image is empty!");
 		return false;
 	}
 	m_Asset->Width = width;

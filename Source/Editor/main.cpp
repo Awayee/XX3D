@@ -1,6 +1,6 @@
-#include "Core/Public/Defines.h"
+#include "Core/Public/Log.h"
 #include "Context/Public/Editor.h"
-#include "Objects/Public/Engine.h"
+#include "Engine/Public/Engine.h"
 #include "SPVCompiler/SPVCompiler.h"
 
 int main() {
@@ -12,12 +12,10 @@ int main() {
 	}
 	//Run Editor
 	{
-		PRINT("Editor Mode");
-		Engine::XXEngine engine{};
-		Editor::XXEditor editor(&engine);
-		editor.EditorRun();
+		LOG_INFO("Editor Mode");
+		Editor::XXEditor editor;
+		editor.Run();
 	}
-
 	//system("pause");
 	return 0;
 }

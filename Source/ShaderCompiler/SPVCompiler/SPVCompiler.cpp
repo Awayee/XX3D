@@ -3,7 +3,6 @@
 #include <vector>
 #include <Windows.h>
 #include <memory>
-#include <atlbase.h>
 #include <fstream>
 #include <filesystem>
 
@@ -87,7 +86,7 @@ bool SPVCompiler::CompileSingleEntry(const wchar_t* hlslFile, const wchar_t* ent
 	HRESULT r;
 	// Load the HLSL text shader from disk
 	uint32_t codePage = DXC_CP_ACP;
-	CComPtr<IDxcBlobEncoding> sourceBlob;
+	IDxcBlobEncoding* sourceBlob;
 	r = m_Utils->LoadFile(hlslFile, &codePage, &sourceBlob);
 	if (FAILED(r)) {
 		wprintf(L"[HLSL2Spv] Could not load shader file: %s\n", hlslFile);
@@ -96,7 +95,7 @@ bool SPVCompiler::CompileSingleEntry(const wchar_t* hlslFile, const wchar_t* ent
 
 	// compile vs
 
-	CComPtr<IDxcCompilerArgs> args;
+	IDxcCompilerArgs* args;
 	m_Utils->BuildArguments(hlslFile, entryPoint, shaderModel, nullptr, 0, defines.data(), defines.size(), &args);
 	LPCWSTR spirv = L"-spirv";
 	args->AddArguments(&spirv, 1);
@@ -117,7 +116,7 @@ bool SPVCompiler::CompileSingleEntry(const wchar_t* hlslFile, const wchar_t* ent
 	buffer.Ptr = sourceBlob->GetBufferPointer();
 	buffer.Size = sourceBlob->GetBufferSize();
 
-	CComPtr<IDxcResult> result{ nullptr };
+	IDxcResult* result{ nullptr };
 	r = m_Compiler->Compile(
 		&buffer,
 		args->GetArguments(),
@@ -132,7 +131,7 @@ bool SPVCompiler::CompileSingleEntry(const wchar_t* hlslFile, const wchar_t* ent
 
 	// Output error if compilation failed
 	if (FAILED(r) && (result)) {
-		CComPtr<IDxcBlobEncoding> errorBlob;
+		IDxcBlobEncoding* errorBlob;
 		r = result->GetErrorBuffer(&errorBlob);
 		if (SUCCEEDED(r) && errorBlob) {
 			std::cerr << "Shader compilation failed :\n\n" << (const char*)errorBlob->GetBufferPointer();
@@ -141,7 +140,7 @@ bool SPVCompiler::CompileSingleEntry(const wchar_t* hlslFile, const wchar_t* ent
 	}
 
 	// Get compilation result
-	CComPtr<IDxcBlob> code;
+	IDxcBlob* code;
 	result->GetResult(&code);
 
 	std::ofstream fout(outFile, std::ios::binary | std::ios::out);
@@ -151,6 +150,11 @@ bool SPVCompiler::CompileSingleEntry(const wchar_t* hlslFile, const wchar_t* ent
 	}
 	fout.write((char*)code->GetBufferPointer(), code->GetBufferSize());
 	fout.close();
+
+	sourceBlob->Release();
+	args->Release();
+	result->Release();
+	code->Release();
 	return true;
 }
 

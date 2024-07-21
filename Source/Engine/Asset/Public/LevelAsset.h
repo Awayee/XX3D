@@ -2,7 +2,7 @@
 #include "AssetCommon.h"
 #include "Math/Public/Vector.h"
 #include "Math/Public/Quaternion.h"
-#include "Core/Public/Defines.h"
+#include "Core/Public/Log.h"
 
 namespace Engine {
 	struct ALevelAsset : AAssetBase {

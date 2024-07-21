@@ -6,23 +6,24 @@
 #include "Render/Public/RenderGraphNode.h"
 #include "Render/Public/RenderGraphResource.h"
 
-namespace Engine {
+namespace Render {
 	class RenderGraph {
 	public:
-		RenderGraph(RHICommandBuffer* cmd);
+		RenderGraph();
 		RenderGraph(const RenderGraph&) = delete;
+		RenderGraph(RenderGraph&& rhs) noexcept;
 		RenderGraph& operator=(const RenderGraph&) = delete;
+		RenderGraph& operator=(RenderGraph&& rhs) noexcept;
 
 		typedef Func<void(RHICommandBuffer*)> NodeFunc;
 
 		template<class T, class...Args>
-		T* CreateNode(XXString&& name, Args&&...args) {
-			TUniquePtr<T> nodePtr = MakeUniquePtr<T>(std::forward<Args>(args)...);
+		T* CreateNode(Args&&...args) {
+			TUniquePtr<T> nodePtr(new T(MoveTemp(args)...));
 			T* node = nodePtr.Get();
 			RGNodeBase* nodeBase = static_cast<RGNodeBase>(node);
 			ASSERT(nodeBase, "");
-			nodeBase->m_Name = std::move(name);
-			CreateNodeInternal(std::move(nodePtr));
+			CreateNodeInternal(MoveTemp(nodePtr));
 			return node;
 		}
 
@@ -33,7 +34,7 @@ namespace Engine {
 
 		void Execute();
 	private:
-		RHICommandBuffer* m_Cmd;
+		RHICommandBufferPtr m_Cmd;
 		TVector<TUniquePtr<RGNodeBase>> m_Nodes;
 		TVector<TUniquePtr<RGResource>> m_Resources;
 		void CreateNodeInternal(TUniquePtr<RGNodeBase>&& node);

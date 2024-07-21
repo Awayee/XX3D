@@ -11,6 +11,7 @@ file(GLOB_RECURSE CPP_FILES "*.cpp")
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${H_FILES} ${CPP_FILES})
 
 add_library(${TARGET_NAME} ${H_FILES} ${CPP_FILES})
+target_link_libraries(${TARGET_NAME} PUBLIC "Core")
 target_include_directories(${TARGET_NAME} PUBLIC ${SOURCE_PATH}/ShaderCompiler)
 
 # dxc

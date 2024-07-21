@@ -1,7 +1,11 @@
 #include "Render/Public/RenderGraphNode.h"
 #include "Render/Public/RenderGraphResource.h"	
-namespace Engine {
+namespace Render {
 	RGNodeBase::RGNodeBase() {
+	}
+
+	void RGNodeBase::SetName(XXString&& name) {
+		m_Name = MoveTemp(name);
 	}
 
 	void RGNodeBase::Input(RGResource* res) {

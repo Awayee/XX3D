@@ -4,16 +4,23 @@
 #include "RHI/Public/RHI.h"
 namespace Engine {
 
-	enum ERenderPath {
+	enum class ERenderPath {
 		RENDER_FORWARD,
 		RENDER_DEFERRED,
 		RENDER_NONE
 	};
 
-	enum EGPUType {
+	enum class EGPUType {
 		GPU_INTEGRATED,
 		GPU_DISCRETE,
-		GPU_NONE
+		GPU_UNKNOWN
+	};
+	enum class ERHIType {
+		Vulkan,
+		DX12,
+		DX11,
+		OpenGL,
+		Invalid
 	};
 
 	struct ConfigData {
@@ -27,13 +34,14 @@ namespace Engine {
 	};
 
 	class ConfigManager {
-	private:
-		ConfigData m_Data;
 	public:
-		const ConfigData& GetData() { return m_Data; }
-		ConfigManager(const char* configPath);
-		~ConfigManager()=default;
+		static void Initialize();
+		static const ConfigData& GetData();
+	private:
+		friend class ConfigModule;
+		static ConfigManager s_Instance;
+		ConfigManager() = default;
+		~ConfigManager() = default;
+		ConfigData m_Data;
 	};
-
-	const ConfigData& GetConfig();
 }

@@ -1,7 +1,6 @@
 #include "EditorUI/Public/EditorUIMgr.h"
 #include "Resource/Public/Config.h"
-#include "Objects/Public/EngineContext.h"
-#include "Window/Public/Wnd.h"
+#include "Window/Public/EngineWindow.h"
 #include "RHI/Public/ImGuiRHI.h"
 
 namespace Editor {
@@ -18,7 +17,7 @@ namespace Editor {
 		// title bar
 		const ImGuiViewport* mainViewport = ImGui::GetMainViewport();
 		ImGui::SetNextWindowPos(mainViewport->WorkPos, ImGuiCond_Always);
-		USize2D windowSize = Engine::Context()->Window()->GetWindowSize();
+		USize2D windowSize = Engine::EngineWindow::Instance()->GetWindowSize();
 		ImGui::SetNextWindowSize(ImVec2((float)windowSize.w, (float)windowSize.h), ImGuiCond_Always);
 		ImGuiWindowFlags   window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
@@ -64,7 +63,7 @@ namespace Editor {
 				wnd->Display();
 			}
 		}
-		ImGuiRHI::Instance()->Release();
+		ImGuiRHI::Instance()->FrameEnd();
 	}
 
 	void EditorUIMgr::AddMenuBar(const char* barName) {
@@ -89,12 +88,12 @@ namespace Editor {
 	EditorWndBase* EditorUIMgr::AddWindow(const char* name, Func<void()>&& func, ImGuiWindowFlags flags) {
 		TUniquePtr<EditorFuncWnd> wndPtr(new EditorFuncWnd(name, func, flags));
 		EditorWndBase* ptr = wndPtr.Get();
-		m_Widgets.PushBack(std::move(wndPtr));
+		m_Widgets.PushBack(MoveTemp(wndPtr));
 		return ptr;
 	}
 
 	void EditorUIMgr::AddWindow(TUniquePtr<EditorWndBase>&& wnd) {
-		m_Widgets.PushBack(std::forward<TUniquePtr<EditorWndBase>>(wnd));
+		m_Widgets.PushBack(MoveTemp(wnd));
 	}
 
 	void EditorUIMgr::DeleteWindow(EditorWndBase*& pWnd) {
@@ -105,7 +104,7 @@ namespace Editor {
 	EditorPopup* EditorUIMgr::AddPopUp(Func<void()>&& func) {
 		TUniquePtr<EditorPopup> popPtr(new EditorPopup(func));
 		EditorPopup* ptr = popPtr.Get();
-		m_Widgets.PushBack(std::move(popPtr));
+		m_Widgets.PushBack(MoveTemp(popPtr));
 		return ptr;
 	}
 }

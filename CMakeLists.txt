@@ -3,9 +3,9 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
-set(PROJECT_NAME "XX3D")
+set(ENGINE_NAME "XX3D")
 
-project (${PROJECT_NAME})
+project (${ENGINE_NAME})
 
 
 # c++ standard
@@ -15,21 +15,23 @@ set(BUILD_SHARED_LIBS OFF)
 
 # directory setup
 ## engine path
-set(ENGINE_PATH ${${PROJECT_NAME}_SOURCE_DIR})
+set(ENGINE_PATH ${${ENGINE_NAME}_SOURCE_DIR})
 set(THIRD_PARTY ${ENGINE_PATH}/ThirdParty)
 set(SOURCE_PATH ${ENGINE_PATH}/Source)
 set(SHADER_PATH ${ENGINE_PATH}/Source/Shaders)
 set(ENGINE_ASSETS ${ENGINE_PATH}/Assets) # inner assets
 ## project path
-set(PROJECT_PATH ${ENGINE_PATH}/DemoProject) # customize project path here
+set(PROJECT_NAME "DemoProject")
+set(PROJECT_PATH ${ENGINE_PATH}/${PROJECT_NAME}) # customize project path here
 set(PROJECT_ASSETS ${PROJECT_PATH}/Assets)
 set(PROJECT_CONFIG ${PROJECT_PATH}/Config)
 
 add_definitions(
-    -DPROJECT_NAME="${PROJECT_NAME}"
+    -DENGINE_NAME="${ENGINE_NAME}"
     -DSHADER_PATH="${SHADER_PATH}/"
     -DENGINE_ASSETS="${ENGINE_PATH}/"
     -DUSE_VMA
+    -DPROJECT_NAME="${PROJECT_NAME}"
     -DPROJECT_ASSETS="${PROJECT_ASSETS}/"
     -DPROJECT_CONFIG="${PROJECT_CONFIG}/"
 )
@@ -42,6 +44,7 @@ endmacro(DEPENDENCY)
 SET_PROPERTY(GLOBAL PROPERTY USE_FOLDERS ON)
 
 add_subdirectory("ThirdParty")
+add_subdirectory("Source/Core")
 add_subdirectory("Source/Engine")
 add_subdirectory("Source/Editor")
 add_subdirectory("Source/Runtime")

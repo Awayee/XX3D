@@ -1,6 +1,5 @@
 ﻿#include "Context/Public/Editor.h"
 #include "Asset/Public/AssetLoader.h"
-#include "Objects/Public/EngineContext.h"
 #include "Resource/Public/Config.h"
 
 #include "EditorUI/Public/UIController.h"
@@ -8,7 +7,7 @@
 #include "Functions/Public/AssetManager.h"
 #include "Functions/Public/EditorLevelMgr.h"
 #include "Functions/Public/EditorTimer.h"
-#include "Window/Public/Wnd.h"
+#include "Window/Public/EngineWindow.h"
 #include "RHI/Public/ImGuiRHI.h"
 
 namespace Editor {
@@ -91,7 +90,7 @@ namespace Editor {
 	void ImGuiConfig() {
 		// imgui
 		float scaleX, scaleY;
-		Engine::Context()->Window()->GetWindowContentScale(&scaleX, &scaleY);
+		Engine::EngineWindow::Instance()->GetWindowContentScale(&scaleX, &scaleY);
 		float contentScale = fmaxf(1.0f, fmaxf(scaleX, scaleY));
 
 		// load font for imgui
@@ -100,7 +99,7 @@ namespace Editor {
 		io.ConfigWindowsMoveFromTitleBarOnly = true;
 
 		File::FPath fontPath = Engine::AssetLoader::AssetPath();
-		fontPath.append(Engine::GetConfig().DefaultFontPath);
+		fontPath.append(Engine::ConfigManager::GetData().DefaultFontPath);
 
 		io.Fonts->AddFontFromFileTTF(fontPath.string().c_str(), contentScale * 16, nullptr, nullptr);
 		ASSERT(io.Fonts->Build(), "Failed to build fonts");
@@ -108,15 +107,14 @@ namespace Editor {
 
 		SetImGuiStyle();
 	}
-	
-	XXEditor::XXEditor(Engine::XXEngine* engine){
-		m_Engine = engine;
-		//Engine::Context()->Renderer()->InitUIPass(ImGuiConfig);
+
+	XXEditor::XXEditor(): XXEngine() {
 		Editor::EditorTimer::Initialize();
 		EngineAssetMgr::Initialize();
 		ProjectAssetMgr::Initialize();
 		EditorUIMgr::Initialize();
 		EditorLevelMgr::Initialize();
+		ImGuiRHI::Initialize();
 		m_UIController.Reset(new UIController);
 	}
 
@@ -127,16 +125,12 @@ namespace Editor {
 		ProjectAssetMgr::Release();
 		EditorUIMgr::Release();
 		EditorLevelMgr::Release();
+		ImGuiRHI::Release();
 	}
 
-	void XXEditor::EditorRun(){
-
-		while (true) {
-			EditorTimer::Instance()->Tick();
-			EditorUIMgr::Instance()->Tick();
-			if (!m_Engine->Tick()) {
-				return;
-			}
-		}
+	void XXEditor::Update() {
+		EditorTimer::Instance()->Tick();
+		EditorUIMgr::Instance()->Tick();
+		XXEngine::Update();
 	}
 }

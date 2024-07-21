@@ -1,5 +1,5 @@
 #include "WindowSystemWin32.h"
-#include "Core/Public/Defines.h"
+#include "Core/Public/Log.h"
 #include <windowsx.h>
 #include <wingdi.h>
 
@@ -75,7 +75,7 @@ namespace Engine {
 						// done resizing the window and releases the resize bars, which 
 						// sends a WM_EXITSIZEMOVE message.
 					}
-					else // API call such as SetWindowPos or mSwapChain->SetFullscreenState.
+					else // API call such as SetWindowPos or mSwapchain->SetFullscreenState.
 					{
 						OnResize();
 					}
@@ -136,10 +136,7 @@ namespace Engine {
 		return dynamic_cast<WindowSystemWin32*>(Instance())->MainWndProc(hwnd, msg, wParam, lParam);
 	}
 
-	WindowSystemWin32::~WindowSystemWin32(){
-	}
-	void WindowSystemWin32::Initialize(const WindowInitInfo& initInfo)
-	{
+	WindowSystemWin32::WindowSystemWin32(const WindowInitInfo& initInfo) {
 		WNDCLASS wc;
 		wc.style = CS_HREDRAW | CS_VREDRAW;
 		wc.lpfnWndProc = WindowSystemWin32::SMainWndProc;
@@ -161,7 +158,7 @@ namespace Engine {
 		int height = R.bottom - R.top;
 		m_MainWnd = CreateWindow(initInfo.title, initInfo.title,
 			WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, width, height, 0, 0, m_HAppInst, 0);
-		if (!m_MainWnd){
+		if (!m_MainWnd) {
 			MessageBox(0, "CreateWindow Failed.", 0, 0);
 			ASSERT(0, "");
 		}
@@ -169,10 +166,10 @@ namespace Engine {
 		UpdateWindow(m_MainWnd);
 	}
 
-	void WindowSystemWin32::Release() {
+	WindowSystemWin32::~WindowSystemWin32(){
 	}
 
-	void WindowSystemWin32::Tick(){
+	void WindowSystemWin32::Update(){
 
 	}
 	bool WindowSystemWin32::ShouldClose(){

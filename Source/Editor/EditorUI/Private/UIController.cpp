@@ -1,8 +1,7 @@
 #include "EditorUI/Public/UIController.h"
 #include "EditorUI/Public/EditorUIMgr.h"
-#include "Objects/Public/EngineContext.h"
 #include "Functions/Public/EditorTimer.h"
-#include "Window/Public/Wnd.h"
+#include "Window/Public/EngineWindow.h"
 #include "WndViewport.h"
 #include "WndAssetBrowser.h"
 #include "WndDetails.h"
@@ -11,7 +10,7 @@
 namespace Editor {
 
 	void EditorExit(){
-		Engine::Context()->Window()->Close();
+		Engine::EngineWindow::Instance()->Close();
 	}
 
 	UIController::UIController() {

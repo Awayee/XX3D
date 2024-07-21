@@ -1,7 +1,7 @@
 #pragma once
 #include "Core/Public/String.h"
 #include "RHI/Public/RHI.h"
-namespace Engine {
+namespace Render {
 	enum class EResourceType {
 		TEXTURE,
 		BUFFER,
