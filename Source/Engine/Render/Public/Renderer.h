@@ -12,7 +12,6 @@ namespace Render {
 		Renderer& operator=(const Renderer&) = delete;
 		Renderer& operator=(Renderer&& rhs) noexcept;
 	private:
-		RHIRenderPassPtr m_RenderPas;
 		RHIGraphicsPipelineStatePtr m_PSO;
 	};
 }

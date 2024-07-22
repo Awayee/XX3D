@@ -23,7 +23,6 @@ typedef TUniquePtr<RHIFence>                     RHIFencePtr;
 typedef TUniquePtr<RHIShader>                    RHIShaderPtr;
 typedef TUniquePtr<RHIGraphicsPipelineState>     RHIGraphicsPipelineStatePtr;
 typedef TUniquePtr<RHIComputePipelineState>      RHIComputePipelineStatePtr;
-typedef TUniquePtr<RHIRenderPass>                RHIRenderPassPtr;
 typedef TUniquePtr<RHIShaderParameterSet>        RHIShaderParameterSetPtr;
 
 
@@ -42,7 +41,6 @@ public:
 	virtual RHIShaderPtr CreateShader(EShaderStageFlagBit type, const char* codeData, size_t codeSize, const char* entryFunc) = 0;
 	virtual RHIGraphicsPipelineStatePtr CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) = 0;
 	virtual RHIComputePipelineStatePtr CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) = 0;
-	virtual RHIRenderPassPtr CreateRenderPass(const RHIRenderPassDesc& desc) = 0;
 	virtual RHIShaderParameterSetPtr CreateShaderParameterSet(const RHIShaderParemeterLayout& layout) = 0;
 
 	virtual RHICommandBufferPtr CreateCommandBuffer() = 0;
@@ -52,9 +50,7 @@ public:
 	virtual void Present() = 0;
 
 	RHI() = default;
-	RHI(const RHI&) = delete;
-	RHI(RHI&&) = delete;
-	RHI* operator=(const RHI&) = delete;
+	NON_COPYABLE(RHI);
 	virtual ~RHI() {}
 private:
 	static TUniquePtr<RHI> s_Instance;

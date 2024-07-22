@@ -15,7 +15,6 @@ namespace Render {
 		};
 		RHITexture* GetDefaultTexture2D(DefaultTextureType type);
 		RHITexture* GetDefaultTextureCube(DefaultTextureType type);
-		RHITexture* GetTexture(DefaultTextureType type, ETextureDimension textureDimension);
 	private:
 		friend TSingleton<DefaultTexture>;
 		DefaultTexture();

@@ -20,12 +20,12 @@ namespace Math {
 	inline float ToRad(float x) { return x * Deg2Rad; }
 	inline float ToDeg(float x) { return x * Rad2Deg; }
 
-	template<typename T> T Sqrt(T x) { return std::sqrt(x); }
-	template<typename T> T Hypot(T x, T y) { return std::hypot(x, y); }
-	template<typename T> T Hypot(T x, T y, T z) { return std::hypot(x, y, z); }
+	template<typename T> T Sqrt(T x) { return (T)std::sqrt(x); }
+	template<typename T> T Hypot(T x, T y) { return (T)std::hypot(x, y); }
+	template<typename T> T Hypot(T x, T y, T z) { return (T)std::hypot(x, y, z); }
 	template<typename T> T Square(T x) { return x * x; }
 	template<typename T> T Cube(T x) { return x * x * x; }
-	template<typename T> T Pow(T x, T exp) { return std::pow(x, exp); }
+	template<typename T> T Pow(T x, T exp) { return (T)std::pow(x, exp); }
 
 	// triangle func
 #ifdef MATH_DEG
@@ -61,8 +61,8 @@ namespace Math {
 	inline float FATan2(float x, float y) { return ATan2<float>(x, y); }
 
 	//data pack
-	inline unsigned char PackFloat01(float x) { return (x * 0.5f + 0.5f) * 255; }
-	inline float UnpackFloat01(unsigned char x) { return x / 255.0f * 2.0f - 1.0f; }
+	inline unsigned char PackFloat01(float x) { return ((unsigned char)(x * 0.5f + 0.5f)) * 255; }
+	inline float UnpackFloat01(unsigned char x) { return (float)x / 255.0f * 2.0f - 1.0f; }
 
 	template<typename T> T UpperExp2(T x) {
 		if (!(x & (x - 1))) {

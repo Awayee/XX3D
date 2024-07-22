@@ -32,6 +32,7 @@ VulkanImGui::VulkanImGui() {
 	VkFormat format = vkRHI->GetSwapchain()->GetSwapchainFormat();
 	initInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats = &format;
 	ImGui_ImplVulkan_Init(&initInfo);
+	ImGui_ImplVulkan_CreateFontsTexture();
 	m_IsInitialized = false;
 }
 
@@ -55,10 +56,7 @@ void VulkanImGui::FrameEnd() {
 }
 
 void VulkanImGui::RenderDrawData(RHICommandBuffer* cmd) {
-	if (!m_FrameBegin) {
-		return;
-	}
-	m_FrameBegin = false;
+	ASSERT(m_FrameBegin, "");
 	ImGui::Render();
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), static_cast<VulkanRHICommandBuffer*>(cmd)->GetHandle());
 }

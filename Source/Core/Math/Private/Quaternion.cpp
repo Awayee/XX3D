@@ -15,12 +15,12 @@ namespace Math {
 
     template <typename T>
     Quaternion<T> Quaternion<T>::Euler(const Vector3<T>& euler) {
-        T cosR = Math::Cos(euler.X * 0.5);//roll
-        T sinR = Math::Sin(euler.X * 0.5);
-        T cosP = Math::Cos(euler.Y * 0.5);//pitch
-        T sinP = Math::Sin(euler.Y * 0.5);
-		T cosY = Math::Cos(euler.Z * 0.5);//yaw
-		T sinY = Math::Sin(euler.Z * 0.5);
+        T cosR = Math::Cos<T>(euler.X * (T)0.5);//roll
+        T sinR = Math::Sin<T>(euler.X * (T)0.5);
+        T cosP = Math::Cos<T>(euler.Y * (T)0.5);//pitch
+        T sinP = Math::Sin<T>(euler.Y * (T)0.5);
+		T cosY = Math::Cos<T>(euler.Z * (T)0.5);//yaw
+		T sinY = Math::Sin<T>(euler.Z * (T)0.5);
 		return {
 			sinP * sinY * cosR + cosP * cosY * sinR,
 			sinP * cosY * cosR - cosP * sinY * sinR,

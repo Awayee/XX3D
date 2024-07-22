@@ -27,7 +27,6 @@ public:
 	RHIShaderPtr CreateShader(EShaderStageFlagBit type, const char* codeData, size_t codeSize, const char* entryFunc) override;
 	RHIGraphicsPipelineStatePtr CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) override;
 	RHIComputePipelineStatePtr CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) override;
-	RHIRenderPassPtr CreateRenderPass(const RHIRenderPassDesc& desc) override;// TODO delete
 	RHIShaderParameterSetPtr CreateShaderParameterSet(const RHIShaderParemeterLayout& layout) override;
 	RHICommandBufferPtr CreateCommandBuffer() override;
 	void SubmitCommandBuffer(RHICommandBuffer* cmd, RHIFence* fence) override;

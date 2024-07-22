@@ -23,7 +23,7 @@ namespace Math {
         Vector2<T> operator-(const Vector2<T>& rhs) const { return Vector2<T>(X - rhs.X, Y - rhs.Y); }
         Vector2<T> operator*(T scalar) const { return Vector2<T>(X * scalar, Y * scalar); }
         Vector2<T> operator*(const Vector2<T>& rhs) const { return Vector2<T>(X * rhs.X, Y * rhs.Y); }
-        Vector2<T> operator/(T scalar) const{ T inv = 1.0f / scalar; return Vector2<T>(X * inv, Y * inv); }
+        Vector2<T> operator/(T scalar) const{ T inv = (T)1 / scalar; return Vector2<T>(X * inv, Y * inv); }
         Vector2<T> operator/(const Vector2<T>& rhs) const { return Vector2<T>(X / rhs.X, Y / rhs.Y); }
         // overloaded operators to help Vector2<T>
         friend Vector2<T> operator*(T scalar, const Vector2<T>& rhs) { return Vector2<T>(scalar * rhs.X, scalar * rhs.Y); }

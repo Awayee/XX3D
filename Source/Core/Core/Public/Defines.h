@@ -30,4 +30,13 @@ typedef unsigned long long	uint64;
 #define XX_NODISCARD [[nodiscard]]
 
 #define MoveTemp(x) (std::move(x))
+
+
+#define NON_COPYABLE(cls)\
+	cls(const cls&) = delete;\
+	cls& operator=(const cls&) = delete
+
+#define NON_MOVEABLE(cls)\
+	cls(cls&&) noexcept = delete; \
+	cls& operator=(cls&&)noexcept = delete
 	

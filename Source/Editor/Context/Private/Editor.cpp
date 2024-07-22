@@ -119,7 +119,6 @@ namespace Editor {
 	}
 
 	XXEditor::~XXEditor() {
-		//Engine::Context()->Renderer()->WaitGPU();
 		Editor::EditorTimer::Release();
 		EngineAssetMgr::Release();
 		ProjectAssetMgr::Release();

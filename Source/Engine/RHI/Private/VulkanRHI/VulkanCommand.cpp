@@ -318,42 +318,6 @@ VulkanRHICommandBuffer::~VulkanRHICommandBuffer() {
 	m_Device->GetCommandMgr()->FreeCmd(m_Handle);
 }
 
-void VulkanRHICommandBuffer::BeginRenderPass(RHIRenderPass* pass) {
-	VulkanRHIRenderPass* vkPass = static_cast<VulkanRHIRenderPass*>(pass);
-	vkPass->ResolveImageLayout(m_ImageLayoutMgr.Get());
-	VkRenderPass passHandle = vkPass->GetRenderPass();
-	VkFramebuffer fbHandle = vkPass->GetFramebuffer();
-	auto& desc = pass->GetDesc();
-	VkRenderPassBeginInfo info{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr };
-	info.renderPass = passHandle;
-	info.framebuffer = fbHandle;
-	info.renderArea.extent.width = desc.RenderArea.w;
-	info.renderArea.extent.height = desc.RenderArea.h;
-	info.renderArea.offset.x = 0;
-	info.renderArea.offset.y = 0;
-	uint32 attachmentCount = desc.ColorTargets.Size() + !!desc.DepthStencilTarget.Target;
-	TFixedArray<VkClearValue> clearValues(attachmentCount);
-	uint32 i = 0;
-	for (; i < desc.ColorTargets.Size(); ++i) {
-		const auto& color = desc.ColorTargets[i].ColorClear;
-		memcpy(&clearValues[i].color.float32[0], &color.r, sizeof(color));
-	}
-	if (desc.DepthStencilTarget.Target) {
-		clearValues[i].depthStencil.depth = desc.DepthStencilTarget.DepthClear;
-		clearValues[i].depthStencil.stencil = desc.DepthStencilTarget.StencilClear;
-		++i;
-	}
-	info.clearValueCount = attachmentCount;
-	info.pClearValues = clearValues.Data();
-	vkCmdBeginRenderPass(m_Handle, &info, VK_SUBPASS_CONTENTS_INLINE);
-
-	m_CurrentPass = passHandle;
-}
-
-void VulkanRHICommandBuffer::EndRenderPass() {
-	vkCmdEndRenderPass(m_Handle);
-}
-
 void VulkanRHICommandBuffer::BeginRendering(const RHIRenderPassDesc& desc) {
 	VkRenderingInfo renderingInfo{ VK_STRUCTURE_TYPE_RENDERING_INFO, nullptr, 0 };
 	auto& area = desc.RenderArea;

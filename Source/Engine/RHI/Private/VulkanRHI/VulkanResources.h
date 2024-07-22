@@ -122,22 +122,3 @@ public:
 private:
 	std::unordered_map<VkImage, VulkanImageLayoutWrap> m_ImageLayoutMap;
 };
-
-class VulkanRHIRenderPass: public RHIRenderPass {
-public:
-	explicit VulkanRHIRenderPass(const RHIRenderPassDesc& desc, VulkanDevice* device);
-	~VulkanRHIRenderPass() override;
-	void SetName(const char* name) override;
-	void ResolveImageLayout(const VulkanImageLayoutMgr* layoutMgr);
-	VkRenderPass GetRenderPass() const { return m_RenderPass; }
-	uint32 GetSubPass() const { return m_SubPass; }
-	VkFramebuffer GetFramebuffer() const { return m_Framebuffer; }
-private:
-	VkRenderPass m_RenderPass;
-	uint32 m_SubPass;
-	VkFramebuffer m_Framebuffer;
-	const VulkanImageLayoutMgr* m_ImageLayoutMgr;
-	VulkanDevice* m_Device;
-	void DestroyHandle();
-	void CreateHandle();
-};

@@ -183,10 +183,6 @@ RHIComputePipelineStatePtr VulkanRHI::CreateComputePipelineState(const RHIComput
 	return new VulkanRHIComputePipelineState(desc, GetDevice());
 }
 
-RHIRenderPassPtr VulkanRHI::CreateRenderPass(const RHIRenderPassDesc& desc) {
-	return new VulkanRHIRenderPass(desc, GetDevice());
-}
-
 RHIShaderParameterSetPtr VulkanRHI::CreateShaderParameterSet(const RHIShaderParemeterLayout& layout) {
 	DescriptorSetHandle handle = m_Device->GetDescriptorMgr()->AllocateDS(layout);
 	if(handle.IsValid()) {

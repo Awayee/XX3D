@@ -16,9 +16,8 @@ class BufferAllocation {
 public:
 	BufferAllocation();
 	~BufferAllocation();
-	BufferAllocation(const BufferAllocation&) = delete;
+	NON_COPYABLE(BufferAllocation);
 	BufferAllocation(BufferAllocation&& rhs) noexcept;
-	BufferAllocation& operator=(const BufferAllocation&) = delete;
 	BufferAllocation& operator=(BufferAllocation&& rhs) noexcept;
 	void* Map();
 	void Unmap();

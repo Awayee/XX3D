@@ -58,7 +58,7 @@ namespace Math {
 
     template <typename T>
     Vector2<T>& Vector2<T>::operator/=(T scalar) {
-        float inv = 1.0f / scalar;
+        T inv = (T)1 / scalar;
         X *= inv;
         Y *= inv;
         return *this;

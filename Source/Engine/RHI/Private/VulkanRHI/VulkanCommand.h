@@ -12,9 +12,6 @@ public:
 	VulkanRHICommandBuffer(VulkanDevice* device, VkCommandBuffer handle);
 	~VulkanRHICommandBuffer() override;
 	VkCommandBuffer GetHandle() const { return m_Handle; }
-	// TODO remove render pass functions
-	void BeginRenderPass(RHIRenderPass* pass) override;
-	void EndRenderPass() override;
 	void BeginRendering(const RHIRenderPassDesc& desc) override;
 	void EndRendering() override;
 	void BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) override;
