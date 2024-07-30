@@ -30,3 +30,4 @@ VkPipelineColorBlendAttachmentState ToAttachmentBlendState(const RHIBlendState& 
 VkAttachmentLoadOp ToVkAttachmentLoadOp(ERTLoadOp op);
 VkAttachmentStoreOp ToVkAttachmentStoreOp(ERTStoreOp op);
 VkImageLayout ToImageLayout(EResourceState state);
+uint32 ConvertImageArraySize(const RHITextureDesc& desc);

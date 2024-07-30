@@ -14,11 +14,8 @@ namespace Render {
 	}
 
 	void RenderGraph::Execute() {
-		for(auto& node: m_Nodes) {
+		for(auto& node: m_PassNodes) {
 			node->Execute(m_Cmd.Get());
 		}
-	}
-
-	void RenderGraph::CreateNodeInternal(TUniquePtr<RGNodeBase>&& node) {
 	}
 }

@@ -9,34 +9,34 @@ namespace Render {
 
 	typedef uint32 ResourceID;
 
-	class RGResource {
+	class RGResourceNode {
+	public:
+		virtual ~RGResourceNode() = 0; // must implement destruction in subclasses
+		virtual EResourceType Type() = 0;
 	private:
 		friend class RenderGraph;
-		friend class RGNodeBase;
+		friend class RGPassNode;
 		ResourceID m_ID;
 		XXString m_Name;
 		uint32 m_RefCount = 0;
-	private:
 		void AddRef();
-	public:
-		virtual ~RGResource() = 0; // must implement destruction in subclasses
-		virtual EResourceType Type() = 0;
 	};
 
-	class RGBuffer: public RGResource {
+	class RGBufferNode: public RGResourceNode {
 	public:
-		RGBuffer(const RHIBufferDesc& desc);
-		explicit RGBuffer(RHIBufferDesc&& desc);
+		NON_COPYABLE(RGBufferNode);
+		RGBufferNode(const RHIBufferDesc& desc);
 	private:
 		RHIBufferDesc m_Desc;
 		RHIBuffer* m_RHIBuffer{nullptr};
 	};
 
-	class RGTexture: public RGResource {
+	class RGTextureNode: public RGResourceNode {
 	public:
-		struct Desc {
-			
-		};
+		NON_COPYABLE(RGTextureNode);
+		RGTextureNode(const RHITextureDesc& desc);
 	private:
+		RHITextureDesc m_Desc;
+		RHITexture* m_RHITexture{ nullptr };
 	};
 }

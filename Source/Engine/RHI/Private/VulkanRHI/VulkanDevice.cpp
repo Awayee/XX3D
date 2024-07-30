@@ -127,6 +127,11 @@ void VulkanDevice::CreateDevice(const VulkanContext* context) {
 
 	// load device functions
 	LoadDeviceFunctions(m_Device);
+	// compatible with vulkan 1.2
+	if(apiVersion < VK_VERSION_1_3) {
+		vkCmdBeginRendering = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>(vkGetDeviceProcAddr(m_Device, "vkCmdBeginRenderingKHR"));
+		vkCmdEndRendering = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(vkGetDeviceProcAddr(m_Device, "vkCmdEndRenderingKHR"));
+	}
 
 	// get queues
 	constexpr uint32 fixedQueueIndex = 0;// Always get the first queue.

@@ -36,5 +36,4 @@ private:
 	TUniquePtr<VulkanDevice> m_Device;
 	TUniquePtr<VulkanSwapchain> m_Swapchain;
 	VkPipelineLayout CreatePipelineLayout(const RHIPipelineLayout& rhiLayout);
-	void Present() override;
 };

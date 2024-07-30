@@ -27,17 +27,22 @@ private:
 
 class VulkanRHITexture: public RHITexture {
 public:
-	VulkanRHITexture(const RHITextureDesc& desc, VulkanDevice* device, VkImage image, VkImageView view, ImageAllocation&& allocation);
+	VulkanRHITexture(const RHITextureDesc& desc, VulkanDevice* device, VkImage image, ImageAllocation&& allocation);
 	~VulkanRHITexture() override;
 	VkImage GetImage() const { return m_Image; }
-	VkImageView GetView() const { return m_View; }
+	VkImageView GetDefaultView() const { return m_DefaultView; }
+	VkImageView Get2DView(uint8 mipIndex, uint32 arrayIndex);
+	VkImageView GetCubeView(uint8 mipIndex, uint32 arrayIndex);// only for cube map
 	void SetName(const char* name) override;
 	void UpdateData(RHITextureOffset offset, uint32 byteSize, const void* data) override;
 protected:
 	VulkanDevice* m_Device;
 	VkImage m_Image;
-	VkImageView m_View;
+	VkImageView m_DefaultView;
+	TVector<VkImageView> m_Views;
+	TVector<VkImageView> m_CubeViews;
 	ImageAllocation m_Allocation;
+	VkImageView CreateView(VkImageViewType type, uint8 mipIndex, uint8 mipCount, uint32 arrayIndex, uint32 arrayCount);
 };
 
 class VulkanRHISampler: public RHISampler{

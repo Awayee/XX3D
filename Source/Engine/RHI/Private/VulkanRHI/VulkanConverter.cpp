@@ -412,3 +412,19 @@ VkPipelineDepthStencilStateCreateInfo ToDepthStencilStateCreateInfo(const RHIDep
 	}
 	return VK_IMAGE_LAYOUT_UNDEFINED;
 }
+
+uint32 ConvertImageArraySize(const RHITextureDesc& desc) {
+	switch (desc.Dimension) {
+	case ETextureDimension::Tex2D:
+	case ETextureDimension::Tex3D:
+		return 1;
+	case ETextureDimension::Tex2DArray:
+		return desc.ArraySize;
+	case ETextureDimension::TexCube:
+		return 6;
+	case ETextureDimension::TexCubeArray:
+		return 6 * desc.ArraySize;
+	default:
+		return 0;
+	}
+}

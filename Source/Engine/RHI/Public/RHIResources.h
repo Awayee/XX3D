@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/Public/BaseStructs.h"
 #include "Core/Public/TVector.h"
+#include "Core/Public/TArray.h"
 #include "Core/Public/Log.h"
 #include "RHIEnum.h"
 
@@ -45,7 +46,7 @@ struct RHITextureDesc {
 	USize3D Size;
 	uint32 Depth;
 	uint32 ArraySize;
-	uint32 NumMips;
+	uint32 MipSize;
 	uint32 Samples;
 };
 
@@ -121,10 +122,14 @@ protected:
 	EShaderStageFlagBit m_Type;
 };
 
+static constexpr uint32 MAX_RENDER_TARGET_NUM = 8;
+
 // render pass
 struct RHIRenderPassDesc {
 	struct ColorTargetInfo {
 		RHITexture* Target;
+		uint32 ArrayIndex;
+		uint8 MipIndex;
 		ERTLoadOp LoadOp{ ERTLoadOp::EClear };
 		ERTStoreOp StoreOp{ ERTStoreOp::EStore };
 		FColor4 ColorClear{ 0.0f, 0.0f, 0.0f, 0.0f };
@@ -138,7 +143,7 @@ struct RHIRenderPassDesc {
 		float DepthClear{ 1.0f };
 		uint32 StencilClear{ 0u };
 	};
-	TVector<ColorTargetInfo> ColorTargets;
+	TStaticArray<ColorTargetInfo, MAX_RENDER_TARGET_NUM> ColorTargets;
 	DepthStencilTargetInfo DepthStencilTarget;
 	IURect RenderArea;
 };

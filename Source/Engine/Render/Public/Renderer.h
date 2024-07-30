@@ -1,17 +1,19 @@
 #pragma once
 #include "RHI/Public/RHI.h"
 #include "Core/Public/TUniquePtr.h"
-
+#include "Render/Public/DrawCallMgr.h"
 namespace Render {
 	class Renderer {
 	public:
+		NON_COPYABLE(Renderer);
 		Renderer();
 		~Renderer();
-		Renderer(const Renderer&) = delete;
 		Renderer(Renderer&& rhs) noexcept;
-		Renderer& operator=(const Renderer&) = delete;
 		Renderer& operator=(Renderer&& rhs) noexcept;
+		void SetRenderTarget();
+		void Execute();
 	private:
-		RHIGraphicsPipelineStatePtr m_PSO;
+		void ExecuteDrawCall(DrawCallQueue& queue);
+		RHICommandBufferPtr m_Cmd;
 	};
 }

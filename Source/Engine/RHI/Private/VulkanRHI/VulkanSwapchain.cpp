@@ -86,7 +86,6 @@ VkSemaphore VulkanSwapchain::AcquireImage() {
 	VkSemaphore signalSmp = m_Semaphores[m_CurFrame];
 	if (VK_SUCCESS == vkAcquireNextImageKHR(m_Device->GetDevice(), m_Swapchain, WAIT_MAX, signalSmp, VK_NULL_HANDLE, &m_ImageIdx)) {
 		m_Prepared = true;
-		m_BackBuffer->UpdateImage(m_Images[m_ImageIdx], m_ImageViews[m_ImageIdx]);
 		return signalSmp;
 	}
 	return VK_NULL_HANDLE;
@@ -121,7 +120,7 @@ USize2D VulkanSwapchain::GetSize() const {
 }
 
 uint32 VulkanSwapchain::GetImageCount() const {
-	return m_Images.Size();
+	return m_BackBuffers.Size();
 }
 
 VkFormat VulkanSwapchain::GetSwapchainFormat() const {
@@ -182,27 +181,13 @@ void VulkanSwapchain::CreateSwapchain() {
 	swapchainInfo.oldSwapchain = VK_NULL_HANDLE;
 	vkCreateSwapchainKHR(m_Device->GetDevice(), &swapchainInfo, nullptr, &m_Swapchain);
 
-	// get swap chain images
+	// Get swap chain images
 	uint32 swapchainImageCount; 
 	vkGetSwapchainImagesKHR(m_Device->GetDevice(), m_Swapchain, &swapchainImageCount, nullptr);
-	m_Images.Resize(swapchainImageCount);
-	vkGetSwapchainImagesKHR(m_Device->GetDevice(), m_Swapchain, &swapchainImageCount, m_Images.Data());
-	m_ImageViews.Resize(swapchainImageCount);
-	for(uint32 i=0; i<swapchainImageCount; ++i) {
-		VkImageViewCreateInfo viewInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0 };
-		viewInfo.image = m_Images[i];
-		viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		viewInfo.format = surfaceFormat.format;
-		viewInfo.components.r = viewInfo.components.g = viewInfo.components.b = viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-		viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		viewInfo.subresourceRange.baseMipLevel = 0;
-		viewInfo.subresourceRange.levelCount = 1;
-		viewInfo.subresourceRange.baseArrayLayer = 0;
-		viewInfo.subresourceRange.layerCount = 1;
-		VK_ASSERT(vkCreateImageView(m_Device->GetDevice(), &viewInfo, nullptr, &m_ImageViews[i]), "");
-	}
+	TFixedArray<VkImage> swapchainImages(swapchainImageCount);
+	vkGetSwapchainImagesKHR(m_Device->GetDevice(), m_Swapchain, &swapchainImageCount, swapchainImages.Data());
 
-	// create back buffer
+	// Create back buffers
 	RHITextureDesc backBufferDesc;
 	backBufferDesc.Dimension = ETextureDimension::Tex2D;
 	backBufferDesc.Format = SurfaceFormatToRHIFormat(surfaceFormat.format);
@@ -210,23 +195,17 @@ void VulkanSwapchain::CreateSwapchain() {
 	backBufferDesc.Size = { swapchainExtent.width, swapchainExtent.height };
 	backBufferDesc.Depth = 1;
 	backBufferDesc.ArraySize = 1;
-	backBufferDesc.NumMips = 1;
+	backBufferDesc.MipSize = 1;
 	backBufferDesc.Samples = 1;
-	m_BackBuffer.Reset(new VulkanBackBuffer(backBufferDesc, m_Device));
+	m_BackBuffers.Resize(swapchainImageCount);
+	for(uint32 i=0; i<swapchainImageCount; ++i) {
+		m_BackBuffers[i].Reset(new VulkanBackBuffer(backBufferDesc, m_Device, swapchainImages[i]));
+	}
 
 	m_SurfaceFormat = surfaceFormat;
 }
 
 void VulkanSwapchain::DestroySwapchain() {
-	for(VkImageView view: m_ImageViews) {
-		vkDestroyImageView(m_Device->GetDevice(), view, nullptr);
-	}
-	m_ImageViews.Clear();
-	for(VkImage image: m_Images) {
-		vkDestroyImage(m_Device->GetDevice(), image, nullptr);
-	}
-	m_Images.Clear();
-
-	m_BackBuffer.Reset();
+	m_BackBuffers.Clear();
 	vkDestroySwapchainKHR(m_Device->GetDevice(), m_Swapchain, nullptr);
 }

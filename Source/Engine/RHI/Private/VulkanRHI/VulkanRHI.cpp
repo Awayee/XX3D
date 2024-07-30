@@ -40,8 +40,17 @@ VulkanRHI::~VulkanRHI() {
 void VulkanRHI::Update() {
 	m_Device->GetMemoryMgr()->Update();
 	m_Device->GetDescriptorMgr()->Update();
+
+	VkSemaphore imageAvailableSmp = m_Swapchain->AcquireImage();
+	if (VK_NULL_HANDLE == imageAvailableSmp) {
+		LOG_DEBUG("VulkanRHI::Present Could not acquire a image!");
+		return;
+	}
+	VkSemaphore completeCmdSmp = m_Device->GetCommandMgr()->Submit(imageAvailableSmp);
+	if (!m_Swapchain->Present(completeCmdSmp)) {
+		LOG_DEBUG("VUlkanRHI::Present Could not present!");
+	}
 	m_Device->GetUploader()->Update();
-	Present();
 }
 
 ERHIFormat VulkanRHI::GetDepthFormat() {
@@ -96,21 +105,14 @@ RHITexturePtr VulkanRHI::CreateTexture(const RHITextureDesc& desc, void* default
 	imageInfo.imageType = ToImageType(desc.Dimension);
 	imageInfo.format = ToVkFormat(desc.Format);
 	imageInfo.extent = { desc.Size.w, desc.Size.h, desc.Size.h };
-	imageInfo.mipLevels = desc.NumMips;
-	if(desc.Dimension == ETextureDimension::TexCube) {
-		imageInfo.arrayLayers = 6;
-	}
-	else {
-		imageInfo.arrayLayers = desc.ArraySize;
-	}
+	imageInfo.mipLevels = desc.MipSize;
+	imageInfo.arrayLayers = ConvertImageArraySize(desc);
 	imageInfo.samples = (VkSampleCountFlagBits)desc.Samples;
 	imageInfo.usage = ToImageUsage(desc.Flags);
 	VkImage imageHandle;
 	if(VK_SUCCESS != vkCreateImage(m_Device->GetDevice(), &imageInfo, nullptr, &imageHandle)) {
 		return nullptr;
-	}
-
-	
+	}	
 	// memory
 	ImageAllocation alloc;
 	VkMemoryPropertyFlags memoryProperty = ToImageMemoryProperty(desc.Flags);
@@ -118,21 +120,7 @@ RHITexturePtr VulkanRHI::CreateTexture(const RHITextureDesc& desc, void* default
 		vkDestroyImage(m_Device->GetDevice(), imageHandle, nullptr);
 		return nullptr;
 	}
-
-	// view
-	VkImageViewCreateInfo imageViewCreateInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0 };
-	imageViewCreateInfo.image = imageHandle;
-	imageViewCreateInfo.viewType = ToImageViewType(desc.Dimension);
-	imageViewCreateInfo.format = imageInfo.format;
-	imageViewCreateInfo.subresourceRange.aspectMask = ToImageAspectFlags(desc.Flags);
-	imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
-	imageViewCreateInfo.subresourceRange.levelCount = desc.NumMips;
-	imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
-	imageViewCreateInfo.subresourceRange.layerCount = desc.ArraySize;
-	VkImageView viewHandle;
-	vkCreateImageView(m_Device->GetDevice(), &imageViewCreateInfo, nullptr, &viewHandle);
-
-	return new VulkanRHITexture(desc, GetDevice(), imageHandle, viewHandle, MoveTemp(alloc));
+	return new VulkanRHITexture(desc, GetDevice(), imageHandle, MoveTemp(alloc));
 }
 
 RHISamplerPtr VulkanRHI::CreateSampler(const RHISamplerDesc& desc) {
@@ -208,18 +196,6 @@ void VulkanRHI::SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence
 		vkHandles[i] = dynamic_cast<VulkanRHICommandBuffer*>(cmds[i])->GetHandle();
 	}
 	m_Device->GetCommandMgr()->AddGraphicsSubmit({ vkHandles.Data(), cmds.Size() }, vkFence->GetFence());
-}
-
-void VulkanRHI::Present() {
-	VkSemaphore imageAvailableSmp = m_Swapchain->AcquireImage();
-	if(VK_NULL_HANDLE == imageAvailableSmp) {
-		LOG_DEBUG("VulkanRHI::Present Could not acquire a image!");
-		return;
-	}
-	VkSemaphore completeCmdSmp = m_Device->GetCommandMgr()->Submit(imageAvailableSmp);
-	if(!m_Swapchain->Present(completeCmdSmp)) {
-		LOG_DEBUG("VUlkanRHI::Present Could not present!");
-	}
 }
 
 VkPipelineLayout VulkanRHI::CreatePipelineLayout(const RHIPipelineLayout& rhiLayout) {

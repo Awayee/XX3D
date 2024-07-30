@@ -47,7 +47,6 @@ public:
 	virtual void SubmitCommandBuffer(RHICommandBuffer* cmd, RHIFence* fence) = 0;
 	virtual void SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence) = 0;
 	virtual void Update() = 0;
-	virtual void Present() = 0;
 
 	RHI() = default;
 	NON_COPYABLE(RHI);

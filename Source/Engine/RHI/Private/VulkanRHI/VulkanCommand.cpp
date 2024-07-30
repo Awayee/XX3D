@@ -253,6 +253,7 @@ VkSemaphore VulkanCommandMgr::Submit(VkSemaphore presentWaitSmp) {
 	// uploading commands must be executed before graphics commands 
 	if(m_UploadCmd) {
 		VkCommandBuffer handle = ((VulkanRHICommandBuffer*)m_UploadCmd.Get())->GetHandle();
+		vkEndCommandBuffer(handle);
 		AddGraphicsSubmit({ handle }, VK_NULL_HANDLE, false);
 	}
 
@@ -302,8 +303,10 @@ VkSemaphore VulkanCommandMgr::Submit(VkSemaphore presentWaitSmp) {
 	m_SubmitInfos.Clear();
 	m_SmpMgr.ResetSmps();
 	// need to free
-	vkFreeCommandBuffers(m_Device->GetDevice(), m_Pool, m_CmdsToFree.Size(), m_CmdsToFree.Data());
-	m_CmdsToFree.Clear();
+	if(!m_CmdsToFree.Empty()) {
+		vkFreeCommandBuffers(m_Device->GetDevice(), m_Pool, m_CmdsToFree.Size(), m_CmdsToFree.Data());
+		m_CmdsToFree.Clear();
+	}
 
 	return completeSmp;
 }
@@ -330,7 +333,7 @@ void VulkanRHICommandBuffer::BeginRendering(const RHIRenderPassDesc& desc) {
 		colorAttachments[i].sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 		colorAttachments[i].pNext = nullptr;
 		const auto& target = desc.ColorTargets[i];
-		colorAttachments[i].imageView = ((VulkanRHITexture*)target.Target)->GetView();
+		colorAttachments[i].imageView = ((VulkanRHITexture*)target.Target)->Get2DView(target.MipIndex, target.ArrayIndex);
 		colorAttachments[i].imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
 		colorAttachments[i].loadOp = ToVkAttachmentLoadOp(target.LoadOp);
 		colorAttachments[i].storeOp = ToVkAttachmentStoreOp(target.StoreOp);
@@ -347,7 +350,7 @@ void VulkanRHICommandBuffer::BeginRendering(const RHIRenderPassDesc& desc) {
 	VkRenderingAttachmentInfo dsAttachment{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO, nullptr };
 	auto& depthStencilTarget = desc.DepthStencilTarget;
 	if(depthStencilTarget.Target) {
-		dsAttachment.imageView = ((VulkanRHITexture*)depthStencilTarget.Target)->GetView();
+		dsAttachment.imageView = ((VulkanRHITexture*)depthStencilTarget.Target)->GetDefaultView();
 		dsAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 		dsAttachment.loadOp = ToVkAttachmentLoadOp(depthStencilTarget.DepthLoadOp);
 		dsAttachment.storeOp = ToVkAttachmentStoreOp(depthStencilTarget.DepthStoreOp);

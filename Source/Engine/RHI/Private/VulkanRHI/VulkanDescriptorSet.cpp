@@ -130,7 +130,7 @@ void VulkanRHIShaderParameterSet::SetStorageBuffer(uint32 binding, RHIBuffer* bu
 
 void VulkanRHIShaderParameterSet::SetTexture(uint32 binding, RHITexture* texture) {
 	VulkanRHITexture* vkTexture = dynamic_cast<VulkanRHITexture*>(texture);
-	VkDescriptorImageInfo imageInfo{ VK_NULL_HANDLE, vkTexture->GetView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+	VkDescriptorImageInfo imageInfo{ VK_NULL_HANDLE, vkTexture->GetDefaultView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 	VkWriteDescriptorSet write{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr,
 	m_Handle.Set, binding,
 	0,

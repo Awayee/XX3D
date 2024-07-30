@@ -43,18 +43,55 @@ void VulkanRHIBuffer::UpdateData(const void* data, uint32 byteSize) {
 	}
 }
 
-VulkanRHITexture::VulkanRHITexture(const RHITextureDesc& desc, VulkanDevice* device, VkImage image, VkImageView view, ImageAllocation&& alloc):
-RHITexture(desc), m_Device(device), m_Image(image), m_View(view), m_Allocation(MoveTemp(alloc)) {}
+VulkanRHITexture::VulkanRHITexture(const RHITextureDesc& desc, VulkanDevice* device, VkImage image, ImageAllocation&& alloc):
+RHITexture(desc), m_Device(device), m_Image(image), m_Allocation(MoveTemp(alloc)) {
+	// Create default view.
+	if(m_Image) {
+		m_DefaultView = CreateView(ToImageViewType(desc.Dimension), 0, (uint8)desc.MipSize, 0, desc.ArraySize);
+		// reserve the views
+		const uint32 viewCount = ConvertImageArraySize(m_Desc) * m_Desc.MipSize;
+		m_Views.Resize(viewCount, VK_NULL_HANDLE);
+		if (desc.Dimension == ETextureDimension::TexCube) {
+			m_CubeViews.Resize(m_Desc.MipSize);
+		}
+	}
+}
 
 VulkanRHITexture::~VulkanRHITexture() {
 	vkDestroyImage(m_Device->GetDevice(), m_Image, nullptr);
-	vkDestroyImageView(m_Device->GetDevice(), m_View, nullptr);
+	for(auto view : m_Views) {
+		if (view) {
+			vkDestroyImageView(m_Device->GetDevice(), view, nullptr);
+		}
+	}
+	for(auto view: m_CubeViews) {
+		if(view) {
+			vkDestroyImageView(m_Device->GetDevice(), view, nullptr);
+		}
+	}
 	m_Device->GetMemoryMgr()->FreeImageMemory(m_Allocation);
+}
+
+VkImageView VulkanRHITexture::Get2DView(uint8 mipIndex, uint32 arrayIndex) {
+	const uint32 viewIndex = mipIndex * ConvertImageArraySize(m_Desc) + arrayIndex;
+	ASSUME(viewIndex < m_Views.Size());
+	if(m_Views[viewIndex] == VK_NULL_HANDLE) {
+		m_Views[viewIndex] = CreateView(VK_IMAGE_VIEW_TYPE_2D, mipIndex, 1, arrayIndex, 1);
+	}
+	return m_Views[viewIndex];
+}
+
+VkImageView VulkanRHITexture::GetCubeView(uint8 mipIndex, uint32 arrayIndex) {
+	ASSERT(m_Desc.Dimension == ETextureDimension::TexCube || m_Desc.Dimension == ETextureDimension::TexCubeArray, "Only TexCube or TexCubeArray has CubeView!");
+	const uint32 viewIndex = mipIndex * m_Desc.ArraySize + arrayIndex * 6;
+	if (m_CubeViews[viewIndex] == VK_NULL_HANDLE) {
+		m_Views[viewIndex] = CreateView(VK_IMAGE_VIEW_TYPE_CUBE, mipIndex, 1, arrayIndex, 6);
+	}
+	return m_CubeViews[viewIndex];
 }
 
 void VulkanRHITexture::SetName(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_IMAGE, m_Image, name);
-	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_IMAGE_VIEW, m_View, name);
 }
 
 void VulkanRHITexture::UpdateData(RHITextureOffset offset, uint32 byteSize, const void* data) {
@@ -69,6 +106,67 @@ void VulkanRHITexture::UpdateData(RHITextureOffset offset, uint32 byteSize, cons
 	cmd->PipelineBarrier(this, desc, EResourceState::Unknown, EResourceState::TransferDst);
 	cmd->CopyBufferToTexture(staging, this, offset.MipLevel, offset.ArrayLayer, 1);
 	cmd->PipelineBarrier(this, desc, EResourceState::TransferDst, EResourceState::ShaderResourceView);
+}
+
+inline bool CheckViewable(ETextureDimension dimension, VkImageViewType type) {
+	if (dimension == ETextureDimension::Tex2D) {
+		return type == VK_IMAGE_VIEW_TYPE_2D;
+	}
+	if (dimension == ETextureDimension::Tex2DArray) {
+		return type == VK_IMAGE_VIEW_TYPE_2D ||
+			type == VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+	}
+	if (dimension == ETextureDimension::TexCube) {
+		return type == VK_IMAGE_VIEW_TYPE_2D ||
+			type == VK_IMAGE_VIEW_TYPE_CUBE;
+	}
+	if (dimension == ETextureDimension::TexCubeArray) {
+		return type == VK_IMAGE_VIEW_TYPE_2D ||
+			type == VK_IMAGE_VIEW_TYPE_CUBE ||
+			type == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+	}
+	if(dimension == ETextureDimension::Tex3D) {
+		return type == VK_IMAGE_VIEW_TYPE_3D;
+	}
+	return false;
+}
+
+inline uint32 ConvertVulkanLayerCount(VkImageViewType type, uint32 layerCount) {
+
+	switch (type) {
+	case VK_IMAGE_VIEW_TYPE_2D:
+	case VK_IMAGE_VIEW_TYPE_1D:
+	case VK_IMAGE_VIEW_TYPE_3D:
+		return 1;
+	case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
+	case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
+		return layerCount;
+	case VK_IMAGE_VIEW_TYPE_CUBE:
+		return 6;
+	case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
+		return 6 * layerCount;
+	default:
+		LOG_ERROR("Invalid view type!");
+		return 1;
+	}
+}
+
+VkImageView VulkanRHITexture::CreateView(VkImageViewType type, uint8 mipIndex, uint8 mipCount, uint32 arrayIndex, uint32 arrayCount) {
+	ASSERT(CheckViewable(m_Desc.Dimension, type), "Type is not viewable!");
+	arrayCount = ConvertVulkanLayerCount(type, arrayCount);
+	VkImageView view;
+	// correct layer count
+	VkImageViewCreateInfo imageViewCreateInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0 };
+	imageViewCreateInfo.image = m_Image;
+	imageViewCreateInfo.viewType = type;
+	imageViewCreateInfo.format = ToVkFormat(m_Desc.Format);
+	imageViewCreateInfo.subresourceRange.aspectMask = ToImageAspectFlags(m_Desc.Flags);
+	imageViewCreateInfo.subresourceRange.baseMipLevel = mipIndex;
+	imageViewCreateInfo.subresourceRange.levelCount = mipCount;
+	imageViewCreateInfo.subresourceRange.baseArrayLayer = arrayIndex;
+	imageViewCreateInfo.subresourceRange.layerCount = arrayCount;
+	vkCreateImageView(m_Device->GetDevice(), &imageViewCreateInfo, nullptr, &view);
+	return view;
 }
 
 VulkanRHISampler::VulkanRHISampler(const RHISamplerDesc& desc, VulkanDevice* device, VkSampler sampler): RHISampler(desc), m_Device(device), m_Sampler(sampler) {}

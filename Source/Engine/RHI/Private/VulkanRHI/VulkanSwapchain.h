@@ -5,11 +5,7 @@
 
 class VulkanBackBuffer: public VulkanRHITexture {
 public:
-	VulkanBackBuffer(const RHITextureDesc& desc, VulkanDevice* device): VulkanRHITexture(desc, device, VK_NULL_HANDLE, VK_NULL_HANDLE, {}){}
-	void UpdateImage(VkImage image, VkImageView imageView) {
-		m_Image = image;
-		m_View = imageView;
-	}
+	VulkanBackBuffer(const RHITextureDesc& desc, VulkanDevice* device, VkImage image): VulkanRHITexture(desc, device, image, {}){}
 };
 
 class VulkanSwapchain {
@@ -34,9 +30,7 @@ private:
 	VkSurfaceKHR m_Surface;
 	VkSwapchainKHR m_Swapchain {VK_NULL_HANDLE};
 	VkSurfaceFormatKHR m_SurfaceFormat;
-	TVector<VkImage> m_Images;
-	TVector<VkImageView> m_ImageViews;
-	TUniquePtr<VulkanBackBuffer> m_BackBuffer;
+	TVector<TUniquePtr<VulkanBackBuffer>> m_BackBuffers;
 	uint32 m_CurFrame{ 0 };
 	bool m_Prepared{ false };
 	bool m_SizeDirty{ false };

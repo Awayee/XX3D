@@ -22,7 +22,7 @@ namespace Render {
 		desc.Size = { 1,1,1 };
 		desc.Depth = 1;
 		desc.ArraySize = 1;
-		desc.NumMips = 1;
+		desc.MipSize = 1;
 		desc.Samples = 1;
 
 		for (uint32 i = 0; i < DefaultTextureType::MAX_NUM; ++i) {
