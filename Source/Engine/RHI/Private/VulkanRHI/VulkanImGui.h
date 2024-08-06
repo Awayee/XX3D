@@ -3,7 +3,7 @@
 
 class VulkanImGui: public ImGuiRHI {
 public:
-	VulkanImGui();
+	VulkanImGui(void(*configInitializer)());
 	~VulkanImGui() override;
 	void FrameBegin() override;
 	void FrameEnd() override;

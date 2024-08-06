@@ -1,4 +1,4 @@
-#include "Resource/Public/Config.h"
+#include "System/Public/Config.h"
 #include "Core/Public/Concurrency.h"
 
 #include "Objects/Public/RenderScene.h"
@@ -47,8 +47,8 @@ namespace Engine {
     void RenderScene::CreateResources() {
         m_DirectionalLight.Reset(new DirectionalLight);
         m_DirectionalLight->SetDir({-1, -1, -1});
-        auto ext = RHI::Instance()->GetRenderArea();
-        m_Camera.Reset(new Camera(CAMERA_PERSPECTIVE, (float)ext.w / ext.h, 0.1f, 1000.0f, Math::Deg2Rad * 75.0f));
+        auto size = RHI::Instance()->GetViewport()->GetSize();
+        m_Camera.Reset(new Camera(CAMERA_PERSPECTIVE, (float)size.w / (float)size.h, 0.1f, 1000.0f, Math::Deg2Rad * 75.0f));
         m_Camera->SetView({ 0, 4, -4 }, { 0, 2, 0}, { 0, 1, 0 });
     }
 

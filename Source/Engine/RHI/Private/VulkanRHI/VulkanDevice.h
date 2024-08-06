@@ -6,8 +6,8 @@
 
 class VulkanMemoryMgr;
 class VulkanDescriptorMgr;
-class VulkanCommandMgr;
 class VulkanUploader;
+class VulkanCommandContext;
 
 struct VulkanQueue {
 	VkQueue Handle{ VK_NULL_HANDLE };
@@ -33,7 +33,7 @@ public:
 
 	VulkanMemoryMgr* GetMemoryMgr() { return m_MemoryMgr.Get(); }
 	VulkanDescriptorMgr* GetDescriptorMgr() { return m_DescriptorMgr.Get(); }
-	VulkanCommandMgr* GetCommandMgr() { return m_CommandMgr.Get();}
+	VulkanCommandContext* GetCommandContext() { return m_CommandContext.Get(); }
 	VulkanUploader* GetUploader() { return m_Uploader.Get(); }
 
 	const VulkanQueue* FindPresentQueue(VkSurfaceKHR surface) const;
@@ -47,7 +47,7 @@ private:
 	VulkanFormats m_Formats{};
 	TUniquePtr<VulkanMemoryMgr> m_MemoryMgr;
 	TUniquePtr<VulkanDescriptorMgr> m_DescriptorMgr;
-	TUniquePtr<VulkanCommandMgr> m_CommandMgr;
+	TUniquePtr<VulkanCommandContext> m_CommandContext;
 	TUniquePtr<VulkanUploader> m_Uploader;
 
 	void CreateDevice(const VulkanContext* context);

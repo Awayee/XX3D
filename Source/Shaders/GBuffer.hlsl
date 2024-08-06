@@ -5,7 +5,6 @@ struct VSOutput{
     [[vk::location(1)]] float2 UV: TEXCOORD0;
 };
 
-#ifdef _VS
 //vs
 struct VSInput {
     [[vk::location(0)]] float3 inPosition : POSITION0;
@@ -40,10 +39,7 @@ VSOutput MainVS(VSInput vIn, uint vertexID: SV_VERTEXID) {
     output.UV = vIn.inUV;
     return output;
 }
-#endif
 
-
-#ifdef _PS
 [[vk::binding(0, 2)]] Texture2D uAlbedoTex;
 [[vk::binding(1, 2)]] SamplerState uSampler;
 
@@ -62,4 +58,3 @@ PSOutput MainPS(VSOutput pIn) {
     psOut.OutAlbedo = uAlbedoTex.Sample(uSampler, pIn.UV).rgba;
     return psOut;
 }
-#endif

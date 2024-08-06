@@ -147,7 +147,7 @@ void VulkanContext::CreateInstance(bool enableDebug) {
 	}
 	uint32 supportedVersion;
 	vkEnumerateInstanceVersion(&supportedVersion);
-	LOG_INFO("Supported Vulkan API version: %i_%i_%i", VK_API_VERSION_MAJOR(supportedVersion), VK_API_VERSION_MINOR(supportedVersion), VK_API_VERSION_PATCH(supportedVersion) );
+	LOG_INFO("Supported Vulkan API version: %i.%i.%i", VK_API_VERSION_MAJOR(supportedVersion), VK_API_VERSION_MINOR(supportedVersion), VK_API_VERSION_PATCH(supportedVersion) );
 	if(supportedVersion < m_APIVersion) {
 		LOG_ERROR("Supported Vulkan API Version < MIN_API_VERSION");
 		return;

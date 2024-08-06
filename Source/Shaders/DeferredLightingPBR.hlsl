@@ -2,8 +2,6 @@ struct VSOutput {
 	float4 Position:SV_POSITION;
 	float2 UV: TEXCOORD0;
 };
-
-#ifdef _VS
 //vs
 static float2 g_Vertices[6] = {
 	float2(-1.0, -1.0), float2(-1.0,  1.0), float2(1.0, -1.0),
@@ -21,9 +19,7 @@ VSOutput MainVS(VSInput vIn, uint vID: SV_VertexID) {
 	vOut.UV = v * 0.5 + 0.5;
 	return vOut;
 }
-#endif
 
-#ifdef _PS
 //ps
 struct CameraUBO {
 	float4x4 View;
@@ -37,8 +33,8 @@ struct LightUBO {
 	float4 Color;
 };
 
-[[vk::binding(0, 0)]] cbuffer uCamera { CameraUBO uCamera; }
-[[vk::binding(1, 0)]] cbuffer uLight { LightUBO uLight; }
+[[vk::binding(0, 0)]] cbuffer uCamera { CameraUBO uCamera; };
+[[vk::binding(1, 0)]] cbuffer uLight { LightUBO uLight; };
 [[vk::input_attachment_index(0)]] SubpassInput<float4> inNormal;
 [[vk::input_attachment_index(1)]] SubpassInput<float4> inAlbedo;
 [[vk::input_attachment_index(2)]] SubpassInput<float> inDepth;
@@ -129,4 +125,3 @@ PSOutput MainPS(VSOutput pIn) {
 	pOut.OutColor = float4(color, 1.0);
 	return pOut;
 }
-#endif

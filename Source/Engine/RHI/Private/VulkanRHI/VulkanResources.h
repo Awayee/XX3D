@@ -30,7 +30,7 @@ public:
 	VulkanRHITexture(const RHITextureDesc& desc, VulkanDevice* device, VkImage image, ImageAllocation&& allocation);
 	~VulkanRHITexture() override;
 	VkImage GetImage() const { return m_Image; }
-	VkImageView GetDefaultView() const { return m_DefaultView; }
+	VkImageView GetDefaultView();
 	VkImageView Get2DView(uint8 mipIndex, uint32 arrayIndex);
 	VkImageView GetCubeView(uint8 mipIndex, uint32 arrayIndex);// only for cube map
 	void SetName(const char* name) override;
@@ -38,10 +38,11 @@ public:
 protected:
 	VulkanDevice* m_Device;
 	VkImage m_Image;
+	ImageAllocation m_Allocation;
 	VkImageView m_DefaultView;
 	TVector<VkImageView> m_Views;
 	TVector<VkImageView> m_CubeViews;
-	ImageAllocation m_Allocation;
+	bool m_IsImageOwner;// m_Image will be destroy in this object if m_IsImageOwner is true
 	VkImageView CreateView(VkImageViewType type, uint8 mipIndex, uint8 mipCount, uint32 arrayIndex, uint32 arrayCount);
 };
 
@@ -66,7 +67,6 @@ public:
 	void SetName(const char* name) override;
 	VkFence GetFence() const { return m_Handle; }
 private:
-	static constexpr uint32 WAIT_MAX = 0xffff;
 	VulkanDevice* m_Device;
 	VkFence m_Handle{VK_NULL_HANDLE};
 };
@@ -110,20 +110,4 @@ private:
 	VkPipelineLayout m_PipelineLayout{ VK_NULL_HANDLE };
 	VkPipeline m_Pipeline{ VK_NULL_HANDLE };
 	VulkanDevice* m_Device;
-};
-
-// layout manager in one pass
-struct VulkanImageLayoutWrap {
-	VkImageLayout InitialLayout{ VK_IMAGE_LAYOUT_UNDEFINED };
-	VkImageLayout CurrentLayout{ VK_IMAGE_LAYOUT_UNDEFINED };
-	VkImageLayout FinalLayout{ VK_IMAGE_LAYOUT_UNDEFINED };
-};
-class VulkanImageLayoutMgr {
-public:
-	VulkanImageLayoutMgr() = default;
-	~VulkanImageLayoutMgr() = default;
-	VulkanImageLayoutWrap* GetLayout(RHITexture* tex);
-	const VulkanImageLayoutWrap* GetLayout(RHITexture* tex) const;
-private:
-	std::unordered_map<VkImage, VulkanImageLayoutWrap> m_ImageLayoutMap;
 };

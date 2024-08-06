@@ -6,7 +6,7 @@
 class ImGuiRHI{
 public:
 	static ImGuiRHI* Instance();
-	static void Initialize();
+	static void Initialize(void(*configInitializer)());
 	static void Release();
 	virtual ~ImGuiRHI() {}
 	virtual void FrameBegin() = 0;

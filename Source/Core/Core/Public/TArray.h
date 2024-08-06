@@ -234,11 +234,16 @@ public:
 	}
 
 	// for-each loop
-	T* begin()const {
+	const T* begin()const {
 		return m_Data;
 	}
-
-	T* end()const {
+	const T* end()const {
+		return m_Data + L;
+	}
+	T* begin() {
+		return m_Data;
+	}
+	T* end() {
 		return m_Data + L;
 	}
 

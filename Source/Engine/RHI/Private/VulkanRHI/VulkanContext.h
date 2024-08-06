@@ -1,6 +1,6 @@
 #pragma once
 #include "VulkanCommon.h"
-#include "Resource/Public/Config.h"
+#include "System/Public/Config.h"
 
 class VulkanContext {
 public:

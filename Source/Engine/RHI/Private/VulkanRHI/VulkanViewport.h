@@ -5,24 +5,23 @@
 
 class VulkanBackBuffer: public VulkanRHITexture {
 public:
-	VulkanBackBuffer(const RHITextureDesc& desc, VulkanDevice* device, VkImage image): VulkanRHITexture(desc, device, image, {}){}
+	VulkanBackBuffer(const RHITextureDesc& desc, VulkanDevice* device, VkImage image);
 };
 
-class VulkanSwapchain {
+class VulkanViewport: public RHIViewport {
 public:
-	explicit VulkanSwapchain(const VulkanContext* context, VulkanDevice* device, WindowHandle window, USize2D size);
-	~VulkanSwapchain();
-	VkSemaphore AcquireImage();// acquire an available image, return VK_NULL_HANDLE if failed
-	bool Present(VkSemaphore waitSmp);// return false if failed
-	void Resize(USize2D size);
+	explicit VulkanViewport(const VulkanContext* context, VulkanDevice* device, WindowHandle window, USize2D size);
+	~VulkanViewport() override;
+	void SetSize(USize2D size) override;
+	USize2D GetSize() override;
+	RHITexture* AcquireBackBuffer() override;
+	RHITexture* GetCurrentBackBuffer() override;
+	void Present() override;
+	VkSemaphore GetCurrentSemaphore() const;
 	USize2D GetSize() const;
 	uint32 GetImageCount() const;
 	VkFormat GetSwapchainFormat() const;
 private:
-	enum : uint32 {
-		WAIT_MAX = 0xff,
-		MAX_FRAME_COUNT = 3,
-	};
 	const VulkanContext* m_Context;
 	VulkanDevice* m_Device;
 	WindowHandle m_Window;
@@ -31,11 +30,9 @@ private:
 	VkSwapchainKHR m_Swapchain {VK_NULL_HANDLE};
 	VkSurfaceFormatKHR m_SurfaceFormat;
 	TVector<TUniquePtr<VulkanBackBuffer>> m_BackBuffers;
-	uint32 m_CurFrame{ 0 };
-	bool m_Prepared{ false };
+	TStaticArray<VkSemaphore, RHI_MAX_FRAME_IN_FLIGHT> m_Semaphores;
 	bool m_SizeDirty{ false };
-	uint32 m_ImageIdx;
-	TVector<VkSemaphore> m_Semaphores;
+	uint32 m_BackBufferIdx{ 0 };
 	const VulkanQueue* m_PresentQueue{ nullptr };
 	void CreateSwapchain();// create swap chain after size assigned.
 	void DestroySwapchain();

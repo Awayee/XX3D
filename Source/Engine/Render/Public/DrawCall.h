@@ -7,27 +7,31 @@
 #include "Core/Public/Func.h"
 
 namespace Render {
+	// A draw call contains pipeline, layout and vb/ib provided by scene objects.
 	class DrawCall {
 	public:
 		NON_COPYABLE(DrawCall);
-		DrawCall();
+		DrawCall() = default;
 		~DrawCall();
 		DrawCall(DrawCall&& rhs) noexcept;
 		DrawCall& operator=(DrawCall&& rhs) noexcept;
+		void ResetFunc(Func<void(RHICommandBuffer*)>&& f);
 		void Execute(RHICommandBuffer* cmd);
 	private:
-		TVector<Func<void(RHICommandBuffer*)>> m_Funcs;
+		Func<void(RHICommandBuffer*)> m_Func;
 	};
 
 	struct EDrawCallQueueType { enum {
 		SHADOW_PASS,
 		BASE_PASS,
+		DEFERRED_LIGHTING_PASS,
 		POST_PROCESS,
 		COUNT,
 	};};
 
 	typedef TVector<DrawCall> DrawCallQueue;
 
+	// A draw call context is obtained by cameras or renderer.
 	class DrawCallContext {
 	public:
 		NON_COPYABLE(DrawCallContext);

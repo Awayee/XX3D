@@ -6,22 +6,19 @@
 
 class VulkanContext;
 class VulkanDevice;
-class VulkanSwapchain;
+class VulkanViewport;
 
 class VulkanRHI final: public RHI {
 public:
 	explicit VulkanRHI(const RHIInitDesc& desc);
 	~VulkanRHI()override;
-	void Update() override;
+	void BeginFrame() override;
 	const VulkanContext* GetContext();
 	VulkanDevice* GetDevice();
-	VulkanSwapchain* GetSwapchain();
-
 	ERHIFormat GetDepthFormat() override;
-	USize2D GetRenderArea() override;
-
-	RHIBufferPtr CreateBuffer(const RHIBufferDesc& desc, void* defaultData) override;
-	RHITexturePtr CreateTexture(const RHITextureDesc& desc, void* defaultData) override;
+	RHIViewport* GetViewport() override;
+	RHIBufferPtr CreateBuffer(const RHIBufferDesc& desc) override;
+	RHITexturePtr CreateTexture(const RHITextureDesc& desc) override;
 	RHISamplerPtr CreateSampler(const RHISamplerDesc& desc) override;
 	RHIFencePtr CreateFence(bool sig) override;
 	RHIShaderPtr CreateShader(EShaderStageFlagBit type, const char* codeData, size_t codeSize, const char* entryFunc) override;
@@ -29,11 +26,11 @@ public:
 	RHIComputePipelineStatePtr CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) override;
 	RHIShaderParameterSetPtr CreateShaderParameterSet(const RHIShaderParemeterLayout& layout) override;
 	RHICommandBufferPtr CreateCommandBuffer() override;
-	void SubmitCommandBuffer(RHICommandBuffer* cmd, RHIFence* fence) override;
-	void SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence) override;
+	void SubmitCommandBuffer(RHICommandBuffer* cmd, RHIFence* fence, bool bPresent) override;
+	void SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence, bool bPresent) override;
 private:
 	TUniquePtr<VulkanContext> m_Context;
 	TUniquePtr<VulkanDevice> m_Device;
-	TUniquePtr<VulkanSwapchain> m_Swapchain;
+	TUniquePtr<VulkanViewport> m_Viewport;
 	VkPipelineLayout CreatePipelineLayout(const RHIPipelineLayout& rhiLayout);
 };

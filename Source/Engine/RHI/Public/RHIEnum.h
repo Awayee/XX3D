@@ -1,6 +1,11 @@
 #pragma once
 #include "Core/Public/Defines.h"
 
+enum : uint32 {
+    RHI_MAX_FRAME_IN_FLIGHT = 2,
+    RHI_MAX_RENDER_TARGET_NUM = 8,
+};
+
 enum class ERHIFormat: uint8 {
     Undefined=0,
     R8_UNORM,

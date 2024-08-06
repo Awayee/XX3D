@@ -1,19 +1,20 @@
 #include "Render/Public/RenderModuleInterface.h"
-#include "Render/Public/Textures.h"
-#include "Render/Public/Samplers.h"
+#include "Render/Public/DefaultResource.h"
+#include "Render/Public/Renderer.h"
 
 namespace Render {
 
 	void Initialize() {
-		DefaultTexture::Initialize();
-		DefaultSampler::Initialize();
+		DefaultResources::Initialize();
+		RendererMgr::Initialize();
 	}
 
 	void Update() {
+		RendererMgr::Instance()->Update();
 	}
 
 	void Release() {
-		DefaultTexture::Release();
-		DefaultSampler::Release();
+		DefaultResources::Release();
+		RendererMgr::Release();
 	}
 }

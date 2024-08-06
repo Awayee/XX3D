@@ -292,12 +292,12 @@ namespace Math {
 
     MATH_GENERIC T* Matrix4x4<T>::operator[](int row_index)
 	{
-        ASSUME(row_index < 4);
+        CHECK(row_index < 4);
 		return Mat[row_index];
 	}
     MATH_GENERIC const T* Matrix4x4<T>::operator[](int row_index) const
 	{
-        ASSUME(row_index < 4);
+        CHECK(row_index < 4);
 		return Mat[row_index];
 	}
     MATH_GENERIC Matrix4x4<T> Matrix4x4<T>::operator*(const Matrix4x4<T>& m2) const

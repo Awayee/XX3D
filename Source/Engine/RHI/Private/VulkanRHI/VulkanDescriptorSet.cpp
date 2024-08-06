@@ -57,7 +57,8 @@ void VulkanDescriptorMgr::Update() {
 }
 
 VkDescriptorPool VulkanDescriptorMgr::AddPool() {
-	VkDescriptorPoolCreateInfo info{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, nullptr, 0 };
+	VkDescriptorPoolCreateInfo info{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, nullptr};
+	info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 	constexpr uint8 bindingCount = static_cast<uint8>(EBindingType::MaxNum);
 	static const uint32 s_CountPerType[bindingCount] = {8, 128, 64, 128, 16, 128};
 	VkDescriptorPoolSize sizes[bindingCount];

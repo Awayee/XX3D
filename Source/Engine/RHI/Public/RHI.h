@@ -32,25 +32,25 @@ public:
 	static void Initialize();
 	static void Release();
 	virtual ERHIFormat GetDepthFormat() = 0;
-	virtual USize2D GetRenderArea() = 0;
-
-	virtual RHIBufferPtr CreateBuffer(const RHIBufferDesc& desc, void* defaultData) = 0;
-	virtual RHITexturePtr CreateTexture(const RHITextureDesc& desc, void* defaultData) = 0;
+	virtual RHIViewport* GetViewport() = 0;
+	virtual void BeginFrame() = 0;
+	virtual RHIBufferPtr CreateBuffer(const RHIBufferDesc& desc) = 0;
+	virtual RHITexturePtr CreateTexture(const RHITextureDesc& desc) = 0;
 	virtual RHISamplerPtr CreateSampler(const RHISamplerDesc& desc) = 0;
 	virtual RHIFencePtr CreateFence(bool sig = true) = 0;
 	virtual RHIShaderPtr CreateShader(EShaderStageFlagBit type, const char* codeData, size_t codeSize, const char* entryFunc) = 0;
 	virtual RHIGraphicsPipelineStatePtr CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) = 0;
 	virtual RHIComputePipelineStatePtr CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) = 0;
 	virtual RHIShaderParameterSetPtr CreateShaderParameterSet(const RHIShaderParemeterLayout& layout) = 0;
-
 	virtual RHICommandBufferPtr CreateCommandBuffer() = 0;
-	virtual void SubmitCommandBuffer(RHICommandBuffer* cmd, RHIFence* fence) = 0;
-	virtual void SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence) = 0;
-	virtual void Update() = 0;
-
+	// Submit command buffer(s), if bPresent is true, the command buffers will execute after viewport acquired back buffer.
+	virtual void SubmitCommandBuffer(RHICommandBuffer* cmd, RHIFence* fence, bool bPresent) = 0;
+	virtual void SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence, bool bPresent) = 0;
+protected:
+	friend TUniquePtr<RHI>;
+	static TUniquePtr<RHI> s_Instance;
 	RHI() = default;
 	NON_COPYABLE(RHI);
+	NON_MOVEABLE(RHI);
 	virtual ~RHI() {}
-private:
-	static TUniquePtr<RHI> s_Instance;
 };

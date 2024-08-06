@@ -1,12 +1,13 @@
 ﻿#include "Context/Public/Editor.h"
 #include "Asset/Public/AssetLoader.h"
-#include "Resource/Public/Config.h"
+#include "System/Public/Config.h"
 
 #include "EditorUI/Public/UIController.h"
 #include "EditorUI/Public/EditorUIMgr.h"
 #include "Functions/Public/AssetManager.h"
 #include "Functions/Public/EditorLevelMgr.h"
 #include "Functions/Public/EditorTimer.h"
+#include "Render/Public/Renderer.h"
 #include "Window/Public/EngineWindow.h"
 #include "RHI/Public/ImGuiRHI.h"
 
@@ -81,10 +82,10 @@ namespace Editor {
 	    style.WindowRounding = 4.0f;
 
 		// TODO do gama correction in post process
-		for(auto& c: style.Colors) {
-			float exp = 2.2f;
-			c = ImVec4(Math::FPow(c.x, exp), Math::FPow(c.y, exp), Math::FPow(c.z, exp), c.w);
-		}
+		//for(auto& c: style.Colors) {
+		//	float exp = 2.2f;
+		//	c = ImVec4(Math::FPow(c.x, exp), Math::FPow(c.y, exp), Math::FPow(c.z, exp), c.w);
+		//}
     }
 
 	void ImGuiConfig() {
@@ -103,7 +104,12 @@ namespace Editor {
 
 		io.Fonts->AddFontFromFileTTF(fontPath.string().c_str(), contentScale * 16, nullptr, nullptr);
 		ASSERT(io.Fonts->Build(), "Failed to build fonts");
-		//io.IniFilename = nullptr; // Do not save settings
+		io.IniFilename = nullptr; // Do not save settings
+
+		// Load imgui.ini
+		XXString imguiFile{ PROJECT_CONFIG };
+		imguiFile.append("imgui.ini");
+		ImGui::LoadIniSettingsFromDisk(imguiFile.c_str());
 
 		SetImGuiStyle();
 	}
@@ -114,11 +120,12 @@ namespace Editor {
 		ProjectAssetMgr::Initialize();
 		EditorUIMgr::Initialize();
 		EditorLevelMgr::Initialize();
-		ImGuiRHI::Initialize();
+		ImGuiRHI::Initialize(ImGuiConfig);
 		m_UIController.Reset(new UIController);
 	}
 
 	XXEditor::~XXEditor() {
+		Render::RendererMgr::Instance()->WaitQueue();
 		Editor::EditorTimer::Release();
 		EngineAssetMgr::Release();
 		ProjectAssetMgr::Release();

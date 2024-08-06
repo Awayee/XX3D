@@ -10,7 +10,6 @@ namespace Engine {
 	class StaticMesh: public RenderObject3D {
 	private:
 		TVector<Material*> m_Materials;
-		//RHI::RDescriptorSet* m_DescriptorSet;
 	public:
 		StaticMesh(const AMeshAsset& meshAsset, RenderScene* scene);
 		~StaticMesh() override;

@@ -1,13 +1,13 @@
 #include "VulkanImGui.h"
 #include "VulkanRHI.h"
 #include "VulkanDescriptorSet.h"
-#include "VulkanSwapchain.h"
+#include "VulkanViewport.h"
 #include "VulkanCommand.h"
 #include "Window/Public/EngineWIndow.h"
 #include <backends/imgui_impl_vulkan.h>
 #include <backends/imgui_impl_glfw.h>
 
-VulkanImGui::VulkanImGui() {
+VulkanImGui::VulkanImGui(void(*configInitializer)()) {
 	IMGUI_CHECKVERSION();
 	m_Context = ImGui::CreateContext();
 
@@ -23,15 +23,17 @@ VulkanImGui::VulkanImGui() {
 	initInfo.QueueFamily = device->GetGraphicsQueue().FamilyIndex;
 	initInfo.Queue = device->GetGraphicsQueue().Handle;
 	initInfo.DescriptorPool = device->GetDescriptorMgr()->GetPool();
-	initInfo.MinImageCount = vkRHI->GetSwapchain()->GetImageCount();
+	VulkanViewport* vkViewport = (VulkanViewport*)(vkRHI->GetViewport());
+	initInfo.MinImageCount = vkViewport->GetImageCount();
 	initInfo.ImageCount = initInfo.MinImageCount;
 	initInfo.UseDynamicRendering = true;
 	//dynamic rendering parameters for imgui to use
 	initInfo.PipelineRenderingCreateInfo = {VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
 	initInfo.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-	VkFormat format = vkRHI->GetSwapchain()->GetSwapchainFormat();
+	VkFormat format = vkViewport->GetSwapchainFormat();
 	initInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats = &format;
 	ImGui_ImplVulkan_Init(&initInfo);
+	configInitializer();
 	ImGui_ImplVulkan_CreateFontsTexture();
 	m_IsInitialized = false;
 }
@@ -58,11 +60,11 @@ void VulkanImGui::FrameEnd() {
 void VulkanImGui::RenderDrawData(RHICommandBuffer* cmd) {
 	ASSERT(m_FrameBegin, "");
 	ImGui::Render();
-	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), static_cast<VulkanRHICommandBuffer*>(cmd)->GetHandle());
+	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), static_cast<VulkanCommandBuffer*>(cmd)->GetHandle());
 }
 
 void VulkanImGui::ImGuiCreateFontsTexture(RHICommandBuffer* cmd) {
-	//ImGui_ImplVulkan_CreateFontsTexture(static_cast<VulkanRHICommandBuffer*>(cmd)->GetHandle());
+	//ImGui_ImplVulkan_CreateFontsTexture(static_cast<VulkanCommandBuffer*>(cmd)->GetHandle());
 }
 
 void VulkanImGui::ImGuiDestroyFontUploadObjects() {

@@ -37,44 +37,57 @@ void VulkanRHIBuffer::UpdateData(const void* data, uint32 byteSize) {
 		void* mappedPointer = staging->Map();
 		memcpy(mappedPointer, data, byteSize);
 		staging->Unmap();
+		auto cmd = m_Device->GetCommandContext()->GetUploadCmd();
 		// TODO replace with vulkan functions
-		auto cmd = m_Device->GetCommandMgr()->GetUploadCmd();
 		cmd->CopyBufferToBuffer(staging, this, 0, 0, byteSize);
 	}
 }
 
 VulkanRHITexture::VulkanRHITexture(const RHITextureDesc& desc, VulkanDevice* device, VkImage image, ImageAllocation&& alloc):
-RHITexture(desc), m_Device(device), m_Image(image), m_Allocation(MoveTemp(alloc)) {
-	// Create default view.
-	if(m_Image) {
-		m_DefaultView = CreateView(ToImageViewType(desc.Dimension), 0, (uint8)desc.MipSize, 0, desc.ArraySize);
-		// reserve the views
-		const uint32 viewCount = ConvertImageArraySize(m_Desc) * m_Desc.MipSize;
-		m_Views.Resize(viewCount, VK_NULL_HANDLE);
-		if (desc.Dimension == ETextureDimension::TexCube) {
-			m_CubeViews.Resize(m_Desc.MipSize);
-		}
+	RHITexture(desc),
+	m_Device(device),
+	m_Image(image),
+	m_Allocation(MoveTemp(alloc)),
+	m_IsImageOwner(true){
+	// reserve the views
+	const uint32 viewCount = ConvertImageArraySize(m_Desc) * m_Desc.MipSize;
+	m_Views.Resize(viewCount, VK_NULL_HANDLE);
+	if (desc.Dimension == ETextureDimension::TexCube) {
+		m_CubeViews.Resize(m_Desc.MipSize, VK_NULL_HANDLE);
 	}
+	m_DefaultView = VK_NULL_HANDLE;
 }
 
 VulkanRHITexture::~VulkanRHITexture() {
-	vkDestroyImage(m_Device->GetDevice(), m_Image, nullptr);
-	for(auto view : m_Views) {
+	for (auto view : m_Views) {
 		if (view) {
 			vkDestroyImageView(m_Device->GetDevice(), view, nullptr);
 		}
 	}
-	for(auto view: m_CubeViews) {
-		if(view) {
+	for (auto view : m_CubeViews) {
+		if (view) {
 			vkDestroyImageView(m_Device->GetDevice(), view, nullptr);
 		}
 	}
-	m_Device->GetMemoryMgr()->FreeImageMemory(m_Allocation);
+	if (m_DefaultView) {
+		vkDestroyImageView(m_Device->GetDevice(), m_DefaultView, nullptr);
+	}
+	if (m_IsImageOwner && m_Image) {
+		vkDestroyImage(m_Device->GetDevice(), m_Image, nullptr);
+		m_Device->GetMemoryMgr()->FreeImageMemory(m_Allocation);
+	}
+}
+
+VkImageView VulkanRHITexture::GetDefaultView() {
+	if(!m_DefaultView) {
+		m_DefaultView = CreateView(ToImageViewType(m_Desc.Dimension), 0, (uint8)m_Desc.MipSize, 0, m_Desc.ArraySize);
+	}
+	return m_DefaultView;
 }
 
 VkImageView VulkanRHITexture::Get2DView(uint8 mipIndex, uint32 arrayIndex) {
 	const uint32 viewIndex = mipIndex * ConvertImageArraySize(m_Desc) + arrayIndex;
-	ASSUME(viewIndex < m_Views.Size());
+	CHECK(viewIndex < m_Views.Size());
 	if(m_Views[viewIndex] == VK_NULL_HANDLE) {
 		m_Views[viewIndex] = CreateView(VK_IMAGE_VIEW_TYPE_2D, mipIndex, 1, arrayIndex, 1);
 	}
@@ -101,7 +114,7 @@ void VulkanRHITexture::UpdateData(RHITextureOffset offset, uint32 byteSize, cons
 	memcpy(mappedPointer, data, byteSize);
 	staging->Unmap();
 	// TODO replace with vulkan functions
-	auto cmd = m_Device->GetCommandMgr()->GetUploadCmd();
+	auto cmd = m_Device->GetCommandContext()->GetUploadCmd();
 	RHITextureSubDesc desc{ offset.MipLevel, 1, offset.ArrayLayer, 1 };
 	cmd->PipelineBarrier(this, desc, EResourceState::Unknown, EResourceState::TransferDst);
 	cmd->CopyBufferToTexture(staging, this, offset.MipLevel, offset.ArrayLayer, 1);
@@ -188,7 +201,7 @@ VulkanRHIFence::~VulkanRHIFence() {
 }
 
 void VulkanRHIFence::Wait() {
-	vkWaitForFences(m_Device->GetDevice(), 1, &m_Handle, 1, WAIT_MAX);
+	vkWaitForFences(m_Device->GetDevice(), 1, &m_Handle, 1, VK_WAIT_MAX);
 }
 
 void VulkanRHIFence::Reset() {
@@ -390,18 +403,4 @@ VulkanRHIComputePipelineState::~VulkanRHIComputePipelineState() {
 
 void VulkanRHIComputePipelineState::SetName(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_PIPELINE, m_Pipeline, name);
-}
-
-
-VulkanImageLayoutWrap* VulkanImageLayoutMgr::GetLayout(RHITexture* tex) {
-	const VkImage image = dynamic_cast<VulkanRHITexture*>(tex)->GetImage();
-	return &m_ImageLayoutMap[image];
-}
-
-const VulkanImageLayoutWrap* VulkanImageLayoutMgr::GetLayout(RHITexture* tex) const {
-	VkImage image = dynamic_cast<VulkanRHITexture*>(tex)->GetImage();
-	if(auto iter = m_ImageLayoutMap.find(image); iter!=m_ImageLayoutMap.end()) {
-		return &iter->second;
-	}
-	return nullptr;
 }

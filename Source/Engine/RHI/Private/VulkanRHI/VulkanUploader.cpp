@@ -1,9 +1,12 @@
 #include "VulkanUploader.h"
+#include "VulkanCommand.h"
 #include "VulkanDevice.h"
+#include "System/Public/FrameCounter.h"
 
 VulkanStagingBuffer::VulkanStagingBuffer(const RHIBufferDesc& desc, VulkanDevice* device) : RHIBuffer(desc), m_Device(device) {
 	constexpr uint32 memoryProperty = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 	m_Device->GetMemoryMgr()->AllocateBufferMemory(m_Allocation, m_Desc.ByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, memoryProperty);
+	m_CreateFrame = FrameCounter::GetFrame();
 }
 
 VulkanStagingBuffer::~VulkanStagingBuffer() {
@@ -33,6 +36,19 @@ VulkanStagingBuffer* VulkanUploader::AcquireBuffer(uint32 bufferSize) {
 	return m_StagingBuffers.EmplaceBack(new VulkanStagingBuffer(desc, m_Device)).Get();
 }
 
-void VulkanUploader::Update() {
-	m_StagingBuffers.Clear();
+void VulkanUploader::BeginFrame() {
+	CheckForRelease();
+}
+
+void VulkanUploader::CheckForRelease() {
+	const uint32 frame = FrameCounter::GetFrame();
+	for(uint32 i=0; i<m_StagingBuffers.Size(); ) {
+		const uint32 createFrame = m_StagingBuffers[i]->GetCreateFrame();
+		if(createFrame + RHI_MAX_FRAME_IN_FLIGHT < frame) {
+			m_StagingBuffers.SwapRemoveAt(i);
+		}
+		else {
+			++i;
+		}
+	}
 }

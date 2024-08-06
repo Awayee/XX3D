@@ -37,13 +37,13 @@ BufferAllocation& BufferAllocation::operator=(BufferAllocation&& rhs) noexcept {
 }
 
 void* BufferAllocation::Map() {
-	ASSUME(!m_MappedPointer);
+	CHECK(!m_MappedPointer);
 	vmaMapMemory(m_Allocator, m_Allocation, &m_MappedPointer);
 	return m_MappedPointer;
 }
 
 void BufferAllocation::Unmap() {
-	ASSUME(m_MappedPointer);
+	CHECK(m_MappedPointer);
 	vmaUnmapMemory(m_Allocator, m_Allocation);
 	m_MappedPointer = nullptr;
 }

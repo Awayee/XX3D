@@ -57,3 +57,12 @@ FormatTexelInfo g_FormatPixelByteSize[(uint32)ERHIFormat::FORMAT_MAX_ENUM] = {
 uint32 RHITexture::GetPixelByteSize() {
     return g_FormatPixelByteSize[(uint32)m_Desc.Format].PixelByteSize;
 }
+
+uint32 RHIRenderPassInfo::GetNumColorTargets() const {
+    for(uint32 i=0; i<ColorTargets.Size(); ++i) {
+	    if(!ColorTargets[i].Target) {
+            return i;
+	    }
+    }
+    return RHI_MAX_RENDER_TARGET_NUM;
+}

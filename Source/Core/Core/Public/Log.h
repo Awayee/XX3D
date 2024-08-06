@@ -1,7 +1,7 @@
 #pragma once
 #include <iostream>
 
-#define ASSUME(x)\
+#define CHECK(x)\
 	do{\
 		if(!(x)){\
 			std::abort();\

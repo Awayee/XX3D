@@ -40,9 +40,9 @@ public:
 
 // texture
 struct RHITextureDesc {
-	ETextureDimension Dimension;
-	ERHIFormat Format;
-	ETextureFlags Flags;
+	ETextureDimension Dimension: 8;
+	ERHIFormat Format : 8;
+	ETextureFlags Flags : 16;
 	USize3D Size;
 	uint32 Depth;
 	uint32 ArraySize;
@@ -51,10 +51,10 @@ struct RHITextureDesc {
 };
 
 struct RHITextureSubDesc {
-	uint32 BaseMip;
-	uint32 NumMips;
-	uint32 BaseLayer;
-	uint32 LayerCount;
+	uint32 BaseMip{ 0 };
+	uint32 MipCount{ 1 };
+	uint32 BaseLayer{ 0 };
+	uint32 LayerCount{ 1 };
 };
 
 struct RHITextureOffset {
@@ -79,6 +79,22 @@ public:
 	uint32 GetPixelByteSize();
 };
 
+struct RHIRenderTarget {
+	RHITexture* m_Texture;
+	uint32 m_MipIndex{ 0 };
+	uint32 m_ArrayIdx{ 0 };
+};
+
+class RHIViewport {
+public:
+	virtual ~RHIViewport() = default;
+	virtual void SetSize(USize2D size) = 0;
+	virtual USize2D GetSize() = 0;
+	virtual RHITexture* AcquireBackBuffer() = 0;
+	virtual RHITexture* GetCurrentBackBuffer() = 0;
+	virtual void Present() = 0;
+};
+
 // sampler
 struct RHISamplerDesc {
 	ESamplerFilter Filter = ESamplerFilter::Point;
@@ -99,12 +115,6 @@ public:
 	XX_NODISCARD const RHISamplerDesc& GetDesc() const { return m_Desc; }
 };
 
-struct RHIRenderTargetView {
-	RHITexture* m_Texture;
-	uint32 m_Miplevel;
-	uint32 m_ArrayIdx;
-};
-
 // fence
 class RHIFence: public RHIResource {
 public:
@@ -122,20 +132,18 @@ protected:
 	EShaderStageFlagBit m_Type;
 };
 
-static constexpr uint32 MAX_RENDER_TARGET_NUM = 8;
-
 // render pass
-struct RHIRenderPassDesc {
+struct RHIRenderPassInfo {
 	struct ColorTargetInfo {
-		RHITexture* Target;
-		uint32 ArrayIndex;
-		uint8 MipIndex;
+		RHITexture* Target{ nullptr };
+		uint32 ArrayIndex{ 0 };
+		uint8 MipIndex{ 0 };
 		ERTLoadOp LoadOp{ ERTLoadOp::EClear };
 		ERTStoreOp StoreOp{ ERTStoreOp::EStore };
 		FColor4 ColorClear{ 0.0f, 0.0f, 0.0f, 0.0f };
 	};
 	struct DepthStencilTargetInfo {
-		RHITexture* Target;
+		RHITexture* Target{ nullptr };
 		ERTLoadOp DepthLoadOp{ ERTLoadOp::EClear };
 		ERTStoreOp DepthStoreOp{ ERTStoreOp::EStore };
 		ERTLoadOp StencilLoadOp{ ERTLoadOp::ENoAction };
@@ -143,18 +151,10 @@ struct RHIRenderPassDesc {
 		float DepthClear{ 1.0f };
 		uint32 StencilClear{ 0u };
 	};
-	TStaticArray<ColorTargetInfo, MAX_RENDER_TARGET_NUM> ColorTargets;
+	TStaticArray<ColorTargetInfo, RHI_MAX_RENDER_TARGET_NUM> ColorTargets;
 	DepthStencilTargetInfo DepthStencilTarget;
 	IURect RenderArea;
-};
-
-class RHIRenderPass : public RHIResource {
-public:
-	RHIRenderPass(const RHIRenderPassDesc& desc) : m_Desc(desc){}
-	virtual ~RHIRenderPass() {}
-	const RHIRenderPassDesc& GetDesc() { return m_Desc; }
-protected:
-	RHIRenderPassDesc m_Desc;
+	uint32 GetNumColorTargets() const;
 };
 
 struct RHIVertexInput {

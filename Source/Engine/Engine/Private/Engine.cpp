@@ -1,8 +1,10 @@
 #include "Engine/Public/Engine.h"
-#include "Resource/Public/Config.h"
+#include "System/Public/Config.h"
 #include "Window/Public/EngineWIndow.h"
 #include "RHI/Public/RHI.h"
-#include "Render/Public/RenderModuleInterface.h"
+#include "Render/Public/DefaultResource.h"
+#include "Render/Public/Renderer.h"
+#include "System/Public/FrameCounter.h"
 
 namespace Engine {
 
@@ -13,21 +15,26 @@ namespace Engine {
 		ConfigManager::Initialize();
 		EngineWindow::Initialize();
 		RHI::Initialize();
-		Render::Initialize();
+		Render::DefaultResources::Initialize();
+		Render::RendererMgr::Initialize();
 		s_RunningEngine = this;
 	}
 
 	XXEngine::~XXEngine() {
+		// wait renderer
+		Render::RendererMgr::Instance()->WaitQueue();
+		Render::RendererMgr::Release();
+		Render::DefaultResources::Release();
 		RHI::Release();
 		EngineWindow::Release();
-		Render::Release();
 		s_RunningEngine = nullptr;
 	}
 
 	void XXEngine::Update() {
-		RHI::Instance()->Update();// RHI Update must run at the beginning.
+		RHI::Instance()->BeginFrame();// RHI Update must run at the beginning.
 		EngineWindow::Instance()->Update();
-		Render::Update();
+		Render::RendererMgr::Instance()->Update();
+		FrameCounter::Update();// Frame counter ticks at last.
 	}
 
 	void XXEngine::Run() {

@@ -1,5 +1,5 @@
 #include "RHID3D12.h"
-#include "Resource/Public/Config.h"
+#include "System/Public/Config.h"
 #include "D3D12Util.h"
 
 namespace Engine {

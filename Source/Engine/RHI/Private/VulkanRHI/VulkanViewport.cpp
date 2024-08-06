@@ -1,5 +1,7 @@
-#include "VulkanSwapchain.h"
+#include "VulkanViewport.h"
+#include "VulkanCommand.h"
 #include "Math/Public/Math.h"
+#include "System/Public/FrameCounter.h"
 #include <GLFW/glfw3.h>
 
 inline VkSurfaceFormatKHR ChooseSurfaceFormat(const VkSurfaceFormatKHR* data, uint32 count) {
@@ -46,7 +48,12 @@ inline VkExtent2D GetSwapchainExtent(const VkSurfaceCapabilitiesKHR& capabilitie
 	};
 }
 
-VulkanSwapchain::VulkanSwapchain(const VulkanContext* context, VulkanDevice* device, WindowHandle window, USize2D size) :
+VulkanBackBuffer::VulkanBackBuffer(const RHITextureDesc& desc, VulkanDevice* device, VkImage image) :
+	VulkanRHITexture(desc, device, image, {}){
+	m_IsImageOwner = false;
+}
+
+VulkanViewport::VulkanViewport(const VulkanContext* context, VulkanDevice* device, WindowHandle window, USize2D size) :
 	m_Context(context),
 	m_Device(device),
 	m_Window(window),
@@ -56,78 +63,80 @@ VulkanSwapchain::VulkanSwapchain(const VulkanContext* context, VulkanDevice* dev
 	VK_ASSERT(glfwCreateWindowSurface(m_Context->GetInstance(), static_cast<GLFWwindow*>(m_Window), nullptr, &m_Surface), "vk create window surface");
 	// Get present queue
 	m_PresentQueue = m_Device->FindPresentQueue(m_Surface);
-	ASSERT(m_PresentQueue, "[VulkanSwapchain]Could not find a present queue!");
+	ASSERT(m_PresentQueue, "[VulkanViewport]Could not find a present queue!");
 	// Create Swapchain
 	CreateSwapchain();
-	// Create semaphores
-	const uint32 frameCount = Math::Max<uint32>(MAX_FRAME_COUNT, GetImageCount());
-	m_Semaphores.Resize(frameCount);
+	// Create semaphores for per frame
 	VkSemaphoreCreateInfo smpInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0 };
-	for (auto& smp : m_Semaphores) {
-		vkCreateSemaphore(m_Device->GetDevice(), &smpInfo, nullptr, &smp);
+	for (uint32 i = 0; i < RHI_MAX_FRAME_IN_FLIGHT; ++i) {
+		vkCreateSemaphore(m_Device->GetDevice(), &smpInfo, nullptr, &m_Semaphores[i]);
 	}
 }
 
-VulkanSwapchain::~VulkanSwapchain() {
+VulkanViewport::~VulkanViewport() {
 	DestroySwapchain();
-	for (auto& smp : m_Semaphores) {
+	for(VkSemaphore smp: m_Semaphores) {
 		vkDestroySemaphore(m_Device->GetDevice(), smp, nullptr);
 	}
+	vkDestroySurfaceKHR(m_Context->GetInstance(), m_Surface, nullptr);
 }
 
-VkSemaphore VulkanSwapchain::AcquireImage() {
+void VulkanViewport::SetSize(USize2D size) {
+	m_SizeDirty = true;
+	m_Size = size;
+}
+
+USize2D VulkanViewport::GetSize() {
+	return m_Size;
+}
+
+RHITexture* VulkanViewport::AcquireBackBuffer() {
 	// check size changed before acquire image
-	if(m_SizeDirty) {
+	if (m_SizeDirty) {
 		DestroySwapchain();
 		CreateSwapchain();
 		m_SizeDirty = false;
 	}
 
-	VkSemaphore signalSmp = m_Semaphores[m_CurFrame];
-	if (VK_SUCCESS == vkAcquireNextImageKHR(m_Device->GetDevice(), m_Swapchain, WAIT_MAX, signalSmp, VK_NULL_HANDLE, &m_ImageIdx)) {
-		m_Prepared = true;
-		return signalSmp;
+	if (VK_SUCCESS == vkAcquireNextImageKHR(m_Device->GetDevice(), m_Swapchain, VK_WAIT_MAX, GetCurrentSemaphore(), VK_NULL_HANDLE, &m_BackBufferIdx)) {
+		return m_BackBuffers[m_BackBufferIdx].Get();
 	}
-	return VK_NULL_HANDLE;
+	return nullptr;
 }
 
-bool VulkanSwapchain::Present(VkSemaphore waitSmp) {
-	bool bRes = false;
-	if (m_Prepared) {
-		VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr };
-		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = &waitSmp;
-		presentInfo.swapchainCount = 1;
-		presentInfo.pSwapchains = &m_Swapchain;
-		presentInfo.pImageIndices = &m_ImageIdx;
-		bRes = VK_SUCCESS == vkQueuePresentKHR(m_PresentQueue->Handle, &presentInfo);
-		m_CurFrame = (m_CurFrame + 1) % m_Semaphores.Size();
-		m_Prepared = false;
-	}
-	else {
-		LOG_DEBUG("VulkanSwapchain::Present image is not available!");
-	}
-	return bRes;
+RHITexture* VulkanViewport::GetCurrentBackBuffer() {
+	return m_BackBuffers[m_BackBufferIdx].Get();
 }
 
-void VulkanSwapchain::Resize(USize2D size) {
-	m_Size = size;
-	m_SizeDirty = true;
+void VulkanViewport::Present() {
+	TVector<VkSemaphore> waitSemaphores;
+	m_Device->GetCommandContext()->GetLastSubmissionSemaphores(waitSemaphores);
+	VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr };
+	presentInfo.waitSemaphoreCount = waitSemaphores.Size();
+	presentInfo.pWaitSemaphores = waitSemaphores.Data();
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = &m_Swapchain;
+	presentInfo.pImageIndices = &m_BackBufferIdx;
+	vkQueuePresentKHR(m_PresentQueue->Handle, &presentInfo);
 }
 
-USize2D VulkanSwapchain::GetSize() const {
+VkSemaphore VulkanViewport::GetCurrentSemaphore() const {
+	return m_Semaphores[FrameCounter::GetFrame() % RHI_MAX_FRAME_IN_FLIGHT];
+}
+
+USize2D VulkanViewport::GetSize() const {
 	return m_Size;
 }
 
-uint32 VulkanSwapchain::GetImageCount() const {
+uint32 VulkanViewport::GetImageCount() const {
 	return m_BackBuffers.Size();
 }
 
-VkFormat VulkanSwapchain::GetSwapchainFormat() const {
+VkFormat VulkanViewport::GetSwapchainFormat() const {
 	return m_SurfaceFormat.format;
 }
 
-void VulkanSwapchain::CreateSwapchain() {
+void VulkanViewport::CreateSwapchain() {
 	// create swap chain
 
 	VkPhysicalDevice physicalDevice = m_Device->GetPhysicalDevice();
@@ -187,7 +196,7 @@ void VulkanSwapchain::CreateSwapchain() {
 	TFixedArray<VkImage> swapchainImages(swapchainImageCount);
 	vkGetSwapchainImagesKHR(m_Device->GetDevice(), m_Swapchain, &swapchainImageCount, swapchainImages.Data());
 
-	// Create back buffers
+	// Create back buffers and semaphores.
 	RHITextureDesc backBufferDesc;
 	backBufferDesc.Dimension = ETextureDimension::Tex2D;
 	backBufferDesc.Format = SurfaceFormatToRHIFormat(surfaceFormat.format);
@@ -205,7 +214,7 @@ void VulkanSwapchain::CreateSwapchain() {
 	m_SurfaceFormat = surfaceFormat;
 }
 
-void VulkanSwapchain::DestroySwapchain() {
+void VulkanViewport::DestroySwapchain() {
 	m_BackBuffers.Clear();
 	vkDestroySwapchainKHR(m_Device->GetDevice(), m_Swapchain, nullptr);
 }

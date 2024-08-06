@@ -7,11 +7,13 @@
 #define VK_ASSERT(x, s)\
 	ASSERT(VK_SUCCESS == (x), s)
 
-#define VK_CHECK(x) (VK_SUCCESS == (x)
+#define VK_CHECK(x) CHECK(VK_SUCCESS == (x))
 
 const uint32 VK_API_VER = VK_API_VERSION_1_2;
 
 constexpr uint32 VK_INVALID_IDX = UINT32_MAX;
+
+constexpr uint32 VK_WAIT_MAX = UINT32_MAX;
 
 typedef void* WindowHandle;
 
@@ -44,19 +46,21 @@ typedef void* WindowHandle;
 	macroName(PFN_vkGetPhysicalDeviceFeatures                , vkGetPhysicalDeviceFeatures)\
 	macroName(PFN_vkGetPhysicalDeviceFeatures2               , vkGetPhysicalDeviceFeatures2)\
 	macroName(PFN_vkGetPhysicalDeviceSurfaceSupportKHR       , vkGetPhysicalDeviceSurfaceSupportKHR)\
-	macroName(PFN_vkCreateCommandPool                        , vkCreateCommandPool)\
+	macroName(PFN_vkDestroySurfaceKHR                        , vkDestroySurfaceKHR)\
 
 #define ENUM_VULKAN_DEVICE_FUNCTIONS(macroName) \
 	macroName(PFN_vkCreateFence                              , vkCreateFence)\
 	macroName(PFN_vkDestroyFence                             , vkDestroyFence)\
 	macroName(PFN_vkWaitForFences                            , vkWaitForFences)\
 	macroName(PFN_vkResetFences                              , vkResetFences)\
+	macroName(PFN_vkCreateCommandPool                        , vkCreateCommandPool)\
 	macroName(PFN_vkResetCommandPool                         , vkResetCommandPool)\
 	macroName(PFN_vkDestroyCommandPool                       , vkDestroyCommandPool)\
 	macroName(PFN_vkBeginCommandBuffer                       , vkBeginCommandBuffer)\
 	macroName(PFN_vkEndCommandBuffer                         , vkEndCommandBuffer)\
 	macroName(PFN_vkAllocateCommandBuffers                   , vkAllocateCommandBuffers)\
 	macroName(PFN_vkFreeCommandBuffers                       , vkFreeCommandBuffers)\
+	macroName(PFN_vkResetCommandBuffer                       , vkResetCommandBuffer)\
 	macroName(PFN_vkCmdBeginRenderPass                       , vkCmdBeginRenderPass)\
 	macroName(PFN_vkCmdCopyBufferToImage                     , vkCmdCopyBufferToImage)\
 	macroName(PFN_vkCmdBlitImage                             , vkCmdBlitImage)\
@@ -129,5 +133,3 @@ ENUM_VULKAN_DEVICE_FUNCTIONS(DECLARE_VULKAN_FUNCTION)\
 bool InitializeInstanceProcAddr();
 void LoadInstanceFunctions(VkInstance instance);
 void LoadDeviceFunctions(VkDevice device);
-
-const char** GetDeviceExtensions(uint32* count);

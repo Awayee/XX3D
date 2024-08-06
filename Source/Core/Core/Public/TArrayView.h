@@ -16,6 +16,9 @@ public:
 	TArrayView(T* data, const SizeType size): m_Data(data), m_Size(size){}
 	TArrayView(T& data) : m_Data(&data), m_Size(1){}
 	TArrayView& operator = (const TArrayView& rhs) {
+		if(this == &rhs) {
+			return *this;
+		}
 		m_Data = rhs.m_Data;
 		m_Size = rhs.m_Size;
 		return *this;

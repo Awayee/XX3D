@@ -5,7 +5,7 @@
 #include "VulkanMemory.h"
 #include "VulkanCommand.h"
 #include "VulkanDescriptorSet.h"
-#include "VulkanSwapchain.h"
+#include "VulkanViewport.h"
 #include "VulkanUploader.h"
 
 #define RETURN_RHI_PTR(cls, hd)\
@@ -27,30 +27,21 @@ VulkanRHI::VulkanRHI(const RHIInitDesc& desc) {
 	// Create logic device
 	m_Device.Reset(new VulkanDevice(m_Context.Get(), physicalDevice));
 	// Create viewport
-	m_Swapchain.Reset(new VulkanSwapchain(m_Context.Get(), m_Device.Get(), desc.WindowHandle, desc.WindowSize));
+	m_Viewport.Reset(new VulkanViewport(m_Context.Get(), m_Device.Get(), desc.WindowHandle, desc.WindowSize));
 
 	LOG_INFO("RHI: Vulkan initialized successfully!");
 }
 
 VulkanRHI::~VulkanRHI() {
-	//vma
+	m_Viewport.Reset();
 	m_Device.Reset();
 }
 
-void VulkanRHI::Update() {
-	m_Device->GetMemoryMgr()->Update();
+void VulkanRHI::BeginFrame() {
+	m_Device->GetCommandContext()->BeginFrame();
+	m_Device->GetUploader()->BeginFrame();
 	m_Device->GetDescriptorMgr()->Update();
-
-	VkSemaphore imageAvailableSmp = m_Swapchain->AcquireImage();
-	if (VK_NULL_HANDLE == imageAvailableSmp) {
-		LOG_DEBUG("VulkanRHI::Present Could not acquire a image!");
-		return;
-	}
-	VkSemaphore completeCmdSmp = m_Device->GetCommandMgr()->Submit(imageAvailableSmp);
-	if (!m_Swapchain->Present(completeCmdSmp)) {
-		LOG_DEBUG("VUlkanRHI::Present Could not present!");
-	}
-	m_Device->GetUploader()->Update();
+	m_Device->GetMemoryMgr()->Update();
 }
 
 ERHIFormat VulkanRHI::GetDepthFormat() {
@@ -66,8 +57,8 @@ ERHIFormat VulkanRHI::GetDepthFormat() {
 	}
 }
 
-USize2D VulkanRHI::GetRenderArea() {
-	return m_Swapchain->GetSize();
+RHIViewport* VulkanRHI::GetViewport() {
+	return m_Viewport.Get();
 }
 
 const VulkanContext* VulkanRHI::GetContext() {
@@ -78,11 +69,7 @@ VulkanDevice* VulkanRHI::GetDevice() {
 	return m_Device.Get();
 }
 
-VulkanSwapchain* VulkanRHI::GetSwapchain() {
-	return m_Swapchain.Get();
-}
-
-RHIBufferPtr VulkanRHI::CreateBuffer(const RHIBufferDesc& desc, void* defaultData) {
+RHIBufferPtr VulkanRHI::CreateBuffer(const RHIBufferDesc& desc) {
 	VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, nullptr, 0 };
 	bufferInfo.usage = ToBufferUsage(desc.Flags);
 	bufferInfo.size = desc.ByteSize;
@@ -99,7 +86,7 @@ RHIBufferPtr VulkanRHI::CreateBuffer(const RHIBufferDesc& desc, void* defaultDat
 	return nullptr;
 }
 
-RHITexturePtr VulkanRHI::CreateTexture(const RHITextureDesc& desc, void* defaultData) {
+RHITexturePtr VulkanRHI::CreateTexture(const RHITextureDesc& desc) {
 	VkImageCreateInfo imageInfo{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr};
 	imageInfo.flags = ToImageCreateFlags(desc.Dimension);
 	imageInfo.imageType = ToImageType(desc.Dimension);
@@ -180,22 +167,18 @@ RHIShaderParameterSetPtr VulkanRHI::CreateShaderParameterSet(const RHIShaderPare
 }
 
 RHICommandBufferPtr VulkanRHI::CreateCommandBuffer() {
-	return m_Device->GetCommandMgr()->NewCmd();
+	return m_Device->GetCommandContext()->AllocateCommandBuffer();
 }
 
-void VulkanRHI::SubmitCommandBuffer(RHICommandBuffer* cmd, RHIFence* fence) {
-	VkCommandBuffer cmdHandle = dynamic_cast<VulkanRHICommandBuffer*>(cmd)->GetHandle();
-	VkFence fenceHandle = dynamic_cast<VulkanRHIFence*>(fence)->GetFence();
-	m_Device->GetCommandMgr()->AddGraphicsSubmit({&cmdHandle, 1}, fenceHandle);
+void VulkanRHI::SubmitCommandBuffer(RHICommandBuffer* cmd, RHIFence* fence, bool bPresent) {
+	SubmitCommandBuffers({ cmd }, fence, bPresent);
 }
 
-void VulkanRHI::SubmitCommandBuffer(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence) {
-	TFixedArray<VkCommandBuffer> vkHandles(cmds.Size());
-	VulkanRHIFence* vkFence = dynamic_cast<VulkanRHIFence*>(fence);
-	for(uint32 i=0; i<cmds.Size(); ++i) {
-		vkHandles[i] = dynamic_cast<VulkanRHICommandBuffer*>(cmds[i])->GetHandle();
-	}
-	m_Device->GetCommandMgr()->AddGraphicsSubmit({ vkHandles.Data(), cmds.Size() }, vkFence->GetFence());
+void VulkanRHI::SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence, bool bPresent) {
+	TArrayView<VulkanCommandBuffer*> vulkanCmds((VulkanCommandBuffer**)(cmds.Data()), cmds.Size());
+	VkFence fenceHandle = fence ? ((VulkanRHIFence*)fence)->GetFence() : VK_NULL_HANDLE;
+	VkSemaphore smp = bPresent ? m_Viewport->GetCurrentSemaphore() : VK_NULL_HANDLE;
+	m_Device->GetCommandContext()->SubmitCommandBuffers(vulkanCmds, smp, fenceHandle);
 }
 
 VkPipelineLayout VulkanRHI::CreatePipelineLayout(const RHIPipelineLayout& rhiLayout) {

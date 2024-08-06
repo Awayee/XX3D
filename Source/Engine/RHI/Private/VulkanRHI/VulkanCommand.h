@@ -5,14 +5,16 @@
 #include "Core/Public/TVector.h"
 #include "Core/Public/TUniquePtr.h"
 
-class VulkanImageLayoutMgr;
+class VulkanCommandContext;
 
-class VulkanRHICommandBuffer : public RHICommandBuffer {
+class VulkanCommandBuffer : public RHICommandBuffer {
 public:
-	VulkanRHICommandBuffer(VulkanDevice* device, VkCommandBuffer handle);
-	~VulkanRHICommandBuffer() override;
+	VulkanCommandBuffer(VulkanCommandContext* context, VkCommandBuffer handle, VkSemaphore smp);
+	~VulkanCommandBuffer() override;
 	VkCommandBuffer GetHandle() const { return m_Handle; }
-	void BeginRendering(const RHIRenderPassDesc& desc) override;
+	VkSemaphore GetSemaphore() const { return m_Semaphore; }
+	void Reset() override;
+	void BeginRendering(const RHIRenderPassInfo& info) override;
 	void EndRendering() override;
 	void BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) override;
 	void BindComputePipeline(RHIComputePipelineState* pipeline) override;
@@ -28,71 +30,49 @@ public:
 	void CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RHITextureCopyRegion& region) override;
 	void PipelineBarrier(RHITexture* texture, RHITextureSubDesc subDesc, EResourceState stateBefore, EResourceState stateAfter) override;
 	void GenerateMipmap(RHITexture* texture, uint32 levelCount, uint32 baseLayer, uint32 layerCount) override;
-
 	void BeginDebugLabel(const char* msg, const float* color) override;
 	void EndDebugLabel() override;
 private:
-	void CmdBegin();
-	VulkanDevice* m_Device;
+	friend VulkanCommandContext;
+	VulkanCommandContext* m_Owner;
 	VkCommandBuffer m_Handle{ VK_NULL_HANDLE };
-	TUniquePtr<VulkanImageLayoutMgr> m_ImageLayoutMgr;
-	// pass info
-	VkRenderPass m_CurrentPass{ VK_NULL_HANDLE };
-	uint32 m_SubPass{ 0 };
 	// pipeline info
 	VkPipeline m_CurrentPipeline{ VK_NULL_HANDLE };
 	VkPipelineLayout m_CurrentPipelineLayout{ VK_NULL_HANDLE };
 	VkPipelineBindPoint m_CurrentPipelineBindPoint{ VK_PIPELINE_BIND_POINT_GRAPHICS };
-
-	bool m_IsBegin{ false };
+	// signal semaphore
+	VkSemaphore m_Semaphore;
+	VkPipelineStageFlags m_StageMask;
+	bool m_HasBegun{ false };
+	void CheckBegin();
+	void CheckEnd();
 };
 
-class SemaphoreMgr {
-public:
-	SemaphoreMgr() = default;
-	~SemaphoreMgr();
-	void Initialize(VkDevice device, uint32 maxSize);
-	uint32 Allocate(); // return index of a semaphore in array
-	VkSemaphore& Get(uint32 idx);
-	void ResetSmps(); // reset allocates
-	void Clear(); // clear all semaphores
-private:
-	VkDevice m_Device {VK_NULL_HANDLE};
-	TVector<VkSemaphore> m_Semaphores;
-	uint32 m_CurIndex {0};
-};
+typedef TVector<VulkanCommandBuffer*> VulkanCommandSubmission;
 
-class VulkanCommandMgr {
+class VulkanCommandContext {
 public:
-	explicit VulkanCommandMgr(VulkanDevice* device);
-	~VulkanCommandMgr();
-	RHICommandBufferPtr NewCmd();
-	RHICommandBuffer* GetUploadCmd();
-	// Add a command buffer to a list, will be submitted util Submit is called.
-	// a batch of Commands in a calling will run parallel, multi batch of commands will run in order of calling.
-	void AddGraphicsSubmit(TConstArrayView<VkCommandBuffer> cmds, VkFence fence, bool toPresent=false);
-	// Add a command buffer to a list, will be freed after Update.
-	void FreeCmd(VkCommandBuffer handle);
-	// submit cmds every frame, return a semaphore of completing all cmds
-	VkSemaphore Submit(VkSemaphore presentWaitSmp);
+	NON_COPYABLE(VulkanCommandContext);
+	NON_MOVEABLE(VulkanCommandContext);
+	explicit VulkanCommandContext(VulkanDevice* device);
+	~VulkanCommandContext();
+	RHICommandBufferPtr AllocateCommandBuffer();
+	void FreeCommandBuffer(VulkanCommandBuffer* cmd);
+	// Input command buffer(s) for parallel execution.
+	void SubmitCommandBuffer(VulkanCommandBuffer* cmd, VkSemaphore waitSemaphore, VkFence completeFence);
+	void SubmitCommandBuffers(TArrayView<VulkanCommandBuffer*> cmds, VkSemaphore waitSemaphore, VkFence completeFence);
+	void BeginFrame();
+	// Get the last submitted command buffer(s) for next submission.
+	const VulkanCommandSubmission& GetLastSubmission();
+	// Get the semaphores of commands last submitted.
+	const void GetLastSubmissionSemaphores(TVector<VkSemaphore>& outSmps);
+	// Get the command buffer for upload, always exists.
+	VulkanCommandBuffer* GetUploadCmd();
+
+	VkDevice GetDevice() const;
 private:
 	VulkanDevice* m_Device;
-	VkCommandPool m_Pool;
-	SemaphoreMgr m_SmpMgr;
-	TVector<VkCommandBuffer> m_CmdsToFree;
-	TVector<VkCommandBuffer> m_CmdsToSubmit;
-
-	// record cmd commit info
-	struct SubmitInfo {
-		uint32 WaitSmpIdx;
-		VkPipelineStageFlags WaitStage;
-		// a cmd mast have signal semaphore
-		uint32 SignalSmpIdx;
-		uint32 CmdStartIdx;
-		uint32 CmdCount;
-		bool ToPresent;
-		VkFence Fence;
-	};
-	TVector<SubmitInfo> m_SubmitInfos;
-	RHICommandBufferPtr m_UploadCmd;
+	VkCommandPool m_CommandPool;
+	TVector<VulkanCommandSubmission> m_Submissions;
+	TUniquePtr<VulkanCommandBuffer> m_UploadCmd;
 };

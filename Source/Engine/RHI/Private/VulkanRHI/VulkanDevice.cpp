@@ -6,11 +6,11 @@
 #include "VulkanCommand.h"
 #include "VulkanUploader.h"
 
-inline TVector<XXString> GetDeviceExtensions(const VulkanContext* context) {
-	TVector<XXString> extensions;
+inline TVector<const char*> GetDeviceExtensions(const VulkanContext* context) {
+	TVector<const char*> extensions;
 	extensions.PushBack(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 	const uint32 APIVersion = context->GetAPIVersion();
-	if(APIVersion < VK_API_VERSION_1_2) {
+	if(APIVersion < VK_API_VERSION_1_3) {
 		extensions.PushBack(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
 	}
 	return extensions;
@@ -26,12 +26,17 @@ VulkanDevice::VulkanDevice(const VulkanContext* context, VkPhysicalDevice physic
 	// Create descriptor manager
 	m_DescriptorMgr.Reset(new VulkanDescriptorMgr(this));
 	// Create command manager
-	m_CommandMgr.Reset(new VulkanCommandMgr(this));
+	m_CommandContext.Reset(new VulkanCommandContext(this));
 	// Create uploader
 	m_Uploader.Reset(new VulkanUploader(this));
 }
 
 VulkanDevice::~VulkanDevice() {
+	m_Uploader.Reset();
+	m_CommandContext.Reset();
+	m_DescriptorMgr.Reset();
+	m_MemoryMgr.Reset();
+	vkDestroyDevice(m_Device, nullptr);
 }
 
 const VulkanQueue* VulkanDevice::FindPresentQueue(VkSurfaceKHR surface) const {
@@ -90,7 +95,7 @@ void VulkanDevice::CreateDevice(const VulkanContext* context) {
 	ASSERT(apiVersion >= VK_VERSION_1_2, "");
 
 	// fill device extensions
-	TVector<const char*> extensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	TVector<const char*> extensions = GetDeviceExtensions(context);
 	// setup features
 	VkPhysicalDeviceFeatures2 features2{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
 	VkPhysicalDeviceVulkan11Features features11{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };

@@ -1,5 +1,5 @@
 #include "Core/Public/Log.h"
-#include "Resource/Public/Config.h"
+#include "System/Public/Config.h"
 #include "ClientCode/Public/Client.h"
 #include "Engine/Public/Engine.h"
 

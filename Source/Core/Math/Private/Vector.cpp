@@ -10,7 +10,7 @@ namespace Math {
     }
 
     template<typename T> T& Vector2<T>::operator[](int i){
-        ASSUME(i < 2);
+        CHECK(i < 2);
         return (i == 0 ? X : Y);
     }
 
@@ -180,21 +180,21 @@ namespace Math {
     }
 
     template<typename T> Vector3<T>& Vector3<T>::operator/=(T scalar){
-        ASSUME(scalar != 0.0);
+        CHECK(scalar != 0.0);
         X /= scalar;
         Y /= scalar;
         Z /= scalar;
         return *this;
     }
     template<typename T> Vector3<T>& Vector3<T>::operator/=(const Vector3<T>& rhs){
-        ASSUME(rhs.X != 0 && rhs.Y != 0 && rhs.Z != 0);
+        CHECK(rhs.X != 0 && rhs.Y != 0 && rhs.Z != 0);
         X /= rhs.X;
         Y /= rhs.Y;
         Z /= rhs.Z;
         return *this;
     }
     template<typename T> Vector3<T> operator/(T scalar, const Vector3<T>& rhs){
-        ASSUME(rhs.X != 0 && rhs.Y != 0 && rhs.Z != 0);
+        CHECK(rhs.X != 0 && rhs.Y != 0 && rhs.Z != 0);
         return Vector3(scalar / rhs.X, scalar / rhs.Y, scalar / rhs.Z);
     }
     template<typename T> T Vector3<T>::Length() const{
@@ -241,23 +241,23 @@ namespace Math {
 
     // vector4
     template<typename T> T Vector4<T>::operator[](int i) const{
-        ASSUME(i < 4);
+        CHECK(i < 4);
         return *(&X + i);
     }
     template<typename T> T& Vector4<T>::operator[](int i){
-        ASSUME(i < 4);
+        CHECK(i < 4);
         return *(&X + i);
     }
     template<typename T> Vector4<T> Vector4<T>::operator/(T scalar) const{
-        ASSUME(scalar != 0.0);
+        CHECK(scalar != 0.0);
         return Vector4<T>(X / scalar, Y / scalar, Z / scalar, W / scalar);
     }
     template<typename T> Vector4<T> Vector4<T>::operator/(const Vector4<T>& rhs) const{
-        ASSUME(rhs.X != 0 && rhs.Y != 0 && rhs.Z != 0 && rhs.W != 0);
+        CHECK(rhs.X != 0 && rhs.Y != 0 && rhs.Z != 0 && rhs.W != 0);
         return Vector4<T>(X / rhs.X, Y / rhs.Y, Z / rhs.Z, W / rhs.W);
     }
     template<typename T> Vector4<T> operator/(T scalar, const Vector4<T>& rhs){
-        ASSUME(rhs.X != 0 && rhs.Y != 0 && rhs.Z != 0 && rhs.W != 0);
+        CHECK(rhs.X != 0 && rhs.Y != 0 && rhs.Z != 0 && rhs.W != 0);
         return Vector4(scalar / rhs.X, scalar / rhs.Y, scalar / rhs.Z, scalar / rhs.W);
     }
 
@@ -316,7 +316,7 @@ namespace Math {
     }
 
     template<typename T> Vector4<T>& Vector4<T>::operator/=(T scalar){
-        ASSUME(scalar != 0.0);
+        CHECK(scalar != 0.0);
         X /= scalar;
         Y /= scalar;
         Z /= scalar;
@@ -324,7 +324,7 @@ namespace Math {
         return *this;
     }
     template<typename T> Vector4<T>& Vector4<T>::operator/=(const Vector4<T>& rhs){
-        ASSUME(rhs.X != 0 && rhs.Y != 0 && rhs.Z != 0);
+        CHECK(rhs.X != 0 && rhs.Y != 0 && rhs.Z != 0);
         X /= rhs.X;
         Y /= rhs.Y;
         Z /= rhs.Z;
