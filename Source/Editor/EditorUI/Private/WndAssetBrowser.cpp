@@ -17,6 +17,14 @@ namespace Editor {
 			static char s_SrcFile[128];
 			static char s_DstFile[128];
 			ImGui::InputText("Source", s_SrcFile, sizeof(s_SrcFile));
+			if (ImGui::BeginDragDropTarget()) {
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("File")) {
+					const FileNode* fileNode = reinterpret_cast<const FileNode*>(payload->Data);
+					auto file = fileNode->GetFullPath().string();
+					strcpy(s_SrcFile, file.c_str());
+				}
+				ImGui::EndDragDropTarget();
+			}
 			ImGui::InputText("Target", s_DstFile, sizeof(s_DstFile));
 			if(ImGui::Button("Import")) {
 				ProjectAssetMgr::Instance()->ImportAsset(s_SrcFile, s_DstFile);

@@ -5,6 +5,12 @@
 #include <stb_image.h>
 
 bool TextureImporter::Import(const char* fullPath) {
+	if (m_SaveFile.empty()) {
+		File::FPath relativePath = File::RelativePath(File::FPath(fullPath), Engine::AssetLoader::AssetPath());
+		relativePath.replace_extension(".texture");
+		m_SaveFile = relativePath.string();
+	}
+
 	int width, height, channels;
 	constexpr int desiredChannels = STBI_rgb_alpha;
 	uint8* pixels = stbi_load(fullPath, &width, &height, &channels, desiredChannels);

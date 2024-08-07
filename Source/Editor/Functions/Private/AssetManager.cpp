@@ -13,6 +13,13 @@ namespace Editor {
 		m_Name = m_Path.filename().string();
 	}
 
+	File::FPath PathNode::GetFullPath() const {
+		File::FPath path{ Engine::AssetLoader::AssetPath() };
+		path.append(m_Path.string());
+		return path;
+	}
+
+
 	bool FolderNode::Contains(NodeID id) const {
 		return m_ID < id;
 	}
@@ -162,7 +169,7 @@ namespace Editor {
 			importer.Import(srcFile);
 			importer.Save();
 		}
-		else if (StrEndsWith(srcFile, ".glb")) {
+		else if (StrEndsWith(srcFile, ".glb") || StrEndsWith(srcFile, "fbx")) {
 			Engine::AMeshAsset asset;
 			MeshImporter importer(&asset, dstFile);
 			importer.Import(srcFile);

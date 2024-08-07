@@ -29,6 +29,7 @@ namespace Editor {
 		PathNode(const File::FPath& path, NodeID id, NodeID parent);
 		_NODISCARD const XXString& GetName() const { return m_Name; }
 		_NODISCARD const File::FPath& GetPath() const { return m_Path; }
+		_NODISCARD File::FPath GetFullPath() const;
 		_NODISCARD const XXString& GetPathStr() const { return m_PathStr; }
 		_NODISCARD NodeID GetID() const { return m_ID; }
 		_NODISCARD NodeID ParentFolder() const { return m_ParentID; }

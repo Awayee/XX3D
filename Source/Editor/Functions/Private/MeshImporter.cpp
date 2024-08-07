@@ -215,6 +215,11 @@ MeshImporter::MeshImporter(Engine::AMeshAsset* asset, const char* saveFile) {
 }
 
 bool MeshImporter::Import(const char* fullPath) {
+	if (m_SaveFile.empty()) {
+		File::FPath relativePath = File::RelativePath(File::FPath(fullPath), Engine::AssetLoader::AssetPath());
+		relativePath.replace_extension(".mesh");
+		m_SaveFile = relativePath.string();
+	}
 	if(StrEndsWith(fullPath, ".glb")) {
 		return ImportGLB(fullPath);
 	}
