@@ -42,6 +42,7 @@ namespace Engine {
         typedef std::function<void(int, const char**)>  OnDropFunc;
         typedef std::function<void(uint32, uint32)>     OnWindowSizeFunc;
         typedef std::function<void()>                   OnWindowCloseFunc;
+        typedef std::function<void(bool)>               OnWindowFocus;
 
         virtual void RegisterOnResetFunc(OnResetFunc&& func) { }
         virtual void RegisterOnKeyFunc(OnKeyFunc&& func) {  }

@@ -98,6 +98,10 @@ RHITexture* VulkanViewport::AcquireBackBuffer() {
 		m_SizeDirty = false;
 	}
 
+	if(!m_Swapchain) {
+		return nullptr;
+	}
+
 	if (VK_SUCCESS == vkAcquireNextImageKHR(m_Device->GetDevice(), m_Swapchain, VK_WAIT_MAX, GetCurrentSemaphore(), VK_NULL_HANDLE, &m_BackBufferIdx)) {
 		return m_BackBuffers[m_BackBufferIdx].Get();
 	}
@@ -137,6 +141,10 @@ VkFormat VulkanViewport::GetSwapchainFormat() const {
 }
 
 void VulkanViewport::CreateSwapchain() {
+	// Window Size may be 0 if window is minimized
+	if(m_Size.w == 0 || m_Size.h == 0) {
+		return;
+	}
 	// create swap chain
 
 	VkPhysicalDevice physicalDevice = m_Device->GetPhysicalDevice();
@@ -195,6 +203,7 @@ void VulkanViewport::CreateSwapchain() {
 	vkGetSwapchainImagesKHR(m_Device->GetDevice(), m_Swapchain, &swapchainImageCount, nullptr);
 	TFixedArray<VkImage> swapchainImages(swapchainImageCount);
 	vkGetSwapchainImagesKHR(m_Device->GetDevice(), m_Swapchain, &swapchainImageCount, swapchainImages.Data());
+	LOG_DEBUG("Image count of swapchain is %u.", swapchainImageCount);
 
 	// Create back buffers and semaphores.
 	RHITextureDesc backBufferDesc;
@@ -217,4 +226,5 @@ void VulkanViewport::CreateSwapchain() {
 void VulkanViewport::DestroySwapchain() {
 	m_BackBuffers.Clear();
 	vkDestroySwapchainKHR(m_Device->GetDevice(), m_Swapchain, nullptr);
+	m_Swapchain = VK_NULL_HANDLE;
 }

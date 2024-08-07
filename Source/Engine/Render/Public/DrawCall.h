@@ -21,13 +21,13 @@ namespace Render {
 		Func<void(RHICommandBuffer*)> m_Func;
 	};
 
-	struct EDrawCallQueueType { enum {
-		SHADOW_PASS,
+	enum class EDrawCallQueueType : uint32 {
+		DIRECTIONAL_SHADOW=0,
 		BASE_PASS,
 		DEFERRED_LIGHTING_PASS,
 		POST_PROCESS,
 		COUNT,
-	};};
+	};
 
 	typedef TVector<DrawCall> DrawCallQueue;
 
@@ -38,8 +38,9 @@ namespace Render {
 		NON_MOVEABLE(DrawCallContext);
 		DrawCallContext();
 		~DrawCallContext();
+		void PushDrawCall(EDrawCallQueueType queueType, Func<void(RHICommandBuffer*)>&& f);
 	private:
-		TStaticArray<DrawCallQueue, EDrawCallQueueType::COUNT> m_DrawCallQueues;
+		TStaticArray<DrawCallQueue, (uint32)EDrawCallQueueType::COUNT> m_DrawCallQueues;
 	};
 
 	class DrawCallMgr {

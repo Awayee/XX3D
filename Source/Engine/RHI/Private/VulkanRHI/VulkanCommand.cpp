@@ -176,6 +176,7 @@ VulkanCommandBuffer::~VulkanCommandBuffer() {
 }
 
 void VulkanCommandBuffer::Reset() {
+	vkResetCommandBuffer(m_Handle, 0);
 	CheckBegin();
 }
 
@@ -325,7 +326,7 @@ void VulkanCommandBuffer::CopyTextureToTexture(RHITexture* srcTex, RHITexture* d
 	vkCmdCopyImage(m_Handle, ((VulkanRHITexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, ((VulkanRHITexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
 }
 
-void VulkanCommandBuffer::PipelineBarrier(RHITexture* texture, RHITextureSubDesc subDesc, EResourceState stateBefore, EResourceState stateAfter) {
+void VulkanCommandBuffer::TransitionTextureState(RHITexture* texture, EResourceState stateBefore, EResourceState stateAfter, RHITextureSubDesc subDesc) {
 	VulkanRHITexture* vkTex = static_cast<VulkanRHITexture*>(texture);
 	const VkImageLayout oldLayout = ToImageLayout(stateBefore);
 	const VkImageLayout newLayout = ToImageLayout(stateAfter);
@@ -377,7 +378,7 @@ void VulkanCommandBuffer::EndDebugLabel() {
 void VulkanCommandBuffer::CheckBegin() {
 	if(!m_HasBegun) {
 		VkCommandBufferBeginInfo info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr };
-		info.flags = 0;
+		info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 		info.pInheritanceInfo = nullptr;
 		vkBeginCommandBuffer(m_Handle, &info);
 		m_HasBegun = true;

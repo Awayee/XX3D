@@ -16,6 +16,10 @@ namespace Engine {
 	void RenderObject3D::SetPosition(const Math::FVector3& pos) {
 		m_Position = pos;
 		m_Dirty = true;
+		// uniform and desc
+		RHIBufferDesc desc{ BUFFER_FLAG_UNIFORM, sizeof(SModelUBO), 0 };
+		m_TransformUniformBuffer = RHI::Instance()->CreateBuffer(desc);
+		m_ShaderParameterSet = RHI::Instance()->CreateShaderParameterSet({}); // TODO fill shader parameter set
 	}
 
 	void RenderObject3D::SetRotation(const Math::FQuaternion& rot) {
@@ -26,6 +30,12 @@ namespace Engine {
 	void RenderObject3D::SetScale(const Math::FVector3& scale) {
 		m_Scale = scale;
 		m_Dirty = true;
+	}
+
+	void RenderObject3D::CreateDrawCall(Render::DrawCallQueue& queue) {
+		queue.EmplaceBack().ResetFunc([this](RHICommandBuffer* cmd) {
+			cmd->BindShaderParameterSet(1, m_ShaderParameterSet.Get());
+		});
 	}
 
 	void RenderObject3D::Update() {

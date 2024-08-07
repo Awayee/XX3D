@@ -5,7 +5,6 @@
 
 namespace Engine {
 	class Camera;
-	class Material;
 	class DirectionalLight;
 	class RenderScene;
 

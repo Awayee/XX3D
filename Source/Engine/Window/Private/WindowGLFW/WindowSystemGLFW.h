@@ -23,6 +23,7 @@ namespace Engine {
 		std::vector<OnDropFunc>        m_OnDropFunc;
 		std::vector<OnWindowSizeFunc>  m_OnWindowSizeFunc;
 		std::vector<OnWindowCloseFunc> m_OnWindowCloseFunc;
+		std::vector<OnWindowFocus>     m_OnWindowFocusFunc;
 	public:
 		explicit WindowSystemGLFW(const WindowInitInfo& initInfo);
 		~WindowSystemGLFW() override;
@@ -53,8 +54,9 @@ namespace Engine {
 		static void OnKey(GLFWwindow* window, int key, int scancode, int action, int mods);
 		static void OnMouseButton(GLFWwindow* window, int button, int action, int mods);
 		static void OnCursorPos(GLFWwindow* window, double x, double y);
-		static void OnCusorEnterFunc(GLFWwindow* window, int entered);
+		static void OnCursorEnter(GLFWwindow* window, int entered);
 		static void OnScroll(GLFWwindow* window, double x, double y);
 		static void OnWindowSize(GLFWwindow* window, int width, int height);
+		static void OnWindowFocus(GLFWwindow* window, int focus);
 	};
 }

@@ -116,9 +116,9 @@ void VulkanRHITexture::UpdateData(RHITextureOffset offset, uint32 byteSize, cons
 	// TODO replace with vulkan functions
 	auto cmd = m_Device->GetCommandContext()->GetUploadCmd();
 	RHITextureSubDesc desc{ offset.MipLevel, 1, offset.ArrayLayer, 1 };
-	cmd->PipelineBarrier(this, desc, EResourceState::Unknown, EResourceState::TransferDst);
+	cmd->TransitionTextureState(this, EResourceState::Unknown, EResourceState::TransferDst, desc);
 	cmd->CopyBufferToTexture(staging, this, offset.MipLevel, offset.ArrayLayer, 1);
-	cmd->PipelineBarrier(this, desc, EResourceState::TransferDst, EResourceState::ShaderResourceView);
+	cmd->TransitionTextureState(this, EResourceState::TransferDst, EResourceState::ShaderResourceView, desc);
 }
 
 inline bool CheckViewable(ETextureDimension dimension, VkImageViewType type) {

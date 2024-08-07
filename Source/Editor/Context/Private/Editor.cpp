@@ -12,8 +12,7 @@
 #include "RHI/Public/ImGuiRHI.h"
 
 namespace Editor {
-    void SetImGuiStyle()
-    {
+    void SetImGuiStyle() {
 		ImGuiStyle& style = ImGui::GetStyle();
 	    ImVec4* colors = style.Colors;
 		//float h[3] = { 0.000f, 0.400f, 0.700f };// highlight color
@@ -80,15 +79,9 @@ namespace Editor {
 	    style.TabBorderSize = 1.0f;
 	    style.TabRounding = 0.0f;
 	    style.WindowRounding = 4.0f;
-
-		// TODO do gama correction in post process
-		//for(auto& c: style.Colors) {
-		//	float exp = 2.2f;
-		//	c = ImVec4(Math::FPow(c.x, exp), Math::FPow(c.y, exp), Math::FPow(c.z, exp), c.w);
-		//}
     }
 
-	void ImGuiConfig() {
+	void InitializeImGuiConfig() {
 		// imgui
 		float scaleX, scaleY;
 		Engine::EngineWindow::Instance()->GetWindowContentScale(&scaleX, &scaleY);
@@ -120,7 +113,7 @@ namespace Editor {
 		ProjectAssetMgr::Initialize();
 		EditorUIMgr::Initialize();
 		EditorLevelMgr::Initialize();
-		ImGuiRHI::Initialize(ImGuiConfig);
+		ImGuiRHI::Initialize(InitializeImGuiConfig);
 		m_UIController.Reset(new UIController);
 	}
 

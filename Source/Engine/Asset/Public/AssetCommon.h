@@ -29,7 +29,7 @@ namespace Engine {
 		~AUnknownAsset() override = default;
 	};
 
-	struct FVertex {
+	struct AssetVertex {
 		Math::FVector3 Position;
 		Math::FVector3 Normal;
 		Math::FVector3 Tangent;
@@ -39,7 +39,7 @@ namespace Engine {
 	typedef uint32 IndexType;
 
 	struct SPrimitiveData {
-		TVector<FVertex> Vertices;
+		TVector<AssetVertex> Vertices;
 		TVector<uint32>  Indices;
 		TVector<XXString>  Textures;
 	};

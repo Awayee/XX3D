@@ -22,7 +22,7 @@ namespace Engine {
 			XXString MaterialFile;
 			XXString Name;
 			TVector<XXString> Textures;
-			TVector<FVertex> Vertices;
+			TVector<AssetVertex> Vertices;
 			TVector<IndexType> Indices;
 		};
 		TVector<SPrimitive> Primitives;
@@ -37,10 +37,10 @@ namespace Engine {
 		bool Save(File::WFile& out) override;
 
 		//load a packed primitive file
-		static bool LoadPrimitiveFile(const char* file, TVector<FVertex>& vertices, TVector<IndexType>& indices);
+		static bool LoadPrimitiveFile(const char* file, TVector<AssetVertex>& vertices, TVector<IndexType>& indices);
 
 		//export with pack, only execute when import external files
-		static bool ExportPrimitiveFile(const char* file, const TVector<FVertex>& vertices, const TVector<IndexType>& indices, EMeshCompressMode packMode = EMeshCompressMode::NONE);
+		static bool ExportPrimitiveFile(const char* file, const TVector<AssetVertex>& vertices, const TVector<IndexType>& indices, EMeshCompressMode packMode = EMeshCompressMode::NONE);
 
 	};
 }

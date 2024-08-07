@@ -1,6 +1,7 @@
 #include "Render/Public/Renderer.h"
 #include "System/Public/FrameCounter.h"
 #include "RHI/Public/ImGuiRHI.h"
+#include "Window/Public/EngineWindow.h"
 
 namespace Render {
 	Renderer::Renderer() {
@@ -11,11 +12,13 @@ namespace Render {
 		m_Cmd.Reset();
 	}
 
-	Renderer::Renderer(Renderer&& rhs) noexcept : m_Cmd(MoveTemp(rhs.m_Cmd)) {
+	Renderer::Renderer(Renderer&& rhs) noexcept : m_Cmd(MoveTemp(rhs.m_Cmd)), m_RenderPass(rhs.m_RenderPass), m_RenderArea(rhs.m_RenderArea) {
 	}
 
 	Renderer& Renderer::operator=(Renderer&& rhs) noexcept{
 		m_Cmd = MoveTemp(rhs.m_Cmd);
+		m_RenderPass = rhs.m_RenderPass;
+		m_RenderArea = rhs.m_RenderArea;
 		return *this;
 	}
 
@@ -56,16 +59,13 @@ namespace Render {
 			m_FrameResources[i].Cmd = r->CreateCommandBuffer();
 			m_FrameResources[i].Fence = r->CreateFence(true);
 		}
-		// initialize the render area
-		USize2D vpSize = r->GetViewport()->GetSize();
-		m_RenderArea = { 0, 0, vpSize.w, vpSize.h };
+		// Resize the RHI viewport if window resized.
+		Engine::EngineWindow::Instance()->RegisterOnWindowSizeFunc([](uint32 w, uint32 h) {
+			RHI::Instance()->GetViewport()->SetSize({ w, h });
+		});
 	}
 
 	PresentRenderer::~PresentRenderer() {
-	}
-
-	void PresentRenderer::SetRenderArea(IURect area) {
-		m_RenderArea = area;
 	}
 
 	void PresentRenderer::SetDepthTarget(RHITexture* depthTarget) {
@@ -73,29 +73,28 @@ namespace Render {
 	}
 
 	void PresentRenderer::Execute(DrawCallQueue& queue) {
-		uint32 resIndex = FrameCounter::GetFrame() % RHI_MAX_FRAME_IN_FLIGHT;
+		const uint32 resIndex = FrameCounter::GetFrame() % RHI_MAX_FRAME_IN_FLIGHT;
 		RHICommandBuffer* cmd = m_FrameResources[resIndex].Cmd.Get();
 		RHIFence* fence = m_FrameResources[resIndex].Fence.Get();
 
 		// Wait fence before rendering.
 		fence->Wait();
-		fence->Reset();
-
 		// Acquire next back buffer and transition texture layout.
 		auto r = RHI::Instance();
 		RHITexture* backBuffer = r->GetViewport()->AcquireBackBuffer();
 		if (!backBuffer) {
-			LOG_WARNING("[PresentRenderer::Execute] Could not get back buffer!");
 			return;
 		}
 
+		fence->Reset();
 		// Prepare the render pass.
 		cmd->Reset();
-		cmd->PipelineBarrier(backBuffer, {}, EResourceState::Unknown, EResourceState::RenderTarget);
+		cmd->TransitionTextureState(backBuffer, EResourceState::Unknown, EResourceState::RenderTarget, {});
 		RHIRenderPassInfo info;
 		info.ColorTargets[0].Target = backBuffer;
 		info.DepthStencilTarget.Target = m_DepthTarget;
-		info.RenderArea = m_RenderArea;
+		USize2D viewportSize = r->GetViewport()->GetSize();
+		info.RenderArea = { 0, 0, viewportSize.w, viewportSize.h };
 
 		// Record the rendering
 		cmd->BeginRendering(info);
@@ -105,7 +104,7 @@ namespace Render {
 		cmd->EndRendering();
 
 		// Present
-		cmd->PipelineBarrier(backBuffer, {}, EResourceState::RenderTarget, EResourceState::Present);
+		cmd->TransitionTextureState(backBuffer, EResourceState::RenderTarget, EResourceState::Present, {});
 		r->SubmitCommandBuffer(cmd, fence, true);
 		r->GetViewport()->Present();
 	}

@@ -7,11 +7,18 @@
 
 namespace Engine {
 	// static mesh
+	struct PrimitiveRenderData {
+		uint32 VertexCount;
+		uint32 IndexCount;
+		RHIBufferPtr VertexBuffer;
+		RHIBufferPtr IndexBuffer;
+	};
 	class StaticMesh: public RenderObject3D {
-	private:
-		TVector<Material*> m_Materials;
 	public:
 		StaticMesh(const AMeshAsset& meshAsset, RenderScene* scene);
 		~StaticMesh() override;
+		void CreateDrawCall(Render::DrawCallQueue& queue) override;
+	private:
+		TVector<PrimitiveRenderData> m_Primitives;
 	};
 }

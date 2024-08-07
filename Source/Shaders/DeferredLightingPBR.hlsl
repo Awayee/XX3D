@@ -35,9 +35,10 @@ struct LightUBO {
 
 [[vk::binding(0, 0)]] cbuffer uCamera { CameraUBO uCamera; };
 [[vk::binding(1, 0)]] cbuffer uLight { LightUBO uLight; };
-[[vk::input_attachment_index(0)]] SubpassInput<float4> inNormal;
-[[vk::input_attachment_index(1)]] SubpassInput<float4> inAlbedo;
-[[vk::input_attachment_index(2)]] SubpassInput<float> inDepth;
+[[vk::binding(2, 0)]] Texture2D<float4> inNormal;
+[[vk::binding(3, 0)]] Texture2D<float4> inAlbedo;
+[[vk::binding(4, 0)]] Texture2D<float> inDepth;
+[[vk::binding(5, 0)]] SamplerState inPointSampler;
 
 struct PSOutput {
 	half4 OutColor:SV_TARGET;
@@ -46,7 +47,7 @@ struct PSOutput {
 
 float3 RebuildWorldPos(float2 uv) {
 	// get depth val
-	float depth = inDepth.SubpassLoad();
+	float depth = inDepth.Sample(inPointSampler, uv);
 	// to ndc
 	float2 ndcXY = uv * 2 - 1;
 	float4 ndcPos = float4(ndcXY.x, ndcXY.y, depth, 1);
@@ -100,8 +101,8 @@ float3 PBRDirectLight(float3 V, float3 L, float3 N, float3 albedo, float3 irradi
 }
 
 PSOutput MainPS(VSOutput pIn) {
-	float4 gNormal = inNormal.SubpassLoad().rgba;
-	float4 gAlbedo = inAlbedo.SubpassLoad().rgba;
+	float4 gNormal = inNormal.Sample(inPointSampler, pIn.UV).rgba;
+	float4 gAlbedo = inAlbedo.Sample(inPointSampler, pIn.UV).rgba;
 	float3 lightColor = uLight.Color.xyz;
 	float3 worldPos = RebuildWorldPos(pIn.UV);
 	float3 V = normalize(uCamera.Pos.xyz - worldPos);

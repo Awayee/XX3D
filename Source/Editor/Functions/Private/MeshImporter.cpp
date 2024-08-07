@@ -64,7 +64,7 @@ void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TVec
 				uv0ByteStride = uvAccessor.ByteStride(uvView) / sizeof(float);
 			}
 
-			TVector<Engine::FVertex>& vertices = primitives[index].Vertices;
+			TVector<Engine::AssetVertex>& vertices = primitives[index].Vertices;
 			vertices.Resize(vertexCount);
 
 			for (uint32 v = 0; v < vertexCount; v++) {
@@ -145,7 +145,7 @@ uint32 GetPrimitiveCount(const aiScene* aScene, aiNode* aNode) {
 void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TVector<Engine::AMeshAsset::SPrimitive>& meshInfos) {
 	for (uint32 i = 0; i < aNode->mNumMeshes; i++) {
 		aiMesh* aMesh = aScene->mMeshes[aNode->mMeshes[i]];
-		TVector<Engine::FVertex>& vertices = meshInfos[i].Vertices;
+		TVector<Engine::AssetVertex>& vertices = meshInfos[i].Vertices;
 		TVector<uint32>& indices = meshInfos[i].Indices;
 		//TVector<std::string>& textures = meshInfos[i].textures;
 

@@ -219,9 +219,10 @@ namespace Engine {
 		glfwSetKeyCallback(m_Window, OnKey);
 		glfwSetMouseButtonCallback(m_Window, OnMouseButton);
 		glfwSetCursorPosCallback(m_Window, OnCursorPos);
-		glfwSetCursorEnterCallback(m_Window, OnCusorEnterFunc);
+		glfwSetCursorEnterCallback(m_Window, OnCursorEnter);
 		glfwSetScrollCallback(m_Window, OnScroll);
 		glfwSetWindowSizeCallback(m_Window, OnWindowSize);
+		glfwSetWindowFocusCallback(m_Window, OnWindowFocus);
 	}
 
 	void WindowSystemGLFW::RegisterOnKeyFunc(OnKeyFunc&& func){
@@ -268,7 +269,7 @@ namespace Engine {
 			func(x, y);
 		}
 	}
-	void WindowSystemGLFW::OnCusorEnterFunc(GLFWwindow* window, int entered){
+	void WindowSystemGLFW::OnCursorEnter(GLFWwindow* window, int entered){
 		WindowSystemGLFW* sys = reinterpret_cast<WindowSystemGLFW*>(glfwGetWindowUserPointer(window));
 		for(auto& func: sys->m_OnCursorEnterFunc) {
 			func(static_cast<bool>(entered));
@@ -288,4 +289,12 @@ namespace Engine {
 			func(width, height);
 		}
 	}
+
+	void WindowSystemGLFW::OnWindowFocus(GLFWwindow* window, int focus) {
+		WindowSystemGLFW* sys = reinterpret_cast<WindowSystemGLFW*>(glfwGetWindowUserPointer(window));
+		for(auto& func: sys->m_OnWindowFocusFunc) {
+			func(focus);
+		}
+	}
+
 }

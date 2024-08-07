@@ -5,14 +5,6 @@
 #include "Core/Public/TArrayView.h"
 
 namespace Render {
-	class RendererBase {
-	public:
-		NON_COPYABLE(RendererBase);
-		NON_MOVEABLE(RendererBase);
-		virtual ~RendererBase() = default;
-		virtual void Execute(DrawCallQueue& queue) = 0;
-	};
-
 	class Renderer {
 	public:
 		NON_COPYABLE(Renderer);
@@ -38,7 +30,6 @@ namespace Render {
 		NON_MOVEABLE(PresentRenderer);
 		PresentRenderer();
 		~PresentRenderer();
-		void SetRenderArea(IURect area);
 		void SetDepthTarget(RHITexture* depthTarget);
 		void Execute(DrawCallQueue& queue);
 		void WaitQueue();
@@ -49,7 +40,6 @@ namespace Render {
 		};
 		TStaticArray<FrameResource, RHI_MAX_FRAME_IN_FLIGHT> m_FrameResources;
 		RHITexture* m_DepthTarget;
-		IURect m_RenderArea;
 	};
 
 	class RendererMgr : public TSingleton<RendererMgr> {
@@ -58,7 +48,6 @@ namespace Render {
 		void Update();
 		void WaitQueue();
 	private:
-		Renderer m_Renderer;
 		// The last renderer
 		PresentRenderer m_PresentRenderer;
 		RendererMgr();

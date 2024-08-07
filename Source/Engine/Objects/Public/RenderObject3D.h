@@ -1,6 +1,7 @@
 #pragma once
 #include "RenderScene.h"
 #include "Math/Public/Matrix.h"
+#include "Render/Public/DrawCall.h"
 
 namespace Engine {
 	class RenderObject3D: public RenderObject {
@@ -11,6 +12,8 @@ namespace Engine {
 
 		Math::FMatrix4x4 m_TransformMat    {Math::FMatrix4x4::IDENTITY};
 		Math::FMatrix4x4 m_InvTransformMat {Math::FMatrix4x4::IDENTITY};
+		RHIBufferPtr m_TransformUniformBuffer;
+		RHIShaderParameterSetPtr m_ShaderParameterSet;
 		bool m_Dirty;
 	public:
 		RenderObject3D() = delete;
@@ -22,6 +25,7 @@ namespace Engine {
 		_NODISCARD const Math::FVector3& GetPosition() const { return m_Position; }
 		_NODISCARD const Math::FQuaternion& GetRotation() const { return m_Rotation; }
 		_NODISCARD const Math::FVector3& GetScale() const { return m_Scale; }
+		virtual void CreateDrawCall(Render::DrawCallQueue& queue);
 
 		virtual void Update() override;
 	};

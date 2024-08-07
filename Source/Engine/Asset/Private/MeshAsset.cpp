@@ -10,7 +10,7 @@ namespace Engine {
 		uint8 Normal[3];
 		uint8 Tangent[3];
 		float UV[2];
-		void Pack(const FVertex& v) {
+		void Pack(const AssetVertex& v) {
 			memcpy(Position, &v.Position.X, sizeof(float) * 3);
 			Normal[0] = Math::PackFloat01(v.Normal.X);
 			Normal[1] = Math::PackFloat01(v.Normal.Y);
@@ -20,7 +20,7 @@ namespace Engine {
 			Tangent[2] = Math::PackFloat01(v.Tangent.Z);
 			memcpy(UV, &v.UV.X, sizeof(float) * 2);
 		}
-		void Unpack(FVertex& v) {
+		void Unpack(AssetVertex& v) {
 			memcpy(&v.Position.X, Position, sizeof(float) * 3);
 			v.Normal = { Math::UnpackFloat01(Normal[0]), Math::UnpackFloat01(Normal[1]), Math::UnpackFloat01(Normal[2]) };
 			v.Tangent = { Math::UnpackFloat01(Tangent[0]), Math::UnpackFloat01(Tangent[1]), Math::UnpackFloat01(Tangent[2]) };
@@ -76,7 +76,7 @@ namespace Engine {
 		doc.AddMember("Primitives", primitives, doc.GetAllocator());
 		return Json::WriteFile(out, doc);
 	}
-	bool AMeshAsset::LoadPrimitiveFile(const char* file, TVector<FVertex>& vertices, TVector<IndexType>& indices) {
+	bool AMeshAsset::LoadPrimitiveFile(const char* file, TVector<AssetVertex>& vertices, TVector<IndexType>& indices) {
 		PARSE_PROJECT_ASSET(file);
 		File::RFile f(file, std::ios::binary);
 		if (!f.is_open()) {
@@ -129,7 +129,7 @@ namespace Engine {
 		return true;
 	}
 
-	bool AMeshAsset::ExportPrimitiveFile(const char* file, const TVector<FVertex>& vertices, const TVector<IndexType>& indices, EMeshCompressMode packMode) {
+	bool AMeshAsset::ExportPrimitiveFile(const char* file, const TVector<AssetVertex>& vertices, const TVector<IndexType>& indices, EMeshCompressMode packMode) {
 		if (vertices.Size() == 0) {
 			LOG_INFO("null primitive!");
 			return false;
