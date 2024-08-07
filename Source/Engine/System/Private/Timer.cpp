@@ -2,6 +2,8 @@
 
 namespace Engine {
 
+	CTimer CTimer::s_Instance;
+
 	void CTimer::Tick() {
 		if (m_Paused) {
 			return;

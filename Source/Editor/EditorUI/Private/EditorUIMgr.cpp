@@ -1,5 +1,4 @@
 #include "EditorUI/Public/EditorUIMgr.h"
-#include "System/Public/Config.h"
 #include "Window/Public/EngineWindow.h"
 #include "RHI/Public/ImGuiRHI.h"
 

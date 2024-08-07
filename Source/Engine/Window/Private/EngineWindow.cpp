@@ -2,7 +2,7 @@
 #include "Core/Public/Concurrency.h"
 #include "Core/Public/Log.h"
 #include "Core/Public/TUniquePtr.h"
-#include "System/Public/Config.h"
+#include "System/Public/EngineConfig.h"
 #include "Window/Private/WindowGLFW/WindowSystemGLFW.h"
 #include "WIndow/Private/WindowWin32/WindowSystemWin32.h"
 

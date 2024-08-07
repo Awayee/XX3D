@@ -1,8 +1,17 @@
 #pragma once
 #include "Core/Public/Time.h"
+#include "Core/Public/TSingleton.h"
 
 namespace Engine {
-	class CTimer {
+	class CTimer{
+	public:
+		static CTimer* Instance() { return &s_Instance; }
+		void Tick();
+		void Reset();
+		void Pause();
+		float GetFPS() { return m_FPS; }
+		float GetTime() { return static_cast<float>(m_NowTime.time_since_epoch().count()); }
+		float GetDeltaTime() { return m_DeltaTime; }
 	private:
 		TimePoint m_NowTime{ std::chrono::steady_clock::now() };
 		uint32 m_FrameCounter{ 0U };
@@ -10,17 +19,10 @@ namespace Engine {
 		bool m_Paused{ false };
 		float m_LastFrameDurationMs{ 0.0f };
 		float m_FPS{ 0.0f };
-	public:
+		static CTimer s_Instance;
+		NON_COPYABLE(CTimer);
+		NON_MOVEABLE(CTimer);
 		CTimer() = default;
-		CTimer(const CTimer&) = default;
-		CTimer(CTimer&&) = default;
 		~CTimer() = default;
-		void Tick();
-		void Reset();
-		void Pause();
-		uint32 GetFrameCounter() { return m_FrameCounter; }
-		float GetFPS() { return m_FPS; }
-		float GetTime() { return static_cast<float>(m_NowTime.time_since_epoch().count()); }
-		float GetDeltaTime() { return m_DeltaTime; }
 	};
 }

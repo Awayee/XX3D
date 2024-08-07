@@ -1,6 +1,6 @@
 #include "RHI/Public/ImGuiRHI.h"
 #include "VulkanRHI/VulkanImGui.h"
-#include "System/Public/Config.h"
+#include "System/Public/EngineConfig.h"
 
 TUniquePtr<ImGuiRHI> ImGuiRHI::s_Instance;
 

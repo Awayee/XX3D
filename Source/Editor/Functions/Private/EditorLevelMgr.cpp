@@ -1,5 +1,5 @@
 #include "Functions/Public/EditorLevelMgr.h"
-#include "System/Public/Config.h"
+#include "System/Public/EngineConfig.h"
 #include "Functions/Public/AssetManager.h"
 
 namespace Editor {

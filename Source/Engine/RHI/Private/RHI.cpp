@@ -1,6 +1,6 @@
 #include "RHI/Public/RHI.h"
 #include "VulkanRHI/VulkanRHI.h"
-#include "System/Public/Config.h"
+#include "System/Public/EngineConfig.h"
 #include "Core/Public/Log.h"
 #include "Core/Public/Concurrency.h"
 #include "Window/Public/EngineWindow.h"

@@ -1,10 +1,11 @@
 #include "Engine/Public/Engine.h"
-#include "System/Public/Config.h"
+#include "System/Public/EngineConfig.h"
 #include "Window/Public/EngineWIndow.h"
 #include "RHI/Public/RHI.h"
 #include "Render/Public/DefaultResource.h"
 #include "Render/Public/Renderer.h"
 #include "System/Public/FrameCounter.h"
+#include "System/Public/Timer.h"
 
 namespace Engine {
 
@@ -34,6 +35,7 @@ namespace Engine {
 		RHI::Instance()->BeginFrame();// RHI Update must run at the beginning.
 		EngineWindow::Instance()->Update();
 		Render::RendererMgr::Instance()->Update();
+		CTimer::Instance()->Tick();
 		FrameCounter::Update();// Frame counter ticks at last.
 	}
 
