@@ -4,7 +4,7 @@
 #include "Core/Public/TVector.h"
 #include "Core/Public/File.h"
 
-namespace Engine {
+namespace Asset {
 	enum EAssetType : uint8 {
 		ASSET_TYPE_MESH = 0,
 		ASSET_TYPE_IMAGE,
@@ -15,12 +15,12 @@ namespace Engine {
 	class AssetLoader {
 		// all path are relative
 	private:
-		static XXString s_EngineAssetPath;
-		static XXString s_ProjectAssetPath;
+		static XString s_EngineAssetPath;
+		static XString s_ProjectAssetPath;
 	public:
 		static File::FPath AssetPath();
-		static bool LoadProjectAsset(AAssetBase* asset, File::PathStr file);
-		static bool LoadEngineAsset(AAssetBase* asset, File::PathStr file);
-		static bool SaveProjectAsset(AAssetBase* asset, File::PathStr file);
+		static bool LoadProjectAsset(AssetBase* asset, File::PathStr file);
+		static bool LoadEngineAsset(AssetBase* asset, File::PathStr file);
+		static bool SaveProjectAsset(AssetBase* asset, File::PathStr file);
 	};
 }

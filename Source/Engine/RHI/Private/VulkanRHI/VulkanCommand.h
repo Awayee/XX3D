@@ -6,6 +6,7 @@
 #include "Core/Public/TUniquePtr.h"
 
 class VulkanCommandContext;
+class VulkanPipelineStateContainer;
 
 class VulkanCommandBuffer : public RHICommandBuffer {
 public:
@@ -18,9 +19,11 @@ public:
 	void EndRendering() override;
 	void BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) override;
 	void BindComputePipeline(RHIComputePipelineState* pipeline) override;
-	void BindShaderParameterSet(uint32 index, RHIShaderParameterSet* set) override;
+	void SetShaderParameter(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& parameter) override;
 	void BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) override;
 	void BindIndexBuffer(RHIBuffer* buffer, uint64 offset) override;
+	void SetViewport(FRect rect, float minDepth, float maxDepth) override;
+	void SetScissor(IURect rect) override;
 	void Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance) override;
 	void DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance) override;
 	void Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ) override;
@@ -36,16 +39,17 @@ private:
 	friend VulkanCommandContext;
 	VulkanCommandContext* m_Owner;
 	VkCommandBuffer m_Handle{ VK_NULL_HANDLE };
-	// pipeline info
-	VkPipeline m_CurrentPipeline{ VK_NULL_HANDLE };
-	VkPipelineLayout m_CurrentPipelineLayout{ VK_NULL_HANDLE };
-	VkPipelineBindPoint m_CurrentPipelineBindPoint{ VK_PIPELINE_BIND_POINT_GRAPHICS };
+	TUniquePtr<VulkanPipelineStateContainer> m_PipelineStateContainer;
+	VkViewport m_Viewport {};
+	VkRect2D m_Scissor {};
 	// signal semaphore
 	VkSemaphore m_Semaphore;
 	VkPipelineStageFlags m_StageMask;
 	bool m_HasBegun{ false };
 	void CheckBegin();
 	void CheckEnd();
+	// call before draw/dispatch
+	void PrepareDrawOrDispatch();
 };
 
 typedef TVector<VulkanCommandBuffer*> VulkanCommandSubmission;
@@ -69,7 +73,7 @@ public:
 	// Get the command buffer for upload, always exists.
 	VulkanCommandBuffer* GetUploadCmd();
 
-	VkDevice GetDevice() const;
+	VulkanDevice* GetDevice();
 private:
 	VulkanDevice* m_Device;
 	VkCommandPool m_CommandPool;

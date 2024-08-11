@@ -1,5 +1,5 @@
 #include "Objects/Public/Camera.h"
-namespace Engine {
+namespace Object {
 	Camera::Camera(EProjectiveType type, float aspect, float zNear, float zFar, float param): m_ProjType(type), m_Aspect(aspect), m_Near(zNear), m_Far(zFar), m_Fov(param) {
 		m_ViewMatrix = Math::FMatrix4x4::IDENTITY;
 		UpdateProjectMatrix();
@@ -17,7 +17,7 @@ namespace Engine {
 
 	void Camera::UpdateProjectMatrix()
 	{
-		if (CAMERA_PERSPECTIVE == m_ProjType) {
+		if (EProjectiveType::Perspective == m_ProjType) {
 			m_ProjectMatrix = Math::FMatrix4x4::PerspectiveMatrix(m_Fov, m_Aspect, m_Near, m_Far);
 			m_ProjectMatrix[1][1] *= -1.0f;
 		}

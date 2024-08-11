@@ -21,10 +21,9 @@ public:
 	RHITexturePtr CreateTexture(const RHITextureDesc& desc) override;
 	RHISamplerPtr CreateSampler(const RHISamplerDesc& desc) override;
 	RHIFencePtr CreateFence(bool sig) override;
-	RHIShaderPtr CreateShader(EShaderStageFlagBit type, const char* codeData, size_t codeSize, const char* entryFunc) override;
+	RHIShaderPtr CreateShader(EShaderStageFlagBit type, const char* codeData, size_t codeSize, const XString& entryFunc) override;
 	RHIGraphicsPipelineStatePtr CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) override;
 	RHIComputePipelineStatePtr CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) override;
-	RHIShaderParameterSetPtr CreateShaderParameterSet(const RHIShaderParemeterLayout& layout) override;
 	RHICommandBufferPtr CreateCommandBuffer() override;
 	void SubmitCommandBuffer(RHICommandBuffer* cmd, RHIFence* fence, bool bPresent) override;
 	void SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence, bool bPresent) override;
@@ -32,5 +31,4 @@ private:
 	TUniquePtr<VulkanContext> m_Context;
 	TUniquePtr<VulkanDevice> m_Device;
 	TUniquePtr<VulkanViewport> m_Viewport;
-	VkPipelineLayout CreatePipelineLayout(const RHIPipelineLayout& rhiLayout);
 };

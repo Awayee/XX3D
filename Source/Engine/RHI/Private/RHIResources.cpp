@@ -54,6 +54,26 @@ FormatTexelInfo g_FormatPixelByteSize[(uint32)ERHIFormat::FORMAT_MAX_ENUM] = {
 };
 
 
+RHITextureDesc RHITextureDesc::Texture2D() {
+    RHITextureDesc desc{};
+    desc.Dimension = ETextureDimension::Tex2D;
+    desc.Depth = 1;
+    desc.ArraySize = 1;
+    desc.MipSize = 1;
+    desc.Samples = 1;
+    return desc;
+}
+
+RHITextureDesc RHITextureDesc::TextureCube() {
+    RHITextureDesc desc{};
+    desc.Dimension = ETextureDimension::TexCube;
+    desc.Depth = 1;
+    desc.ArraySize = 1;
+    desc.MipSize = 1;
+    desc.Samples = 1;
+    return desc;
+}
+
 uint32 RHITexture::GetPixelByteSize() {
     return g_FormatPixelByteSize[(uint32)m_Desc.Format].PixelByteSize;
 }
@@ -65,4 +85,47 @@ uint32 RHIRenderPassInfo::GetNumColorTargets() const {
 	    }
     }
     return RHI_MAX_RENDER_TARGET_NUM;
+}
+
+RHIShaderParam RHIShaderParam::UniformBuffer(RHIBuffer* buffer, uint32 offset, uint32 size) {
+    RHIShaderParam parameter{};
+    parameter.Type = EBindingType::UniformBuffer;
+    parameter.Data.Buffer = buffer;
+    parameter.Data.Offset = offset;
+    parameter.Data.Size = size;
+    return parameter;
+}
+
+RHIShaderParam RHIShaderParam::StorageBuffer(RHIBuffer* buffer, uint32 offset, uint32 size) {
+    RHIShaderParam parameter{};
+    parameter.Type = EBindingType::StorageBuffer;
+    parameter.Data.Buffer = buffer;
+    parameter.Data.Offset = offset;
+    parameter.Data.Size = size;
+    return parameter;
+}
+
+RHIShaderParam RHIShaderParam::Texture(RHITexture* texture, ETextureSRVType srvType, RHITextureSubDesc textureSub) {
+    RHIShaderParam parameter{};
+    parameter.Type = EBindingType::Texture;
+    parameter.Data.Texture = texture;
+    parameter.Data.TextureSub = textureSub;
+    parameter.Data.SRVType = srvType;
+    return parameter;
+}
+
+RHIShaderParam RHIShaderParam::Sampler(RHISampler* sampler) {
+    RHIShaderParam parameter{};
+    parameter.Type = EBindingType::Sampler;
+    parameter.Data.Sampler = sampler;
+    return parameter;
+}
+
+RHIShaderParam RHIShaderParam::TextureSampler(RHITexture* texture, RHISampler* sampler, RHITextureSubDesc textureSub) {
+    RHIShaderParam parameter{};
+    parameter.Type = EBindingType::TextureSampler;
+    parameter.Data.Texture = texture;
+    parameter.Data.Sampler = sampler;
+    parameter.Data.TextureSub = textureSub;
+    return parameter;
 }

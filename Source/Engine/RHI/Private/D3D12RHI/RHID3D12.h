@@ -48,7 +48,7 @@ namespace Engine {
 		~RHID3D12() override;
 
 		ID3D12Device* Device() { return m_Device; }
-		static RHID3D12* InstanceD3D12() { return dynamic_cast<RHID3D12*>(RHI::Instance()); }
+		static RHID3D12* InstanceD3D12() { return static_cast<RHID3D12*>(RHI::Instance()); }
 	};
 
 #define DX_DEVICE  RHID3D12::InstanceD3D12()->Device()

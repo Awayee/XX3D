@@ -17,7 +17,7 @@ namespace Render {
 		friend class RenderGraph;
 		friend class RGPassNode;
 		ResourceID m_ID;
-		XXString m_Name;
+		XString m_Name;
 		uint32 m_RefCount = 0;
 		void AddRef();
 	};

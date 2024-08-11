@@ -1,7 +1,7 @@
 #pragma once
 #include "AssetCommon.h"
-namespace Engine {
-	struct MaterialAsset : public AAssetBase {
+namespace Asset {
+	struct MaterialAsset : public AssetBase {
 
 	};	
 }

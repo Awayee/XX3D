@@ -4,7 +4,7 @@
 namespace Runtime {
 	class Client {
 	private:
-		TUniquePtr<Engine::Level> m_Level;
+		TUniquePtr<Object::Level> m_Level;
 	public:
 		Client();
 		void Tick();

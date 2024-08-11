@@ -57,11 +57,16 @@ inline bool CheckInstanceExtensionsSupported(const TVector<const char*>& extensi
 	return true;
 }
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT,
-	VkDebugUtilsMessageTypeFlagsEXT,
+static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+	VkDebugUtilsMessageTypeFlagsEXT type,
 	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 	void* data){
-	LOG_ERROR("[Vulkan Error] %s", pCallbackData->pMessage);
+	if(VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT == severity) {
+		LOG_WARNING("[Vulkan Warning] %s", pCallbackData->pMessage);
+	}
+	else if (VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT == severity) {
+		LOG_ERROR("[Vulkan Error] %s", pCallbackData->pMessage);
+	}
 	return VK_FALSE;
 }
 

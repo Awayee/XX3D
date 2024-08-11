@@ -9,16 +9,16 @@ namespace Render {
 	class RGPassNode {
 	public:
 		RGPassNode();
-		void SetName(XXString&& name);
-		void Input(RGResourceNode* res);
+		void SetName(XString&& name);
 		void Input(RGResourceNode* res, uint32 i);
-		void Output(RGResourceNode* res);
-		void Output(RGResourceNode* res, uint32 i);
+		void OutputColor(RGResourceNode* node, uint32 i);
+		void OutputDepth(RGResourceNode* node);
 		virtual void Execute(RHICommandBuffer* cmd) = 0;
 	private:
-		XXString m_Name;
+		XString m_Name;
 		friend class RenderGraph;
 		TVector<RGResourceNode*> m_Inputs;
-		TVector<RGResourceNode*> m_Outputs;
+		TVector<RGResourceNode*> m_ColorOutputs;
+		RGResourceNode* m_DepthOutput;
 	};
 }

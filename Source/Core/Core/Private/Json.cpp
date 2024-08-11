@@ -6,7 +6,7 @@
 
 namespace Json {
 	bool ReadFile(const char* file, Document& doc) {
-		File::RFile in(file, std::ios::binary);
+		File::RFile in(file, File::EFileMode::Binary);
 		if(!in.is_open()) {
 			return false;
 		}
@@ -16,13 +16,13 @@ namespace Json {
 	}
 
 	bool ReadFile( File::RFile& in, Document& doc) {
-		const XXString content{ std::istream_iterator<char>(in), std::istream_iterator<char>() };
+		const XString content{ std::istream_iterator<char>(in), std::istream_iterator<char>() };
 		return !doc.Parse(content.c_str()).HasParseError();
 	}
 
 	bool WriteFile(const char* file, const Document& doc, bool pretty) {
 		File::WFile out;
-		out.open(file, std::ios::out);
+		out.open(file, File::EFileMode::Write);
 
 		if (!out.good()) {
 			LOG_INFO("Failed to write json file: %s", file);

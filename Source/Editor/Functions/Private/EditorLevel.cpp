@@ -4,10 +4,10 @@
 
 namespace Editor {
 
-	EditorLevel::EditorLevel(const Engine::ALevelAsset& asset, Engine::RenderScene* scene): m_Scene(scene) {
+	EditorLevel::EditorLevel(const Asset::LevelAsset& asset, Object::RenderScene* scene): m_Scene(scene) {
 		//camera
 		auto& cameraParam = asset.CameraParam;
-		Engine::Camera* camera = scene->GetMainCamera();
+		Object::Camera* camera = scene->GetMainCamera();
 		camera->SetView(cameraParam.Eye, cameraParam.At, cameraParam.Up);
 		camera->SetNear(cameraParam.Near);
 		camera->SetFar(cameraParam.Far);
@@ -19,18 +19,17 @@ namespace Editor {
 		for (auto& meshData : meshes) {
 			FileNode* node = ProjectAssetMgr::Instance()->GetFile(meshData.File);
 			if (node) {
-				EditorLevelMesh levelMesh;
-				levelMesh.Asset = node->GetAsset<Engine::AMeshAsset>();
+				EditorLevelMesh& levelMesh = m_Meshes.EmplaceBack();
+				levelMesh.Asset = node->GetAsset<Asset::MeshAsset>();
 				levelMesh.Position = meshData.Position;
 				levelMesh.Scale = meshData.Scale;
 				levelMesh.Rotation = meshData.Rotation;
 				levelMesh.Name = meshData.Name;
 				levelMesh.File = meshData.File;
-				levelMesh.Mesh.Reset(new Engine::StaticMesh(*levelMesh.Asset, m_Scene));
+				levelMesh.Mesh.Reset(new Object::StaticMesh(*levelMesh.Asset, m_Scene));
 				levelMesh.Mesh->SetPosition(levelMesh.Position);
 				levelMesh.Mesh->SetScale(levelMesh.Scale);
 				levelMesh.Mesh->SetRotation(Math::FQuaternion::Euler(levelMesh.Rotation));
-				m_Meshes.PushBack(levelMesh);
 			}
 		}
 	}
@@ -47,25 +46,24 @@ namespace Editor {
 		return &m_Meshes[idx];
 	}
 
-	EditorLevelMesh* EditorLevel::AddMesh(const XXString& file, Engine::AMeshAsset* asset) {
-		EditorLevelMesh mesh{};
+	EditorLevelMesh* EditorLevel::AddMesh(const XString& file, Asset::MeshAsset* asset) {
+		EditorLevelMesh& mesh = m_Meshes.EmplaceBack();
 		mesh.File = file;
 		mesh.Name = asset->Name;
 		mesh.Asset = asset;
-		mesh.Mesh.Reset(new Engine::StaticMesh(*asset, m_Scene));
+		mesh.Mesh.Reset(new Object::StaticMesh(*asset, m_Scene));
 		mesh.Position = mesh.Mesh->GetPosition();
 		mesh.Scale = mesh.Mesh->GetScale();
 		mesh.Rotation = mesh.Mesh->GetRotation().ToEuler();
-		m_Meshes.PushBack(mesh);
-		return &m_Meshes.Back();
+		return &mesh;
 	}
 
 	void EditorLevel::DelMesh(uint32 idx) {
 		m_Meshes.RemoveAt(idx);
 	}
 
-	void EditorLevel::SaveAsset(Engine::ALevelAsset* asset) {
-		Engine::Camera* camera = m_Scene->GetMainCamera();
+	void EditorLevel::SaveAsset(Asset::LevelAsset* asset) {
+		Object::Camera* camera = m_Scene->GetMainCamera();
 		asset->CameraParam.Eye = camera->GetView().Eye;
 		asset->CameraParam.At = camera->GetView().At;
 		asset->CameraParam.Up = camera->GetView().Up;
@@ -73,7 +71,7 @@ namespace Editor {
 		asset->CameraParam.Far = camera->GetFar();
 		asset->CameraParam.Fov = camera->GetFov();
 
-		asset->Meshes.Clear();
+		asset->Meshes.Reset();
 		asset->Meshes.Resize(m_Meshes.Size());
 		for(uint32 i=0; i<m_Meshes.Size(); ++i) {
 			auto& savedMesh = asset->Meshes[i];

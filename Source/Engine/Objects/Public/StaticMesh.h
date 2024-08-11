@@ -5,17 +5,18 @@
 #include "Core/Public/TUniquePtr.h"
 #include "RHI/Public/RHI.h"
 
-namespace Engine {
+namespace Object {
 	// static mesh
 	struct PrimitiveRenderData {
 		uint32 VertexCount;
 		uint32 IndexCount;
 		RHIBufferPtr VertexBuffer;
 		RHIBufferPtr IndexBuffer;
+		RHITexturePtr Texture;
 	};
 	class StaticMesh: public RenderObject3D {
 	public:
-		StaticMesh(const AMeshAsset& meshAsset, RenderScene* scene);
+		StaticMesh(const Asset::MeshAsset& meshAsset, RenderScene* scene);
 		~StaticMesh() override;
 		void CreateDrawCall(Render::DrawCallQueue& queue) override;
 	private:

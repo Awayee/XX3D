@@ -1,7 +1,12 @@
 #pragma once
 #include <string>
 
-typedef std::string XXString;
+typedef std::string XString;
+typedef std::wstring XWString;
+
+XWString String2WString(const XString& str);
+
+XString WString2String(const XWString& wStr);
 
 inline bool StrStartsWith(const char* str, const char* sign) {
 	if (!str || !sign) {
@@ -33,14 +38,14 @@ inline bool StrEqual(const char* s0, const char* s1) {
 }
 
 template <unsigned int Num=128, typename ...T>
-XXString StringFormat(const char* str, T ...args) {
+XString StringFormat(const char* str, T ...args) {
 	char strBuf[Num];
 	sprintf(strBuf, str, args...);
-	return XXString(strBuf);
+	return XString(strBuf);
 }
 
 template<typename T>
-inline XXString ToString(T val) {
+inline XString ToString(T val) {
 	return std::to_string(val);
 }
 

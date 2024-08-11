@@ -12,7 +12,6 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${H_FILES} ${CPP_FILES})
 
 add_executable(${TARGET_NAME} ${H_FILES} ${CPP_FILES})
 target_link_libraries(${TARGET_NAME} PRIVATE "Engine")
-target_link_libraries(${TARGET_NAME} PRIVATE "ShaderCompiler")
 target_include_directories(${TARGET_NAME} PRIVATE ${SOURCE_PATH}/Editor)
 
 #stb image

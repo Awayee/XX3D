@@ -53,7 +53,7 @@ namespace Editor {
 	}
 
 	void EditorPopup::Display() {
-		XXString str = StringFormat("Popup_%u", m_ID);
+		XString str = StringFormat("Popup_%u", m_ID);
 		if(ImGui::BeginPopupContextItem(str.c_str())) {
 			m_Func();
 			ImGui::EndPopup();

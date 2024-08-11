@@ -5,7 +5,7 @@
 #include "VulkanContext.h"
 
 class VulkanMemoryMgr;
-class VulkanDescriptorMgr;
+class VulkanDescriptorSetMgr;
 class VulkanUploader;
 class VulkanCommandContext;
 
@@ -26,13 +26,12 @@ public:
 	VkDevice GetDevice() const { return m_Device; }
 	VkPhysicalDevice GetPhysicalDevice() const { return m_PhysicalDevice; }
 	const VkPhysicalDeviceProperties& GetProperties() const  { return m_DeviceProperties; }
-	const VkPhysicalDeviceLimits& GetLimits() const { return m_DeviceProperties.limits; }
 	const VulkanQueue& GetGraphicsQueue() const { return m_GraphicsQueue; }
 	const VulkanQueue& GetComputeQueue() const { return m_ComputeQueue; }
 	const VulkanFormats& GetFormats() const { return m_Formats; }
 
 	VulkanMemoryMgr* GetMemoryMgr() { return m_MemoryMgr.Get(); }
-	VulkanDescriptorMgr* GetDescriptorMgr() { return m_DescriptorMgr.Get(); }
+	VulkanDescriptorSetMgr* GetDescriptorMgr() { return m_DescriptorMgr.Get(); }
 	VulkanCommandContext* GetCommandContext() { return m_CommandContext.Get(); }
 	VulkanUploader* GetUploader() { return m_Uploader.Get(); }
 
@@ -46,9 +45,9 @@ private:
 	VkPhysicalDeviceProperties m_DeviceProperties{};
 	VulkanFormats m_Formats{};
 	TUniquePtr<VulkanMemoryMgr> m_MemoryMgr;
-	TUniquePtr<VulkanDescriptorMgr> m_DescriptorMgr;
+	TUniquePtr<VulkanDescriptorSetMgr> m_DescriptorMgr;
 	TUniquePtr<VulkanCommandContext> m_CommandContext;
 	TUniquePtr<VulkanUploader> m_Uploader;
-
+	void InitializeDeviceInfo();
 	void CreateDevice(const VulkanContext* context);
 };

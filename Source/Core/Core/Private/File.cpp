@@ -4,15 +4,18 @@
 
 namespace File {
 
-	void LoadFileCode(const char* file, TVector<char>& code) {
-		RFile f(file, std::ios::ate | std::ios::binary);
-		ASSERT(f.is_open(), "file load failed!");
+	bool LoadFileCode(const char* file, TVector<char>& code) {
+		RFile f(file, EFileMode::AtEnd | EFileMode::Binary);
+		if(!f.is_open()) {
+			return false;
+		}
 
 		uint32 fileSize = (uint32)f.tellg();
 		code.Resize(fileSize);
 		f.seekg(0);
 		f.read(code.Data(), fileSize);
 		f.close();
+		return true;
 	}
 
 	void ForeachPath(const char* folder, FForEachPathFunc&& func, bool recursively) {

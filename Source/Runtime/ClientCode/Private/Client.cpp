@@ -8,7 +8,7 @@ namespace Runtime {
 	Client::Client() {
 		Engine::ALevelAsset asset;
 		Engine::AssetLoader::LoadProjectAsset(&asset, "Level/test.level");
-		m_Level.Reset(new Engine::Level(asset, Engine::RenderScene::GetDefaultScene()));
+		m_Level.Reset(new Object::Level(asset, Object::RenderScene::GetDefaultScene()));
 	}
 
 	void Client::Tick() {

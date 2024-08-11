@@ -74,7 +74,7 @@ namespace Editor {
 		style.WindowRounding = 4.0f;
 	}
 
-	const XXString& EditorConfig::GetImGuiConfigSavePath() {
+	const XString& EditorConfig::GetImGuiConfigSavePath() {
 		return m_ImGuiConfigSavePath;
 	}
 
@@ -89,7 +89,7 @@ namespace Editor {
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 		io.ConfigWindowsMoveFromTitleBarOnly = true;
 
-		File::FPath fontPath = Engine::AssetLoader::AssetPath();
+		File::FPath fontPath = Asset::AssetLoader::AssetPath();
 		fontPath.append(Engine::ConfigManager::GetData().DefaultFontPath);
 
 		io.Fonts->AddFontFromFileTTF(fontPath.string().c_str(), contentScale * 16, nullptr, nullptr);

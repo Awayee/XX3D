@@ -42,14 +42,4 @@ namespace Render {
 	private:
 		TStaticArray<DrawCallQueue, (uint32)EDrawCallQueueType::COUNT> m_DrawCallQueues;
 	};
-
-	class DrawCallMgr {
-	public:
-		DrawCallMgr();
-		~DrawCallMgr();
-		DrawCallContext& GetDrawCallContext();
-	private:
-		friend TSingleton<DrawCallMgr>;
-		DrawCallContext m_Context;
-	};
 }

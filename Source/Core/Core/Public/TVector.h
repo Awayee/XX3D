@@ -28,6 +28,14 @@ public:
 	using Base::begin;
 	using Base::end;
 
+	operator TArrayView<T>() {
+		return TArrayView<T>(Data(), Size());
+	}
+
+	operator TConstArrayView<T> () const {
+		return TConstArrayView<T>(Data(), Size());
+	}
+
 	uint32 Size() const { return static_cast<uint32>(Base::size()); }
 
 	uint32 ByteSize() const { return static_cast<uint32>(Base::size() * sizeof(T)); }
@@ -47,8 +55,6 @@ public:
 
 	void PopBack() { Base::pop_back(); }
 
-	void Clear() { Base::clear(); }
-
 	void Resize(uint32 size) { Base::resize(size); }
 	void Resize(uint32 size, const T& val) { Base::resize(size, val); }
 
@@ -60,7 +66,15 @@ public:
 	T& Back() { return Base::back(); }
 	const T& Back() const { return Base::back(); }
 
-	bool Empty() const { return Base::empty(); }
+	bool IsEmpty() const { return Base::empty(); }
+
+	void Reset() { Base::clear(); }
+
+	// Clear and reallocate memory.
+	void Empty(uint32 size) {
+		Base::swap(TVector{});
+		Resize(size);
+	}
 
 	typedef std::function<bool(const T&, const T&)>  SortFunc;
 	void Sort(const SortFunc& f) { std::sort(Base::begin(), Base::end(), f); }

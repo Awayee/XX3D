@@ -1,7 +1,7 @@
 #include "VulkanCommand.h"
 #include "VulkanResources.h"
 #include "VulkanConverter.h"
-#include "VulkanDescriptorSet.h"
+#include "VulkanPipeline.h"
 #include "Core/Public/TArray.h"
 #include "VulkanDevice.h"
 
@@ -19,7 +19,13 @@ namespace {
 			srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 			dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 		}
-		// for getGuidAndDepthOfMouseClickOnRenderSceneForUI() get depthimage
+		else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+			srcAccessMask = 0;
+			dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+			dstStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+		}
+		// for get depth
 		else if (oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
 			srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 			dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
@@ -45,6 +51,19 @@ namespace {
 			dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 			srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 			dstStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		}
+		// for shader resource
+		else if(oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+			srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			srcStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dstStage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+		}
+		else if(oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+			srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			srcStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+			dstStage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
 		}
 		// for swapchain present.
 		else if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
@@ -168,6 +187,7 @@ m_Handle(handle),
 m_Semaphore(smp),
 // TODO stage mask would be reset
 m_StageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT){
+	m_PipelineStateContainer.Reset(new VulkanPipelineStateContainer(context->GetDevice()));
 }
 
 VulkanCommandBuffer::~VulkanCommandBuffer() {
@@ -177,6 +197,7 @@ VulkanCommandBuffer::~VulkanCommandBuffer() {
 
 void VulkanCommandBuffer::Reset() {
 	vkResetCommandBuffer(m_Handle, 0);
+	m_PipelineStateContainer->Reset();
 	CheckBegin();
 }
 
@@ -222,6 +243,8 @@ void VulkanCommandBuffer::BeginRendering(const RHIRenderPassInfo& info) {
 	}
 
 	vkCmdBeginRendering(m_Handle, &renderingInfo);
+	m_Viewport = { (float)area.x, (float)area.y, (float)area.w, (float)area.h, 0.0f, 1.0f };
+	m_Scissor = { {area.x, area.y}, {area.w, area.h} };
 }
 
 void VulkanCommandBuffer::EndRendering() {
@@ -230,24 +253,20 @@ void VulkanCommandBuffer::EndRendering() {
 
 void VulkanCommandBuffer::BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) {
 	VulkanRHIGraphicsPipelineState* vkPipeline = static_cast<VulkanRHIGraphicsPipelineState*>(pipeline);
-	m_CurrentPipeline = vkPipeline->GetPipelineHandle();
-	m_CurrentPipelineLayout = vkPipeline->GetLayoutHandle();
-	m_CurrentPipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	vkCmdBindPipeline(m_Handle, m_CurrentPipelineBindPoint, m_CurrentPipeline);
+	vkCmdBindPipeline(m_Handle, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipeline->GetPipelineHandle());
+	m_PipelineStateContainer->BindPipelineState(vkPipeline);
 }
 
 void VulkanCommandBuffer::BindComputePipeline(RHIComputePipelineState* pipeline) {
 	VulkanRHIComputePipelineState* vkPipeline = static_cast<VulkanRHIComputePipelineState*>(pipeline);
-	m_CurrentPipeline = vkPipeline->GetPipelineHandle();
-	m_CurrentPipelineLayout = vkPipeline->GetLayoutHandle();
-	m_CurrentPipelineBindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
-	vkCmdBindPipeline(m_Handle, m_CurrentPipelineBindPoint, m_CurrentPipeline);
+	vkCmdBindPipeline(m_Handle, VK_PIPELINE_BIND_POINT_COMPUTE, vkPipeline->GetPipelineHandle());
+	m_PipelineStateContainer->BindPipelineState(vkPipeline);
 }
 
-void VulkanCommandBuffer::BindShaderParameterSet(uint32 index, RHIShaderParameterSet* set) {
-	VulkanRHIShaderParameterSet* vkSet = static_cast<VulkanRHIShaderParameterSet*>(set);
-	const VkDescriptorSet dsHandle = vkSet->GetHandle();
-	vkCmdBindDescriptorSets(m_Handle, m_CurrentPipelineBindPoint, m_CurrentPipelineLayout, index, 1, &dsHandle, 0, nullptr);
+void VulkanCommandBuffer::SetShaderParameter(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& parameter) {
+	if(VulkanPipelineDescriptorSetCache* dsCache = m_PipelineStateContainer->GetCurrentDescriptorSetCache()) {
+		dsCache->SetParameter(setIndex, bindIndex, parameter);
+	}
 }
 
 void VulkanCommandBuffer::BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) {
@@ -259,15 +278,26 @@ void VulkanCommandBuffer::BindIndexBuffer(RHIBuffer* buffer, uint64 offset) {
 	vkCmdBindIndexBuffer(m_Handle, static_cast<VulkanRHIBuffer*>(buffer)->GetBuffer(), offset, VK_INDEX_TYPE_UINT32);
 }
 
+void VulkanCommandBuffer::SetViewport(FRect rect, float minDepth, float maxDepth) {
+	m_Viewport = { rect.x, rect.y, rect.w, rect.h, minDepth, maxDepth };
+}
+
+void VulkanCommandBuffer::SetScissor(IURect rect) {
+	m_Scissor = { {rect.x, rect.y}, {rect.w, rect.h} };
+}
+
 void VulkanCommandBuffer::Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance) {
+	PrepareDrawOrDispatch();
 	vkCmdDraw(m_Handle, vertexCount, instanceCount, firstIndex, firstInstance);
 }
 
 void VulkanCommandBuffer::DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance) {
+	PrepareDrawOrDispatch();
 	vkCmdDrawIndexed(m_Handle, indexCount, instanceCount, firstIndex, static_cast<int32>(vertexOffset), firstInstance);
 }
 
 void VulkanCommandBuffer::Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ) {
+	PrepareDrawOrDispatch();
 	vkCmdDispatch(m_Handle, groupCountX, groupCountY, groupCountZ);
 }
 
@@ -304,8 +334,8 @@ void VulkanCommandBuffer::CopyBufferToTexture(RHIBuffer* buffer, RHITexture* tex
 	region.imageSubresource.baseArrayLayer = 0;
 	region.imageSubresource.layerCount = layerCount;
 	region.imageOffset = { 0, 0, 0 };
-	const USize3D size = vkTex->GetDesc().Size;
-	region.imageExtent = { size.w, size.h, size.d };
+	const auto& desc = vkTex->GetDesc();
+	region.imageExtent = { desc.Width, desc.Height, desc.Depth };
 	vkCmdCopyBufferToImage(m_Handle, ((VulkanRHIBuffer*)buffer)->GetBuffer(), vkTex->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
@@ -351,9 +381,9 @@ void VulkanCommandBuffer::TransitionTextureState(RHITexture* texture, EResourceS
 
 void VulkanCommandBuffer::GenerateMipmap(RHITexture* texture, uint32 levelCount, uint32 baseLayer, uint32 layerCount) {
 	VulkanRHITexture* vkTex = static_cast<VulkanRHITexture*>(texture);
-	USize3D size = vkTex->GetDesc().Size;
+	const auto& desc = vkTex->GetDesc();
 	const VkImageAspectFlags aspect = ToImageAspectFlags(vkTex->GetDesc().Flags);
-	GenerateMipMap(m_Handle, vkTex->GetImage(), levelCount, size.w, size.h, aspect, baseLayer, layerCount);
+	GenerateMipMap(m_Handle, vkTex->GetImage(), levelCount, desc.Width, desc.Height, aspect, baseLayer, layerCount);
 }
 
 void VulkanCommandBuffer::BeginDebugLabel(const char* msg, const float* color) {
@@ -392,6 +422,20 @@ void VulkanCommandBuffer::CheckEnd() {
 	}
 }
 
+void VulkanCommandBuffer::PrepareDrawOrDispatch() {
+	vkCmdSetViewport(m_Handle, 0, 1, &m_Viewport);
+	vkCmdSetScissor(m_Handle, 0, 1, &m_Scissor);
+	if(VulkanPipelineDescriptorSetCache* dsCache = m_PipelineStateContainer->GetCurrentDescriptorSetCache()) {
+		auto ds = dsCache->GetDescriptorSets();
+		if(VulkanRHIGraphicsPipelineState* graphicsPSO = m_PipelineStateContainer->GetCurrentGraphicsPipelineState()) {
+			vkCmdBindDescriptorSets(m_Handle, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPSO->GetLayoutHandle(), 0, ds.Size(), ds.Data(), 0, nullptr);
+		}
+		else if(VulkanRHIComputePipelineState* computePSO = m_PipelineStateContainer->GetCurrentComputePipelineState()) {
+			vkCmdBindDescriptorSets(m_Handle, VK_PIPELINE_BIND_POINT_COMPUTE, computePSO->GetLayoutHandle(), 0, ds.Size(), ds.Data(), 0, nullptr);
+		}
+	}
+}
+
 VulkanCommandContext::VulkanCommandContext(VulkanDevice* device) :m_Device(device), m_CommandPool(VK_NULL_HANDLE) {
 	VkCommandPoolCreateInfo commandPoolCreateInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr };
 	commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
@@ -416,7 +460,7 @@ RHICommandBufferPtr VulkanCommandContext::AllocateCommandBuffer() {
 	VkSemaphore smp;
 	VkSemaphoreCreateInfo semaphoreInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0 };
 	vkCreateSemaphore(m_Device->GetDevice(), &semaphoreInfo, nullptr, &smp);
-	return new VulkanCommandBuffer(this, handle, smp);
+	return RHICommandBufferPtr(new VulkanCommandBuffer(this, handle, smp));
 }
 
 void VulkanCommandContext::FreeCommandBuffer(VulkanCommandBuffer* cmd) {
@@ -484,7 +528,7 @@ void VulkanCommandContext::SubmitCommandBuffers(TArrayView<VulkanCommandBuffer*>
 
 void VulkanCommandContext::BeginFrame() {
 	// clear submission cache
-	m_Submissions.Clear();
+	m_Submissions.Reset();
 	// submit upload cmd if need.
 	if(m_UploadCmd->m_HasBegun) {
 		m_UploadCmd->CheckEnd();
@@ -494,13 +538,13 @@ void VulkanCommandContext::BeginFrame() {
 
 const VulkanCommandSubmission& VulkanCommandContext::GetLastSubmission() {
 	static VulkanCommandSubmission s_EmptySubmission{};
-	return m_Submissions.Empty() ? s_EmptySubmission : m_Submissions.Back();
+	return m_Submissions.IsEmpty() ? s_EmptySubmission : m_Submissions.Back();
 }
 
 const void VulkanCommandContext::GetLastSubmissionSemaphores(TVector<VkSemaphore>& outSmps) {
-	outSmps.Clear();
+	outSmps.Reset();
 	auto& lastSubmissions = GetLastSubmission();
-	if(lastSubmissions.Empty()) {
+	if(lastSubmissions.IsEmpty()) {
 		return;
 	}
 	outSmps.Reserve(lastSubmissions.Size());
@@ -516,6 +560,6 @@ VulkanCommandBuffer* VulkanCommandContext::GetUploadCmd() {
 	return m_UploadCmd.Get();
 }
 
-VkDevice VulkanCommandContext::GetDevice() const {
-	return m_Device->GetDevice();
+VulkanDevice* VulkanCommandContext::GetDevice() {
+	return m_Device;
 }

@@ -3,18 +3,8 @@
 #include "Math/Public/Matrix.h"
 #include "Render/Public/DrawCall.h"
 
-namespace Engine {
+namespace Object {
 	class RenderObject3D: public RenderObject {
-	private:
-		Math::FVector3 m_Position          {0,0,0};
-		Math::FQuaternion m_Rotation       {0,0,0,1};
-		Math::FVector3 m_Scale             {1,1,1};
-
-		Math::FMatrix4x4 m_TransformMat    {Math::FMatrix4x4::IDENTITY};
-		Math::FMatrix4x4 m_InvTransformMat {Math::FMatrix4x4::IDENTITY};
-		RHIBufferPtr m_TransformUniformBuffer;
-		RHIShaderParameterSetPtr m_ShaderParameterSet;
-		bool m_Dirty;
 	public:
 		RenderObject3D() = delete;
 		RenderObject3D(RenderScene* scene);
@@ -25,8 +15,15 @@ namespace Engine {
 		_NODISCARD const Math::FVector3& GetPosition() const { return m_Position; }
 		_NODISCARD const Math::FQuaternion& GetRotation() const { return m_Rotation; }
 		_NODISCARD const Math::FVector3& GetScale() const { return m_Scale; }
-		virtual void CreateDrawCall(Render::DrawCallQueue& queue);
-
+		virtual void CreateDrawCall(Render::DrawCallQueue& queue) = 0;
 		virtual void Update() override;
+	protected:
+		Math::FVector3 m_Position          {0,0,0};
+		Math::FQuaternion m_Rotation       {0,0,0,1};
+		Math::FVector3 m_Scale             {1,1,1};
+		Math::FMatrix4x4 m_TransformMat    {Math::FMatrix4x4::IDENTITY};
+		Math::FMatrix4x4 m_InvTransformMat {Math::FMatrix4x4::IDENTITY};
+		RHIBufferPtr m_TransformUniformBuffer;
+		bool m_Dirty;
 	};
 }

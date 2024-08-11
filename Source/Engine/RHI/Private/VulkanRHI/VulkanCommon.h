@@ -9,9 +9,15 @@
 
 #define VK_CHECK(x) CHECK(VK_SUCCESS == (x))
 
+
+#define VK_SET_OBJECT_NAME(type, handle, name) do{\
+VkDebugUtilsObjectNameInfoEXT info{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, nullptr, type, reinterpret_cast<uint64>(handle), name};\
+vkSetDebugUtilsObjectNameEXT(m_Device->GetDevice(), &info);\
+}while(0)
+
 const uint32 VK_API_VER = VK_API_VERSION_1_2;
 
-constexpr uint32 VK_INVALID_IDX = UINT32_MAX;
+constexpr uint32 VK_INVALID_INDEX = UINT32_MAX;
 
 constexpr uint32 VK_WAIT_MAX = UINT32_MAX;
 

@@ -4,7 +4,7 @@
 #include "Core/Public/Log.h"
 #include <lz4.h>
 
-namespace Engine {
+namespace Asset {
 	struct FVertexPack {
 		float Position[3];
 		uint8 Normal[3];
@@ -28,7 +28,7 @@ namespace Engine {
 		}
 	};
 
-	bool AMeshAsset::Load(File::RFile& in) {
+	bool MeshAsset::Load(File::RFile& in) {
 		Json::Document doc;
 		if (!Json::ReadFile(in, doc)) {
 			return false;
@@ -49,13 +49,13 @@ namespace Engine {
 				}
 
 				//load primitive binary
-				AMeshAsset::LoadPrimitiveFile(Primitives[i].BinaryFile.c_str(), Primitives[i].Vertices, Primitives[i].Indices);
+				MeshAsset::LoadPrimitiveFile(Primitives[i].BinaryFile.c_str(), Primitives[i].Vertices, Primitives[i].Indices);
 			}
 		}
 		return true;
 	}
 
-	bool AMeshAsset::Save(File::WFile& out) {
+	bool MeshAsset::Save(File::WFile& out) {
 		Json::Document doc;
 		doc.SetObject();
 
@@ -76,9 +76,9 @@ namespace Engine {
 		doc.AddMember("Primitives", primitives, doc.GetAllocator());
 		return Json::WriteFile(out, doc);
 	}
-	bool AMeshAsset::LoadPrimitiveFile(const char* file, TVector<AssetVertex>& vertices, TVector<IndexType>& indices) {
+	bool MeshAsset::LoadPrimitiveFile(const char* file, TVector<AssetVertex>& vertices, TVector<IndexType>& indices) {
 		PARSE_PROJECT_ASSET(file);
-		File::RFile f(file, std::ios::binary);
+		File::RFile f(file, File::EFileMode::Binary);
 		if (!f.is_open()) {
 			LOG_INFO("Failed to open file: %s", file);
 			return false;
@@ -129,14 +129,14 @@ namespace Engine {
 		return true;
 	}
 
-	bool AMeshAsset::ExportPrimitiveFile(const char* file, const TVector<AssetVertex>& vertices, const TVector<IndexType>& indices, EMeshCompressMode packMode) {
+	bool MeshAsset::ExportPrimitiveFile(const char* file, const TVector<AssetVertex>& vertices, const TVector<IndexType>& indices, EMeshCompressMode packMode) {
 		if (vertices.Size() == 0) {
 			LOG_INFO("null primitive!");
 			return false;
 		}
 
 		PARSE_PROJECT_ASSET(file);
-		File::WFile f(file, std::ios::binary | std::ios::out);
+		File::WFile f(file, File::EFileMode::Binary | File::EFileMode::Write);
 		if (!f.is_open()) {
 			LOG_INFO("Failed to open file: %s", file);
 			return false;

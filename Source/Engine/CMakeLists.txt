@@ -13,6 +13,7 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${H_FILES} ${CPP_FILES} ${
 add_library(${TARGET_NAME} STATIC ${H_FILES} ${CPP_FILES} ${HPP_FILES})
 
 target_link_libraries(${TARGET_NAME} PUBLIC "Core")
+target_link_libraries(${TARGET_NAME} PUBLIC "ShaderCompiler")
 target_include_directories(${TARGET_NAME} PUBLIC ${SOURCE_PATH}/Engine)
 
 # #add include files

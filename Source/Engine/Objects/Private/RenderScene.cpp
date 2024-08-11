@@ -5,7 +5,7 @@
 #include "Objects/Public/Camera.h"
 #include "Objects/Public/Light/DirectionalLight.h"
 
-namespace Engine {
+namespace Object {
     RenderObject::RenderObject(RenderScene* scene)
     {
         if (nullptr == scene)scene = RenderScene::GetDefaultScene();
@@ -20,7 +20,7 @@ namespace Engine {
 
     TUniquePtr<RenderScene> RenderScene::s_Default;
 
-    struct SceneUBO {
+    struct LightUBO {
         Math::FVector3 LightDir; float _padding;
         Math::FVector3 LightColor; float _padding1;
     };
@@ -32,29 +32,30 @@ namespace Engine {
         Math::FMatrix4x4 InvVP;
         Math::FVector3 CamPos;
     };
+
+    struct SceneData {
+        LightUBO LightUbo;
+        CameraUBO CameraUbo;
+    };
     void RenderScene::UpdateUniform() {
-        SceneUBO sceneUbo;
-        sceneUbo.LightDir = m_DirectionalLight->GetLightDir();
-        sceneUbo.LightColor = m_DirectionalLight->GetLightColor();
-        CameraUBO cameraUbo;
-        cameraUbo.View = m_Camera->GetViewMatrix();
-        cameraUbo.Proj = m_Camera->GetProjectMatrix();
-        cameraUbo.VP = m_Camera->GetViewProjectMatrix();
-        cameraUbo.InvVP = m_Camera->GetInvViewProjectMatrix();
-        cameraUbo.CamPos = m_Camera->GetView().Eye;
+        SceneData sceneData;
+        sceneData.LightUbo.LightDir = m_DirectionalLight->GetLightDir();
+        sceneData.LightUbo.LightColor = m_DirectionalLight->GetLightColor();
+        sceneData.CameraUbo.View = m_Camera->GetViewMatrix();
+        sceneData.CameraUbo.Proj = m_Camera->GetProjectMatrix();
+        sceneData.CameraUbo.VP = m_Camera->GetViewProjectMatrix();
+        sceneData.CameraUbo.InvVP = m_Camera->GetInvViewProjectMatrix();
+        sceneData.CameraUbo.CamPos = m_Camera->GetView().Eye;
+        m_UniformBuffer->UpdateData(&sceneData, sizeof(SceneData), 0);
     }
 
     void RenderScene::CreateResources() {
         m_DirectionalLight.Reset(new DirectionalLight);
         m_DirectionalLight->SetDir({-1, -1, -1});
         auto size = RHI::Instance()->GetViewport()->GetSize();
-        m_Camera.Reset(new Camera(CAMERA_PERSPECTIVE, (float)size.w / (float)size.h, 0.1f, 1000.0f, Math::Deg2Rad * 75.0f));
+        m_Camera.Reset(new Camera(EProjectiveType::Perspective, (float)size.w / (float)size.h, 0.1f, 1000.0f, Math::Deg2Rad * 75.0f));
         m_Camera->SetView({ 0, 4, -4 }, { 0, 2, 0}, { 0, 1, 0 });
-    }
-
-    void RenderScene::CreateDescriptorSets() {
-        uint32 bufferSize = sizeof(CameraUBO);
-        bufferSize = sizeof(SceneUBO);
+        m_UniformBuffer = RHI::Instance()->CreateBuffer({ EBufferFlagBit::BUFFER_FLAG_UNIFORM, sizeof(LightUBO) + sizeof(CameraUBO), 0 });
     }
 
     RenderScene* RenderScene::GetDefaultScene() {
@@ -70,11 +71,22 @@ namespace Engine {
 
     RenderScene::RenderScene() {
         CreateResources();
-        CreateDescriptorSets();
     }
 
     RenderScene::~RenderScene() {
-        //RHI::Instance()->FreeDescriptorSet(m_SceneDescs);
+    }
+
+    RenderScene::RenderScene(RenderScene&& rhs)noexcept:
+	m_RenderObjects(MoveTemp(rhs.m_RenderObjects)),
+	m_DirectionalLight(MoveTemp(rhs.m_DirectionalLight)),
+	m_Camera(MoveTemp(rhs.m_Camera)) {
+    }
+
+    RenderScene& RenderScene::operator=(RenderScene&& rhs) noexcept {
+        m_RenderObjects = MoveTemp(rhs.m_RenderObjects);
+        m_DirectionalLight = MoveTemp(rhs.m_DirectionalLight);
+        m_Camera = MoveTemp(rhs.m_Camera);
+        return *this;
     }
 
     void RenderScene::AddRenderObject(RenderObject* obj) {
@@ -87,7 +99,7 @@ namespace Engine {
         if(obj->m_Scene != this || RenderObject::INVALID_INDEX == obj->m_Index) {
             return;
         }
-        if (!m_RenderObjects.Empty()) {
+        if (!m_RenderObjects.IsEmpty()) {
             m_RenderObjects.Back()->m_Index = obj->m_Index;
             m_RenderObjects.SwapRemoveAt(obj->m_Index);
         }
@@ -98,5 +110,8 @@ namespace Engine {
         for(RenderObject* obj: m_RenderObjects) {
             obj->Update();
         }
+    }
+
+    void RenderScene::GenerateDrawCall(Render::DrawCallQueue& queue) {
     }
 }

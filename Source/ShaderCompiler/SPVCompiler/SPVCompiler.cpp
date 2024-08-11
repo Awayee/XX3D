@@ -1,55 +1,28 @@
 #include "SPVCompiler.h"
-#include <iostream>
-#include <vector>
+#include "Core/Public/File.h"
+#include "Core/Public/Container.h"
 #include <Windows.h>
-#include <memory>
-#include <fstream>
-#include <filesystem>
 
 #define SHADER_MODEL_VS L"vs_6_1"
 #define SHADER_MODEL_PS L"ps_6_1"
-#define ENTRY_POINT_VS L"MainVS"
-#define ENTRY_POINT_PS L"MainPS"
-#define SPV_EXT L"spv"
+#define SHADER_MODEL_CS L"cs_6_1"
 
 #define DX_RELEASE(x) if(x){ (x)->Release(); (x)=nullptr;}
-
+#define COMPILE_FILE_EXT ".spv"
 #define STR_LEN_MAX 128
 
-//#define PARSE_SHADER_PATH(x)\
-//char x##__s[STR_LEN_MAX];{\
-//	int pathSize = strlen(SHADER_PATH);\
-//	if (pathSize > STR_LEN_MAX - 1) pathSize = STR_LEN_MAX - 1;\
-//	strcpy_s(x##__s, pathSize, SHADER_PATH);\
-//	x##__s[pathSize] = '\0';\
-//	int fSize = strlen(x);\
-//	if (pathSize + fSize > STR_LEN_MAX - 1) fSize = STR_LEN_MAX - 1 - pathSize;\
-//	if (fSize > 0) {\
-//		strcat_s(x##__s, fSize, x);\
-//		x##__s[fSize + pathSize] = 0;\
-//	}}x = x##__s
-
-#define PARSE_SHADER_PATH(x)\
-	char x##__s[STR_LEN_MAX];{\
-		int l = strlen(SHADER_PATH) + 1;\
-		if (l > STR_LEN_MAX) l = STR_LEN_MAX;\
-		strcpy_s(x##__s, l, SHADER_PATH);\
-		x##__s[l - 1] = '\0';\
-		if (l + strlen(x) + 1 <= STR_LEN_MAX)strcat_s(x##__s, sizeof(x##__s), x);\
-	}x=x##__s
-
-#define PARSE_SHADER_PATH_W(x)\
-	wchar_t x##W[STR_LEN_MAX];{\
-		int pathSize = MultiByteToWideChar(CP_OEMCP, 0, SHADER_PATH, strlen(SHADER_PATH), NULL, 0);\
-		if (pathSize > STR_LEN_MAX-1) pathSize = STR_LEN_MAX-1;\
-		MultiByteToWideChar(CP_OEMCP, 0, SHADER_PATH, strlen(SHADER_PATH), x##W, pathSize);\
-		int fSize = MultiByteToWideChar(CP_OEMCP, 0, x, strlen(x), NULL, 0);\
-		if (pathSize + fSize > STR_LEN_MAX-1)fSize = STR_LEN_MAX-1 - pathSize;\
-		if (fSize > 0)MultiByteToWideChar(CP_OEMCP, 0, x, strlen(x), x##W + pathSize, fSize);\
-		x##W[pathSize + fSize] = '\0';\
+inline const wchar_t* GetShaderModule(ESPVShaderStage stage) {
+	switch(stage) {
+	case ESPVShaderStage::Vertex:
+		return SHADER_MODEL_VS;
+	case ESPVShaderStage::Pixel:
+		return SHADER_MODEL_PS;
+	case ESPVShaderStage::Compute:
+		return SHADER_MODEL_CS;
+	default:
+		return L"";
 	}
-
-
+}
 
 SPVCompiler::SPVCompiler() {
 	HRESULT r;
@@ -72,7 +45,6 @@ SPVCompiler::SPVCompiler() {
 		printf("[HLSL2Spv] Could not init DXC Utiliy\n");
 		return;
 	}
-	m_Initialized = true;
 }
 
 SPVCompiler::~SPVCompiler() {
@@ -81,30 +53,67 @@ SPVCompiler::~SPVCompiler() {
 	DX_RELEASE(m_Library);
 }
 
-bool SPVCompiler::CompileSingleEntry(const wchar_t* hlslFile, const wchar_t* entryPoint, const wchar_t* shaderModel, const std::vector<DxcDefine>& defines, const char* outFile) {
+XString SPVCompiler::GetShaderOutputFile(const XString& hlslFile, const XString& entryPoint) {
+	XString resultFile;
+	if (auto extIndex = hlslFile.rfind(".hlsl"); extIndex != hlslFile.npos) {
+		resultFile = hlslFile.substr(0, extIndex);
+	}
+	else {
+		resultFile = hlslFile;
+	}
+	resultFile.append(entryPoint);
+	resultFile.append(COMPILE_FILE_EXT);
+	return resultFile;
+}
+
+void SPVCompiler::ClearCompiledCache() {
+	File::ForeachPath(SHADER_PATH, [](const File::FPathEntry& p) {
+		if(p.path().extension()== COMPILE_FILE_EXT){
+			File::RemoveFile(p.path());
+		}
+	}, true);
+}
+
+bool SPVCompiler::CompileHLSL(const XString& hlslFile, const XString& entryPoint, ESPVShaderStage stage, TConstArrayView<SPVDefine> defines) {
+	File::FPath hlslFilePath{ SHADER_PATH };
+	hlslFilePath.append(hlslFile);
+	const wchar_t* hlslFileW = hlslFilePath.c_str();
+	
+	File::FPath outFilePath{ SHADER_PATH };
+	outFilePath.append(GetShaderOutputFile(hlslFile, entryPoint));
 
 	HRESULT r;
 	// Load the HLSL text shader from disk
 	uint32_t codePage = DXC_CP_ACP;
 	IDxcBlobEncoding* sourceBlob;
-	r = m_Utils->LoadFile(hlslFile, &codePage, &sourceBlob);
+	r = m_Utils->LoadFile(hlslFileW, &codePage, &sourceBlob);
 	if (FAILED(r)) {
-		wprintf(L"[HLSL2Spv] Could not load shader file: %s\n", hlslFile);
+		wprintf(L"[HLSL2Spv] Could not load shader file: %s\n", hlslFileW);
 		return false;
 	}
 
-	// compile vs
-
+	const wchar_t* shaderModel = GetShaderModule(stage);
 	IDxcCompilerArgs* args;
-	m_Utils->BuildArguments(hlslFile, entryPoint, shaderModel, nullptr, 0, defines.data(), defines.size(), &args);
+	// parse defines
+	TVector<TPair<XWString, XWString>> definesW; definesW.Reserve(defines.Size());
+	TVector<DxcDefine> dxcDefines; dxcDefines.Reserve(defines.Size());
+	for(const auto& define: defines) {
+		auto& defineW = definesW.EmplaceBack();
+		defineW.first = String2WString(define.Name);
+		defineW.second = String2WString(define.Value);
+		dxcDefines.PushBack({ defineW.first.c_str(), defineW.second.c_str() });
+	}
+
+	XWString entryPointW = String2WString(entryPoint);
+	m_Utils->BuildArguments(hlslFileW, entryPointW.c_str(), shaderModel, nullptr, 0, dxcDefines.Data(), dxcDefines.Size(), &args);
 	LPCWSTR spirv = L"-spirv";
 	args->AddArguments(&spirv, 1);
 
 	std::vector<LPCWSTR> arguments = {
 		// (Optional) name of the shader file to be displayed e.g. in an error message
-		hlslFile,
+		hlslFileW,
 		// Shader main entry point
-		L"-E", entryPoint,
+		L"-E", entryPointW.c_str(),
 		// Shader target profile
 		L"-T", shaderModel,
 		// Compile to SPIRV
@@ -143,38 +152,17 @@ bool SPVCompiler::CompileSingleEntry(const wchar_t* hlslFile, const wchar_t* ent
 	IDxcBlob* code;
 	result->GetResult(&code);
 
-	std::ofstream fout(outFile, std::ios::binary | std::ios::out);
+	XString outFile = outFilePath.string();
+	File::WFile fout(outFile.c_str(), File::EFileMode::Binary | File::EFileMode::Write);
 	if (!fout.is_open()) {
-		printf("[HLSL2Spv] write file failed: %s\n", outFile);
+		printf("[HLSL2Spv] write file failed: %s\n", outFile.c_str());
 		return false;
 	}
 	fout.write((char*)code->GetBufferPointer(), code->GetBufferSize());
 	fout.close();
-
-	sourceBlob->Release();
-	args->Release();
-	result->Release();
-	code->Release();
+	DX_RELEASE(sourceBlob);
+	DX_RELEASE(args);
+	DX_RELEASE(result);
+	DX_RELEASE(code);
 	return true;
-}
-
-bool SPVCompiler::CompileHLSL(const char* hlslFile) {
-	PARSE_SHADER_PATH(hlslFile);
-	printf("[ShaderCompile] Compiling Shader: %s\n", hlslFile);
-	std::filesystem::path hlslPath(hlslFile);
-
-	// out vs
-	std::filesystem::path vsPath = hlslPath;
-	vsPath.replace_extension("");
-	vsPath += ENTRY_POINT_VS;
-	vsPath.replace_extension(L"spv");
-	bool vs = CompileSingleEntry(hlslPath.c_str(), ENTRY_POINT_VS, SHADER_MODEL_VS, {{L"_VS"}}, vsPath.string().c_str());
-	// out ps
-	std::filesystem::path psPath = hlslPath;
-	psPath.replace_extension("");
-	psPath += ENTRY_POINT_PS;
-	psPath.replace_extension(L"spv");
-	bool ps = CompileSingleEntry(hlslPath.c_str(), ENTRY_POINT_PS, SHADER_MODEL_PS, { {L"_PS"}}, psPath.string().c_str());
-
-	return vs && ps;
 }

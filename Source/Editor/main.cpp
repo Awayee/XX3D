@@ -4,11 +4,9 @@
 #include "SPVCompiler/SPVCompiler.h"
 
 int main() {
-	//compile shaders
+	//clear all compiled shader cache
 	{
-		SPVCompiler compiler;
-		bool res = compiler.CompileHLSL("GBuffer.hlsl");
-		res &= compiler.CompileHLSL("DeferredLightingPBR.hlsl");
+		SPVCompiler::ClearCompiledCache();
 	}
 	//Run Editor
 	{

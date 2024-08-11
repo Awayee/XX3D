@@ -14,7 +14,7 @@ namespace Editor {
 	}
 
 	File::FPath PathNode::GetFullPath() const {
-		File::FPath path{ Engine::AssetLoader::AssetPath() };
+		File::FPath path{ Asset::AssetLoader::AssetPath() };
 		path.append(m_Path.string());
 		return path;
 	}
@@ -25,7 +25,7 @@ namespace Editor {
 	}
 
 	void FileNode::Save() {
-		if(Engine::AssetLoader::SaveProjectAsset(m_Asset.Get(), m_PathStr.c_str())) {
+		if(Asset::AssetLoader::SaveProjectAsset(m_Asset.Get(), m_PathStr.c_str())) {
 			LOG_INFO("FileNode::Save %s", GetPathStr().c_str());
 		}
 	}
@@ -111,8 +111,8 @@ namespace Editor {
 	}
 
 	void AssetManager::BuildTree() {
-		m_Folders.Clear();
-		m_Files.Clear();
+		m_Folders.Reset();
+		m_Files.Reset();
 		m_Root = BuildFolderRecursively(m_RootPath, INVALLID_NODE);
 		m_Folders[m_Root].m_Name = m_RootPath.parent_path().stem().string();
 	}
@@ -164,13 +164,13 @@ namespace Editor {
 
 	void AssetManager::ImportAsset(const char* srcFile, const char* dstFile) {
 		if(StrEndsWith(srcFile, ".png")) {
-			Engine::ATextureAsset asset;
+			Asset::TextureAsset asset;
 			TextureImporter importer(&asset, dstFile);
 			importer.Import(srcFile);
 			importer.Save();
 		}
 		else if (StrEndsWith(srcFile, ".glb") || StrEndsWith(srcFile, "fbx")) {
-			Engine::AMeshAsset asset;
+			Asset::MeshAsset asset;
 			MeshImporter importer(&asset, dstFile);
 			importer.Import(srcFile);
 			importer.Save();

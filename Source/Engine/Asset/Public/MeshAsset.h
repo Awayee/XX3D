@@ -1,7 +1,7 @@
 #pragma once
 #include "AssetCommon.h"
 
-namespace Engine {
+namespace Asset {
 
 	enum class EVertexFormat : int8 {
 		UINT16,
@@ -14,21 +14,21 @@ namespace Engine {
 	};
 
 
-	struct AMeshAsset : public AAssetBase {
+	struct MeshAsset : public AssetBase {
 	public:
-		XXString Name;
+		XString Name;
 		struct SPrimitive {
-			XXString BinaryFile;
-			XXString MaterialFile;
-			XXString Name;
-			TVector<XXString> Textures;
+			XString BinaryFile;
+			XString MaterialFile;
+			XString Name;
+			TVector<XString> Textures;
 			TVector<AssetVertex> Vertices;
 			TVector<IndexType> Indices;
 		};
 		TVector<SPrimitive> Primitives;
 
 	public:
-		AMeshAsset() = default;
+		MeshAsset() = default;
 
 		//load with primitive binaries
 		bool Load(File::RFile& in) override;

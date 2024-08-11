@@ -34,7 +34,7 @@ protected:
 	RHIBufferDesc m_Desc;
 public:
 	RHIBuffer(const RHIBufferDesc& desc): m_Desc(desc){}
-	virtual void UpdateData(const void* data, uint32 byteSize) = 0;
+	virtual void UpdateData(const void* data, uint32 byteSize, uint32 offset) = 0;
 	XX_NODISCARD const RHIBufferDesc& GetDesc() const { return m_Desc; }
 };
 
@@ -43,24 +43,28 @@ struct RHITextureDesc {
 	ETextureDimension Dimension: 8;
 	ERHIFormat Format : 8;
 	ETextureFlags Flags : 16;
-	USize3D Size;
-	uint32 Depth;
-	uint32 ArraySize;
-	uint32 MipSize;
-	uint32 Samples;
+	uint32 Width;
+	uint32 Height;
+	uint32 Depth; //Only for Texture3D
+	uint8 ArraySize;
+	uint8 MipSize;
+	uint8 Samples;
+	uint8 _Padding{ 0 };
+	static RHITextureDesc Texture2D();
+	static RHITextureDesc TextureCube();
 };
 
 struct RHITextureSubDesc {
-	uint32 BaseMip{ 0 };
-	uint32 MipCount{ 1 };
-	uint32 BaseLayer{ 0 };
-	uint32 LayerCount{ 1 };
+	uint8 BaseMip{ 0 };
+	uint8 MipCount{ 1 };
+	uint8 BaseLayer{ 0 };
+	uint8 LayerCount{ 1 };
 };
 
 struct RHITextureOffset {
-	uint32 MipLevel;
-	uint32 ArrayLayer;
-	UOffset3D Offset;
+	uint8 MipLevel{ 0 };
+	uint8 ArrayLayer{ 0 };
+	UOffset3D Offset{ 0,0,0 };
 };
 
 struct RHITextureCopyRegion {
@@ -75,7 +79,7 @@ protected:
 public:
 	RHITexture(const RHITextureDesc& desc) : m_Desc(desc) {}
 	XX_NODISCARD const RHITextureDesc& GetDesc() const { return m_Desc; }
-	virtual void UpdateData(RHITextureOffset offset, uint32 byteSize, const void* data) = 0;
+	virtual void UpdateData(uint32 byteSize, const void* data, RHITextureOffset offset) = 0;
 	uint32 GetPixelByteSize();
 };
 
@@ -157,7 +161,7 @@ struct RHIRenderPassInfo {
 	uint32 GetNumColorTargets() const;
 };
 
-struct RHIVertexInput {
+struct RHIVertexInputInfo {
 	struct BindingDesc {
 		uint32 Binding;
 		uint32 Stride;
@@ -215,24 +219,23 @@ struct RHIDepthStencilState {
 
 // layout
 struct RHIShaderBinding {
-	uint32 Count;
 	EBindingType Type;
 	EShaderStageFlags StageFlags;
+	uint16 Count = 1;
 };
-typedef TVector<RHIShaderBinding> RHIShaderParemeterLayout;
-typedef TVector<RHIShaderParemeterLayout> RHIPipelineLayout;
+typedef TVector<RHIShaderBinding> RHIShaderParamSetLayout;
 
 // pso
 struct RHIGraphicsPipelineStateDesc {
 	RHIShader* VertexShader;
 	RHIShader* PixelShader;
-	RHIPipelineLayout Layout;
-	RHIVertexInput VertexInput;
+	TVector<RHIShaderParamSetLayout> Layout;
+	RHIVertexInputInfo VertexInput;
 	RHIBlendDesc BlendDesc;
 	RHIRasterizerState RasterizerState;
 	RHIDepthStencilState DepthStencilState;
 	EPrimitiveTopology PrimitiveTopology;
-	TVector<ERHIFormat> RenderTargetFormats;
+	TVector<ERHIFormat> ColorFormats;
 	ERHIFormat DepthStencilFormat;
 	uint8 NumSamples;
 };
@@ -248,7 +251,7 @@ protected:
 // compute pipeline
 struct RHIComputePipelineStateDesc {
 	RHIShader* Shader;
-	RHIPipelineLayout Layout;
+	TVector<RHIShaderParamSetLayout> Layout;
 };
 
 class RHIComputePipelineState: public RHIResource {
@@ -259,12 +262,27 @@ protected:
 	RHIComputePipelineStateDesc m_Desc;
 };
 
-class RHIShaderParameterSet {
-public:
-	virtual ~RHIShaderParameterSet(){}
-	virtual void SetUniformBuffer(uint32 binding, RHIBuffer* buffer) = 0;
-	virtual void SetStorageBuffer(uint32 binding, RHIBuffer* buffer) = 0;
-	virtual void SetTexture(uint32 binding, RHITexture* image) = 0;
-	virtual void SetSampler(uint32 binding, RHISampler* sampler) = 0;
+struct RHIShaderParam {
+	union {
+		struct {
+			RHIBuffer* Buffer;
+			uint32 Offset;
+			uint32 Size;
+			uint64 _Padding;
+		};
+		struct {
+			RHITexture* Texture;
+			RHISampler* Sampler;
+			ETextureSRVType SRVType;// optional
+			RHITextureSubDesc TextureSub;// valid if SRVType is not Default.
+		};
+	} Data {nullptr, 0u, 0u, 0ull};
+	uint32 ArrayIndex = 0;
+	EBindingType Type{ EBindingType::MaxNum };
+	static RHIShaderParam UniformBuffer(RHIBuffer* buffer, uint32 offset, uint32 size);
+	static RHIShaderParam UniformBuffer(RHIBuffer* buffer) { return UniformBuffer(buffer, 0, buffer->GetDesc().ByteSize); }
+	static RHIShaderParam StorageBuffer(RHIBuffer* buffer, uint32 offset, uint32 size);
+	static RHIShaderParam Texture(RHITexture* texture, ETextureSRVType srvType = ETextureSRVType::Default, RHITextureSubDesc textureSub = {});
+	static RHIShaderParam Sampler(RHISampler* sampler);
+	static RHIShaderParam TextureSampler(RHITexture* texture, RHISampler* sampler, RHITextureSubDesc textureSub = {});
 };
-

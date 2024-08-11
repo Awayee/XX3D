@@ -22,15 +22,15 @@ namespace Editor {
 		NodeID m_ID{ 0 };
 		NodeID m_ParentID{ INVALLID_NODE };
 		File::FPath m_Path;//relative path
-		XXString m_PathStr;
-		XXString m_Name;
+		XString m_PathStr;
+		XString m_Name;
 		friend class AssetManager;
 	public:
 		PathNode(const File::FPath& path, NodeID id, NodeID parent);
-		_NODISCARD const XXString& GetName() const { return m_Name; }
+		_NODISCARD const XString& GetName() const { return m_Name; }
 		_NODISCARD const File::FPath& GetPath() const { return m_Path; }
 		_NODISCARD File::FPath GetFullPath() const;
-		_NODISCARD const XXString& GetPathStr() const { return m_PathStr; }
+		_NODISCARD const XString& GetPathStr() const { return m_PathStr; }
 		_NODISCARD NodeID GetID() const { return m_ID; }
 		_NODISCARD NodeID ParentFolder() const { return m_ParentID; }
 	};
@@ -51,7 +51,7 @@ namespace Editor {
 	//file
 	class FileNode: public PathNode {
 	private:
-		TUniquePtr<Engine::AAssetBase> m_Asset;
+		TUniquePtr<Asset::AssetBase> m_Asset;
 		TVector<std::pair<EventID, Func<void(FileNode*)>>> m_OnFileChange;
 		friend class AssetManager;
 	public:
@@ -59,9 +59,9 @@ namespace Editor {
 		template<typename T> T* GetAsset() {
 			if (!m_Asset.Get()) {//lazy load
 				m_Asset.Reset(new T);
-				Engine::AssetLoader::LoadProjectAsset(m_Asset.Get(), m_Path.string().c_str());
+				Asset::AssetLoader::LoadProjectAsset(m_Asset.Get(), m_Path.string().c_str());
 			}
-			return dynamic_cast<T*>(m_Asset.Get());
+			return static_cast<T*>(m_Asset.Get());
 		}
 		void Save();
 	};

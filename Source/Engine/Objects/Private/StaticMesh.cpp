@@ -1,13 +1,9 @@
 #include "Objects/Public/StaticMesh.h"
+#include "Render/Public/GlobalShader.h"
 
-namespace Engine {
+namespace Object {
 
-	struct SModelUBO {
-		Math::FMatrix4x4 ModelMat;
-		Math::FMatrix4x4 InvModelMat;
-	};
-
-	StaticMesh::StaticMesh(const AMeshAsset& meshAsset, RenderScene* scene): RenderObject3D(scene) {
+	StaticMesh::StaticMesh(const Asset::MeshAsset& meshAsset, RenderScene* scene): RenderObject3D(scene) {
 		auto r = RHI::Instance();
 		m_Primitives.Resize(meshAsset.Primitives.Size());
 		for (uint32 i = 0; i < m_Primitives.Size(); ++i) {
@@ -16,13 +12,13 @@ namespace Engine {
 			primitive.VertexCount = primitiveData.Vertices.Size();
 			primitive.IndexCount = primitiveData.Indices.Size();
 			// vb
-			RHIBufferDesc vbDesc{ BUFFER_FLAG_VERTEX | BUFFER_FLAG_COPY_DST, primitiveData.Vertices.ByteSize(), sizeof(IndexType) };
+			RHIBufferDesc vbDesc{ BUFFER_FLAG_VERTEX | BUFFER_FLAG_COPY_DST, primitiveData.Vertices.ByteSize(), sizeof(Asset::IndexType) };
 			primitive.VertexBuffer = r->CreateBuffer(vbDesc);
-			primitive.VertexBuffer->UpdateData(primitiveData.Vertices.Data(), primitiveData.Vertices.ByteSize());
+			primitive.VertexBuffer->UpdateData(primitiveData.Vertices.Data(), primitiveData.Vertices.ByteSize(), 0);
 			// ib
-			RHIBufferDesc ibDesc{ BUFFER_FLAG_INDEX | BUFFER_FLAG_COPY_DST, primitiveData.Indices.ByteSize(), sizeof(IndexType) };
+			RHIBufferDesc ibDesc{ BUFFER_FLAG_INDEX | BUFFER_FLAG_COPY_DST, primitiveData.Indices.ByteSize(), sizeof(Asset::IndexType) };
 			primitive.IndexBuffer = r->CreateBuffer(ibDesc);
-			primitive.IndexBuffer->UpdateData(primitiveData.Indices.Data(), primitiveData.Indices.ByteSize());
+			primitive.IndexBuffer->UpdateData(primitiveData.Indices.Data(), primitiveData.Indices.ByteSize(), 0);
 		}
 	}
 
@@ -30,9 +26,9 @@ namespace Engine {
 	}
 
 	void StaticMesh::CreateDrawCall(Render::DrawCallQueue& queue) {
-		RenderObject3D::CreateDrawCall(queue);
 		for(auto& primitive: m_Primitives) {
-			queue.EmplaceBack().ResetFunc([&primitive](RHICommandBuffer* cmd) {
+			queue.EmplaceBack().ResetFunc([&primitive, buffer=m_TransformUniformBuffer.Get()](RHICommandBuffer* cmd) {
+				cmd->SetShaderParameter(1, 0, RHIShaderParam::UniformBuffer(buffer));
 				cmd->BindVertexBuffer(primitive.VertexBuffer.Get(), 0, 0);
 				cmd->BindIndexBuffer(primitive.IndexBuffer.Get(), 0);
 				cmd->DrawIndexed(primitive.IndexCount, 1, 0, 0, 0);

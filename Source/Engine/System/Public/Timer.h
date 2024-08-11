@@ -13,9 +13,9 @@ namespace Engine {
 		float GetTime() { return static_cast<float>(m_NowTime.time_since_epoch().count()); }
 		float GetDeltaTime() { return m_DeltaTime; }
 	private:
-		TimePoint m_NowTime{ std::chrono::steady_clock::now() };
+		TimePoint m_NowTime{ NowTimePoint()};
 		uint32 m_FrameCounter{ 0U };
-		float m_DeltaTime;
+		float m_DeltaTime{ 0.0f };
 		bool m_Paused{ false };
 		float m_LastFrameDurationMs{ 0.0f };
 		float m_FPS{ 0.0f };

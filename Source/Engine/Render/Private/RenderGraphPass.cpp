@@ -4,13 +4,8 @@ namespace Render {
 	RGPassNode::RGPassNode() {
 	}
 
-	void RGPassNode::SetName(XXString&& name) {
+	void RGPassNode::SetName(XString&& name) {
 		m_Name = MoveTemp(name);
-	}
-
-	void RGPassNode::Input(RGResourceNode* res) {
-		m_Inputs.PushBack(res);
-		res->AddRef();
 	}
 
 	void RGPassNode::Input(RGResourceNode* res, uint32 i) {
@@ -21,16 +16,15 @@ namespace Render {
 		res->AddRef();
 	}
 
-	void RGPassNode::Output(RGResourceNode* res) {
-		m_Outputs.PushBack(res);
-		res->AddRef();
+	void RGPassNode::OutputColor(RGResourceNode* node, uint32 i) {
+		if (!(m_ColorOutputs.Size() > i)) {
+			m_ColorOutputs.Resize(i + 1);
+		}
+		m_ColorOutputs[i] = node;
+		node->AddRef();
 	}
 
-	void RGPassNode::Output(RGResourceNode* res, uint32 i) {
-		if(!(m_Outputs.Size() > i)) {
-			m_Outputs.Resize(i + 1);
-		}
-		m_Outputs[i] = res;
-		res->AddRef();
+	void RGPassNode::OutputDepth(RGResourceNode* node) {
+		m_DepthOutput = node;
 	}
 }

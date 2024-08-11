@@ -3,7 +3,7 @@
 #include "Core/Public/File.h"
 #include "Core/Public/Log.h"
 
-namespace Engine {
+namespace Asset {
 	enum class ETexCompressMode : uint8 {
 		NONE = 0,
 		LZ4,
@@ -12,7 +12,7 @@ namespace Engine {
 
 	const ETexCompressMode COMPRESS_MODE = ETexCompressMode::LZ4;
 
-	bool ATextureAsset::Load(File::RFile& in) {
+	bool TextureAsset::Load(File::RFile& in) {
 		in.seekg(0);
 		in.read(BYTE_PTR(&Width), sizeof(uint32));
 		in.read(BYTE_PTR(&Height), sizeof(uint32));
@@ -33,13 +33,13 @@ namespace Engine {
 			LZ4_decompress_safe(compressedData.Data(), BYTE_PTR(Pixels.Data()), (int)compressedByteSize, (int)byteSize);
 		}
 		else {
-			LOG_INFO("[ATextureAsset::Load] Unknown compress mode %u", compressMode);
+			LOG_INFO("[TextureAssetBaseLoad] Unknown compress mode %u", compressMode);
 			return false;
 		}
 
 		return true;
 	}
-	bool ATextureAsset::Save(File::WFile& out) {
+	bool TextureAsset::Save(File::WFile& out) {
 		ETexCompressMode compressMode = COMPRESS_MODE;
 
 		out.write(CBYTE_PTR(&Width), sizeof(uint32));
@@ -59,13 +59,13 @@ namespace Engine {
 			out.write(compressedData.Data(), compressedSize);
 		}
 		else {
-			LOG_INFO("[ATextureAsset::Save] Unknown compress mode %u", compressMode);
+			LOG_INFO("[TextureAssetBaseSave] Unknown compress mode %u", compressMode);
 			return false;
 		}
 		return true;
 	}
 
-	ATextureAsset::~ATextureAsset() {
+	TextureAsset::~TextureAsset() {
 	}
 	
 }

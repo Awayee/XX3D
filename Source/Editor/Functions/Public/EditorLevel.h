@@ -6,10 +6,10 @@
 
 namespace Editor {
 	struct EditorLevelMesh {
-		XXString File;
-		XXString Name;
-		Engine::AMeshAsset* Asset{nullptr};
-		TUniquePtr<Engine::StaticMesh> Mesh;
+		XString File;
+		XString Name;
+		Asset::MeshAsset* Asset;
+		TUniquePtr<Object::StaticMesh> Mesh;
 		Math::FVector3 Position;
 		Math::FVector3 Scale;
 		Math::FVector3 Rotation;
@@ -18,14 +18,14 @@ namespace Editor {
 	class EditorLevel {
 	private:
 		TVector<EditorLevelMesh> m_Meshes;
-		Engine::RenderScene* m_Scene{nullptr};
+		Object::RenderScene* m_Scene{nullptr};
 	public:
-		EditorLevel(const Engine::ALevelAsset& asset, Engine::RenderScene* scene);
+		EditorLevel(const Asset::LevelAsset& asset, Object::RenderScene* scene);
 		~EditorLevel();
 		TVector<EditorLevelMesh>& Meshes();
 		EditorLevelMesh* GetMesh(uint32 idx);
-		EditorLevelMesh* AddMesh(const XXString& file, Engine::AMeshAsset* asset);
+		EditorLevelMesh* AddMesh(const XString& file, Asset::MeshAsset* asset);
 		void DelMesh(uint32 idx);
-		void SaveAsset(Engine::ALevelAsset* asset);
+		void SaveAsset(Asset::LevelAsset* asset);
 	};
 }

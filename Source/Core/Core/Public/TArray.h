@@ -189,8 +189,7 @@ public:
 	TStaticArray(TStaticArray&& rhs) noexcept = delete;
 
 	TStaticArray(std::initializer_list<T> params) {
-		static_assert(L == params.size());
-		memcpy(m_Data, params.begin(), ByteSize());
+		memcpy(m_Data, params.begin(), params.size() * sizeof(T));
 	}
 
 	TStaticArray& operator =(const TStaticArray& rhs) {
@@ -206,7 +205,7 @@ public:
 		return TArrayView<T>{m_Data, L};
 	}
 
-	operator TArrayView<T>() const {
+	operator TConstArrayView<T>() const {
 		return TConstArrayView<T>{m_Data, L};
 	}
 

@@ -6,7 +6,7 @@
 
 bool TextureImporter::Import(const char* fullPath) {
 	if (m_SaveFile.empty()) {
-		File::FPath relativePath = File::RelativePath(File::FPath(fullPath), Engine::AssetLoader::AssetPath());
+		File::FPath relativePath = File::RelativePath(File::FPath(fullPath), Asset::AssetLoader::AssetPath());
 		relativePath.replace_extension(".texture");
 		m_SaveFile = relativePath.string();
 	}
@@ -29,5 +29,5 @@ bool TextureImporter::Import(const char* fullPath) {
 }
 
 bool TextureImporter::Save() {
-	return Engine::AssetLoader::SaveProjectAsset(m_Asset, m_SaveFile.c_str());
+	return Asset::AssetLoader::SaveProjectAsset(m_Asset, m_SaveFile.c_str());
 }

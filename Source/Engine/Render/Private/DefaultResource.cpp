@@ -27,13 +27,11 @@ namespace Render {
 		// create default texture 2d;
 		RHI* rhi = RHI::Instance();
 		ASSERT(rhi, "");
-		RHITextureDesc desc;
-		desc.Dimension = ETextureDimension::Tex2D;
+		RHITextureDesc desc = RHITextureDesc::Texture2D();
 		desc.Format = ERHIFormat::R8G8B8A8_UNORM;
 		desc.Flags = TEXTURE_FLAG_SRV | TEXTURE_FLAG_CPY_DST;
-		desc.Size = { 1,1,1 };
-		desc.Depth = 1;
-		desc.ArraySize = 1;
+		desc.Width = 1;
+		desc.Height = 1;
 		desc.MipSize = 1;
 		desc.Samples = 1;
 
@@ -51,7 +49,7 @@ namespace Render {
 		auto* tex = GetDefaultTexture2D(TEX_WHITE);
 		const Color4<uint8> color{ 1,1,1,1 };
 		const RHITextureOffset offset{ 0,0, {0,0,0} };
-		tex->UpdateData(offset, sizeof(color), &color);
+		tex->UpdateData(sizeof(color), &color, offset);
 	}
 
 	void DefaultResources::CreateDefaultSamplers() {

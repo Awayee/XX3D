@@ -1,7 +1,7 @@
 #pragma once
 #include "Math/Public/Math.h"
 
-namespace Engine {
+namespace Object {
 	class DirectionalLight {
 	private:
 		Math::FVector3 m_LightDir{-1,-1,-1};

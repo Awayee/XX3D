@@ -5,7 +5,7 @@
 #include "Core/Public/Concurrency.h"
 #include "Window/Public/EngineWindow.h"
 
-TUniquePtr<RHI> RHI::s_Instance = nullptr;
+TUniquePtr<RHI> RHI::s_Instance{ nullptr };
 
 RHI* RHI::Instance() {
 	return s_Instance.Get();
@@ -26,7 +26,7 @@ void RHI::Initialize() {
 
 	switch(rhiType) {
 	case Engine::ERHIType::Vulkan:
-		s_Instance = new VulkanRHI(desc);
+		s_Instance.Reset(new VulkanRHI(desc));
 		break;
 	case Engine::ERHIType::DX12:
 	case Engine::ERHIType::DX11:

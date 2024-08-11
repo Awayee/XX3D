@@ -1,14 +1,14 @@
 #pragma once
 #include <algorithm>
+#include "Core/Public/Defines.h"
 
-inline size_t ByteHash(const unsigned char* data, size_t size) {
-	static constexpr size_t P = 0xfff;
-	static constexpr size_t M = 0xffff;
-	size_t hs = 0;
-	size_t p = 1;
-	for(size_t i=0; i < size; ++i) {
-		hs += (data[i] * p) % M;
+template<typename T> uint64 DataArrayHash(const T* data, uint64 size, uint64 startVal=0) {
+	static constexpr uint64 P = 0xfff;
+	static constexpr uint64 M = 0xffff;
+	uint64 p = 1;
+	for (uint64 i = 0; i < size; ++i) {
+		startVal += (data[i] * p) % M;
 		p *= P;
 	}
-	return hs;
+	return startVal;
 }

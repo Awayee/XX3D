@@ -1,34 +1,51 @@
 #pragma once
+#include "Defines.h"
 
 template<class T>
 class TUniquePtr {
 public:
+	NON_COPYABLE(TUniquePtr);
 	TUniquePtr(): m_Ptr(nullptr) {}
-	TUniquePtr(T* ptr) {
+	explicit TUniquePtr(T* ptr) {
 		m_Ptr = ptr;
 	}
-	template<class Ty> TUniquePtr(Ty* ptr) {
+
+	template<class Ty> explicit TUniquePtr(Ty* ptr) {
 		m_Ptr = static_cast<T*>(ptr);
 	}
-	template<class Ty> TUniquePtr(const TUniquePtr<Ty>&) = delete;
-	template<class Ty> TUniquePtr(TUniquePtr<Ty>&& rhs) noexcept {
-		m_Ptr = static_cast<T*>(rhs.Release());
-	}
+
+	TUniquePtr(decltype(nullptr)) {}
+
 	~TUniquePtr() {
 		Free();
 	}
 
+	template<class Ty> TUniquePtr(const TUniquePtr<Ty>&) = delete;
+
 	template<class Ty> TUniquePtr& operator=(const TUniquePtr<Ty>& rhs) = delete;
+
+	TUniquePtr(TUniquePtr&& rhs) noexcept {
+		m_Ptr = rhs.Release();
+	}
+
+	TUniquePtr& operator=(TUniquePtr&& rhs) noexcept {
+		Free();
+		m_Ptr = rhs.Release();
+		return *this;
+	}
+
+	template<class Ty> TUniquePtr(TUniquePtr<Ty>&& rhs) noexcept {
+		m_Ptr = static_cast<T*>(rhs.Release());
+	}
+
 	template<class Ty> TUniquePtr& operator=(TUniquePtr<Ty>&& rhs) noexcept {
 		Free();
 		m_Ptr = static_cast<T*>(rhs.Release());
 		return *this;
 	}
 
-	template<class Ty> TUniquePtr& operator=(Ty* rhs) {
-		Free();
-		m_Ptr = static_cast<T*>(rhs);
-		return *this;
+	operator T*(){
+		return m_Ptr;
 	}
 
 	explicit operator bool () const {

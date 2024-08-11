@@ -2,7 +2,7 @@
 #include "Core/Public/Defines.h"
 
 enum : uint32 {
-    RHI_MAX_FRAME_IN_FLIGHT = 2,
+    RHI_MAX_FRAME_IN_FLIGHT = 1, // TODO optional
     RHI_MAX_RENDER_TARGET_NUM = 8,
 };
 
@@ -78,9 +78,9 @@ enum class ETextureDimension : uint8 {
 };
 
 enum ETextureFlagBit {
-    TEXTURE_FLAG_RENDER_TARGET = 1u,
-    TEXTURE_FLAG_DEPTH = 1u << 1,
-    TEXTURE_FLAG_STENCIL=1u << 2,
+    TEXTURE_FLAG_COLOR_TARGET = 1u,
+    TEXTURE_FLAG_DEPTH_TARGET = 1u << 1,
+    TEXTURE_FLAG_STENCIL = 1u << 2,
     TEXTURE_FLAG_SRV = 1u << 3,
     TEXTURE_FLAG_UAV = 1u << 4,
     TEXTURE_FLAG_PRESENT = 1u << 5,
@@ -88,6 +88,15 @@ enum ETextureFlagBit {
     TEXTURE_FLAG_CPY_DST = 1u << 7,
 };
 typedef uint32 ETextureFlags;
+
+enum class ETextureSRVType : uint8 {
+    Default = 0,
+    Texture2D,
+    CubeMap,
+    Depth,
+    Stencil,
+    MaxNum
+};
 
 enum class ESamplerFilter : uint8 {
     Point=0,
@@ -129,7 +138,7 @@ enum class ERTStoreOp: uint8 {
 enum EShaderStageFlagBit: uint8 {
     SHADER_STAGE_VERTEX_BIT = 1,
     SHADER_STAGE_GEOMETRY_BIT = 2,
-    SHADER_STAGE_FRAGMENT_BIT = 4,
+    SHADER_STAGE_PIXEL_BIT = 4,
     SHADER_STAGE_COMPUTE_BIT = 8,
 };
 typedef uint8 EShaderStageFlags;

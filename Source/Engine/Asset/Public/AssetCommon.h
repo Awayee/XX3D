@@ -6,7 +6,7 @@
 #include "Core/Public/File.h"
 #include "Core/Public/String.h"
 
-namespace Engine {
+namespace Asset {
 	#define PARSE_PROJECT_ASSET(f)\
 		char f##__s[128]; StrCopy(f##__s, PROJECT_ASSETS); strcat(f##__s, f); f=f##__s
 
@@ -16,17 +16,17 @@ namespace Engine {
 	#define CBYTE_PTR reinterpret_cast<const char*>
 	#define BYTE_PTR reinterpret_cast<char*>
 
-	struct AAssetBase {
+	struct AssetBase {
 
 		virtual bool Load(File::RFile& in) = 0;
 		virtual bool Save(File::WFile& out) = 0;
-		virtual ~AAssetBase() = default;
+		virtual ~AssetBase() = default;
 	};
 
-	struct AUnknownAsset: public AAssetBase {
+	struct UnknownAsset: public AssetBase {
 		bool Load(File::RFile& in) override { return true; }
 		bool Save(File::WFile& out) override { return true; }
-		~AUnknownAsset() override = default;
+		~UnknownAsset() override = default;
 	};
 
 	struct AssetVertex {
@@ -41,6 +41,6 @@ namespace Engine {
 	struct SPrimitiveData {
 		TVector<AssetVertex> Vertices;
 		TVector<uint32>  Indices;
-		TVector<XXString>  Textures;
+		TVector<XString>  Textures;
 	};
 }

@@ -51,7 +51,7 @@ namespace Editor {
 		if(!m_CurrentFolder) {
 			return;
 		}
-		m_Contents.Clear();
+		m_Contents.Reset();
 		for(NodeID id : m_CurrentFolder->GetChildFolders()) {
 			FolderNode* node = Browser()->GetFolder(id);
 			if(node) {
@@ -74,7 +74,7 @@ namespace Editor {
 		}
 		auto& children = folderNode->GetChildFolders();
 		ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_OpenOnArrow;
-		if(children.Empty()) {
+		if(children.IsEmpty()) {
 			nodeFlags |= ImGuiTreeNodeFlags_Leaf;
 		}
 
@@ -84,7 +84,7 @@ namespace Editor {
 
 		bool expanded = ImGui::TreeNodeEx(folderNode->GetName().c_str(), nodeFlags);
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
-			if (children.Empty() || !IsMouseOnTreeNodeArrow()) {
+			if (children.IsEmpty() || !IsMouseOnTreeNodeArrow()) {
 				SetCurrentFolder(folderNode);
 			}
 		}
@@ -140,7 +140,7 @@ namespace Editor {
 	WndAssetBrowser::WndAssetBrowser() : EditorWndBase("Assets") {
 		EditorUIMgr::Instance()->AddMenu("Menu", "Import", ImportAsset, nullptr);
 		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
-		if(s_Instances.Empty()) {
+		if(s_Instances.IsEmpty()) {
 			Browser()->RegisterFolderRebuildEvent(WndAssetBrowser::OnFolderRebuildAllWindows);
 		}
 		s_Instances.PushBack(this);

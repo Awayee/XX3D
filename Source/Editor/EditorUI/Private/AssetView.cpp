@@ -8,7 +8,7 @@ namespace Editor {
 		m_ID = m_Node->GetID();
 	}
 
-	const XXString& FolderAssetView::GetName() {
+	const XString& FolderAssetView::GetName() {
 		return m_Node->GetName();
 	}
 
@@ -28,10 +28,10 @@ namespace Editor {
 
 	FileAssetView::FileAssetView(FileNode* node): m_Node(node) {
 		m_ID = m_Node->GetID();
-		m_Node->GetAsset<Engine::AUnknownAsset>();
+		m_Node->GetAsset<Asset::UnknownAsset>();
 	}
 
-	const XXString& FileAssetView::GetName() {
+	const XString& FileAssetView::GetName() {
 		return m_Node->GetName();
 	}
 

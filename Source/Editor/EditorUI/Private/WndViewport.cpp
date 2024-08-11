@@ -6,7 +6,7 @@
 namespace Editor {
 
 
-	void MoveCamera(Engine::Camera* camera, float x, float y, float z, bool local) {
+	void MoveCamera(Object::Camera* camera, float x, float y, float z, bool local) {
 		Math::FVector3 eye = camera->GetView().Eye;
 		Math::FVector3 at = camera->GetView().At;
 		Math::FVector3 up = camera->GetView().Up;
@@ -24,7 +24,7 @@ namespace Editor {
 		camera->SetView(eye, at, up);
 	}
 
-	void RotateCamera(Engine::Camera* camera, float x, float y, float z, bool localSpace) {
+	void RotateCamera(Object::Camera* camera, float x, float y, float z, bool localSpace) {
 		Math::FVector3 eye = camera->GetView().Eye;
 		Math::FVector3 at = camera->GetView().At;
 		Math::FVector3 tempUp = camera->GetView().Up;
@@ -67,6 +67,7 @@ namespace Editor {
 			m_LastY = 0.0f;
 		}
 
+		Object::Camera* camera = Object::RenderScene::GetDefaultScene()->GetMainCamera();
 		//rotate
 		if (m_MouseDown) {
 			auto pos = ImGui::GetMousePos();
@@ -78,7 +79,7 @@ namespace Editor {
 			else {
 				float dX = x - m_LastX;
 				float dY = y - m_LastY;
-				RotateCamera(Engine::RenderScene::GetDefaultScene()->GetMainCamera(), dY, dX, 0.0f, true);
+				RotateCamera(camera, dY, dX, 0.0f, true);
 				m_LastX = x;
 				m_LastY = y;
 			}
@@ -90,7 +91,7 @@ namespace Editor {
 			int z = ImGui::IsKeyDown(ImGuiKey_W) - ImGui::IsKeyDown(ImGuiKey_S);
 			int y = ImGui::IsKeyDown(ImGuiKey_E) - ImGui::IsKeyDown(ImGuiKey_Q);
 			if (x || y || z) {
-				MoveCamera(Engine::RenderScene::GetDefaultScene()->GetMainCamera(), (float)x * 0.004f, (float)y * 0.004f, (float)z * 0.004f, true);
+				MoveCamera(camera, (float)x * 0.004f, (float)y * 0.004f, (float)z * 0.004f, true);
 			}
 		}
 	}

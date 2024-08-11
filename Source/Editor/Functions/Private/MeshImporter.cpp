@@ -26,7 +26,7 @@ uint32 GetPrimitiveCount(const tinygltf::Model& model, const tinygltf::Node& nod
 	return count;
 }
 
-void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TVector<Engine::AMeshAsset::SPrimitive>& primitives, uint32& index) {
+void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TVector<Asset::MeshAsset::SPrimitive>& primitives, uint32& index) {
 	if (node.mesh > -1) {
 		const tinygltf::Mesh& mesh = model.meshes[node.mesh];
 		for (uint32 i = 0; i < mesh.primitives.size(); i++) {
@@ -64,7 +64,7 @@ void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TVec
 				uv0ByteStride = uvAccessor.ByteStride(uvView) / sizeof(float);
 			}
 
-			TVector<Engine::AssetVertex>& vertices = primitives[index].Vertices;
+			TVector<Asset::AssetVertex>& vertices = primitives[index].Vertices;
 			vertices.Resize(vertexCount);
 
 			for (uint32 v = 0; v < vertexCount; v++) {
@@ -142,10 +142,10 @@ uint32 GetPrimitiveCount(const aiScene* aScene, aiNode* aNode) {
 	return count;
 }
 
-void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TVector<Engine::AMeshAsset::SPrimitive>& meshInfos) {
+void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TVector<Asset::MeshAsset::SPrimitive>& meshInfos) {
 	for (uint32 i = 0; i < aNode->mNumMeshes; i++) {
 		aiMesh* aMesh = aScene->mMeshes[aNode->mMeshes[i]];
-		TVector<Engine::AssetVertex>& vertices = meshInfos[i].Vertices;
+		TVector<Asset::AssetVertex>& vertices = meshInfos[i].Vertices;
 		TVector<uint32>& indices = meshInfos[i].Indices;
 		//TVector<std::string>& textures = meshInfos[i].textures;
 
@@ -209,14 +209,14 @@ void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TVector<Engine::AMeshAsse
 	}
 }
 
-MeshImporter::MeshImporter(Engine::AMeshAsset* asset, const char* saveFile) {
+MeshImporter::MeshImporter(Asset::MeshAsset* asset, const char* saveFile) {
 	m_Asset = asset;
 	m_SaveFile = saveFile;
 }
 
 bool MeshImporter::Import(const char* fullPath) {
 	if (m_SaveFile.empty()) {
-		File::FPath relativePath = File::RelativePath(File::FPath(fullPath), Engine::AssetLoader::AssetPath());
+		File::FPath relativePath = File::RelativePath(File::FPath(fullPath), Asset::AssetLoader::AssetPath());
 		relativePath.replace_extension(".mesh");
 		m_SaveFile = relativePath.string();
 	}
@@ -232,9 +232,9 @@ bool MeshImporter::Import(const char* fullPath) {
 bool MeshImporter::ImportGLB(const char* file) {
 	tinygltf::Model gltfModel;
 	tinygltf::TinyGLTF gltfContext;
-	XXString error;
-	XXString warning;
-	XXString fullPath(file);
+	XString error;
+	XString warning;
+	XString fullPath(file);
 	if (!gltfContext.LoadBinaryFromFile(&gltfModel, &error, &warning, fullPath)) {
 		LOG_INFO("Failed to load GLTF mesh: %s", file);
 		return false;
@@ -275,7 +275,7 @@ bool MeshImporter::Save() {
 	bool r = true;
 	const File::FPath FullPath(m_SaveFile.c_str());
 
-	TUnorderedSet<XXString> usedNames;
+	TUnorderedSet<XString> usedNames;
 	for (uint32 i = 0; i < m_Asset->Primitives.Size(); ++i) {
 		auto& primitive = m_Asset->Primitives[i];
 		//generate name if empty
@@ -286,12 +286,12 @@ bool MeshImporter::Save() {
 		File::FPath parentPath = FullPath.parent_path();
 		parentPath.append(primitive.Name);
 		parentPath.replace_extension(".primitive");
-		XXString binaryFile = parentPath.string();
+		XString binaryFile = parentPath.string();
 		std::replace(binaryFile.begin(), binaryFile.end(), '\\', '/');
 
-		r |= Engine::AMeshAsset::ExportPrimitiveFile(binaryFile.c_str(), primitive.Vertices, primitive.Indices, Engine::EMeshCompressMode::NONE);
+		r |= Asset::MeshAsset::ExportPrimitiveFile(binaryFile.c_str(), primitive.Vertices, primitive.Indices, Asset::EMeshCompressMode::NONE);
 		primitive.BinaryFile.swap(binaryFile);
 	}
-	r |= Engine::AssetLoader::SaveProjectAsset(m_Asset, m_SaveFile.c_str());
+	r |= Asset::AssetLoader::SaveProjectAsset(m_Asset, m_SaveFile.c_str());
 	return r;
 }

@@ -4,7 +4,7 @@
 #include "VulkanDevice.h"
 #include "VulkanMemory.h"
 #include "VulkanCommand.h"
-#include "VulkanDescriptorSet.h"
+#include "VulkanPipeline.h"
 #include "VulkanViewport.h"
 #include "VulkanUploader.h"
 
@@ -81,7 +81,7 @@ RHIBufferPtr VulkanRHI::CreateBuffer(const RHIBufferDesc& desc) {
 	VkMemoryPropertyFlags memoryProperty = ToBufferMemoryProperty(desc.Flags);
 	BufferAllocation alloc;
 	if(m_Device->GetMemoryMgr()->AllocateBufferMemory(alloc, desc.ByteSize, ToBufferUsage(desc.Flags), memoryProperty)) {
-		return new VulkanRHIBuffer(desc, m_Device.Get(), MoveTemp(alloc));
+		return RHIBufferPtr(new VulkanRHIBuffer(desc, m_Device.Get(), MoveTemp(alloc)));
 	}
 	return nullptr;
 }
@@ -91,10 +91,10 @@ RHITexturePtr VulkanRHI::CreateTexture(const RHITextureDesc& desc) {
 	imageInfo.flags = ToImageCreateFlags(desc.Dimension);
 	imageInfo.imageType = ToImageType(desc.Dimension);
 	imageInfo.format = ToVkFormat(desc.Format);
-	imageInfo.extent = { desc.Size.w, desc.Size.h, desc.Size.h };
+	imageInfo.extent = { desc.Width, desc.Height, desc.Depth};
 	imageInfo.mipLevels = desc.MipSize;
 	imageInfo.arrayLayers = ConvertImageArraySize(desc);
-	imageInfo.samples = (VkSampleCountFlagBits)desc.Samples;
+	imageInfo.samples = ToVkMultiSampleCount(desc.Samples);
 	imageInfo.usage = ToImageUsage(desc.Flags);
 	VkImage imageHandle;
 	if(VK_SUCCESS != vkCreateImage(m_Device->GetDevice(), &imageInfo, nullptr, &imageHandle)) {
@@ -107,7 +107,12 @@ RHITexturePtr VulkanRHI::CreateTexture(const RHITextureDesc& desc) {
 		vkDestroyImage(m_Device->GetDevice(), imageHandle, nullptr);
 		return nullptr;
 	}
-	return new VulkanRHITexture(desc, GetDevice(), imageHandle, MoveTemp(alloc));
+	if(desc.Flags & (TEXTURE_FLAG_DEPTH_TARGET | TEXTURE_FLAG_STENCIL)) {
+		return RHITexturePtr(new VulkanDepthStencilTexture(desc, GetDevice(), imageHandle, MoveTemp(alloc)));
+	}
+	else {
+		return RHITexturePtr(new VulkanRHITexture(desc, GetDevice(), imageHandle, MoveTemp(alloc)));
+	}
 }
 
 RHISamplerPtr VulkanRHI::CreateSampler(const RHISamplerDesc& desc) {
@@ -130,7 +135,7 @@ RHISamplerPtr VulkanRHI::CreateSampler(const RHISamplerDesc& desc) {
 	if (VK_SUCCESS != vkCreateSampler(m_Device->GetDevice(), &info, nullptr, &samplerHandle)) {
 		return nullptr;
 	}
-	return new VulkanRHISampler(desc, GetDevice(), samplerHandle);
+	return RHISamplerPtr(new VulkanRHISampler(desc, GetDevice(), samplerHandle));
 }
 
 RHIFencePtr VulkanRHI::CreateFence(bool sig) {
@@ -140,30 +145,21 @@ RHIFencePtr VulkanRHI::CreateFence(bool sig) {
 	info.flags = sig ? VK_FENCE_CREATE_SIGNALED_BIT : 0; // the fence is initialized as signaled
 	VkFence fence;
 	if(VK_SUCCESS == vkCreateFence(m_Device->GetDevice(), &info, nullptr, &fence)) {
-		return new VulkanRHIFence(fence, GetDevice());
+		return RHIFencePtr(new VulkanRHIFence(fence, GetDevice()));
 	}
 	return nullptr;
 }
 
-RHIShaderPtr VulkanRHI::CreateShader(EShaderStageFlagBit type, const char* codeData, size_t codeSize, const char* entryFunc) {
-	return new VulkanRHIShader(type, codeData, codeSize, entryFunc, GetDevice());
+RHIShaderPtr VulkanRHI::CreateShader(EShaderStageFlagBit type, const char* codeData, size_t codeSize, const XString& entryFunc) {
+	return RHIShaderPtr(new VulkanRHIShader(type, codeData, codeSize, entryFunc, GetDevice()));
 }
 
 RHIGraphicsPipelineStatePtr VulkanRHI::CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) {
-	return new VulkanRHIGraphicsPipelineState(desc, GetDevice()) ;
+	return RHIGraphicsPipelineStatePtr(new VulkanRHIGraphicsPipelineState(desc, GetDevice()));
 }
-
 
 RHIComputePipelineStatePtr VulkanRHI::CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) {
-	return new VulkanRHIComputePipelineState(desc, GetDevice());
-}
-
-RHIShaderParameterSetPtr VulkanRHI::CreateShaderParameterSet(const RHIShaderParemeterLayout& layout) {
-	DescriptorSetHandle handle = m_Device->GetDescriptorMgr()->AllocateDS(layout);
-	if(handle.IsValid()) {
-		return new VulkanRHIShaderParameterSet(handle, m_Device.Get());
-	}
-	return nullptr;
+	return RHIComputePipelineStatePtr(new VulkanRHIComputePipelineState(desc, GetDevice()));
 }
 
 RHICommandBufferPtr VulkanRHI::CreateCommandBuffer() {
@@ -179,20 +175,4 @@ void VulkanRHI::SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, RHIFenc
 	VkFence fenceHandle = fence ? ((VulkanRHIFence*)fence)->GetFence() : VK_NULL_HANDLE;
 	VkSemaphore smp = bPresent ? m_Viewport->GetCurrentSemaphore() : VK_NULL_HANDLE;
 	m_Device->GetCommandContext()->SubmitCommandBuffers(vulkanCmds, smp, fenceHandle);
-}
-
-VkPipelineLayout VulkanRHI::CreatePipelineLayout(const RHIPipelineLayout& rhiLayout) {
-	uint32 layoutCount = rhiLayout.Size();
-	TFixedArray<VkDescriptorSetLayout> layouts(layoutCount);
-	for (uint32 i = 0; i < layoutCount; ++i) {
-		layouts[i] = m_Device->GetDescriptorMgr()->GetLayoutHandle(rhiLayout[i]);
-	}
-	VkPipelineLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0 };
-	layoutInfo.setLayoutCount = layoutCount;
-	layoutInfo.pSetLayouts = layouts.Data();
-	VkPipelineLayout layoutHandle;
-	if(VK_SUCCESS == vkCreatePipelineLayout(m_Device->GetDevice(), &layoutInfo, nullptr, &layoutHandle)) {
-		return layoutHandle;
-	}
-	return VK_NULL_HANDLE;
 }

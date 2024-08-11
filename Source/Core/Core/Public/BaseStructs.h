@@ -3,6 +3,12 @@
 
 template<typename T> struct Size2D {
 	T w{ 0 }, h{ 0 };
+	friend bool operator==(Size2D l, Size2D r) {
+		return l.w == r.w && l.h == r.h;
+	}
+	friend bool operator!=(Size2D l, Size2D r) {
+		return l.w != r.w || l.h != r.h;
+	}
 };
 typedef Size2D<uint32> USize2D;
 typedef Size2D<int32>  ISize2D;

@@ -7,10 +7,10 @@ namespace Editor {
 	class EditorConfig: public TSingleton<EditorConfig> {
 		friend TSingleton<EditorConfig>;
 	public:
-		const XXString& GetImGuiConfigSavePath();
+		const XString& GetImGuiConfigSavePath();
 		static void InitializeImGuiConfig();
 	private:
-		XXString m_ImGuiConfigSavePath;
+		XString m_ImGuiConfigSavePath;
 		EditorConfig();
 		~EditorConfig() override;
 	};

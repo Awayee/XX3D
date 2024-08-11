@@ -4,11 +4,11 @@
 #include "Math/Public/Quaternion.h"
 #include "Core/Public/Log.h"
 
-namespace Engine {
-	struct ALevelAsset : AAssetBase {
+namespace Asset {
+	struct LevelAsset : AssetBase {
 		struct MeshData {
-			XXString Name;
-			XXString File;
+			XString Name;
+			XString File;
 			Math::FVector3 Position;
 			Math::FVector3 Scale;
 			Math::FVector3 Rotation;

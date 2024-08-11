@@ -7,7 +7,7 @@
 typedef void(*DebugFunc)(const char*);
 
 struct RHIInitDesc {
-	XXString AppName;
+	XString AppName;
 	bool EnableDebug;
 	bool IntegratedGPU;
 	void* WindowHandle;
@@ -23,7 +23,6 @@ typedef TUniquePtr<RHIFence>                     RHIFencePtr;
 typedef TUniquePtr<RHIShader>                    RHIShaderPtr;
 typedef TUniquePtr<RHIGraphicsPipelineState>     RHIGraphicsPipelineStatePtr;
 typedef TUniquePtr<RHIComputePipelineState>      RHIComputePipelineStatePtr;
-typedef TUniquePtr<RHIShaderParameterSet>        RHIShaderParameterSetPtr;
 
 
 class RHI{
@@ -38,10 +37,9 @@ public:
 	virtual RHITexturePtr CreateTexture(const RHITextureDesc& desc) = 0;
 	virtual RHISamplerPtr CreateSampler(const RHISamplerDesc& desc) = 0;
 	virtual RHIFencePtr CreateFence(bool sig = true) = 0;
-	virtual RHIShaderPtr CreateShader(EShaderStageFlagBit type, const char* codeData, size_t codeSize, const char* entryFunc) = 0;
+	virtual RHIShaderPtr CreateShader(EShaderStageFlagBit type, const char* codeData, size_t codeSize, const XString& entryFunc) = 0;
 	virtual RHIGraphicsPipelineStatePtr CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) = 0;
 	virtual RHIComputePipelineStatePtr CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) = 0;
-	virtual RHIShaderParameterSetPtr CreateShaderParameterSet(const RHIShaderParemeterLayout& layout) = 0;
 	virtual RHICommandBufferPtr CreateCommandBuffer() = 0;
 	// Submit command buffer(s), if bPresent is true, the command buffers will execute after viewport acquired back buffer.
 	virtual void SubmitCommandBuffer(RHICommandBuffer* cmd, RHIFence* fence, bool bPresent) = 0;

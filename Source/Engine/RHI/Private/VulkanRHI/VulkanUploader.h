@@ -9,7 +9,7 @@ class VulkanStagingBuffer: public RHIBuffer {
 public:
 	VulkanStagingBuffer(const RHIBufferDesc& desc, VulkanDevice* device);
 	~VulkanStagingBuffer() override;
-	void UpdateData(const void* data, uint32 byteSize) override { ASSERT(0, ""); }
+	void UpdateData(const void* data, uint32 byteSize, uint32 offset) override { ASSERT(0, ""); }
 	void* Map();
 	void Unmap();
 	VkBuffer GetBuffer();

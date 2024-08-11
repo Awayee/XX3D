@@ -133,7 +133,7 @@ namespace Engine {
 	}
 
 	LRESULT WindowSystemWin32::SMainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-		return dynamic_cast<WindowSystemWin32*>(Instance())->MainWndProc(hwnd, msg, wParam, lParam);
+		return static_cast<WindowSystemWin32*>(Instance())->MainWndProc(hwnd, msg, wParam, lParam);
 	}
 
 	WindowSystemWin32::WindowSystemWin32(const WindowInitInfo& initInfo) {

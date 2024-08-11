@@ -3,14 +3,9 @@
 #include "VulkanCommand.h"
 #include "VulkanRHI.h"
 #include "VulkanConverter.h"
-#include "VulkanDescriptorSet.h"
+#include "VulkanPipeline.h"
 #include "VulkanDevice.h"
 #include "VulkanUploader.h"
-
-#define VK_SET_OBJECT_NAME(type, handle, name) do{\
-VkDebugUtilsObjectNameInfoEXT info{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, nullptr, type, reinterpret_cast<uint64>(handle), name};\
-vkSetDebugUtilsObjectNameEXT(m_Device->GetDevice(), &info);\
-}while(0)
 
 VulkanRHIBuffer::VulkanRHIBuffer(const RHIBufferDesc& desc, VulkanDevice* device, BufferAllocation&& alloc):
 RHIBuffer(desc), m_Device(device), m_Allocation(std::forward<BufferAllocation>(alloc)) {}
@@ -20,14 +15,13 @@ VulkanRHIBuffer::~VulkanRHIBuffer() {
 }
 
 void VulkanRHIBuffer::SetName(const char* name) {
-	
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_BUFFER, GetBuffer(), name);
 }
 
-void VulkanRHIBuffer::UpdateData(const void* data, uint32 byteSize) {
+void VulkanRHIBuffer::UpdateData(const void* data, uint32 byteSize, uint32 offset) {
 	const EBufferFlags bufferFlags = GetDesc().Flags;
 	if(bufferFlags & EBufferFlagBit::BUFFER_FLAG_UNIFORM) {
-		void* mappedData = m_Allocation.Map();
+		void* mappedData = ((uint8*)m_Allocation.Map() + offset);
 		memcpy(mappedData, data, byteSize);
 		m_Allocation.Unmap();
 	}
@@ -39,7 +33,7 @@ void VulkanRHIBuffer::UpdateData(const void* data, uint32 byteSize) {
 		staging->Unmap();
 		auto cmd = m_Device->GetCommandContext()->GetUploadCmd();
 		// TODO replace with vulkan functions
-		cmd->CopyBufferToBuffer(staging, this, 0, 0, byteSize);
+		cmd->CopyBufferToBuffer(staging, this, 0, offset, byteSize);
 	}
 }
 
@@ -51,26 +45,16 @@ VulkanRHITexture::VulkanRHITexture(const RHITextureDesc& desc, VulkanDevice* dev
 	m_IsImageOwner(true){
 	// reserve the views
 	const uint32 viewCount = ConvertImageArraySize(m_Desc) * m_Desc.MipSize;
-	m_Views.Resize(viewCount, VK_NULL_HANDLE);
+	m_2DViewIndices.Resize(viewCount, VK_INVALID_INDEX);
 	if (desc.Dimension == ETextureDimension::TexCube) {
-		m_CubeViews.Resize(m_Desc.MipSize, VK_NULL_HANDLE);
+		m_CubeViewIndices.Resize(m_Desc.MipSize, VK_INVALID_INDEX);
 	}
-	m_DefaultView = VK_NULL_HANDLE;
+	m_DefaultViewIndex = VK_INVALID_INDEX;
 }
 
 VulkanRHITexture::~VulkanRHITexture() {
-	for (auto view : m_Views) {
-		if (view) {
-			vkDestroyImageView(m_Device->GetDevice(), view, nullptr);
-		}
-	}
-	for (auto view : m_CubeViews) {
-		if (view) {
-			vkDestroyImageView(m_Device->GetDevice(), view, nullptr);
-		}
-	}
-	if (m_DefaultView) {
-		vkDestroyImageView(m_Device->GetDevice(), m_DefaultView, nullptr);
+	for(VkImageView view: m_AllViews) {
+		vkDestroyImageView(m_Device->GetDevice(), view, nullptr);
 	}
 	if (m_IsImageOwner && m_Image) {
 		vkDestroyImage(m_Device->GetDevice(), m_Image, nullptr);
@@ -78,36 +62,46 @@ VulkanRHITexture::~VulkanRHITexture() {
 	}
 }
 
-VkImageView VulkanRHITexture::GetDefaultView() {
-	if(!m_DefaultView) {
-		m_DefaultView = CreateView(ToImageViewType(m_Desc.Dimension), 0, (uint8)m_Desc.MipSize, 0, m_Desc.ArraySize);
+VkImageView VulkanRHITexture::GetView(ETextureSRVType type, RHITextureSubDesc sub) {
+	switch (type) {
+	case ETextureSRVType::Default: return GetDefaultView();
+	case ETextureSRVType::Texture2D: return Get2DView(sub.BaseMip, sub.BaseLayer);
+	case ETextureSRVType::CubeMap: return GetCubeView(sub.BaseMip, sub.BaseLayer);
+	default: LOG_ERROR("[VulkanRHITexture::GetView] Vinalid src type!");
 	}
-	return m_DefaultView;
+}
+
+VkImageView VulkanRHITexture::GetDefaultView() {
+	if(VK_INVALID_INDEX == m_DefaultViewIndex) {
+		m_DefaultViewIndex = CreateView(ToImageViewType(m_Desc.Dimension), ToImageAspectFlags(m_Desc.Flags), 0, m_Desc.MipSize, 0, m_Desc.ArraySize);
+	}
+	return m_AllViews[m_DefaultViewIndex];
 }
 
 VkImageView VulkanRHITexture::Get2DView(uint8 mipIndex, uint32 arrayIndex) {
-	const uint32 viewIndex = mipIndex * ConvertImageArraySize(m_Desc) + arrayIndex;
-	CHECK(viewIndex < m_Views.Size());
-	if(m_Views[viewIndex] == VK_NULL_HANDLE) {
-		m_Views[viewIndex] = CreateView(VK_IMAGE_VIEW_TYPE_2D, mipIndex, 1, arrayIndex, 1);
+	const uint32 idx = mipIndex * ConvertImageArraySize(m_Desc) + arrayIndex;
+	CHECK(idx < m_2DViewIndices.Size());
+	if(m_2DViewIndices[idx] == VK_INVALID_INDEX) {
+		m_2DViewIndices[idx] = CreateView(VK_IMAGE_VIEW_TYPE_2D, ToImageAspectFlags(m_Desc.Flags), mipIndex, 1, arrayIndex, 1);
 	}
-	return m_Views[viewIndex];
+	return m_AllViews[m_2DViewIndices[idx]];
 }
 
 VkImageView VulkanRHITexture::GetCubeView(uint8 mipIndex, uint32 arrayIndex) {
 	ASSERT(m_Desc.Dimension == ETextureDimension::TexCube || m_Desc.Dimension == ETextureDimension::TexCubeArray, "Only TexCube or TexCubeArray has CubeView!");
-	const uint32 viewIndex = mipIndex * m_Desc.ArraySize + arrayIndex * 6;
-	if (m_CubeViews[viewIndex] == VK_NULL_HANDLE) {
-		m_Views[viewIndex] = CreateView(VK_IMAGE_VIEW_TYPE_CUBE, mipIndex, 1, arrayIndex, 6);
+	const uint32 idx = mipIndex * m_Desc.ArraySize + arrayIndex * 6;
+	CHECK(idx < m_CubeViewIndices.Size());
+	if (m_CubeViewIndices[idx] == VK_INVALID_INDEX) {
+		m_CubeViewIndices[idx] = CreateView(VK_IMAGE_VIEW_TYPE_CUBE, ToImageAspectFlags(m_Desc.Flags), mipIndex, 1, arrayIndex, 6);
 	}
-	return m_CubeViews[viewIndex];
+	return m_AllViews[m_CubeViewIndices[idx]];
 }
 
 void VulkanRHITexture::SetName(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_IMAGE, m_Image, name);
 }
 
-void VulkanRHITexture::UpdateData(RHITextureOffset offset, uint32 byteSize, const void* data) {
+void VulkanRHITexture::UpdateData(uint32 byteSize, const void* data, RHITextureOffset offset) {
 	ASSERT(GetDesc().Flags & ETextureFlagBit::TEXTURE_FLAG_CPY_DST, "");
 	VulkanStagingBuffer* staging = m_Device->GetUploader()->AcquireBuffer(byteSize);
 	void* mappedPointer = staging->Map();
@@ -164,22 +158,55 @@ inline uint32 ConvertVulkanLayerCount(VkImageViewType type, uint32 layerCount) {
 	}
 }
 
-VkImageView VulkanRHITexture::CreateView(VkImageViewType type, uint8 mipIndex, uint8 mipCount, uint32 arrayIndex, uint32 arrayCount) {
+uint32 VulkanRHITexture::CreateView(VkImageViewType type, VkImageAspectFlags aspectFlags, uint8 mipIndex, uint8 mipCount, uint32 arrayIndex, uint32 arrayCount) {
 	ASSERT(CheckViewable(m_Desc.Dimension, type), "Type is not viewable!");
 	arrayCount = ConvertVulkanLayerCount(type, arrayCount);
-	VkImageView view;
+	uint32 index = m_AllViews.Size();
 	// correct layer count
 	VkImageViewCreateInfo imageViewCreateInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0 };
 	imageViewCreateInfo.image = m_Image;
 	imageViewCreateInfo.viewType = type;
 	imageViewCreateInfo.format = ToVkFormat(m_Desc.Format);
-	imageViewCreateInfo.subresourceRange.aspectMask = ToImageAspectFlags(m_Desc.Flags);
+	imageViewCreateInfo.subresourceRange.aspectMask = aspectFlags;
 	imageViewCreateInfo.subresourceRange.baseMipLevel = mipIndex;
 	imageViewCreateInfo.subresourceRange.levelCount = mipCount;
 	imageViewCreateInfo.subresourceRange.baseArrayLayer = arrayIndex;
 	imageViewCreateInfo.subresourceRange.layerCount = arrayCount;
-	vkCreateImageView(m_Device->GetDevice(), &imageViewCreateInfo, nullptr, &view);
-	return view;
+	vkCreateImageView(m_Device->GetDevice(), &imageViewCreateInfo, nullptr, &m_AllViews.EmplaceBack());
+	return index;
+}
+
+VulkanDepthStencilTexture::VulkanDepthStencilTexture(const RHITextureDesc& desc, VulkanDevice* device, VkImage image, ImageAllocation&& allocation):
+VulkanRHITexture(desc, device, image, MoveTemp(allocation)),
+m_DepthViewIndex(VK_INVALID_INDEX),
+m_StencilViewIndex(VK_INVALID_INDEX){}
+
+VkImageView VulkanDepthStencilTexture::GetView(ETextureSRVType type, RHITextureSubDesc sub) {
+	if(ETextureSRVType::Depth == type) {
+		return GetDepthView();
+	}
+	if(ETextureSRVType::Stencil == type) {
+		return GetStencilView();
+	}
+	return VulkanRHITexture::GetView(type, sub);
+}
+
+VkImageView VulkanDepthStencilTexture::GetDepthView() {
+	if(VK_INVALID_INDEX == m_DepthViewIndex) {
+		m_DepthViewIndex = CreateView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1);
+	}
+	return m_AllViews[m_DepthViewIndex];
+}
+
+VkImageView VulkanDepthStencilTexture::GetStencilView() {
+	if (VK_INVALID_INDEX == m_StencilViewIndex) {
+		m_StencilViewIndex = CreateView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1);
+	}
+	return m_AllViews[m_StencilViewIndex];
+}
+
+VkImageView VulkanDepthStencilTexture::GetDepthStencilView() {
+	return GetDefaultView();
 }
 
 VulkanRHISampler::VulkanRHISampler(const RHISamplerDesc& desc, VulkanDevice* device, VkSampler sampler): RHISampler(desc), m_Device(device), m_Sampler(sampler) {}
@@ -212,10 +239,10 @@ void VulkanRHIFence::SetName(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_FENCE, m_Handle, name);
 }
 
-VulkanRHIShader::VulkanRHIShader(EShaderStageFlagBit type, const char* code, size_t codeSize, const char* funcName, VulkanDevice* device): RHIShader(type), m_Device(device) {
+VulkanRHIShader::VulkanRHIShader(EShaderStageFlagBit type, const char* code, size_t codeSize, const XString& entryFunc, VulkanDevice* device): RHIShader(type), m_Device(device) {
 	VkShaderModuleCreateInfo shaderInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, nullptr, 0, codeSize, reinterpret_cast<const uint32*>(code)};
 	vkCreateShaderModule(m_Device->GetDevice(), &shaderInfo, nullptr, &m_ShaderModule);
-	m_EntryName = funcName;
+	m_EntryName = entryFunc;
 }
 
 VulkanRHIShader::~VulkanRHIShader() {
@@ -233,174 +260,4 @@ VkPipelineShaderStageCreateInfo VulkanRHIShader::GetShaderStageInfo() const {
 	info.pName = m_EntryName.data();
 	info.pSpecializationInfo = nullptr;
 	return info;
-}
-
-VulkanRHIGraphicsPipelineState::VulkanRHIGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc, VulkanDevice* device):RHIGraphicsPipelineState(desc), m_Device(device) {
-	// Create pipeline layout
-	{
-		uint32 layoutCount = desc.Layout.Size();
-		TFixedArray<VkDescriptorSetLayout> layouts(layoutCount);
-		for (uint32 i = 0; i < layoutCount; ++i) {
-			layouts[i] = m_Device->GetDescriptorMgr()->GetLayoutHandle(desc.Layout[i]);
-		}
-		VkPipelineLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0 };
-		layoutInfo.setLayoutCount = layoutCount;
-		layoutInfo.pSetLayouts = layouts.Data();
-		VK_ASSERT(vkCreatePipelineLayout(m_Device->GetDevice(), &layoutInfo, nullptr, &m_PipelineLayout), "PipelineLayout");
-	}
-
-	// Create pipeline handle
-	{
-		VkGraphicsPipelineCreateInfo pipelineInfo{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
-		// shader stage
-		uint32 shaderCount = !!m_Desc.VertexShader + !!m_Desc.PixelShader;
-		TFixedArray<VkPipelineShaderStageCreateInfo> shaderStages(shaderCount);
-		shaderCount = 0;
-		if (m_Desc.VertexShader) {
-			shaderStages[shaderCount++] = static_cast<VulkanRHIShader*>(m_Desc.VertexShader)->GetShaderStageInfo();
-		}
-		if (m_Desc.PixelShader) {
-			shaderStages[shaderCount++] = static_cast<VulkanRHIShader*>(m_Desc.PixelShader)->GetShaderStageInfo();
-		}
-
-		// vertex input
-		auto& vertexInput = m_Desc.VertexInput;
-		VkPipelineVertexInputStateCreateInfo vertexInputInfo{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO, nullptr, 0 };
-		const uint32 attrCount = vertexInput.Attributes.Size();
-		TFixedArray<VkVertexInputAttributeDescription> viAttrs(attrCount);
-		for (uint32 i = 0; i < attrCount; ++i) {
-			viAttrs[i].format = ToVkFormat(vertexInput.Attributes[i].Format);
-			viAttrs[i].binding = vertexInput.Attributes[i].Binding;
-			viAttrs[i].location = i;
-			viAttrs[i].offset = vertexInput.Attributes[i].Offset;
-		}
-		vertexInputInfo.vertexAttributeDescriptionCount = attrCount;
-		vertexInputInfo.pVertexAttributeDescriptions = viAttrs.Data();
-		const uint32 bindingCount = vertexInput.Bindings.Size();
-		TFixedArray<VkVertexInputBindingDescription> viBindings(bindingCount);
-		for (uint32 i = 0; i < bindingCount; ++i) {
-			viBindings[i].binding = i;
-			viBindings[i].inputRate = vertexInput.Bindings[i].PerInstance ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
-			viBindings[i].stride = vertexInput.Bindings[i].Stride;
-		}
-		vertexInputInfo.vertexBindingDescriptionCount = bindingCount;
-		vertexInputInfo.pVertexBindingDescriptions = viBindings.Data();
-
-		// input assembly
-		VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO, nullptr, 0 };
-		inputAssemblyInfo.topology = ToPrimitiveTopology(m_Desc.PrimitiveTopology);
-		inputAssemblyInfo.primitiveRestartEnable = false;
-
-		// tessellation state TODO
-		VkPipelineTessellationStateCreateInfo tessellationStateInfo{ VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO, nullptr, 0 };
-		tessellationStateInfo.patchControlPoints = 0;
-
-		// viewport state (dynamic)
-		VkPipelineViewportStateCreateInfo viewportInfo{ VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO, nullptr, 0 };
-		viewportInfo.viewportCount = 1;
-		viewportInfo.scissorCount = 1;
-
-		// rasterization
-		VkPipelineRasterizationStateCreateInfo rasterizationStateInfo = ToRasterizationStateCreateInfo(m_Desc.RasterizerState);
-
-		// multi-sample
-		VkPipelineMultisampleStateCreateInfo multiSampleInfo{ VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO, nullptr, 0 };
-		multiSampleInfo.rasterizationSamples = ToVkMultiSampleCount(m_Desc.NumSamples);
-
-		// depth stencil
-		VkPipelineDepthStencilStateCreateInfo depthStencilInfo = ToDepthStencilStateCreateInfo(m_Desc.DepthStencilState);
-
-		// color blend
-		auto& blendDesc = m_Desc.BlendDesc;
-		VkPipelineColorBlendStateCreateInfo colorBlendInfo{ VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr, 0 };
-		colorBlendInfo.logicOpEnable = false;
-		colorBlendInfo.logicOp = VK_LOGIC_OP_COPY;
-		uint32 blendStateCount = blendDesc.BlendStates.Size();
-		TFixedArray<VkPipelineColorBlendAttachmentState> states(blendStateCount);
-		for (uint32 i = 0; i < blendStateCount; ++i) {
-			states[i] = ToAttachmentBlendState(blendDesc.BlendStates[i]);
-		}
-		for (uint32 i = 0; i < 4; ++i) {
-			colorBlendInfo.blendConstants[i] = blendDesc.BlendConst[i];
-		}
-
-		// dynamic state
-		static VkDynamicState s_DynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-		VkPipelineDynamicStateCreateInfo dynamicInfo{ VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO, nullptr, 0 };
-		dynamicInfo.dynamicStateCount = ArraySize(s_DynamicStates);
-		dynamicInfo.pDynamicStates = s_DynamicStates;
-
-		// rendering create info
-		VkPipelineRenderingCreateInfo renderingCreateInfo{ VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO, nullptr };
-		renderingCreateInfo.viewMask = 0;// TODO multi view
-		uint32 colorAttachmentCount = desc.RenderTargetFormats.Size();
-		TFixedArray<VkFormat> colorAttachmentFormats(colorAttachmentCount);
-		for(uint32 i=0; i<colorAttachmentCount; ++i) {
-			colorAttachmentFormats[i] = ToVkFormat(desc.RenderTargetFormats[i]);
-		}
-		renderingCreateInfo.colorAttachmentCount = colorAttachmentCount;
-		renderingCreateInfo.pColorAttachmentFormats = colorAttachmentFormats.Data();
-		renderingCreateInfo.depthAttachmentFormat = ToVkFormat(desc.DepthStencilFormat);
-		renderingCreateInfo.stencilAttachmentFormat = renderingCreateInfo.depthAttachmentFormat;
-
-		pipelineInfo.pNext = &renderingCreateInfo;
-		pipelineInfo.flags = 0u;
-		pipelineInfo.stageCount = shaderCount;
-		pipelineInfo.pStages = shaderStages.Data();
-		pipelineInfo.pVertexInputState = &vertexInputInfo;
-		pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
-		pipelineInfo.pTessellationState = &tessellationStateInfo;
-		pipelineInfo.pViewportState = &viewportInfo;
-		pipelineInfo.pRasterizationState = &rasterizationStateInfo;
-		pipelineInfo.pMultisampleState = &multiSampleInfo;
-		pipelineInfo.pDepthStencilState = &depthStencilInfo;
-		pipelineInfo.pColorBlendState = &colorBlendInfo;
-		pipelineInfo.pDynamicState = &dynamicInfo;
-		pipelineInfo.layout = m_PipelineLayout;
-
-		VK_ASSERT(vkCreateGraphicsPipelines(m_Device->GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_Pipeline), "vkCreateGraphicsPipelines");
-	}
-}
-
-VulkanRHIGraphicsPipelineState::~VulkanRHIGraphicsPipelineState() {
-	vkDestroyPipeline(m_Device->GetDevice(), m_Pipeline, nullptr);
-	vkDestroyPipelineLayout(m_Device->GetDevice(), m_PipelineLayout, nullptr);
-}
-
-void VulkanRHIGraphicsPipelineState::SetName(const char* name) {
-	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_PIPELINE, m_Pipeline, name);
-}
-
-VulkanRHIComputePipelineState::VulkanRHIComputePipelineState(const RHIComputePipelineStateDesc& desc, VulkanDevice* device): RHIComputePipelineState(desc), m_Device(device) {
-	// create layout
-	{
-		uint32 layoutCount = desc.Layout.Size();
-		TFixedArray<VkDescriptorSetLayout> layouts(layoutCount);
-		for (uint32 i = 0; i < layoutCount; ++i) {
-			layouts[i] = m_Device->GetDescriptorMgr()->GetLayoutHandle(desc.Layout[i]);
-		}
-		VkPipelineLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0 };
-		layoutInfo.setLayoutCount = layoutCount;
-		layoutInfo.pSetLayouts = layouts.Data();
-		VK_ASSERT(vkCreatePipelineLayout(m_Device->GetDevice(), &layoutInfo, nullptr, &m_PipelineLayout), "vkCreatePipelineLayout");
-	}
-
-	// create pipeline
-	{
-		VkComputePipelineCreateInfo pipelineInfo{ VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, nullptr, 0 };
-		pipelineInfo.stage = dynamic_cast<VulkanRHIShader*>(m_Desc.Shader)->GetShaderStageInfo();
-		pipelineInfo.layout = m_PipelineLayout;
-		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-		pipelineInfo.basePipelineIndex = 0;
-		vkCreateComputePipelines(m_Device->GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_Pipeline);
-	}
-}
-
-VulkanRHIComputePipelineState::~VulkanRHIComputePipelineState() {
-	vkDestroyPipelineLayout(m_Device->GetDevice(), m_PipelineLayout, nullptr);
-	vkDestroyPipeline(m_Device->GetDevice(), m_Pipeline, nullptr);
-}
-
-void VulkanRHIComputePipelineState::SetName(const char* name) {
-	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_PIPELINE, m_Pipeline, name);
 }

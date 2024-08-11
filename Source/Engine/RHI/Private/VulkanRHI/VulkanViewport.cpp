@@ -206,13 +206,11 @@ void VulkanViewport::CreateSwapchain() {
 	LOG_DEBUG("Image count of swapchain is %u.", swapchainImageCount);
 
 	// Create back buffers and semaphores.
-	RHITextureDesc backBufferDesc;
-	backBufferDesc.Dimension = ETextureDimension::Tex2D;
+	RHITextureDesc backBufferDesc = RHITextureDesc::Texture2D();
 	backBufferDesc.Format = SurfaceFormatToRHIFormat(surfaceFormat.format);
 	backBufferDesc.Flags = TEXTURE_FLAG_PRESENT;
-	backBufferDesc.Size = { swapchainExtent.width, swapchainExtent.height };
-	backBufferDesc.Depth = 1;
-	backBufferDesc.ArraySize = 1;
+	backBufferDesc.Width = swapchainExtent.width;
+	backBufferDesc.Height = swapchainExtent.height;
 	backBufferDesc.MipSize = 1;
 	backBufferDesc.Samples = 1;
 	m_BackBuffers.Resize(swapchainImageCount);
@@ -224,7 +222,7 @@ void VulkanViewport::CreateSwapchain() {
 }
 
 void VulkanViewport::DestroySwapchain() {
-	m_BackBuffers.Clear();
+	m_BackBuffers.Reset();
 	vkDestroySwapchainKHR(m_Device->GetDevice(), m_Swapchain, nullptr);
 	m_Swapchain = VK_NULL_HANDLE;
 }

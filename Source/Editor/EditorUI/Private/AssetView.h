@@ -13,7 +13,7 @@ namespace Editor {
 		NodeID m_ID;
 	public:
 		virtual ~AssetViewBase() {}
-		virtual const XXString& GetName() = 0;
+		virtual const XString& GetName() = 0;
 		virtual bool IsFolder() = 0;
 		virtual void Open() = 0;
 		virtual void Save() = 0;
@@ -25,7 +25,7 @@ namespace Editor {
 		FolderNode* m_Node{ nullptr };
 	public:
 		FolderAssetView(FolderNode* node);
-		const XXString& GetName() override;
+		const XString& GetName() override;
 		bool IsFolder() override;
 		void Open() override;
 		void Save() override;
@@ -37,7 +37,7 @@ namespace Editor {
 		FileNode* m_Node = nullptr;
 	public:
 		FileAssetView(FileNode* node);
-		const XXString& GetName() override;
+		const XString& GetName() override;
 		bool IsFolder() override;
 		virtual void Open() override {}
 		virtual void Save() override {}
@@ -55,27 +55,27 @@ namespace Editor {
 	};
 
 	// asset extents
-	class MeshAssetView : public FileAssetViewTemplate<Engine::AMeshAsset> {
+	class MeshAssetView : public FileAssetViewTemplate<Asset::MeshAsset> {
 	public:
-		MeshAssetView(FileNode* node) : FileAssetViewTemplate<Engine::AMeshAsset>(node) {}
+		MeshAssetView(FileNode* node) : FileAssetViewTemplate<Asset::MeshAsset>(node) {}
 		void Open() override;
 	};
 
-	class TextureAssetView: public FileAssetViewTemplate<Engine::ATextureAsset> {
+	class TextureAssetView: public FileAssetViewTemplate<Asset::TextureAsset> {
 	public:
-		TextureAssetView(FileNode* node) : FileAssetViewTemplate<Engine::ATextureAsset>(node) {}
+		TextureAssetView(FileNode* node) : FileAssetViewTemplate<Asset::TextureAsset>(node) {}
 		void Open() override;
 	};
 
-	class LevelAssetView: public FileAssetViewTemplate<Engine::ALevelAsset> {
+	class LevelAssetView: public FileAssetViewTemplate<Asset::LevelAsset> {
 	public:
-		LevelAssetView(FileNode* node) : FileAssetViewTemplate<Engine::ALevelAsset>(node) {}
+		LevelAssetView(FileNode* node) : FileAssetViewTemplate<Asset::LevelAsset>(node) {}
 		void Open() override;
 		void Save() override;
 	};
 
 	inline TUniquePtr<AssetViewBase> CreateAssetView(FileNode* node) {
-		const XXString& ext = node->GetPath().extension().string();
+		const XString& ext = node->GetPath().extension().string();
 		if(ext == ".mesh") {
 			return TUniquePtr(new MeshAssetView(node));
 		}

@@ -1,10 +1,10 @@
 #include "Asset/Public/AssetLoader.h"
 #include "Core/Public/Log.h"
 
-namespace Engine {
+namespace Asset {
 
-	XXString AssetLoader::s_EngineAssetPath{ ENGINE_ASSETS };
-	XXString AssetLoader::s_ProjectAssetPath{ PROJECT_ASSETS };
+	XString AssetLoader::s_EngineAssetPath{ ENGINE_ASSETS };
+	XString AssetLoader::s_ProjectAssetPath{ PROJECT_ASSETS };
 
 	namespace {
 		// TODO Temporary to check the file content, all assets will be binary
@@ -17,10 +17,10 @@ namespace Engine {
 		return s_ProjectAssetPath;
 	}
 
-	bool AssetLoader::LoadProjectAsset(AAssetBase* asset, File::PathStr file) {
+	bool AssetLoader::LoadProjectAsset(AssetBase* asset, File::PathStr file) {
 		File::FPath filePath(s_ProjectAssetPath);
 		filePath.append(file);
-		File::RFile in(filePath.string().c_str(), BinaryFile(file) ? (std::ios::in) : (std::ios::in | std::ios::binary));
+		File::RFile in(filePath.string().c_str(), BinaryFile(file) ? (File::EFileMode::Read) : (File::EFileMode::Read | File::EFileMode::Binary));
 		if (!in.is_open()) {
 			LOG_INFO("[AssetLoader::LoadProjectAsset] Failed to read file: %s", filePath.string().c_str());
 			return false;
@@ -33,10 +33,10 @@ namespace Engine {
 		return ok;
 	}
 
-	bool AssetLoader::LoadEngineAsset(AAssetBase* asset, File::PathStr file) {
+	bool AssetLoader::LoadEngineAsset(AssetBase* asset, File::PathStr file) {
 		File::FPath filePath(s_EngineAssetPath);
 		filePath.append(file);
-		File::RFile in(filePath.string().c_str(), BinaryFile(file) ? (std::ios::in) : (std::ios::in | std::ios::binary));
+		File::RFile in(filePath.string().c_str(), BinaryFile(file) ? (File::EFileMode::Read) : (File::EFileMode::Read | File::EFileMode::Binary));
 		if (!in.is_open()) {
 			LOG_INFO("[AssetLoader::LoadEngineAsset] Failed to read file: %s", filePath.string().c_str());
 			return false;
@@ -49,10 +49,10 @@ namespace Engine {
 		return ok;
 	}
 
-	bool AssetLoader::SaveProjectAsset(AAssetBase* asset, File::PathStr file) {
+	bool AssetLoader::SaveProjectAsset(AssetBase* asset, File::PathStr file) {
 		File::FPath filePath(s_ProjectAssetPath);
 		filePath.append(file);
-		File::WFile out(filePath.string().c_str(), BinaryFile(file) ? (std::ios::out) : (std::ios::out | std::ios::binary));
+		File::WFile out(filePath.string().c_str(), BinaryFile(file) ? (File::EFileMode::Write) : (File::EFileMode::Write | File::EFileMode::Binary));
 		if (!out.is_open()) {
 			LOG_INFO("[AssetLoader::SaveProjectAsset] Failed to write file: %s", filePath.string().c_str());
 			return false;

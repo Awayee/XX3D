@@ -4,6 +4,7 @@
 #include "RHI/Public/RHI.h"
 #include "Render/Public/DefaultResource.h"
 #include "Render/Public/Renderer.h"
+#include "Render/Public/GlobalShader.h"
 #include "System/Public/FrameCounter.h"
 #include "System/Public/Timer.h"
 
@@ -17,6 +18,7 @@ namespace Engine {
 		EngineWindow::Initialize();
 		RHI::Initialize();
 		Render::DefaultResources::Initialize();
+		Render::GlobalShaderMap::Initialize();
 		Render::RendererMgr::Initialize();
 		s_RunningEngine = this;
 	}
@@ -25,6 +27,7 @@ namespace Engine {
 		// wait renderer
 		Render::RendererMgr::Instance()->WaitQueue();
 		Render::RendererMgr::Release();
+		Render::GlobalShaderMap::Release();
 		Render::DefaultResources::Release();
 		RHI::Release();
 		EngineWindow::Release();
@@ -36,7 +39,7 @@ namespace Engine {
 		EngineWindow::Instance()->Update();
 		Render::RendererMgr::Instance()->Update();
 		CTimer::Instance()->Tick();
-		FrameCounter::Update();// Frame counter ticks at last.
+		FrameCounter::Update();// Frame counter ticks at last.e
 	}
 
 	void XXEngine::Run() {

@@ -132,10 +132,10 @@ VkImageViewType ToImageViewType(ETextureDimension dimension) {
 
  VkImageUsageFlags ToImageUsage(ETextureFlags flags) {
 	VkImageUsageFlags vkFlags = 0;
-	if (flags & (ETextureFlagBit::TEXTURE_FLAG_DEPTH | ETextureFlagBit::TEXTURE_FLAG_STENCIL)) {
+	if (flags & (ETextureFlagBit::TEXTURE_FLAG_DEPTH_TARGET | ETextureFlagBit::TEXTURE_FLAG_STENCIL)) {
 		vkFlags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 	}
-	if (flags & ETextureFlagBit::TEXTURE_FLAG_RENDER_TARGET) {
+	if (flags & ETextureFlagBit::TEXTURE_FLAG_COLOR_TARGET) {
 		vkFlags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	}
 	if (flags & ETextureFlagBit::TEXTURE_FLAG_SRV) {
@@ -157,11 +157,12 @@ VkImageViewType ToImageViewType(ETextureDimension dimension) {
 
  VkImageAspectFlags ToImageAspectFlags(ETextureFlags flags) {
 	VkImageAspectFlags vkFlags = 0;
-	if (flags & (ETextureFlagBit::TEXTURE_FLAG_SRV | ETextureFlagBit::TEXTURE_FLAG_RENDER_TARGET | ETextureFlagBit::TEXTURE_FLAG_PRESENT)) {
+	if (flags & (ETextureFlagBit::TEXTURE_FLAG_SRV | ETextureFlagBit::TEXTURE_FLAG_COLOR_TARGET | ETextureFlagBit::TEXTURE_FLAG_PRESENT)) {
 		vkFlags |= VK_IMAGE_ASPECT_COLOR_BIT;
 	}
-	if (flags & ETextureFlagBit::TEXTURE_FLAG_DEPTH) {
+	if (flags & ETextureFlagBit::TEXTURE_FLAG_DEPTH_TARGET) {
 		vkFlags |= VK_IMAGE_ASPECT_DEPTH_BIT;
+		vkFlags &= (~VK_IMAGE_ASPECT_COLOR_BIT);
 	}
 	if (flags & ETextureFlagBit::TEXTURE_FLAG_STENCIL) {
 		vkFlags |= VK_IMAGE_ASPECT_STENCIL_BIT;
@@ -192,8 +193,9 @@ VkImageViewType ToImageViewType(ETextureDimension dimension) {
  VkShaderStageFlagBits ToVkShaderStageFlagBit(EShaderStageFlagBit type) {
 	switch (type) {
 	case EShaderStageFlagBit::SHADER_STAGE_COMPUTE_BIT: return VK_SHADER_STAGE_COMPUTE_BIT;
-	case EShaderStageFlagBit::SHADER_STAGE_VERTEX_BIT: return VK_SHADER_STAGE_FRAGMENT_BIT; return VK_SHADER_STAGE_GEOMETRY_BIT;
-	case EShaderStageFlagBit::SHADER_STAGE_FRAGMENT_BIT: return VK_SHADER_STAGE_FRAGMENT_BIT;
+	case EShaderStageFlagBit::SHADER_STAGE_VERTEX_BIT: return VK_SHADER_STAGE_VERTEX_BIT;
+	case EShaderStageFlagBit::SHADER_STAGE_GEOMETRY_BIT: return VK_SHADER_STAGE_GEOMETRY_BIT;
+	case EShaderStageFlagBit::SHADER_STAGE_PIXEL_BIT: return VK_SHADER_STAGE_FRAGMENT_BIT;
 	}
 	return VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
 }
@@ -203,13 +205,13 @@ VkShaderStageFlags ToVkShaderStageFlags(EShaderStageFlags flags) {
 	if(flags & EShaderStageFlagBit::SHADER_STAGE_COMPUTE_BIT) {
 		vkFlags |= VK_SHADER_STAGE_COMPUTE_BIT;
 	}
-	if(flags &EShaderStageFlagBit::SHADER_STAGE_VERTEX_BIT ) {
+	if(flags & EShaderStageFlagBit::SHADER_STAGE_VERTEX_BIT ) {
 		vkFlags |= VK_SHADER_STAGE_VERTEX_BIT;
 	}
 	if(flags & EShaderStageFlagBit::SHADER_STAGE_GEOMETRY_BIT) {
 		vkFlags |= VK_SHADER_STAGE_GEOMETRY_BIT;
 	}
-	if(flags & EShaderStageFlagBit::SHADER_STAGE_FRAGMENT_BIT) {
+	if(flags & EShaderStageFlagBit::SHADER_STAGE_PIXEL_BIT) {
 		vkFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
 	}
 	return vkFlags;
@@ -257,7 +259,17 @@ VkDescriptorType ToVkDescriptorType(EBindingType type) {
 }
 
  VkSampleCountFlagBits ToVkMultiSampleCount(uint8 count) {
-	return static_cast<VkSampleCountFlagBits>(count);
+	switch (count) {
+	case 1: return VK_SAMPLE_COUNT_1_BIT;
+	case 2: return VK_SAMPLE_COUNT_2_BIT;
+	case 4: return VK_SAMPLE_COUNT_4_BIT;
+	case 8: return VK_SAMPLE_COUNT_8_BIT;
+	case 16: return VK_SAMPLE_COUNT_16_BIT;
+	case 32: return VK_SAMPLE_COUNT_32_BIT;
+	case 64: return VK_SAMPLE_COUNT_64_BIT;
+	default: break;
+	}
+	LOG_ERROR("[ToVkMultiSampleCount] Invalid multi sample count: %u", count);
 }
 
  VkCompareOp ToVkCompareOp(ECompareType type) {
@@ -313,6 +325,7 @@ VkPipelineRasterizationStateCreateInfo ToRasterizationStateCreateInfo(const RHIR
 		info.depthBiasConstantFactor = desc.DepthBias;
 		info.depthBiasSlopeFactor = desc.SlopeScaleDepthBias;
 	}
+	info.lineWidth = 1.0f;
 	return info;
 }
 

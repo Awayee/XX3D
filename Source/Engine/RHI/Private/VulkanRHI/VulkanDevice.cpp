@@ -2,7 +2,7 @@
 #include "Core/Public/TArray.h"
 #include "Core/Public/Container.h"
 #include "VulkanMemory.h"
-#include "VulkanDescriptorSet.h"
+#include "VulkanPipeline.h"
 #include "VulkanCommand.h"
 #include "VulkanUploader.h"
 
@@ -16,15 +16,34 @@ inline TVector<const char*> GetDeviceExtensions(const VulkanContext* context) {
 	return extensions;
 }
 
+inline VkFormat FindDepthFormat(VkPhysicalDevice physicalDevice) {
+	// find depth format
+	const TVector<VkFormat> candidates{ VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT };
+	VkImageTiling tiling{ VK_IMAGE_TILING_OPTIMAL };
+	VkFormatFeatureFlags features{ VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT };
+	for (VkFormat format : candidates){
+		VkFormatProperties props;
+		vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
+		if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features){
+			return format;
+		}
+		else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features){
+			return format;
+		}
+	}
+	LOG_ERROR("findSupportedFormat failed");
+	return VK_FORMAT_UNDEFINED;
+}
+
 VulkanDevice::VulkanDevice(const VulkanContext* context, VkPhysicalDevice physicalDevice): m_PhysicalDevice(physicalDevice) {
 	// Get device properties
-	vkGetPhysicalDeviceProperties(m_PhysicalDevice, &m_DeviceProperties);
+	InitializeDeviceInfo();
 	// Create logical device
 	CreateDevice(context);
 	// Create memory manager
 	m_MemoryMgr.Reset(new VulkanMemoryMgr(context, this));
 	// Create descriptor manager
-	m_DescriptorMgr.Reset(new VulkanDescriptorMgr(this));
+	m_DescriptorMgr.Reset(new VulkanDescriptorSetMgr(this));
 	// Create command manager
 	m_CommandContext.Reset(new VulkanCommandContext(this));
 	// Create uploader
@@ -52,6 +71,11 @@ const VulkanQueue* VulkanDevice::FindPresentQueue(VkSurfaceKHR surface) const {
 	return nullptr;
 }
 
+void VulkanDevice::InitializeDeviceInfo() {
+	vkGetPhysicalDeviceProperties(m_PhysicalDevice, &m_DeviceProperties);
+	m_Formats.DepthFormat = FindDepthFormat(m_PhysicalDevice);
+}
+
 void VulkanDevice::CreateDevice(const VulkanContext* context) {
 	// Get queue
 	uint32 queueFamilyCount;
@@ -61,16 +85,16 @@ void VulkanDevice::CreateDevice(const VulkanContext* context) {
 
 	// get queue indices
 	// the present queue will be created after swapchain
-	uint32 graphicsQueueFamilyIdx{ VK_INVALID_IDX }, computeQueueFamilyIdx{ VK_INVALID_IDX }, transferQueueFamilyIdx{ VK_INVALID_IDX };
+	uint32 graphicsQueueFamilyIdx{ VK_INVALID_INDEX }, computeQueueFamilyIdx{ VK_INVALID_INDEX }, transferQueueFamilyIdx{ VK_INVALID_INDEX };
 	for (uint32 i = 0; i < queueFamilyCount; ++i) {
 		const VkQueueFamilyProperties& prop = queueFamilyProperties[i];
-		if ((prop.queueFlags & VK_QUEUE_GRAPHICS_BIT) == VK_QUEUE_GRAPHICS_BIT && VK_INVALID_IDX == graphicsQueueFamilyIdx) {
+		if ((prop.queueFlags & VK_QUEUE_GRAPHICS_BIT) == VK_QUEUE_GRAPHICS_BIT && VK_INVALID_INDEX == graphicsQueueFamilyIdx) {
 			graphicsQueueFamilyIdx = i;
 		}
-		if ((prop.queueFlags & VK_QUEUE_COMPUTE_BIT) == VK_QUEUE_COMPUTE_BIT && VK_INVALID_IDX == computeQueueFamilyIdx) {
+		if ((prop.queueFlags & VK_QUEUE_COMPUTE_BIT) == VK_QUEUE_COMPUTE_BIT && VK_INVALID_INDEX == computeQueueFamilyIdx) {
 			computeQueueFamilyIdx = i;
 		}
-		if ((prop.queueFlags & VK_QUEUE_TRANSFER_BIT) == VK_QUEUE_TRANSFER_BIT && VK_INVALID_IDX == transferQueueFamilyIdx) {
+		if ((prop.queueFlags & VK_QUEUE_TRANSFER_BIT) == VK_QUEUE_TRANSFER_BIT && VK_INVALID_INDEX == transferQueueFamilyIdx) {
 			transferQueueFamilyIdx = i;
 		}
 	}
