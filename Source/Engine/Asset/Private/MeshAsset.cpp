@@ -76,7 +76,7 @@ namespace Asset {
 		doc.AddMember("Primitives", primitives, doc.GetAllocator());
 		return Json::WriteFile(out, doc);
 	}
-	bool MeshAsset::LoadPrimitiveFile(const char* file, TVector<AssetVertex>& vertices, TVector<IndexType>& indices) {
+	bool MeshAsset::LoadPrimitiveFile(const char* file, TArray<AssetVertex>& vertices, TArray<IndexType>& indices) {
 		PARSE_PROJECT_ASSET(file);
 		File::RFile f(file, File::EFileMode::Binary);
 		if (!f.is_open()) {
@@ -98,14 +98,14 @@ namespace Asset {
 		EMeshCompressMode compressMode;
 		f.read(BYTE_PTR(&compressMode), sizeof(EMeshCompressMode));
 		uint32 dataByteSize = vertexCount * sizeof(FVertexPack) + indexCount * sizeof(IndexType);
-		TVector<char> data(dataByteSize);
+		TArray<char> data(dataByteSize);
 		if (compressMode == EMeshCompressMode::NONE) {
 			f.read(data.Data(), dataByteSize);
 		}
 		else if (compressMode == EMeshCompressMode::LZ4) {
 			uint32 compressedByteSize;
 			f.read(BYTE_PTR(&compressedByteSize), sizeof(uint32));
-			TVector<char> compressedData(compressedByteSize);
+			TArray<char> compressedData(compressedByteSize);
 			f.read(compressedData.Data(), compressedByteSize);
 			LZ4_decompress_safe(compressedData.Data(), data.Data(), (int)compressedByteSize, (int)dataByteSize);
 		}
@@ -129,7 +129,7 @@ namespace Asset {
 		return true;
 	}
 
-	bool MeshAsset::ExportPrimitiveFile(const char* file, const TVector<AssetVertex>& vertices, const TVector<IndexType>& indices, EMeshCompressMode packMode) {
+	bool MeshAsset::ExportPrimitiveFile(const char* file, const TArray<AssetVertex>& vertices, const TArray<IndexType>& indices, EMeshCompressMode packMode) {
 		if (vertices.Size() == 0) {
 			LOG_INFO("null primitive!");
 			return false;
@@ -149,7 +149,7 @@ namespace Asset {
 		f.write(CBYTE_PTR(&indexCount), sizeof(uint32));
 
 		//cpy vertices and indices;
-		TVector<char> data(dataByteSize);
+		TArray<char> data(dataByteSize);
 		FVertexPack* vertexPtr = reinterpret_cast<FVertexPack*>(data.Data());
 		for (uint32 i = 0; i < vertexCount; ++i) {
 			vertexPtr[i].Pack(vertices[i]);
@@ -169,7 +169,7 @@ namespace Asset {
 		//lz4 pack
 		else if (packMode == EMeshCompressMode::LZ4) {
 			uint64 compressBound = LZ4_compressBound(dataByteSize);
-			TVector<char> compressedData(compressBound);
+			TArray<char> compressedData(compressBound);
 			uint32 compressedSize = LZ4_compress_default(data.Data(), compressedData.Data(), (int)data.Size(), (int)compressBound);
 			compressedData.Resize(compressedSize);
 			f.write(CBYTE_PTR(&compressedSize), sizeof(uint32));

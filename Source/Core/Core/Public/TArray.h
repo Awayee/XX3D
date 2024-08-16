@@ -1,7 +1,10 @@
 #pragma once
 #include "Core/Public/Defines.h"
 #include "Core/Public/TArrayView.h"
+#include "Core/Public/Func.h"
+#include "Core/Public/Algorithm.h"
 #include <initializer_list>
+#include <vector>
 
 // a simple array just contains data
 template<typename T, typename SizeType=uint32>
@@ -43,11 +46,8 @@ public:
 	}
 };
 
-
-
-
+/*
 // an array with more info
-// can be replaced by TVector
 template<typename T, typename SizeType=uint32>
 class TArray {
 private:
@@ -177,6 +177,7 @@ public:
 		return *this;
 	}
 };
+*/
 
 template <typename T, uint32 L>
 class TStaticArray{
@@ -248,4 +249,114 @@ public:
 
 private:
 	T m_Data[L];
+};
+
+
+// A dynamic array derived from std::vector.
+template <class T>
+class TArray : private std::vector<T> {
+private:
+	typedef std::vector<T> Base;
+public:
+	TArray() : Base() {}
+
+	TArray(uint32 size) :Base(size) {}
+	TArray(uint32 size, const T& val) :Base(size, val) {}
+
+	TArray(std::initializer_list<T> p) {
+		Base::resize(p.size());
+		auto begin = p.begin();
+		for (unsigned int i = 0; i < p.size(); i++) {
+			Base::at(i) = *(begin + i);
+		}
+	}
+
+	using Base::operator[];
+	using Base::operator=;
+	using Base::begin;
+	using Base::end;
+
+	operator TArrayView<T>() {
+		return TArrayView<T>(Data(), Size());
+	}
+
+	operator TConstArrayView<T>() const {
+		return TConstArrayView<T>(Data(), Size());
+	}
+
+	uint32 Size() const { return static_cast<uint32>(Base::size()); }
+
+	uint32 ByteSize() const { return static_cast<uint32>(Base::size() * sizeof(T)); }
+
+	void PushBack(T&& ele) { Base::push_back(std::forward<T>(ele)); }
+
+	void PushBack(const T& ele) { Base::push_back(ele); }
+
+	void PushBack(uint32 count, const T* pEle) {
+		Base::resize(Base::size() + count);
+		void* cpyDst = Base::empty() ? Base::data() : &Base::back();
+		memcpy(cpyDst, pEle, count * sizeof(T));
+	}
+
+	template<typename ...Args>
+	T& EmplaceBack(Args&&...args) { return Base::emplace_back(std::forward<Args>(args)...); }
+
+	void PopBack() { Base::pop_back(); }
+
+	void Resize(uint32 size) { Base::resize(size); }
+	void Resize(uint32 size, const T& val) { Base::resize(size, val); }
+
+	void Reserve(uint32 size) { Base::reserve(size); }
+
+	T* Data() { return Base::data(); }
+	const T* Data() const { return Base::data(); }
+
+	T& Back() { return Base::back(); }
+	const T& Back() const { return Base::back(); }
+
+	bool IsEmpty() const { return Base::empty(); }
+
+	void Reset() { Base::clear(); }
+
+	// Clear and reallocate memory.
+	void Empty(uint32 size) {
+		Base::swap(TArray{});
+		Resize(size);
+	}
+
+	typedef std::function<bool(const T&, const T&)>  SortFunc;
+	void Sort(const SortFunc& f) { std::sort(Base::begin(), Base::end(), f); }
+
+	void Sort() { std::sort(Base::begin(), Base::end(), std::less<T>()); }
+
+	void RemoveAt(uint32 i) {
+		Base::erase(Base::begin() + i);
+	}
+
+	void SwapRemove(const T& ele) {
+		for (uint32 i = 0; i < Base::size(); ++i) {
+			if (Base::at(i) == ele) {
+				std::swap(Base::at(i), Base::back());
+				Base::pop_back();
+				break;
+			}
+		}
+	}
+
+	void SwapRemoveAt(uint32 i) {
+		std::swap(Base::at(i), Base::back());
+		Base::pop_back();
+	}
+
+	void Swap(TArray& r) {
+		Base::swap(r);
+	}
+
+	void Replace(T oldVal, T newVal) {
+		for (uint32 i = 0; i < Base::size(); ++i) {
+			if (Base::at(i) == oldVal) {
+				Base::at(i) = newVal;
+			}
+		}
+	}
 };

@@ -17,8 +17,8 @@ namespace Render {
 	private:
 		XString m_Name;
 		friend class RenderGraph;
-		TVector<RGResourceNode*> m_Inputs;
-		TVector<RGResourceNode*> m_ColorOutputs;
+		TArray<RGResourceNode*> m_Inputs;
+		TArray<RGResourceNode*> m_ColorOutputs;
 		RGResourceNode* m_DepthOutput;
 	};
 }

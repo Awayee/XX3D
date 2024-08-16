@@ -161,7 +161,7 @@ namespace Math {
 
         void ExtractAxies(Vector3<T>& outX, Vector3<T>& outY, Vector3<T>& outZ);
 
-        /** Building a Matrix4 from orientation / scale / position.
+        /** Building a Matrix4 from position / scale / orientation.
         @remarks
         Transform is performed in the order scale, rotate, translation, i.e. translation is independent
         of orientation axes, scale does not affect size of translation, rotation and scaling are always
@@ -170,14 +170,14 @@ namespace Math {
         void MakeTransform(const Vector3<T>& position, const Vector3<T>& scale, const Quaternion<T>& rotation);
 
 
-        /** Building an inverse Matrix4 from orientation / scale / position.
+        /** Building an inverse Matrix4 from position / scale / orientation.
         @remarks
         As MakeTransform except it build the inverse given the same data as MakeTransform, so
         performing -translation, -rotate, 1/scale in that order.
         */
         void MakeInverseTransform(const Vector3<T>& position, const Vector3<T>& scale, const Quaternion<T>& rotation);
 
-        /** Decompose a Matrix4 to orientation / scale / position.
+        /** Decompose a Matrix4 to position / scale / orientation.
          */
         void Decomposition(Vector3<T>& position, Vector3<T>& scale, Quaternion<T>& rotate) const;
 

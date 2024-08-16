@@ -1,15 +1,14 @@
 #include "VulkanContext.h"
-#include "Core/Public/TVector.h"
 #include "Core/Public/String.h"
 #include "Core/Public/TArray.h"
 #include <GLFW/glfw3.h>
 
 static const char* VALIDATION_LAYER_NAME = "VK_LAYER_KHRONOS_validation";
 
-inline bool CheckLayerSupported(const TVector<const char*>& layers){
+inline bool CheckLayerSupported(const TArray<const char*>& layers){
 	uint32 layerCount;
 	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-	TVector<VkLayerProperties> availableLayers(layerCount);
+	TArray<VkLayerProperties> availableLayers(layerCount);
 	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.Data());
 	for (auto& name : layers){
 		bool layerFound = false;
@@ -27,7 +26,7 @@ inline bool CheckLayerSupported(const TVector<const char*>& layers){
 	return true;
 }
 
-inline void GetInstanceExtensions(TVector<const char*>& extensions, bool enableDebug) {
+inline void GetInstanceExtensions(TArray<const char*>& extensions, bool enableDebug) {
 	uint32 glfwExtensionCount = 0;
 	const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 	extensions.Resize(glfwExtensionCount);
@@ -37,10 +36,10 @@ inline void GetInstanceExtensions(TVector<const char*>& extensions, bool enableD
 	}
 }
 
-inline bool CheckInstanceExtensionsSupported(const TVector<const char*>& extensions) {
+inline bool CheckInstanceExtensionsSupported(const TArray<const char*>& extensions) {
 	uint32 extensionCount{ 0 };
 	VK_ASSERT(vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr), "");
-	TVector<VkExtensionProperties> extensionProperties(extensionCount);
+	TArray<VkExtensionProperties> extensionProperties(extensionCount);
 	VK_ASSERT(vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensionProperties.Data()), "");
 	for (auto extension : extensions) {
 		bool supported = false;
@@ -110,7 +109,7 @@ VkPhysicalDevice VulkanContext::PickPhysicalDevice() {
 		VkPhysicalDevice PhysicalDevice;
 		VkPhysicalDeviceProperties Properties;
 	};
-	TVector<PhysicalDeviceInfo> deviceInfos;
+	TArray<PhysicalDeviceInfo> deviceInfos;
 	for(uint32 i=0; i<physicalDeviceCount; ++i) {
 
 		// TODO device extensions check
@@ -162,7 +161,7 @@ void VulkanContext::CreateInstance(bool enableDebug) {
 	}
 
 	// Check extensions
-	TVector<const char*> extensions;
+	TArray<const char*> extensions;
 	GetInstanceExtensions(extensions, enableDebug);
 	if(!CheckInstanceExtensionsSupported(extensions)) {
 		LOG_ERROR("Instance extension is not supported!");
@@ -187,7 +186,7 @@ void VulkanContext::CreateInstance(bool enableDebug) {
 	createInfo.pNext = nullptr;
 
 	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
-	const TVector<const char*> layers{ VALIDATION_LAYER_NAME };
+	const TArray<const char*> layers{ VALIDATION_LAYER_NAME };
 	if (enableDebug) {
 		if (CheckLayerSupported(layers)) {
 			createInfo.enabledLayerCount = layers.Size();

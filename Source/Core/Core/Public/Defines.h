@@ -39,4 +39,13 @@ typedef unsigned long long	uint64;
 #define NON_MOVEABLE(cls)\
 	cls(cls&&) noexcept = delete; \
 	cls& operator=(cls&&)noexcept = delete
-	
+
+#define SINGLETON_INSTANCE(cls)\
+public:\
+	static void Release(){ if(s_Instance) delete s_Instance; }\
+	template <class ...Args> static void Initialize(Args...args) { Release(); s_Instance = new cls(args...); }\
+	static cls* Instance() {return s_Instance; }\
+private:\
+	NON_COPYABLE(cls);\
+	NON_MOVEABLE(cls);\
+	inline static cls* s_Instance {nullptr}

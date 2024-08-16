@@ -29,7 +29,7 @@ private:
 	VkSurfaceKHR m_Surface;
 	VkSwapchainKHR m_Swapchain {VK_NULL_HANDLE};
 	VkSurfaceFormatKHR m_SurfaceFormat;
-	TVector<TUniquePtr<VulkanBackBuffer>> m_BackBuffers;
+	TArray<TUniquePtr<VulkanBackBuffer>> m_BackBuffers;
 	TStaticArray<VkSemaphore, RHI_MAX_FRAME_IN_FLIGHT> m_Semaphores;
 	bool m_SizeDirty{ false };
 	uint32 m_BackBufferIdx{ 0 };

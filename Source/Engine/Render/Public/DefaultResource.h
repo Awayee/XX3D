@@ -1,11 +1,12 @@
 #pragma once
-#include "Core/Public/TSingleton.h"
+#include "Core/Public/Defines.h"
 #include "Core/Public/TArray.h"
 #include "Core/Public/TUniquePtr.h"
 #include "RHI/Public/RHI.h"
 
 namespace Render {
-	class DefaultResources: public TSingleton<DefaultResources> {
+	class DefaultResources {
+		SINGLETON_INSTANCE(DefaultResources);
 	public:
 		enum DefaultTextureType: uint32 {
 			TEX_WHITE=0,
@@ -17,12 +18,11 @@ namespace Render {
 		RHITexture* GetDefaultTextureCube(DefaultTextureType type);
 		RHISampler* GetDefaultSampler(ESamplerFilter filter, ESamplerAddressMode addressMode);
 	private:
-		friend TSingleton<DefaultResources>;
 		TStaticArray<RHITexturePtr, TEX_MAX_NUM> m_DefaultTexture2D;
 		TStaticArray<RHITexturePtr, TEX_MAX_NUM> m_DefaultTextureCube;
 		TStaticArray<TStaticArray<TUniquePtr<RHISampler>, (uint8)ESamplerFilter::MaxNum>, (uint8)ESamplerAddressMode::MaxNum> m_Samplers;
 		DefaultResources();
-		~DefaultResources() override;
+		~DefaultResources();
 		void CreateDefaultTextures();
 		void CreateDefaultSamplers();
 	};

@@ -26,7 +26,7 @@ uint32 GetPrimitiveCount(const tinygltf::Model& model, const tinygltf::Node& nod
 	return count;
 }
 
-void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TVector<Asset::MeshAsset::SPrimitive>& primitives, uint32& index) {
+void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TArray<Asset::MeshAsset::SPrimitive>& primitives, uint32& index) {
 	if (node.mesh > -1) {
 		const tinygltf::Mesh& mesh = model.meshes[node.mesh];
 		for (uint32 i = 0; i < mesh.primitives.size(); i++) {
@@ -64,7 +64,7 @@ void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TVec
 				uv0ByteStride = uvAccessor.ByteStride(uvView) / sizeof(float);
 			}
 
-			TVector<Asset::AssetVertex>& vertices = primitives[index].Vertices;
+			TArray<Asset::AssetVertex>& vertices = primitives[index].Vertices;
 			vertices.Resize(vertexCount);
 
 			for (uint32 v = 0; v < vertexCount; v++) {
@@ -80,7 +80,7 @@ void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TVec
 
 			//indices
 			if (primitive.indices > -1) {
-				TVector<uint32>& indices = primitives[index].Indices;
+				TArray<uint32>& indices = primitives[index].Indices;
 				const tinygltf::Accessor& indexAccessor = model.accessors[primitive.indices];
 				const tinygltf::BufferView& indexView = model.bufferViews[indexAccessor.bufferView];
 				const tinygltf::Buffer& bufferIndex = model.buffers[indexView.buffer];
@@ -110,7 +110,7 @@ void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TVec
 			// TODO textures
 			auto& attr = primitive.attributes;
 			if (primitive.material > -1) {
-				TVector<std::string>& textureNames = primitives[index].Textures;
+				TArray<std::string>& textureNames = primitives[index].Textures;
 				const tinygltf::Material& mat = model.materials[primitive.material];
 				if (mat.pbrMetallicRoughness.baseColorTexture.index < model.textures.size()) {
 					const tinygltf::Texture& tex = model.textures[mat.pbrMetallicRoughness.baseColorTexture.index];
@@ -142,12 +142,12 @@ uint32 GetPrimitiveCount(const aiScene* aScene, aiNode* aNode) {
 	return count;
 }
 
-void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TVector<Asset::MeshAsset::SPrimitive>& meshInfos) {
+void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TArray<Asset::MeshAsset::SPrimitive>& meshInfos) {
 	for (uint32 i = 0; i < aNode->mNumMeshes; i++) {
 		aiMesh* aMesh = aScene->mMeshes[aNode->mMeshes[i]];
-		TVector<Asset::AssetVertex>& vertices = meshInfos[i].Vertices;
-		TVector<uint32>& indices = meshInfos[i].Indices;
-		//TVector<std::string>& textures = meshInfos[i].textures;
+		TArray<Asset::AssetVertex>& vertices = meshInfos[i].Vertices;
+		TArray<uint32>& indices = meshInfos[i].Indices;
+		//TArray<std::string>& textures = meshInfos[i].textures;
 
 		// vertices
 		vertices.Resize(aMesh->mNumVertices);

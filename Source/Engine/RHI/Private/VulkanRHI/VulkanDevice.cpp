@@ -6,8 +6,8 @@
 #include "VulkanCommand.h"
 #include "VulkanUploader.h"
 
-inline TVector<const char*> GetDeviceExtensions(const VulkanContext* context) {
-	TVector<const char*> extensions;
+inline TArray<const char*> GetDeviceExtensions(const VulkanContext* context) {
+	TArray<const char*> extensions;
 	extensions.PushBack(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 	const uint32 APIVersion = context->GetAPIVersion();
 	if(APIVersion < VK_API_VERSION_1_3) {
@@ -18,7 +18,7 @@ inline TVector<const char*> GetDeviceExtensions(const VulkanContext* context) {
 
 inline VkFormat FindDepthFormat(VkPhysicalDevice physicalDevice) {
 	// find depth format
-	const TVector<VkFormat> candidates{ VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT };
+	const TArray<VkFormat> candidates{ VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT };
 	VkImageTiling tiling{ VK_IMAGE_TILING_OPTIMAL };
 	VkFormatFeatureFlags features{ VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT };
 	for (VkFormat format : candidates){
@@ -119,7 +119,7 @@ void VulkanDevice::CreateDevice(const VulkanContext* context) {
 	ASSERT(apiVersion >= VK_VERSION_1_2, "");
 
 	// fill device extensions
-	TVector<const char*> extensions = GetDeviceExtensions(context);
+	TArray<const char*> extensions = GetDeviceExtensions(context);
 	// setup features
 	VkPhysicalDeviceFeatures2 features2{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
 	VkPhysicalDeviceVulkan11Features features11{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };

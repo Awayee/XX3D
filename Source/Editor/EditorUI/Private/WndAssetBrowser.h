@@ -10,11 +10,11 @@ namespace Editor {
 		const NodeID MAX_FOLDER_NUM = 0xffff;
 
 	private:
-		static TVector<WndAssetBrowser*> s_Instances;
+		static TArray<WndAssetBrowser*> s_Instances;
 
 		FolderNode* m_CurrentFolder{nullptr};
-		TVector<TUniquePtr<AssetViewBase>> m_Contents;
-		TVector<TUniquePtr<FolderAssetView>> m_Folders;
+		TArray<TUniquePtr<AssetViewBase>> m_Contents;
+		TArray<TUniquePtr<FolderAssetView>> m_Folders;
 
 		uint32 m_SelectedItem{ INVALLID_NODE };
 		uint32 m_SelectedFolder{ INVALLID_NODE };

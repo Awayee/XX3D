@@ -53,7 +53,7 @@ namespace Engine {
 	void LogAdapters(IDXGIFactory4* factory, DXGI_FORMAT format) {
 		UINT i = 0;
 		IDXGIAdapter* adapter = nullptr;
-		TVector<IDXGIAdapter*> adapterList;
+		TArray<IDXGIAdapter*> adapterList;
 		while (factory->EnumAdapters(i, &adapter) != DXGI_ERROR_NOT_FOUND)
 		{
 			DXGI_ADAPTER_DESC desc;

@@ -2,33 +2,41 @@
 #include "System/Public/EngineConfig.h"
 #include "Window/Public/EngineWIndow.h"
 #include "RHI/Public/RHI.h"
+#include "RHI/Public/ImGuiRHI.h"
 #include "Render/Public/DefaultResource.h"
 #include "Render/Public/Renderer.h"
 #include "Render/Public/GlobalShader.h"
 #include "System/Public/FrameCounter.h"
 #include "System/Public/Timer.h"
+#include "Objects/Public/TextureResource.h"
+#include "Objects/Public/RenderScene.h"
 
 namespace Engine {
 
 	XXEngine* s_RunningEngine{ nullptr };
 
 	XXEngine::XXEngine(): m_Running(false) {
-		ASSERT(!s_RunningEngine, "Engine allows only one instance!");
+		ASSERT(!s_RunningEngine, "Multi XXEngine object is Invalid!");
 		ConfigManager::Initialize();
 		EngineWindow::Initialize();
 		RHI::Initialize();
 		Render::DefaultResources::Initialize();
 		Render::GlobalShaderMap::Initialize();
 		Render::RendererMgr::Initialize();
+		Object::TextureResourceMgr::Initialize();
+		Object::RenderScene::Initialize();
 		s_RunningEngine = this;
 	}
 
 	XXEngine::~XXEngine() {
 		// wait renderer
 		Render::RendererMgr::Instance()->WaitQueue();
+		Object::RenderScene::Release();
+		Object::TextureResourceMgr::Release();
 		Render::RendererMgr::Release();
 		Render::GlobalShaderMap::Release();
 		Render::DefaultResources::Release();
+		ImGuiRHI::Release();
 		RHI::Release();
 		EngineWindow::Release();
 		s_RunningEngine = nullptr;
@@ -37,9 +45,10 @@ namespace Engine {
 	void XXEngine::Update() {
 		RHI::Instance()->BeginFrame();// RHI Update must run at the beginning.
 		EngineWindow::Instance()->Update();
+		Object::RenderScene::Tick();
 		Render::RendererMgr::Instance()->Update();
 		CTimer::Instance()->Tick();
-		FrameCounter::Update();// Frame counter ticks at last.e
+		FrameCounter::Update();// Frame counter ticks at last.
 	}
 
 	void XXEngine::Run() {

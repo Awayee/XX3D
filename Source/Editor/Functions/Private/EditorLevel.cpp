@@ -26,10 +26,13 @@ namespace Editor {
 				levelMesh.Rotation = meshData.Rotation;
 				levelMesh.Name = meshData.Name;
 				levelMesh.File = meshData.File;
-				levelMesh.Mesh.Reset(new Object::StaticMesh(*levelMesh.Asset, m_Scene));
-				levelMesh.Mesh->SetPosition(levelMesh.Position);
-				levelMesh.Mesh->SetScale(levelMesh.Scale);
-				levelMesh.Mesh->SetRotation(Math::FQuaternion::Euler(levelMesh.Rotation));
+				levelMesh.ObjectEntityID = scene->NewEntity();
+				auto* transform = scene->AddComponent<Object::TransformComponent>(levelMesh.ObjectEntityID);
+				transform->SetPosition(levelMesh.Position);
+				transform->SetScale(levelMesh.Scale);
+				transform->SetRotation(Math::FQuaternion::Euler(levelMesh.Rotation));
+				auto* staticMesh = scene->AddComponent<Object::StaticMeshComponent>(levelMesh.ObjectEntityID);
+				staticMesh->BuildFromAsset(*levelMesh.Asset);
 			}
 		}
 	}
@@ -38,7 +41,11 @@ namespace Editor {
 		
 	}
 
-	TVector<EditorLevelMesh>& EditorLevel::Meshes() {
+	Object::RenderScene* EditorLevel::GetScene() {
+		return m_Scene;
+	}
+
+	TArray<EditorLevelMesh>& EditorLevel::Meshes() {
 		return m_Meshes;
 	}
 
@@ -51,10 +58,13 @@ namespace Editor {
 		mesh.File = file;
 		mesh.Name = asset->Name;
 		mesh.Asset = asset;
-		mesh.Mesh.Reset(new Object::StaticMesh(*asset, m_Scene));
-		mesh.Position = mesh.Mesh->GetPosition();
-		mesh.Scale = mesh.Mesh->GetScale();
-		mesh.Rotation = mesh.Mesh->GetRotation().ToEuler();
+		mesh.ObjectEntityID = m_Scene->NewEntity();
+		auto* transform = m_Scene->AddComponent<Object::TransformComponent>(mesh.ObjectEntityID);
+		auto* staticMesh = m_Scene->AddComponent<Object::StaticMeshComponent>(mesh.ObjectEntityID);
+		staticMesh->BuildFromAsset(*asset);
+		mesh.Position = transform->GetPosition();
+		mesh.Scale = transform->GetScale();
+		mesh.Rotation = transform->GetRotation().ToEuler();
 		return &mesh;
 	}
 

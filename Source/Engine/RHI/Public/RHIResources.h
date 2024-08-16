@@ -1,6 +1,5 @@
 #pragma once
 #include "Core/Public/BaseStructs.h"
-#include "Core/Public/TVector.h"
 #include "Core/Public/TArray.h"
 #include "Core/Public/Log.h"
 #include "RHIEnum.h"
@@ -36,6 +35,19 @@ public:
 	RHIBuffer(const RHIBufferDesc& desc): m_Desc(desc){}
 	virtual void UpdateData(const void* data, uint32 byteSize, uint32 offset) = 0;
 	XX_NODISCARD const RHIBufferDesc& GetDesc() const { return m_Desc; }
+};
+
+struct RHIUniformBufferDesc {
+	uint32 ByteSize;
+};
+
+class RHIUniformBuffer: public RHIResource {
+public:
+	RHIUniformBuffer(const RHIUniformBufferDesc& desc) : m_Desc(desc) {}
+	const RHIUniformBufferDesc& GetDesc() const { return m_Desc; }
+	virtual void UpdateData(const void* data, uint32 byteSize, uint32 offset) = 0;
+private:
+	RHIUniformBufferDesc m_Desc;
 };
 
 // texture
@@ -173,8 +185,8 @@ struct RHIVertexInputInfo {
 		ERHIFormat Format;
 		uint32 Offset;
 	};
-	TVector<BindingDesc> Bindings;
-	TVector<AttributeDesc> Attributes;
+	TArray<BindingDesc> Bindings;
+	TArray<AttributeDesc> Attributes;
 };
 
 struct RHIBlendState {
@@ -189,7 +201,7 @@ struct RHIBlendState {
 };
 
 struct RHIBlendDesc {
-	TVector<RHIBlendState> BlendStates;
+	TArray<RHIBlendState> BlendStates;
 	float BlendConst[4];
 };
 
@@ -223,19 +235,19 @@ struct RHIShaderBinding {
 	EShaderStageFlags StageFlags;
 	uint16 Count = 1;
 };
-typedef TVector<RHIShaderBinding> RHIShaderParamSetLayout;
+typedef TArray<RHIShaderBinding> RHIShaderParamSetLayout;
 
 // pso
 struct RHIGraphicsPipelineStateDesc {
 	RHIShader* VertexShader;
 	RHIShader* PixelShader;
-	TVector<RHIShaderParamSetLayout> Layout;
+	TArray<RHIShaderParamSetLayout> Layout;
 	RHIVertexInputInfo VertexInput;
 	RHIBlendDesc BlendDesc;
 	RHIRasterizerState RasterizerState;
 	RHIDepthStencilState DepthStencilState;
 	EPrimitiveTopology PrimitiveTopology;
-	TVector<ERHIFormat> ColorFormats;
+	TArray<ERHIFormat> ColorFormats;
 	ERHIFormat DepthStencilFormat;
 	uint8 NumSamples;
 };
@@ -251,7 +263,7 @@ protected:
 // compute pipeline
 struct RHIComputePipelineStateDesc {
 	RHIShader* Shader;
-	TVector<RHIShaderParamSetLayout> Layout;
+	TArray<RHIShaderParamSetLayout> Layout;
 };
 
 class RHIComputePipelineState: public RHIResource {

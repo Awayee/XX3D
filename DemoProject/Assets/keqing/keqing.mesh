@@ -1,0 +1,85 @@
+{
+    "Name": "keqing",
+    "Primitives": [
+        {
+            "Material": "keqing/tex/face.texture",
+            "BinaryFile": "keqing/keqing0.primitive"
+        },
+        {
+            "Material": "keqing/tex/emoj.texture",
+            "BinaryFile": "keqing/keqing1.primitive"
+        },
+        {
+            "Material": "keqing/tex/face.texture",
+            "BinaryFile": "keqing/keqing2.primitive"
+        },
+        {
+            "Material": "keqing/tex/hair.texture",
+            "BinaryFile": "keqing/keqing3.primitive"
+        },
+        {
+            "Material": "keqing/tex/hair.texture",
+            "BinaryFile": "keqing/keqing4.primitive"
+        },
+        {
+            "Material": "keqing/tex/hair.texture",
+            "BinaryFile": "keqing/keqing5.primitive"
+        },
+        {
+            "Material": "keqing/tex/hair.texture",
+            "BinaryFile": "keqing/keqing6.primitive"
+        },
+        {
+            "Material": "keqing/tex/hair.texture",
+            "BinaryFile": "keqing/keqing7.primitive"
+        },
+        {
+            "Material": "keqing/tex/hair.texture",
+            "BinaryFile": "keqing/keqing8.primitive"
+        },
+        {
+            "Material": "keqing/tex/hair.texture",
+            "BinaryFile": "keqing/keqing9.primitive"
+        },
+        {
+            "Material": "keqing/tex/hair.texture",
+            "BinaryFile": "keqing/keqing10.primitive"
+        },
+        {
+            "Material": "keqing/tex/cloth.texture",
+            "BinaryFile": "keqing/keqing11.primitive"
+        },
+        {
+            "Material": "keqing/tex/cloth.texture",
+            "BinaryFile": "keqing/keqing12.primitive"
+        },
+        {
+            "Material": "keqing/tex/cloth.texture",
+            "BinaryFile": "keqing/keqing13.primitive"
+        },
+        {
+            "Material": "keqing/tex/cloth.texture",
+            "BinaryFile": "keqing/keqing14.primitive"
+        },
+        {
+            "Material": "keqing/tex/cloth.texture",
+            "BinaryFile": "keqing/keqing15.primitive"
+        },
+        {
+            "Material": "keqing/tex/cloth.texture",
+            "BinaryFile": "keqing/keqing16.primitive"
+        },
+        {
+            "Material": "keqing/tex/skin.texture",
+            "BinaryFile": "keqing/keqing17.primitive"
+        },
+        {
+            "Material": "keqing/tex/cloth.texture",
+            "BinaryFile": "keqing/keqing18.primitive"
+        },
+        {
+            "Material": "keqing/tex/skin.texture",
+            "BinaryFile": "keqing/keqing19.primitive"
+        }
+    ]
+}

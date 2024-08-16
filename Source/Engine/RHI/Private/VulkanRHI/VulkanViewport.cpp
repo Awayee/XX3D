@@ -113,7 +113,7 @@ RHITexture* VulkanViewport::GetCurrentBackBuffer() {
 }
 
 void VulkanViewport::Present() {
-	TVector<VkSemaphore> waitSemaphores;
+	TArray<VkSemaphore> waitSemaphores;
 	m_Device->GetCommandContext()->GetLastSubmissionSemaphores(waitSemaphores);
 	VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr };
 	presentInfo.waitSemaphoreCount = waitSemaphores.Size();

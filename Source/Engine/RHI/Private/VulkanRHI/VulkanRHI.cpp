@@ -21,7 +21,7 @@ VulkanRHI::VulkanRHI(const RHIInitDesc& desc) {
 	// initialize context
 	m_Context.Reset(new VulkanContext(desc.EnableDebug, MIN_API_VERSION));
 	// Pick GPU
-	TVector<const char*> extensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	TArray<const char*> extensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 	VkPhysicalDevice physicalDevice = m_Context->PickPhysicalDevice();
 	ASSERT(physicalDevice != VK_NULL_HANDLE, "Failed to pick GPU!");
 	// Create logic device
@@ -70,14 +70,6 @@ VulkanDevice* VulkanRHI::GetDevice() {
 }
 
 RHIBufferPtr VulkanRHI::CreateBuffer(const RHIBufferDesc& desc) {
-	VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, nullptr, 0 };
-	bufferInfo.usage = ToBufferUsage(desc.Flags);
-	bufferInfo.size = desc.ByteSize;
-	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	VkBuffer buffer;
-	if (VK_SUCCESS != vkCreateBuffer(m_Device->GetDevice(), &bufferInfo, nullptr, &buffer)) {
-		return nullptr;
-	}
 	VkMemoryPropertyFlags memoryProperty = ToBufferMemoryProperty(desc.Flags);
 	BufferAllocation alloc;
 	if(m_Device->GetMemoryMgr()->AllocateBufferMemory(alloc, desc.ByteSize, ToBufferUsage(desc.Flags), memoryProperty)) {

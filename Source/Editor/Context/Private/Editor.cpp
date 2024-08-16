@@ -27,7 +27,6 @@ namespace Editor {
 		ProjectAssetMgr::Release();
 		EditorUIMgr::Release();
 		EditorLevelMgr::Release();
-		ImGuiRHI::Release();
 	}
 
 	void XXEditor::Update() {

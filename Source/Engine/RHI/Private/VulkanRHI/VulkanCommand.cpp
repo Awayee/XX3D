@@ -477,8 +477,8 @@ void VulkanCommandContext::SubmitCommandBuffers(TArrayView<VulkanCommandBuffer*>
 
 	// collect the wait semaphores
 	auto& lastSubmission = GetLastSubmission();
-	TVector<VkSemaphore> waitSemaphores; waitSemaphores.Reserve(lastSubmission.Size() + 1);
-	TVector<VkPipelineStageFlags> waitStageMasks; waitStageMasks.Reserve(lastSubmission.Size() + 1);
+	TArray<VkSemaphore> waitSemaphores; waitSemaphores.Reserve(lastSubmission.Size() + 1);
+	TArray<VkPipelineStageFlags> waitStageMasks; waitStageMasks.Reserve(lastSubmission.Size() + 1);
 	for(auto* cmd: lastSubmission) {
 		if(cmd->m_Semaphore) {
 			waitSemaphores.PushBack(cmd->m_Semaphore);
@@ -496,9 +496,9 @@ void VulkanCommandContext::SubmitCommandBuffers(TArrayView<VulkanCommandBuffer*>
 	info.pWaitDstStageMask = waitStageMasks.Data();
 	
 	// collect cmds and signal semaphores.
-	TVector<VkSemaphore> semaphores; semaphores.Reserve(cmds.Size());
-	TVector<VkPipelineStageFlags> pipelineStageMasks; pipelineStageMasks.Reserve(cmds.Size());
-	TVector<VulkanCommandBuffer*> recordCmds; recordCmds.Reserve(cmds.Size());
+	TArray<VkSemaphore> semaphores; semaphores.Reserve(cmds.Size());
+	TArray<VkPipelineStageFlags> pipelineStageMasks; pipelineStageMasks.Reserve(cmds.Size());
+	TArray<VulkanCommandBuffer*> recordCmds; recordCmds.Reserve(cmds.Size());
 	const uint32 cmdCount = cmds.Size();
 	TFixedArray<VkCommandBuffer> vkCmds(cmds.Size());
 	for(uint32 i=0; i<cmdCount; ++i) {
@@ -541,7 +541,7 @@ const VulkanCommandSubmission& VulkanCommandContext::GetLastSubmission() {
 	return m_Submissions.IsEmpty() ? s_EmptySubmission : m_Submissions.Back();
 }
 
-const void VulkanCommandContext::GetLastSubmissionSemaphores(TVector<VkSemaphore>& outSmps) {
+const void VulkanCommandContext::GetLastSubmissionSemaphores(TArray<VkSemaphore>& outSmps) {
 	outSmps.Reset();
 	auto& lastSubmissions = GetLastSubmission();
 	if(lastSubmissions.IsEmpty()) {

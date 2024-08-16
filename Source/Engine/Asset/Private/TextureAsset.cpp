@@ -28,7 +28,7 @@ namespace Asset {
 		else if (ETexCompressMode::LZ4 == compressMode) {
 			uint32 compressedByteSize;
 			in.read(BYTE_PTR(&compressedByteSize), sizeof(uint32));
-			TVector<char> compressedData(compressedByteSize);
+			TArray<char> compressedData(compressedByteSize);
 			in.read(compressedData.Data(), compressedByteSize);
 			LZ4_decompress_safe(compressedData.Data(), BYTE_PTR(Pixels.Data()), (int)compressedByteSize, (int)byteSize);
 		}
@@ -52,7 +52,7 @@ namespace Asset {
 		}
 		else if (ETexCompressMode::LZ4 == compressMode) {
 			uint64 compressBound = LZ4_compressBound((int)Pixels.Size());
-			TVector<char> compressedData(compressBound);
+			TArray<char> compressedData(compressBound);
 			uint32 compressedSize = LZ4_compress_default(CBYTE_PTR(Pixels.Data()), compressedData.Data(), (int)Pixels.Size(), (int)compressBound);
 			compressedData.Resize(compressedSize);
 			out.write(CBYTE_PTR(&compressedSize), sizeof(uint32));

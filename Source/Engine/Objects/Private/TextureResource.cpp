@@ -1,10 +1,11 @@
 #include "Objects/Public/TextureResource.h"
+#include "Asset/Public/AssetLoader.h"
+#include "Render/Public/DefaultResource.h"
 
 namespace {
 	static constexpr ERHIFormat FORMAT = ERHIFormat::R8G8B8A8_SRGB;
 	static constexpr ETextureFlags USAGE = ETextureFlagBit::TEXTURE_FLAG_SRV | ETextureFlagBit::TEXTURE_FLAG_CPY_DST;
 	static constexpr int CHANNELS = 4;
-	static constexpr uint32 DEFAULT_SIZE = 2;
 }
 
 namespace Object {
@@ -29,12 +30,19 @@ namespace Object {
 		return m_RHI;
 	}
 
-	TextureResource* TextureResourceMgr::GetTexture(const XString& fileName) {
+	RHITexture* TextureResourceMgr::GetTexture(const XString& fileName) {
 		if(auto iter = m_All.find(fileName); iter != m_All.end()) {
-			return &iter->second;
+			return iter->second.GetRHI();
 		}
 		Asset::TextureAsset imageAsset;
-
+		if(Asset::AssetLoader::LoadProjectAsset(&imageAsset, fileName.c_str())) {
+			TextureResource texRes{ imageAsset };
+			auto* texRHI = texRes.GetRHI();
+			m_All.emplace(fileName, MoveTemp(texRes));
+			return texRHI;
+		}
+		LOG_WARNING("Failed to load texture file: %s", fileName.c_str());
+		return Render::DefaultResources::Instance()->GetDefaultTexture2D(Render::DefaultResources::TEX_WHITE);
 	}
 }
 

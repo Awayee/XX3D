@@ -33,7 +33,9 @@ VulkanUploader::~VulkanUploader() {
 
 VulkanStagingBuffer* VulkanUploader::AcquireBuffer(uint32 bufferSize) {
 	const RHIBufferDesc desc{ EBufferFlagBit::BUFFER_FLAG_COPY_SRC, bufferSize, 1};
-	return m_StagingBuffers.EmplaceBack(new VulkanStagingBuffer(desc, m_Device)).Get();
+	auto& bufferPtr =  m_StagingBuffers.EmplaceBack(new VulkanStagingBuffer(desc, m_Device));
+	bufferPtr->SetName("Upload_Buffer");
+	return bufferPtr.Get();
 }
 
 void VulkanUploader::BeginFrame() {

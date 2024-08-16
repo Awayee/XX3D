@@ -7,7 +7,6 @@ namespace Object {
 	class Level {
 	private:
 		RenderScene* m_Scene;
-		TVector<TUniquePtr<StaticMesh>> m_Meshes;
 	public:
 		Level() = default;
 		Level(const Asset::LevelAsset & levelAsset, RenderScene* scene);

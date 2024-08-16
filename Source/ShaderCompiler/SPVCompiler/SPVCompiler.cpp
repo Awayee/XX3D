@@ -95,8 +95,8 @@ bool SPVCompiler::CompileHLSL(const XString& hlslFile, const XString& entryPoint
 	const wchar_t* shaderModel = GetShaderModule(stage);
 	IDxcCompilerArgs* args;
 	// parse defines
-	TVector<TPair<XWString, XWString>> definesW; definesW.Reserve(defines.Size());
-	TVector<DxcDefine> dxcDefines; dxcDefines.Reserve(defines.Size());
+	TArray<TPair<XWString, XWString>> definesW; definesW.Reserve(defines.Size());
+	TArray<DxcDefine> dxcDefines; dxcDefines.Reserve(defines.Size());
 	for(const auto& define: defines) {
 		auto& defineW = definesW.EmplaceBack();
 		defineW.first = String2WString(define.Name);

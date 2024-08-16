@@ -4,7 +4,7 @@
 
 namespace Render {
 
-	inline bool LoadShaderCode(const XString& shaderFile, TVector<int8>& outCode) {
+	inline bool LoadShaderCode(const XString& shaderFile, TArray<int8>& outCode) {
 		File::FPath shaderFilePath{ SHADER_PATH };
 		shaderFilePath.append(shaderFile);
 		const XString shaderFileAbs = shaderFilePath.string();
@@ -31,7 +31,7 @@ namespace Render {
 	}
 	GlobalShader::GlobalShader(const XString& shaderFile, const XString& entry, EShaderStageFlagBit type) {
 		const XString spvFile = SPVCompiler::GetShaderOutputFile(shaderFile, entry);
-		TVector<int8> codeData;
+		TArray<int8> codeData;
 		if(!LoadShaderCode(spvFile, codeData)) {
 			if(SPVCompiler{}.CompileHLSL(shaderFile, entry, ToSPVShaderStage(type), {})) {
 				LOG_DEBUG("Shader compiled: %s, %s, %s", shaderFile.c_str(), entry.c_str(), spvFile.c_str());

@@ -1,5 +1,5 @@
 #pragma once
-#include "Core/Public/TSingleton.h"
+#include "Core/Public/Defines.h"
 #include "Core/Public/COntainer.h"
 #include "Core/Public/String.h"
 #include "Asset/Public/TextureAsset.h"
@@ -18,9 +18,10 @@ namespace Object {
 		RHITexturePtr m_RHI;
 	};
 
-	class TextureResourceMgr : public TSingleton<TextureResourceMgr> {
+	class TextureResourceMgr {
+		SINGLETON_INSTANCE(TextureResourceMgr);
 	public:
-		TextureResource* GetTexture(const XString& fileName);
+		RHITexture* GetTexture(const XString& fileName);
 	private:
 		TMap<XString, TextureResource> m_All;
 		TextureResourceMgr() = default;

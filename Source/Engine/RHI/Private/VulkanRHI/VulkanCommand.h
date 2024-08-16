@@ -2,7 +2,7 @@
 #include "RHI/Public/RHI.h"
 #include "VulkanCommon.h"
 #include "VulkanDevice.h"
-#include "Core/Public/TVector.h"
+#include "Core/Public/TArray.h"
 #include "Core/Public/TUniquePtr.h"
 
 class VulkanCommandContext;
@@ -52,7 +52,7 @@ private:
 	void PrepareDrawOrDispatch();
 };
 
-typedef TVector<VulkanCommandBuffer*> VulkanCommandSubmission;
+typedef TArray<VulkanCommandBuffer*> VulkanCommandSubmission;
 
 class VulkanCommandContext {
 public:
@@ -69,7 +69,7 @@ public:
 	// Get the last submitted command buffer(s) for next submission.
 	const VulkanCommandSubmission& GetLastSubmission();
 	// Get the semaphores of commands last submitted.
-	const void GetLastSubmissionSemaphores(TVector<VkSemaphore>& outSmps);
+	const void GetLastSubmissionSemaphores(TArray<VkSemaphore>& outSmps);
 	// Get the command buffer for upload, always exists.
 	VulkanCommandBuffer* GetUploadCmd();
 
@@ -77,6 +77,6 @@ public:
 private:
 	VulkanDevice* m_Device;
 	VkCommandPool m_CommandPool;
-	TVector<VulkanCommandSubmission> m_Submissions;
+	TArray<VulkanCommandSubmission> m_Submissions;
 	TUniquePtr<VulkanCommandBuffer> m_UploadCmd;
 };

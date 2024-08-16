@@ -1,9 +1,7 @@
 #pragma once
 #include "RHI/Public/RHI.h"
 #include "Core/Public/TUniquePtr.h"
-#include "Core/Public/TVector.h"
 #include "Core/Public/TArray.h"
-#include "Core/Public/TSingleton.h"
 #include "Core/Public/Func.h"
 
 namespace Render {
@@ -29,7 +27,7 @@ namespace Render {
 		COUNT,
 	};
 
-	typedef TVector<DrawCall> DrawCallQueue;
+	typedef TArray<DrawCall> DrawCallQueue;
 
 	// A draw call context is obtained by cameras or renderer.
 	class DrawCallContext {

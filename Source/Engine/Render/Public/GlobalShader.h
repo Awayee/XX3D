@@ -1,5 +1,5 @@
 #pragma once
-#include "Core/Public/TSingleton.h"
+#include "Core/Public/Defines.h"
 #include "Core/Public/Container.h"
 #include "Core/Public/Algorithm.h"
 #include "RHI/Public/RHI.h"
@@ -28,7 +28,8 @@ namespace Render {
 		}\
 	};
 
-	class GlobalShaderMap: public TSingleton<GlobalShaderMap> {
+	class GlobalShaderMap {
+		SINGLETON_INSTANCE(GlobalShaderMap);
 	public:
 		template <typename T> T* GetShader() {
 			uint64 hash = T::GetHash();
@@ -40,9 +41,8 @@ namespace Render {
 			return shader;
 		}
 	private:
-		friend TSingleton<GlobalShaderMap>;
 		TMap<uint32, TUniquePtr<GlobalShader>> m_ShaderMap;
 		GlobalShaderMap();
-		~GlobalShaderMap() override;
+		~GlobalShaderMap();
 	};
 }

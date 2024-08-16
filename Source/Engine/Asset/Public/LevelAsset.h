@@ -13,7 +13,7 @@ namespace Asset {
 			Math::FVector3 Scale;
 			Math::FVector3 Rotation;
 		};
-		TVector<MeshData> Meshes;
+		TArray<MeshData> Meshes;
 
 		struct {
 			Math::FVector3 Eye;

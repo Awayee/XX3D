@@ -33,7 +33,7 @@ namespace Editor {
 		EditorUIMgr::Instance()->AddWindow("AssetImporter", MoveTemp(f));
 	}
 
-	TVector<WndAssetBrowser*> WndAssetBrowser::s_Instances;
+	TArray<WndAssetBrowser*> WndAssetBrowser::s_Instances;
 
 	void WndAssetBrowser::OnFolderRebuildAllWindows(const FolderNode* node) {
 		for(WndAssetBrowser* wnd: s_Instances) {

@@ -24,15 +24,15 @@ namespace Editor {
 		if(ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
 			ImGui::Text("Position"); ImGui::SameLine();
 			if (ImGui::DragFloat3("##Position", mesh->Position.Data(), 0.01f)) {
-				mesh->Mesh->SetPosition(mesh->Position);
+				level->GetScene()->GetComponent<Object::TransformComponent>(mesh->ObjectEntityID)->SetPosition(mesh->Position);
 			}
 			ImGui::Text("Scale   "); ImGui::SameLine();
 			if (ImGui::DragFloat3("##Scale", mesh->Scale.Data(), 0.01f)) {
-				mesh->Mesh->SetScale(mesh->Scale);
+				level->GetScene()->GetComponent<Object::TransformComponent>(mesh->ObjectEntityID)->SetScale(mesh->Scale);
 			}
 			ImGui::Text("Rotation"); ImGui::SameLine();
 			if (ImGui::DragFloat3("##Rotation", mesh->Rotation.Data(), 0.01f)) {
-				mesh->Mesh->SetRotation(Math::FQuaternion::Euler(mesh->Rotation));
+				level->GetScene()->GetComponent<Object::TransformComponent>(mesh->ObjectEntityID)->SetRotation(Math::FQuaternion::Euler(mesh->Rotation));
 			}
 		}
 

@@ -36,7 +36,7 @@ public:
 	virtual RHIBufferPtr CreateBuffer(const RHIBufferDesc& desc) = 0;
 	virtual RHITexturePtr CreateTexture(const RHITextureDesc& desc) = 0;
 	virtual RHISamplerPtr CreateSampler(const RHISamplerDesc& desc) = 0;
-	virtual RHIFencePtr CreateFence(bool sig = true) = 0;
+	virtual RHIFencePtr CreateFence(bool isSignaled = true) = 0;
 	virtual RHIShaderPtr CreateShader(EShaderStageFlagBit type, const char* codeData, size_t codeSize, const XString& entryFunc) = 0;
 	virtual RHIGraphicsPipelineStatePtr CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) = 0;
 	virtual RHIComputePipelineStatePtr CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) = 0;

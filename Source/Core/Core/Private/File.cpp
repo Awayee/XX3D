@@ -4,7 +4,7 @@
 
 namespace File {
 
-	bool LoadFileCode(const char* file, TVector<char>& code) {
+	bool LoadFileCode(const char* file, TArray<char>& code) {
 		RFile f(file, EFileMode::AtEnd | EFileMode::Binary);
 		if(!f.is_open()) {
 			return false;

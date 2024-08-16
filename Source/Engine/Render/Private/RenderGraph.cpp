@@ -7,7 +7,7 @@ namespace Render {
 
 	void RenderGraph::Execute() {
 		// find the start pass (with out input)
-		TVector<RGPassNode*> startNodes;
+		TArray<RGPassNode*> startNodes;
 		for(auto& node: m_PassNodes) {
 			if(node->m_Inputs.IsEmpty()) {
 				startNodes.PushBack(node);

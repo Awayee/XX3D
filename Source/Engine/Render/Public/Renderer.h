@@ -63,12 +63,13 @@ namespace Render {
 			RHICommandBufferPtr Cmd;
 			RHIFencePtr Fence;// rendering complete in this frame.
 		};
-		TStaticArray<FrameResource, RHI_MAX_FRAME_IN_FLIGHT> m_FrameResources;
+		TStaticArray<RHICommandBufferPtr, RHI_MAX_FRAME_IN_FLIGHT> m_Cmds;
+		TStaticArray<RHIFencePtr, RHI_MAX_FRAME_IN_FLIGHT> m_Fences;
 		RHITexture* m_DepthTarget;
 	};
 
-	class RendererMgr : public TSingleton<RendererMgr> {
-		friend TSingleton<RendererMgr>;
+	class RendererMgr {
+		SINGLETON_INSTANCE(RendererMgr);
 	public:
 		void Update();
 		void WaitQueue();
@@ -78,6 +79,6 @@ namespace Render {
 		DeferredLightingPass m_DeferredLightingPass;
 		PresentPass m_PresentRenderer;
 		RendererMgr();
-		~RendererMgr() override;
+		~RendererMgr();
 	};
 }

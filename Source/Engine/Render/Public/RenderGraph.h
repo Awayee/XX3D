@@ -1,7 +1,7 @@
 #pragma once
 #include "RHI/Public/RHI.h"
 #include "Core/Public/Func.h"
-#include "Core/Public/TVector.h"
+#include "Core/Public/TArray.h"
 #include "Core/Public/TUniquePtr.h"
 #include "Render/Public/RenderGraphPass.h"
 #include "Render/Public/RenderGraphResource.h"
@@ -24,7 +24,7 @@ namespace Render {
 		void Execute();
 	private:
 		RHICommandBufferPtr m_Cmd;
-		TVector<TUniquePtr<RGPassNode>> m_PassNodes;
-		TVector<TUniquePtr<RGResourceNode>> m_ResourceNodes;
+		TArray<TUniquePtr<RGPassNode>> m_PassNodes;
+		TArray<TUniquePtr<RGResourceNode>> m_ResourceNodes;
 	};
 }

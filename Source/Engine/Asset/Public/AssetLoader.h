@@ -1,7 +1,7 @@
 #pragma once
 #include "AssetCommon.h"
 #include "Core/Public/String.h"
-#include "Core/Public/TVector.h"
+#include "Core/Public/TArray.h"
 #include "Core/Public/File.h"
 
 namespace Asset {

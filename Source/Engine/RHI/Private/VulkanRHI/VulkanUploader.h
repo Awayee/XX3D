@@ -29,6 +29,6 @@ public:
 	void BeginFrame();
 private:
 	VulkanDevice* m_Device;
-	TVector<TUniquePtr<VulkanStagingBuffer>> m_StagingBuffers;// Buffers to upload in current frame.
+	TArray<TUniquePtr<VulkanStagingBuffer>> m_StagingBuffers;// Buffers to upload in current frame.
 	void CheckForRelease();
 };

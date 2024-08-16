@@ -29,7 +29,7 @@ template<class T>
 using TStrMap = std::unordered_map<const char*, T, hs, cmp>;
 
 //template<class T>
-//using TVector =  std::vector<T>;
+//using TArray =  std::vector<T>;
 
 template<typename T1, typename T2>
 using TPair = std::pair<T1, T2>;

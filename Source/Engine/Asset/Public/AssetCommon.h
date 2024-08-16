@@ -1,5 +1,4 @@
 #pragma once
-#include "Core/Public/TVector.h"
 #include "Core/Public/String.h"
 #include "Math/Public/Vector.h"
 #include "Core/Public/Defines.h"
@@ -39,8 +38,8 @@ namespace Asset {
 	typedef uint32 IndexType;
 
 	struct SPrimitiveData {
-		TVector<AssetVertex> Vertices;
-		TVector<uint32>  Indices;
-		TVector<XString>  Textures;
+		TArray<AssetVertex> Vertices;
+		TArray<uint32>  Indices;
+		TArray<XString>  Textures;
 	};
 }

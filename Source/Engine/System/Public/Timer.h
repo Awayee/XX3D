@@ -1,6 +1,6 @@
 #pragma once
 #include "Core/Public/Time.h"
-#include "Core/Public/TSingleton.h"
+#include "Core/Public/Defines.h"
 
 namespace Engine {
 	class CTimer{

@@ -136,8 +136,8 @@ namespace Render {
 		RHI* r = RHI::Instance();
 		// create command buffer
 		for (uint32 i = 0; i < RHI_MAX_FRAME_IN_FLIGHT; ++i) {
-			m_FrameResources[i].Cmd = r->CreateCommandBuffer();
-			m_FrameResources[i].Fence = r->CreateFence(true);
+			m_Cmds[i] = r->CreateCommandBuffer();
+			m_Fences[i] = r->CreateFence(true);
 		}
 		// Resize the RHI viewport if window resized.
 		Engine::EngineWindow::Instance()->RegisterOnWindowSizeFunc([](uint32 w, uint32 h) {
@@ -154,8 +154,8 @@ namespace Render {
 
 	void PresentPass::Execute(DrawCallQueue& queue) {
 		const uint32 resIndex = FrameCounter::GetFrame() % RHI_MAX_FRAME_IN_FLIGHT;
-		RHICommandBuffer* cmd = m_FrameResources[resIndex].Cmd;
-		RHIFence* fence = m_FrameResources[resIndex].Fence;
+		RHICommandBuffer* cmd = m_Cmds[resIndex].Get();
+		RHIFence* fence = m_Fences[resIndex].Get();
 
 		// Wait fence before rendering.
 		fence->Wait();
@@ -191,14 +191,14 @@ namespace Render {
 
 	void PresentPass::WaitAll() {
 		// The fences must be signaled before destruction.
-		for (auto& res : m_FrameResources) {
-			res.Fence->Wait();
+		for (auto& fence : m_Fences) {
+			fence->Wait();
 		}
 		std::unique_ptr<RHICommandBuffer> null = nullptr;
 	}
 
 	void PresentPass::WaitCurrent() {
-		m_FrameResources[FrameCounter::GetFrame() % RHI_MAX_FRAME_IN_FLIGHT].Fence->Wait();
+		m_Fences[FrameCounter::GetFrame() % RHI_MAX_FRAME_IN_FLIGHT]->Wait();
 	}
 
 	void RendererMgr::Update() {

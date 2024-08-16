@@ -1,7 +1,7 @@
 #pragma once
 #include "Core/Public/File.h"
 #include "Core/Public/String.h"
-#include "Core/Public/TVector.h"
+#include "Core/Public/TArray.h"
 #include <combaseapi.h>
 #include <dxcapi.h>
 

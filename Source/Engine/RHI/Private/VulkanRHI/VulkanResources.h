@@ -40,11 +40,11 @@ protected:
 	VulkanDevice* m_Device;
 	VkImage m_Image;
 	ImageAllocation m_Allocation;
-	TVector<VkImageView> m_AllViews;
+	TArray<VkImageView> m_AllViews;
 	// view indices for search
 	uint32 m_DefaultViewIndex;
-	TVector<uint32> m_2DViewIndices;
-	TVector<uint32> m_CubeViewIndices;
+	TArray<uint32> m_2DViewIndices;
+	TArray<uint32> m_CubeViewIndices;
 	// m_Image will be destroy in this object if m_IsImageOwner is true
 	bool m_IsImageOwner;
 	uint32 CreateView(VkImageViewType type, VkImageAspectFlags aspectFlags, uint8 mipIndex, uint8 mipCount, uint32 arrayIndex, uint32 arrayCount);

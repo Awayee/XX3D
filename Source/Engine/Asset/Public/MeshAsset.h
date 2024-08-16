@@ -21,11 +21,11 @@ namespace Asset {
 			XString BinaryFile;
 			XString MaterialFile;
 			XString Name;
-			TVector<XString> Textures;
-			TVector<AssetVertex> Vertices;
-			TVector<IndexType> Indices;
+			TArray<XString> Textures;
+			TArray<AssetVertex> Vertices;
+			TArray<IndexType> Indices;
 		};
-		TVector<SPrimitive> Primitives;
+		TArray<SPrimitive> Primitives;
 
 	public:
 		MeshAsset() = default;
@@ -37,10 +37,10 @@ namespace Asset {
 		bool Save(File::WFile& out) override;
 
 		//load a packed primitive file
-		static bool LoadPrimitiveFile(const char* file, TVector<AssetVertex>& vertices, TVector<IndexType>& indices);
+		static bool LoadPrimitiveFile(const char* file, TArray<AssetVertex>& vertices, TArray<IndexType>& indices);
 
 		//export with pack, only execute when import external files
-		static bool ExportPrimitiveFile(const char* file, const TVector<AssetVertex>& vertices, const TVector<IndexType>& indices, EMeshCompressMode packMode = EMeshCompressMode::NONE);
+		static bool ExportPrimitiveFile(const char* file, const TArray<AssetVertex>& vertices, const TArray<IndexType>& indices, EMeshCompressMode packMode = EMeshCompressMode::NONE);
 
 	};
 }

@@ -5,7 +5,6 @@
 #include "Core/Public/Defines.h"
 #include "Core/Public/File.h"
 #include "Core/Public/Func.h"
-#include "Core/Public/TSingleton.h"
 #include "Asset/Public/AssetLoader.h"
 
 namespace Editor {
@@ -38,13 +37,13 @@ namespace Editor {
 	//folder
 	class FolderNode : public PathNode {
 	private:
-		TVector<NodeID> m_Folders;
-		TVector<NodeID> m_Files;
+		TArray<NodeID> m_Folders;
+		TArray<NodeID> m_Files;
 		friend class AssetManager;
 	public:
 		FolderNode(const File::FPath& path, NodeID id, NodeID parent) : PathNode(path, id, parent) {}
-		_NODISCARD const TVector<NodeID>& GetChildFolders() const { return m_Folders; }
-		_NODISCARD const TVector<NodeID>& GetChildFiles() const { return m_Files; }
+		_NODISCARD const TArray<NodeID>& GetChildFolders() const { return m_Folders; }
+		_NODISCARD const TArray<NodeID>& GetChildFiles() const { return m_Files; }
 		_NODISCARD bool Contains(NodeID node)const;
 	};
 
@@ -52,7 +51,7 @@ namespace Editor {
 	class FileNode: public PathNode {
 	private:
 		TUniquePtr<Asset::AssetBase> m_Asset;
-		TVector<std::pair<EventID, Func<void(FileNode*)>>> m_OnFileChange;
+		TArray<std::pair<EventID, Func<void(FileNode*)>>> m_OnFileChange;
 		friend class AssetManager;
 	public:
 		FileNode(const File::FPath& path, NodeID id, NodeID parent): PathNode(path, id, parent){}
@@ -69,8 +68,8 @@ namespace Editor {
 	class AssetManager {
 	private:
 		File::FPath m_RootPath;
-		TVector<FolderNode> m_Folders;
-		TVector<FileNode> m_Files;
+		TArray<FolderNode> m_Folders;
+		TArray<FileNode> m_Files;
 		NodeID m_Root;
 		//events
 		void (*m_OnFolderRebuild)(const FolderNode*) {nullptr };
@@ -93,14 +92,14 @@ namespace Editor {
 	};
 
 
-	class EngineAssetMgr: public TSingleton<EngineAssetMgr>, public AssetManager {
+	class EngineAssetMgr: public AssetManager {
+		SINGLETON_INSTANCE(EngineAssetMgr);
 	private:
-		friend TSingleton<EngineAssetMgr>;
 		EngineAssetMgr(): AssetManager(ENGINE_ASSETS){}
 	};
-	class ProjectAssetMgr: public TSingleton<ProjectAssetMgr>, public AssetManager {
+	class ProjectAssetMgr: public AssetManager {
+		SINGLETON_INSTANCE(ProjectAssetMgr);
 	private:
-		friend TSingleton<ProjectAssetMgr>;
 		ProjectAssetMgr(): AssetManager(PROJECT_ASSETS){}
 	};
 

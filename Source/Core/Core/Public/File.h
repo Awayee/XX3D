@@ -2,7 +2,7 @@
 #include <fstream>
 #include <filesystem>
 #include <functional>
-#include "TVector.h"
+#include "TArray.h"
 
 namespace File {
 	typedef std::ofstream WFile;
@@ -22,7 +22,7 @@ namespace File {
 		Write = std::ios::out,
 	};
 
-	bool LoadFileCode(const char* file, TVector<char>& code);
+	bool LoadFileCode(const char* file, TArray<char>& code);
 
 	inline FPath RelativePath(const FPath& path, const FPath& base) {
 		return std::filesystem::relative(path, base);

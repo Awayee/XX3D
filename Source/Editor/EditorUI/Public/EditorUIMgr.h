@@ -1,6 +1,5 @@
 #pragma once
-#include "Core/Public/TSingleton.h"
-#include "Core/Public/TVector.h"
+#include "Core/Public/TArray.h"
 #include "Core/Public/TUniquePtr.h"
 #include "Core/Public/Func.h"
 #include "EditorUI/Public/Widget.h"
@@ -10,9 +9,9 @@
 
 namespace Editor {
 
-	class EditorUIMgr: public TSingleton<EditorUIMgr>{
+	class EditorUIMgr{
+		SINGLETON_INSTANCE(EditorUIMgr);
 	private:
-		friend TSingleton<EditorUIMgr>;
 		struct MenuItem {
 			XString Name;
 			Func<void()> Func;
@@ -20,10 +19,10 @@ namespace Editor {
 		};
 		struct MenuColumn {
 			XString Name;
-			TVector<MenuItem> Items;
+			TArray<MenuItem> Items;
 		};
-		TVector<MenuColumn> m_MenuBar;
-		TVector<TUniquePtr<WidgetBase>> m_Widgets;
+		TArray<MenuColumn> m_MenuBar;
+		TArray<TUniquePtr<WidgetBase>> m_Widgets;
 		EditorUIMgr();
 		~EditorUIMgr();
 	public:

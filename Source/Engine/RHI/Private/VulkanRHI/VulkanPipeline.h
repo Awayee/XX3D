@@ -1,7 +1,6 @@
 #pragma once
 #include "VulkanCommon.h"
 #include "Core/Public/Container.h"
-#include "Core/Public/TVector.h"
 #include "Core/Public/TUniquePtr.h"
 #include "RHI/Public/RHIResources.h"
 
@@ -22,7 +21,7 @@ public:
 private:
 	VulkanDevice* m_Device;
 	TUnorderedMap<uint64, VkDescriptorSetLayout> m_LayoutMap;
-	TVector<VkDescriptorPool> m_Pools;
+	TArray<VkDescriptorPool> m_Pools;
 	VkDescriptorPool AddPool();
 };
 
@@ -30,8 +29,8 @@ private:
 class VulkanPipelineDescriptorSetCache {
 public:
 	struct PipelineLayoutDesc {
-		TVector<VkDescriptorSetLayout> LayoutHandles;
-		TVector<RHIShaderParamSetLayout> LayoutInfos;
+		TArray<VkDescriptorSetLayout> LayoutHandles;
+		TArray<RHIShaderParamSetLayout> LayoutInfos;
 		VkPipelineLayout PipelineLayout;
 	};
 	NON_COPYABLE(VulkanPipelineDescriptorSetCache);
@@ -42,8 +41,8 @@ public:
 	TConstArrayView<VkDescriptorSet> GetDescriptorSets() const;
 private:
 	VulkanDevice* m_Device;
-	TVector<VkDescriptorSet> m_DescriptorSets;
-	TVector<TVector<RHIShaderParam>> m_ParametersCache;
+	TArray<VkDescriptorSet> m_DescriptorSets;
+	TArray<TArray<RHIShaderParam>> m_ParametersCache;
 	TConstArrayView<VkDescriptorSetLayout> m_Layouts;// reference, for layout checking.
 };
 
@@ -59,7 +58,7 @@ public:
 private:
 	VkPipeline m_Pipeline{ VK_NULL_HANDLE };
 	VkPipelineLayout m_PipelineLayout;
-	TVector<VkDescriptorSetLayout> m_SetLayouts;
+	TArray<VkDescriptorSetLayout> m_SetLayouts;
 	VulkanDevice* m_Device;
 };
 
@@ -75,7 +74,7 @@ public:
 private:
 	VkPipeline m_Pipeline{ VK_NULL_HANDLE };
 	VkPipelineLayout m_PipelineLayout;
-	TVector<VkDescriptorSetLayout> m_SetLayouts;
+	TArray<VkDescriptorSetLayout> m_SetLayouts;
 	VulkanDevice* m_Device;
 };
 
@@ -100,5 +99,5 @@ private:
 		};
 		TUniquePtr<VulkanPipelineDescriptorSetCache> DescriptorSetCache;
 	};
-	TVector<PipelineData> m_Pipelines;
+	TArray<PipelineData> m_Pipelines;
 };

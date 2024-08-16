@@ -1,7 +1,7 @@
 #include "System/Public/EngineConfig.h"
 #include "Core/Public/Log.h"
 #include "Core/Public/Container.h"
-#include "Core/Public/TVector.h"
+#include "Core/Public/TArray.h"
 #include "Core/Public/String.h"
 #include "Core/Public/Concurrency.h"
 #include "Core/Public/File.h"

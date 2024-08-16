@@ -100,8 +100,7 @@ bool VulkanMemoryMgr::AllocateBufferMemory(BufferAllocation& allocation, uint32 
 
 void VulkanMemoryMgr::FreeBufferMemory(BufferAllocation& allocation) {
 	if(allocation.m_Allocator) {
-		vmaFreeMemory(allocation.m_Allocator, allocation.m_Allocation);
-		vkDestroyBuffer(m_Device->GetDevice(), allocation.m_Buffer, nullptr);
+		vmaDestroyBuffer(allocation.m_Allocator, allocation.m_Buffer, allocation.m_Allocation);
 		allocation.InnerFree();
 	}
 }

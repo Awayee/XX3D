@@ -7,11 +7,11 @@ namespace Editor {
 
 	struct LevelObject {
 		XString Name;
-		Object::RenderObject3D* RenderObj;
+		Object::EntityID ObjectID;
 	};
 
-	class EditorLevelMgr: public TSingleton<EditorLevelMgr> {
-		friend TSingleton<EditorLevelMgr>;
+	class EditorLevelMgr {
+		SINGLETON_INSTANCE(EditorLevelMgr);
 	private:
 		TUniquePtr<Asset::LevelAsset> m_TempLevel; //if there is not level asset, create a temp level
 		TUniquePtr<EditorLevel> m_Level;
