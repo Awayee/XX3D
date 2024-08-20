@@ -3,8 +3,7 @@
 #include "Core/Public/Func.h"
 #include "Core/Public/TArray.h"
 #include "Core/Public/TUniquePtr.h"
-#include "Render/Public/RenderGraphPass.h"
-#include "Render/Public/RenderGraphResource.h"
+#include "Render/Public/RenderGraphNode.h"
 
 namespace Render {
 	class RenderGraph {
@@ -12,19 +11,15 @@ namespace Render {
 		NON_COPYABLE(RenderGraph);
 		NON_MOVEABLE(RenderGraph);
 		RenderGraph();
-		typedef Func<void(RHICommandBuffer*)> NodeFunc;
-		template<class T> T* CreatePassNode() {
-			return m_PassNodes.EmplaceBack(new T()).Get();
-		}
-
-		template<class T, class Desc> T* CreateResourceNode(const Desc& desc) {
-			return m_ResourceNodes.EmplaceBack(new T(desc)).Get();
-		}
-
-		void Execute();
+		RGRenderNode* CreateRenderNode(XString&& name);
+		RGBufferNode* CreateBufferNode(RHIBuffer* buffer, XString&& name);
+		RGTextureNode* CreateTextureNode(RHITexture* texture, XString&& name);
+		RGPresentNode* CreatePresentNode();
+		void Run(ICmdAllocator* cmdAlloc);
 	private:
-		RHICommandBufferPtr m_Cmd;
-		TArray<TUniquePtr<RGPassNode>> m_PassNodes;
-		TArray<TUniquePtr<RGResourceNode>> m_ResourceNodes;
+		TArray<TUniquePtr<RGNode>> m_Nodes;
+		TArray<bool> m_NodesSolved;
+		RGNodeID m_PresentNodeID;
+		void RecursivelyRunNode(RGNodeID nodeID, ICmdAllocator* cmdAlloc);
 	};
 }

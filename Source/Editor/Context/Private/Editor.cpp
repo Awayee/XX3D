@@ -1,13 +1,10 @@
 ﻿#include "Context/Public/Editor.h"
 #include "Asset/Public/AssetLoader.h"
 #include "Functions/Public/EditorConfig.h"
-
 #include "EditorUI/Public/UIController.h"
 #include "EditorUI/Public/EditorUIMgr.h"
 #include "Functions/Public/AssetManager.h"
 #include "Functions/Public/EditorLevelMgr.h"
-#include "Functions/Public/EditorConfig.h"
-#include "Render/Public/Renderer.h"
 #include "RHI/Public/ImGuiRHI.h"
 
 namespace Editor {
@@ -22,7 +19,6 @@ namespace Editor {
 	}
 
 	XXEditor::~XXEditor() {
-		Render::RendererMgr::Instance()->WaitQueue();
 		EngineAssetMgr::Release();
 		ProjectAssetMgr::Release();
 		EditorUIMgr::Release();

@@ -46,7 +46,7 @@ void VulkanUploader::CheckForRelease() {
 	const uint32 frame = FrameCounter::GetFrame();
 	for(uint32 i=0; i<m_StagingBuffers.Size(); ) {
 		const uint32 createFrame = m_StagingBuffers[i]->GetCreateFrame();
-		if(createFrame + RHI_MAX_FRAME_IN_FLIGHT < frame) {
+		if(createFrame + RHI_FRAME_IN_FLIGHT_MAX < frame) {
 			m_StagingBuffers.SwapRemoveAt(i);
 		}
 		else {

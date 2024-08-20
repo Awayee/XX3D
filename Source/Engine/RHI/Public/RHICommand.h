@@ -15,7 +15,7 @@ public:
 	virtual void BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) = 0;
 	virtual void BindIndexBuffer(RHIBuffer* buffer, uint64 offset) = 0;
 	virtual void SetViewport(FRect rect, float minDepth, float maxDepth) = 0;
-	virtual void SetScissor(IURect rect) = 0;
+	virtual void SetScissor(Rect rect) = 0;
 	virtual void Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance) = 0;
 	virtual void DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance) = 0;
 	virtual void Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ) = 0;

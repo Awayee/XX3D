@@ -10,7 +10,7 @@ namespace Render {
 	public:
 		NON_COPYABLE(DrawCall);
 		DrawCall() = default;
-		~DrawCall();
+		~DrawCall() = default;
 		DrawCall(DrawCall&& rhs) noexcept;
 		DrawCall& operator=(DrawCall&& rhs) noexcept;
 		void ResetFunc(Func<void(RHICommandBuffer*)>&& f);
@@ -20,11 +20,11 @@ namespace Render {
 	};
 
 	enum class EDrawCallQueueType : uint32 {
-		DIRECTIONAL_SHADOW=0,
-		BASE_PASS,
-		DEFERRED_LIGHTING_PASS,
-		POST_PROCESS,
-		COUNT,
+		DirectionalShadow=0,
+		BasePass,
+		DeferredLighting,
+		PostProcess,
+		MaxNum,
 	};
 
 	typedef TArray<DrawCall> DrawCallQueue;
@@ -33,11 +33,14 @@ namespace Render {
 	class DrawCallContext {
 	public:
 		NON_COPYABLE(DrawCallContext);
-		NON_MOVEABLE(DrawCallContext);
-		DrawCallContext();
-		~DrawCallContext();
+		DrawCallContext() = default;
+		~DrawCallContext() = default;
+		DrawCallContext(DrawCallContext&& rhs) noexcept;
+		DrawCallContext& operator=(DrawCallContext&& rhs)noexcept;
 		void PushDrawCall(EDrawCallQueueType queueType, Func<void(RHICommandBuffer*)>&& f);
+		DrawCallQueue& GetDrawCallQueue(EDrawCallQueueType queueType);
+		void Reset();
 	private:
-		TStaticArray<DrawCallQueue, (uint32)EDrawCallQueueType::COUNT> m_DrawCallQueues;
+		TStaticArray<DrawCallQueue, (uint32)EDrawCallQueueType::MaxNum> m_DrawCallQueues;
 	};
 }

@@ -32,14 +32,14 @@ template<typename T> struct Offset3D {
 typedef Offset3D<uint32> UOffset3D;
 typedef Offset3D<float>  FOffset3D;
 
-template<typename offset, typename TSize> struct Rect {
+template<typename offset, typename TSize> struct RectTemplate {
 	offset x{ 0 }, y{ 0 };
 	TSize w{ 0 }, h{ 0 };
 };
-typedef Rect<float, float> FRect;
-typedef Rect<int32, int32> IRect;
-typedef Rect<uint32, uint32> URect;
-typedef Rect<int32, uint32> IURect;
+typedef RectTemplate<float, float> FRect;
+typedef RectTemplate<int32, int32> IRect;
+typedef RectTemplate<uint32, uint32> URect;
+typedef RectTemplate<int32, uint32> Rect;
 
 
 template<typename T> struct Color3 {

@@ -11,16 +11,18 @@ namespace Object {
 	typedef uint8 ComponentID;
 	typedef uint32 ComponentMask;
 
+
+	//  ================ component ====================
 	constexpr ComponentID NUM_COMPONENT_MAX = 32;
-
 	ComponentID RegisterComponent();
-
 #define REGISTER_ECS_COMPONENT(cls)\
 	public:\
 	static Object::ComponentID cls::GetComponentID(){ return s_ComponentID;	}\
 	static Object::ComponentMask cls::GetComponentMask(){return 1 << s_ComponentID;}\
 	private:\
 		inline static Object::ComponentID s_ComponentID{Object::RegisterComponent()}
+
+	class ECSScene;
 
 	class ECSComponentContainerBase {
 	public:
@@ -45,7 +47,7 @@ namespace Object {
 
 		T* Get(EntityID entityID) {
 			if(auto iter = m_Entity2Indices.find(entityID); iter != m_Entity2Indices.end()) {
-				m_Components[iter->second];
+				return &m_Components[iter->second];
 			}
 			return nullptr;
 		}
@@ -95,27 +97,10 @@ namespace Object {
 		}
 	};
 
-	//typedef TStaticArray<uint8, sizeof(ECSComponentContainer<uint32>)> ECSComponentContainerStorage;
-
-	// Inner entity struct
-	struct ECSEntity {
-		EntityID ID{ 0 };
-		ComponentMask ComponentMask{ 0 }; // Means supports less than 32 components
-		// Marks components owned by this entity
-		struct ComponentIDIndexPair {
-			ComponentID ComponentID;
-			uint32 Index;
-		};
-		TArray<ComponentIDIndexPair> Components;
-	};
-
-	class ECSScene;
-
+	//  ================ system ====================
 	class ECSSystemBase {
 	public:
-		ECSSystemBase(ComponentMask mask) : m_Mask(mask) {}
 		virtual ~ECSSystemBase() = default;
-		ComponentMask GetMask() const { return m_Mask; }
 		void AddEntity(EntityID entityID) {
 			m_Entity2Indices[entityID] = m_Entities.Size();
 			m_Entities.PushBack(entityID);
@@ -131,26 +116,26 @@ namespace Object {
 		}
 	protected:
 		friend ECSScene;
-		ComponentMask m_Mask{ 0 };
 		TArray<EntityID> m_Entities;
 		TMap<EntityID, uint32> m_Entity2Indices;
-		virtual void InnerUpdate(ECSScene* scene, ECSComponentContainerMgr& mgr) = 0;
+		virtual void UpdateEntry(ECSScene* scene, ECSComponentContainerMgr& mgr) = 0;
 	};
 
 	template<class ...T>
 	class ECSSystem: public ECSSystemBase {
 	public:
 		static ComponentMask GetComponentMask() { return (0 | ... | T::GetComponentMask()); } // only for c++17
-		ECSSystem() : ECSSystemBase(GetComponentMask()) {}
-		virtual void Update(ECSScene* scene, EntityID entityID, T*...components) = 0;
+		virtual void Update(ECSScene* scene, T*...components) = 0;
 	private:
-		void InnerUpdate(ECSScene* scene, ECSComponentContainerMgr& mgr) final {
+		void UpdateEntry(ECSScene* scene, ECSComponentContainerMgr& mgr) final {
 			for(EntityID entityID: m_Entities) {
-				Update(scene, entityID, mgr.GetComponent<T>(entityID)...);
+				Update(scene, mgr.GetComponent<T>(entityID)...);
 			}
 		}
 	};
 
+
+	// Scene
 	class ECSScene {
 	public:
 		ECSScene() = default;
@@ -207,9 +192,9 @@ namespace Object {
 			}
 		}
 
-		void Update() {
+		void SystemUpdate() {
 			for(auto&[comMask, sys]: m_Systems) {
-				sys->InnerUpdate(this, m_ComponentContainerMgr);
+				sys->UpdateEntry(this, m_ComponentContainerMgr);
 			}
 		}
 

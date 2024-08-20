@@ -28,11 +28,6 @@ private:
 // cache descriptors for pipelines, this object must be freed before PSO
 class VulkanPipelineDescriptorSetCache {
 public:
-	struct PipelineLayoutDesc {
-		TArray<VkDescriptorSetLayout> LayoutHandles;
-		TArray<RHIShaderParamSetLayout> LayoutInfos;
-		VkPipelineLayout PipelineLayout;
-	};
 	NON_COPYABLE(VulkanPipelineDescriptorSetCache);
 	NON_MOVEABLE(VulkanPipelineDescriptorSetCache);
 	VulkanPipelineDescriptorSetCache(VulkanDevice* device, TConstArrayView<VkDescriptorSetLayout> layouts);
@@ -42,7 +37,7 @@ public:
 private:
 	VulkanDevice* m_Device;
 	TArray<VkDescriptorSet> m_DescriptorSets;
-	TArray<TArray<RHIShaderParam>> m_ParametersCache;
+	TArray<VkDescriptorSet> m_BindingSets;
 	TConstArrayView<VkDescriptorSetLayout> m_Layouts;// reference, for layout checking.
 };
 

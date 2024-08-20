@@ -84,7 +84,7 @@ uint32 RHIRenderPassInfo::GetNumColorTargets() const {
             return i;
 	    }
     }
-    return RHI_MAX_RENDER_TARGET_NUM;
+    return RHI_COLOR_TARGET_MAX;
 }
 
 RHIShaderParam RHIShaderParam::UniformBuffer(RHIBuffer* buffer, uint32 offset, uint32 size) {

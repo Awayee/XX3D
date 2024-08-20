@@ -66,7 +66,7 @@ VkFormat ToVkFormat(ERHIFormat f) {
 		usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 	}
 	if (flags & EBufferFlagBit::BUFFER_FLAG_INDEX) {
-		usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 	}
 	if (flags & EBufferFlagBit::BUFFER_FLAG_VERTEX) {
 		usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -387,20 +387,20 @@ VkPipelineDepthStencilStateCreateInfo ToDepthStencilStateCreateInfo(const RHIDep
 	return state;
 }
 
- VkAttachmentLoadOp ToVkAttachmentLoadOp(ERTLoadOp op) {
+ VkAttachmentLoadOp ToVkAttachmentLoadOp(ERTLoadOption op) {
 	switch(op) {
-	case ERTLoadOp::EClear: return VK_ATTACHMENT_LOAD_OP_CLEAR;
-	case ERTLoadOp::ELoad: return VK_ATTACHMENT_LOAD_OP_LOAD;
-	case ERTLoadOp::ENoAction: return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	case ERTLoadOption::Clear: return VK_ATTACHMENT_LOAD_OP_CLEAR;
+	case ERTLoadOption::Load: return VK_ATTACHMENT_LOAD_OP_LOAD;
+	case ERTLoadOption::NoAction: return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	}
 	return VK_ATTACHMENT_LOAD_OP_MAX_ENUM;
 }
 
- VkAttachmentStoreOp ToVkAttachmentStoreOp(ERTStoreOp op) {
+ VkAttachmentStoreOp ToVkAttachmentStoreOp(ERTStoreOption op) {
 	switch(op) {
-	case ERTStoreOp::EStore:
+	case ERTStoreOption::EStore:
 		return VK_ATTACHMENT_STORE_OP_STORE;
-	case ERTStoreOp::ENoAction:
+	case ERTStoreOption::ENoAction:
 		return VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	}
 	return VK_ATTACHMENT_STORE_OP_MAX_ENUM;
@@ -408,7 +408,7 @@ VkPipelineDepthStencilStateCreateInfo ToDepthStencilStateCreateInfo(const RHIDep
 
  VkImageLayout ToImageLayout(EResourceState state) {
 	switch(state) {
-	case EResourceState::RenderTarget:
+	case EResourceState::ColorTarget:
 		return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	case EResourceState::DepthStencil:
 		return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;

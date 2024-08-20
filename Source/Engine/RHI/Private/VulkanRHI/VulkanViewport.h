@@ -30,7 +30,7 @@ private:
 	VkSwapchainKHR m_Swapchain {VK_NULL_HANDLE};
 	VkSurfaceFormatKHR m_SurfaceFormat;
 	TArray<TUniquePtr<VulkanBackBuffer>> m_BackBuffers;
-	TStaticArray<VkSemaphore, RHI_MAX_FRAME_IN_FLIGHT> m_Semaphores;
+	TStaticArray<VkSemaphore, RHI_FRAME_IN_FLIGHT_MAX> m_Semaphores;
 	bool m_SizeDirty{ false };
 	uint32 m_BackBufferIdx{ 0 };
 	const VulkanQueue* m_PresentQueue{ nullptr };

@@ -3,11 +3,12 @@
 #include "Objects/Public/RenderScene.h"
 #include "Objects/Public/Camera.h"
 #include "Objects/Public/Light/DirectionalLight.h"
-#include "Objects/Public/StaticMesh.h"
+#include "Window/Public/EngineWindow.h"
 
 namespace Object {
 
     TUniquePtr<RenderScene> RenderScene::s_Default;
+    TArray<Func<void(RenderScene*)>> RenderScene::s_RegisterSystems;
 
     struct LightUBO {
         Math::FVector3 LightDir; float _padding;
@@ -28,19 +29,25 @@ namespace Object {
     };
 
     RenderScene::RenderScene() {
-        RegisterSystem<Object::MeshRenderSystem>();
         CreateResources();
+        // register systems
+        for(auto& func: s_RegisterSystems) {
+            func(this);
+        }
+        auto windowSize = Engine::EngineWindow::Instance()->GetWindowSize();
+        m_Renderer.SetRenderArea({ 0, 0, windowSize.w, windowSize.h });
     }
 
     RenderScene::~RenderScene() {
+        m_Renderer.WaitAllFence();
     }
 
     void RenderScene::Update() {
-        UpdateUniform();
-        ECSScene::Update();
-    }
-
-    void RenderScene::GenerateDrawCall(Render::DrawCallQueue& queue) {
+        // draw call
+        ResetSceneDrawCall();
+        SystemUpdate();
+        // Render
+        m_Renderer.Execute(&m_DrawCallContext);
     }
 
     RenderScene* RenderScene::GetDefaultScene() {
@@ -59,7 +66,9 @@ namespace Object {
         s_Default->Update();
     }
 
-    void RenderScene::UpdateUniform() {
+    void RenderScene::ResetSceneDrawCall() {
+        m_DrawCallContext.Reset();
+
         SceneData sceneData;
         sceneData.LightUbo.LightDir = m_DirectionalLight->GetLightDir();
         sceneData.LightUbo.LightColor = m_DirectionalLight->GetLightColor();
@@ -69,6 +78,9 @@ namespace Object {
         sceneData.CameraUbo.InvVP = m_Camera->GetInvViewProjectMatrix();
         sceneData.CameraUbo.CamPos = m_Camera->GetView().Eye;
         m_UniformBuffer->UpdateData(&sceneData, sizeof(SceneData), 0);
+        m_DrawCallContext.PushDrawCall(Render::EDrawCallQueueType::BasePass, [this](RHICommandBuffer* cmd) {
+            cmd->SetShaderParameter(0, 0, RHIShaderParam::UniformBuffer(m_UniformBuffer));
+        });
     }
 
     void RenderScene::CreateResources() {

@@ -27,7 +27,7 @@ VkPipelineRasterizationStateCreateInfo ToRasterizationStateCreateInfo(const RHIR
 VkPipelineDepthStencilStateCreateInfo ToDepthStencilStateCreateInfo(const RHIDepthStencilState& desc);
 VkBlendOp ToVkBlendOp(EBlendOption op);
 VkPipelineColorBlendAttachmentState ToAttachmentBlendState(const RHIBlendState& blendState);
-VkAttachmentLoadOp ToVkAttachmentLoadOp(ERTLoadOp op);
-VkAttachmentStoreOp ToVkAttachmentStoreOp(ERTStoreOp op);
+VkAttachmentLoadOp ToVkAttachmentLoadOp(ERTLoadOption op);
+VkAttachmentStoreOp ToVkAttachmentStoreOp(ERTStoreOption op);
 VkImageLayout ToImageLayout(EResourceState state);
 uint32 ConvertImageArraySize(const RHITextureDesc& desc);

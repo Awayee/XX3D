@@ -212,7 +212,7 @@ void VulkanCommandBuffer::BeginRendering(const RHIRenderPassInfo& info) {
 	for(uint32 i=0; i<colorAttachmentCount; ++i) {
 		colorAttachments[i] = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO , nullptr };
 		const auto& target = info.ColorTargets[i];
-		colorAttachments[i].imageView = ((VulkanRHITexture*)target.Target)->Get2DView(target.MipIndex, target.ArrayIndex);
+		colorAttachments[i].imageView = ((VulkanRHITexture*)target.Target)->Get2DView(target.MipIndex, target.LayerIndex);
 		colorAttachments[i].imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		colorAttachments[i].resolveMode = VK_RESOLVE_MODE_NONE;
 		colorAttachments[i].resolveImageView = VK_NULL_HANDLE;
@@ -282,7 +282,7 @@ void VulkanCommandBuffer::SetViewport(FRect rect, float minDepth, float maxDepth
 	m_Viewport = { rect.x, rect.y, rect.w, rect.h, minDepth, maxDepth };
 }
 
-void VulkanCommandBuffer::SetScissor(IURect rect) {
+void VulkanCommandBuffer::SetScissor(Rect rect) {
 	m_Scissor = { {rect.x, rect.y}, {rect.w, rect.h} };
 }
 
@@ -369,9 +369,9 @@ void VulkanCommandBuffer::TransitionTextureState(RHITexture* texture, EResourceS
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.image = vkTex->GetImage();
 	barrier.subresourceRange.aspectMask = ToImageAspectFlags(vkTex->GetDesc().Flags);
-	barrier.subresourceRange.baseMipLevel = subDesc.BaseMip;
+	barrier.subresourceRange.baseMipLevel = subDesc.MipIndex;
 	barrier.subresourceRange.levelCount = subDesc.MipCount;
-	barrier.subresourceRange.baseArrayLayer = subDesc.BaseLayer;
+	barrier.subresourceRange.baseArrayLayer = subDesc.LayerIndex;
 	barrier.subresourceRange.layerCount = subDesc.LayerCount;
 	VkPipelineStageFlags srcStage;
 	VkPipelineStageFlags dstStage;
@@ -423,8 +423,6 @@ void VulkanCommandBuffer::CheckEnd() {
 }
 
 void VulkanCommandBuffer::PrepareDrawOrDispatch() {
-	vkCmdSetViewport(m_Handle, 0, 1, &m_Viewport);
-	vkCmdSetScissor(m_Handle, 0, 1, &m_Scissor);
 	if(VulkanPipelineDescriptorSetCache* dsCache = m_PipelineStateContainer->GetCurrentDescriptorSetCache()) {
 		auto ds = dsCache->GetDescriptorSets();
 		if(VulkanRHIGraphicsPipelineState* graphicsPSO = m_PipelineStateContainer->GetCurrentGraphicsPipelineState()) {
@@ -434,6 +432,8 @@ void VulkanCommandBuffer::PrepareDrawOrDispatch() {
 			vkCmdBindDescriptorSets(m_Handle, VK_PIPELINE_BIND_POINT_COMPUTE, computePSO->GetLayoutHandle(), 0, ds.Size(), ds.Data(), 0, nullptr);
 		}
 	}
+	vkCmdSetViewport(m_Handle, 0, 1, &m_Viewport);
+	vkCmdSetScissor(m_Handle, 0, 1, &m_Scissor);
 }
 
 VulkanCommandContext::VulkanCommandContext(VulkanDevice* device) :m_Device(device), m_CommandPool(VK_NULL_HANDLE) {

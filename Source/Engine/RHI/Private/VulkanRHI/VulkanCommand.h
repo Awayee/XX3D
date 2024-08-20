@@ -23,7 +23,7 @@ public:
 	void BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) override;
 	void BindIndexBuffer(RHIBuffer* buffer, uint64 offset) override;
 	void SetViewport(FRect rect, float minDepth, float maxDepth) override;
-	void SetScissor(IURect rect) override;
+	void SetScissor(Rect rect) override;
 	void Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance) override;
 	void DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance) override;
 	void Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ) override;

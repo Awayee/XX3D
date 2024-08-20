@@ -2,8 +2,8 @@
 #include "Core/Public/Defines.h"
 
 enum : uint32 {
-    RHI_MAX_FRAME_IN_FLIGHT = 1, // TODO optional
-    RHI_MAX_RENDER_TARGET_NUM = 8,
+    RHI_FRAME_IN_FLIGHT_MAX = 1, // TODO optional
+    RHI_COLOR_TARGET_MAX = 8,
 };
 
 enum class ERHIFormat: uint8 {
@@ -123,13 +123,13 @@ enum class EPrimitiveTopology : uint8 {
     LineStrip,
 };
 
-enum class ERTLoadOp : uint8 {
-    ENoAction,
-    ELoad,
-    EClear
+enum class ERTLoadOption : uint8 {
+    NoAction,
+    Load,
+    Clear
 };
 
-enum class ERTStoreOp: uint8 {
+enum class ERTStoreOption: uint8 {
     ENoAction,
     EStore
 };
@@ -224,7 +224,7 @@ enum class EStencilOp: uint8 {
 
 enum class EResourceState : uint8 {
     Unknown,
-    RenderTarget,
+    ColorTarget,
     DepthStencil,
     ShaderResourceView,
     UnorderedAccessView,

@@ -65,8 +65,8 @@ VulkanRHITexture::~VulkanRHITexture() {
 VkImageView VulkanRHITexture::GetView(ETextureSRVType type, RHITextureSubDesc sub) {
 	switch (type) {
 	case ETextureSRVType::Default: return GetDefaultView();
-	case ETextureSRVType::Texture2D: return Get2DView(sub.BaseMip, sub.BaseLayer);
-	case ETextureSRVType::CubeMap: return GetCubeView(sub.BaseMip, sub.BaseLayer);
+	case ETextureSRVType::Texture2D: return Get2DView(sub.MipIndex, sub.LayerIndex);
+	case ETextureSRVType::CubeMap: return GetCubeView(sub.MipIndex, sub.LayerIndex);
 	default: LOG_ERROR("[VulkanRHITexture::GetView] Vinalid src type!");
 	}
 }

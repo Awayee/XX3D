@@ -3,82 +3,46 @@
 #include "Core/Public/TUniquePtr.h"
 #include "Render/Public/DrawCall.h"
 #include "Core/Public/TArrayView.h"
+#include "Render/Public/RenderGraph.h"
 
 namespace Render {
-	class BasePass {
+	class CmdPool: public ICmdAllocator {
 	public:
-		NON_COPYABLE(BasePass);
-		NON_MOVEABLE(BasePass);
-		BasePass();
-		~BasePass();
-		void SetTargetSize(USize2D size);
-		void SetRenderArea(IURect area);
-		const IURect& GetRenderArea() const { return m_RenderArea; }
-		RHITexture* GetColorTarget(uint32 i);
-		RHITexture* GetDepthTarget();
-		void Execute(DrawCallQueue& queue);
+		NON_COPYABLE(CmdPool);
+		NON_MOVEABLE(CmdPool);
+		CmdPool();
+		~CmdPool() override = default;
+		RHICommandBuffer* GetCmd() override;
+		void Reset();
+		void GC();
 	private:
-		static TStaticArray<ERHIFormat, 2> s_ColorFormats;
-		RHIGraphicsPipelineStatePtr m_PSO;
-		RHICommandBufferPtr m_Cmd;
-		TStaticArray<RHITexturePtr, 2> m_ColorTargets;
-		RHITexturePtr m_DepthTarget;
-		USize2D m_TargetSize;
-		IURect m_RenderArea;
-		void ResetTargets();
+		TArray<RHICommandBufferPtr> m_Cmds;
+		TArray<bool> m_CmdsLifespan;// for gc
+		uint32 m_AllocatedIndex;
 	};
 
-	class DeferredLightingPass {
+	class ViewportRenderer {
 	public:
-		NON_COPYABLE(DeferredLightingPass);
-		NON_MOVEABLE(DeferredLightingPass);
-		DeferredLightingPass();
-		~DeferredLightingPass();
-		void SetInput(uint32 i, RHITexture* input);
-		void SetRenderArea(IURect area);
-		void Execute();
-		RHITexture* GetColorTarget();
+		ViewportRenderer();
+		~ViewportRenderer() = default;
+		void SetRenderArea(const Rect& renderArea);
+		void Execute(DrawCallContext* drawCallContext);
+		void WaitAllFence();
+		void WaitCurrentFence();
 	private:
-		static ERHIFormat s_ColorFormat;
-		RHIGraphicsPipelineStatePtr m_PSO;
-		RHICommandBufferPtr m_Cmd;
-		TStaticArray<RHITexture*, 4> m_InputTargets;
-		RHITexturePtr m_ColorTarget;
-		IURect m_RenderArea;
-	};
-
-	// The pass directly render for Swapchain
-	class PresentPass {
-	public:
-		NON_COPYABLE(PresentPass);
-		NON_MOVEABLE(PresentPass);
-		PresentPass();
-		~PresentPass();
-		void SetDepthTarget(RHITexture* depthTarget);
-		void Execute(DrawCallQueue& queue);
-		void WaitAll();
-		void WaitCurrent();
-	private:
-		struct FrameResource {
-			RHICommandBufferPtr Cmd;
-			RHIFencePtr Fence;// rendering complete in this frame.
-		};
-		TStaticArray<RHICommandBufferPtr, RHI_MAX_FRAME_IN_FLIGHT> m_Cmds;
-		TStaticArray<RHIFencePtr, RHI_MAX_FRAME_IN_FLIGHT> m_Fences;
-		RHITexture* m_DepthTarget;
-	};
-
-	class RendererMgr {
-		SINGLETON_INSTANCE(RendererMgr);
-	public:
-		void Update();
-		void WaitQueue();
-	private:
-		// The last renderer
-		BasePass m_BasePass;
-		DeferredLightingPass m_DeferredLightingPass;
-		PresentPass m_PresentRenderer;
-		RendererMgr();
-		~RendererMgr();
+		// render resources
+		constexpr static ERHIFormat s_NormalFormat = ERHIFormat::B8G8R8A8_UNORM;
+		constexpr static ERHIFormat s_AlbedoFormat = ERHIFormat::B8G8R8A8_UNORM;
+		constexpr static ERHIFormat s_ColorFormat{ ERHIFormat::R8G8B8A8_UNORM };
+		Rect m_RenderArea;
+		RHITexturePtr m_GBufferNormal;
+		RHITexturePtr m_GBufferAlbedo;
+		RHITexturePtr m_Depth;
+		TStaticArray<CmdPool, RHI_FRAME_IN_FLIGHT_MAX> m_CmdPools;
+		TStaticArray<RHIFencePtr, RHI_FRAME_IN_FLIGHT_MAX> m_Fences;
+		RHIGraphicsPipelineStatePtr MeshGBufferPSO;
+		RHIGraphicsPipelineStatePtr m_DeferredLightingPSO;
+		void CreateTextures();
+		bool IsRenderAreaValid() const;
 	};
 }

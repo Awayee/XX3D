@@ -9,6 +9,7 @@
 #include "System/Public/FrameCounter.h"
 #include "System/Public/Timer.h"
 #include "Objects/Public/TextureResource.h"
+#include "Objects/Public/StaticMesh.h"
 #include "Objects/Public/RenderScene.h"
 
 namespace Engine {
@@ -22,18 +23,16 @@ namespace Engine {
 		RHI::Initialize();
 		Render::DefaultResources::Initialize();
 		Render::GlobalShaderMap::Initialize();
-		Render::RendererMgr::Initialize();
 		Object::TextureResourceMgr::Initialize();
+		Object::MeshRenderSystem::Initialize();
 		Object::RenderScene::Initialize();
 		s_RunningEngine = this;
 	}
 
 	XXEngine::~XXEngine() {
 		// wait renderer
-		Render::RendererMgr::Instance()->WaitQueue();
 		Object::RenderScene::Release();
 		Object::TextureResourceMgr::Release();
-		Render::RendererMgr::Release();
 		Render::GlobalShaderMap::Release();
 		Render::DefaultResources::Release();
 		ImGuiRHI::Release();
@@ -46,7 +45,7 @@ namespace Engine {
 		RHI::Instance()->BeginFrame();// RHI Update must run at the beginning.
 		EngineWindow::Instance()->Update();
 		Object::RenderScene::Tick();
-		Render::RendererMgr::Instance()->Update();
+		//Render::RendererMgr::Instance()->Update();
 		CTimer::Instance()->Tick();
 		FrameCounter::Update();// Frame counter ticks at last.
 	}

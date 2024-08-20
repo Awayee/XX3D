@@ -67,9 +67,9 @@ struct RHITextureDesc {
 };
 
 struct RHITextureSubDesc {
-	uint8 BaseMip{ 0 };
+	uint8 MipIndex{ 0 };
 	uint8 MipCount{ 1 };
-	uint8 BaseLayer{ 0 };
+	uint8 LayerIndex{ 0 };
 	uint8 LayerCount{ 1 };
 };
 
@@ -93,12 +93,6 @@ public:
 	XX_NODISCARD const RHITextureDesc& GetDesc() const { return m_Desc; }
 	virtual void UpdateData(uint32 byteSize, const void* data, RHITextureOffset offset) = 0;
 	uint32 GetPixelByteSize();
-};
-
-struct RHIRenderTarget {
-	RHITexture* m_Texture;
-	uint32 m_MipIndex{ 0 };
-	uint32 m_ArrayIdx{ 0 };
 };
 
 class RHIViewport {
@@ -152,24 +146,24 @@ protected:
 struct RHIRenderPassInfo {
 	struct ColorTargetInfo {
 		RHITexture* Target{ nullptr };
-		uint32 ArrayIndex{ 0 };
+		uint8 LayerIndex{ 0 };
 		uint8 MipIndex{ 0 };
-		ERTLoadOp LoadOp{ ERTLoadOp::EClear };
-		ERTStoreOp StoreOp{ ERTStoreOp::EStore };
+		ERTLoadOption LoadOp{ ERTLoadOption::Clear };
+		ERTStoreOption StoreOp{ ERTStoreOption::EStore };
 		FColor4 ColorClear{ 0.0f, 0.0f, 0.0f, 0.0f };
 	};
 	struct DepthStencilTargetInfo {
 		RHITexture* Target{ nullptr };
-		ERTLoadOp DepthLoadOp{ ERTLoadOp::EClear };
-		ERTStoreOp DepthStoreOp{ ERTStoreOp::EStore };
-		ERTLoadOp StencilLoadOp{ ERTLoadOp::ENoAction };
-		ERTStoreOp StencilStoreOp{ ERTStoreOp::ENoAction };
+		ERTLoadOption DepthLoadOp{ ERTLoadOption::Clear };
+		ERTStoreOption DepthStoreOp{ ERTStoreOption::EStore };
+		ERTLoadOption StencilLoadOp{ ERTLoadOption::NoAction };
+		ERTStoreOption StencilStoreOp{ ERTStoreOption::ENoAction };
 		float DepthClear{ 1.0f };
 		uint32 StencilClear{ 0u };
 	};
-	TStaticArray<ColorTargetInfo, RHI_MAX_RENDER_TARGET_NUM> ColorTargets;
+	TStaticArray<ColorTargetInfo, RHI_COLOR_TARGET_MAX> ColorTargets;
 	DepthStencilTargetInfo DepthStencilTarget;
-	IURect RenderArea;
+	Rect RenderArea;
 	uint32 GetNumColorTargets() const;
 };
 

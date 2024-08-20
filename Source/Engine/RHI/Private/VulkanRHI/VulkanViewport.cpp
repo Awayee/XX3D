@@ -68,7 +68,7 @@ VulkanViewport::VulkanViewport(const VulkanContext* context, VulkanDevice* devic
 	CreateSwapchain();
 	// Create semaphores for per frame
 	VkSemaphoreCreateInfo smpInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0 };
-	for (uint32 i = 0; i < RHI_MAX_FRAME_IN_FLIGHT; ++i) {
+	for (uint32 i = 0; i < RHI_FRAME_IN_FLIGHT_MAX; ++i) {
 		vkCreateSemaphore(m_Device->GetDevice(), &smpInfo, nullptr, &m_Semaphores[i]);
 	}
 }
@@ -125,7 +125,7 @@ void VulkanViewport::Present() {
 }
 
 VkSemaphore VulkanViewport::GetCurrentSemaphore() const {
-	return m_Semaphores[FrameCounter::GetFrame() % RHI_MAX_FRAME_IN_FLIGHT];
+	return m_Semaphores[FrameCounter::GetFrame() % RHI_FRAME_IN_FLIGHT_MAX];
 }
 
 USize2D VulkanViewport::GetSize() const {
