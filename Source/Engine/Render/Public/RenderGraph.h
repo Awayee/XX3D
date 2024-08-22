@@ -6,6 +6,7 @@
 #include "Render/Public/RenderGraphNode.h"
 
 namespace Render {
+	// A render graph without resource manager.
 	class RenderGraph {
 	public:
 		NON_COPYABLE(RenderGraph);

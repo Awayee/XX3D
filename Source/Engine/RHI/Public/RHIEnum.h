@@ -2,9 +2,9 @@
 #include "Core/Public/Defines.h"
 
 enum : uint32 {
-    RHI_FRAME_IN_FLIGHT_MAX = 1, // TODO optional
+    RHI_FRAME_IN_FLIGHT_MAX = 2,
     RHI_COLOR_TARGET_MAX = 8,
-};
+};           
 
 enum class ERHIFormat: uint8 {
     Undefined=0,
@@ -180,10 +180,11 @@ enum class EBlendFactor:uint8 {
 };
 
 enum EColorWriteMaskFlagBit {
-    COLOR_WRITE_MASK_R=1,
-    COLOR_WRITE_MASK_G=2,
-    COLOR_WRITE_MASK_B=4,
-    COLOR_WRITE_MASK_A=8,
+    COLOR_WRITE_MASK_R = 1,
+    COLOR_WRITE_MASK_G = 2,
+    COLOR_WRITE_MASK_B = 4,
+    COLOR_WRITE_MASK_A = 8,
+    COLOR_WRITE_MASK_ALL = COLOR_WRITE_MASK_R | COLOR_WRITE_MASK_G | COLOR_WRITE_MASK_B | COLOR_WRITE_MASK_A,
 };
 typedef uint32 EColorWriteMaskFlags;
 

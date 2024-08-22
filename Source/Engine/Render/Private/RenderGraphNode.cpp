@@ -81,9 +81,15 @@ namespace Render {
 			}
 			renderPassInfo.RenderArea = m_RenderArea;
 			// execute render task
+			if(!m_Name.empty()) {
+				cmd->BeginDebugLabel(m_Name.c_str(), nullptr);
+			}
 			cmd->BeginRendering(renderPassInfo);
 			m_Task(cmd);
 			cmd->EndRendering();
+			if (!m_Name.empty()) {
+				cmd->EndDebugLabel();
+			}
 		}
 
 		// state transition after rendering 

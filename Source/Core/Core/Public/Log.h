@@ -19,7 +19,7 @@
 #ifdef _DEBUG
 #define LOG_DEBUG(...) printf(__VA_ARGS__); std::cout << std::endl
 #else
-#define PRINT_DEBUG(...)
+#define LOG_DEBUG(...)
 #endif
 
 #define LOG_INFO(...) printf(__VA_ARGS__); std::cout << std::endl

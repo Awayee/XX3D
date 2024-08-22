@@ -5,6 +5,7 @@
 #include "RHI/Public/RHIResources.h"
 
 class VulkanDevice;
+struct VulkanPipelineLayout;
 
 // descriptor set manager
 class VulkanDescriptorSetMgr{
@@ -25,20 +26,46 @@ private:
 	VkDescriptorPool AddPool();
 };
 
+// cache parameters for writing descriptor set
+class VulkanDescriptorSetParamCache {
+public:
+	NON_COPYABLE(VulkanDescriptorSetParamCache);
+	VulkanDescriptorSetParamCache(const RHIShaderParamSetLayout& layout);
+	VulkanDescriptorSetParamCache(VulkanDescriptorSetParamCache&&)noexcept = default;
+	void SetParam(uint32 bindIndex, const RHIShaderParam& param);
+	TArray<VkWriteDescriptorSet>& GetWrites() { return m_Writes; }
+private:
+	const RHIShaderParamSetLayout& m_LayoutRef;
+	TArray<VkDescriptorBufferInfo> m_WriteBuffers;
+	TArray<VkDescriptorImageInfo> m_WriteImages;
+	TArray<VkWriteDescriptorSet> m_Writes;
+};
+
 // cache descriptors for pipelines, this object must be freed before PSO
 class VulkanPipelineDescriptorSetCache {
 public:
 	NON_COPYABLE(VulkanPipelineDescriptorSetCache);
 	NON_MOVEABLE(VulkanPipelineDescriptorSetCache);
-	VulkanPipelineDescriptorSetCache(VulkanDevice* device, TConstArrayView<VkDescriptorSetLayout> layouts);
+	VulkanPipelineDescriptorSetCache(VulkanDevice* device, const VulkanPipelineLayout* layout);
 	~VulkanPipelineDescriptorSetCache();
-	void SetParameter(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& parameter);
-	TConstArrayView<VkDescriptorSet> GetDescriptorSets() const;
+	void SetParam(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& param);
+	void Bind(VkCommandBuffer cmd, VkPipelineBindPoint point);
 private:
 	VulkanDevice* m_Device;
-	TArray<VkDescriptorSet> m_DescriptorSets;
-	TArray<VkDescriptorSet> m_BindingSets;
-	TConstArrayView<VkDescriptorSetLayout> m_Layouts;// reference, for layout checking.
+	const VulkanPipelineLayout* m_Layout;// reference, for layout checking.
+	TArray<VulkanDescriptorSetParamCache> m_ParamCaches;
+	TArray<VkDescriptorSet> m_BindingSets; // current binding descriptor sets
+	TArray<bool> m_DirtySets; // mark set as dirty, to create new descriptor set handle
+	TArray<VkDescriptorSet> m_AllDescriptorSets;// all allocated descriptor sets
+	VkDescriptorSet ReallocateSet(uint32 setIndex);
+};
+
+// pipeline layout owned by pso
+struct VulkanPipelineLayout {
+	VkPipelineLayout Handle{ VK_NULL_HANDLE };
+	TArray<VkDescriptorSetLayout> DescriptorSetLayouts{ VK_NULL_HANDLE };
+	TConstArrayView<RHIShaderParamSetLayout> PipelineLayoutMeta;
+	void Build(VulkanDevice* device, TConstArrayView<RHIShaderParamSetLayout> meta);
 };
 
 // graphics PSO
@@ -48,12 +75,10 @@ public:
 	~VulkanRHIGraphicsPipelineState() override;
 	void SetName(const char* name) override;
 	VkPipeline GetPipelineHandle() const { return m_Pipeline; }
-	VkPipelineLayout GetLayoutHandle() const { return m_PipelineLayout; }
-	TConstArrayView<VkDescriptorSetLayout> GetSetLayouts() const { return m_SetLayouts; }
+	const VulkanPipelineLayout* GetPipelineLayout()const { return &m_PipelineLayout; }
 private:
 	VkPipeline m_Pipeline{ VK_NULL_HANDLE };
-	VkPipelineLayout m_PipelineLayout;
-	TArray<VkDescriptorSetLayout> m_SetLayouts;
+	VulkanPipelineLayout m_PipelineLayout;
 	VulkanDevice* m_Device;
 };
 
@@ -64,12 +89,10 @@ public:
 	~VulkanRHIComputePipelineState() override;
 	void SetName(const char* name) override;
 	VkPipeline GetPipelineHandle() const { return m_Pipeline; }
-	VkPipelineLayout GetLayoutHandle() const { return m_PipelineLayout; }
-	TConstArrayView<VkDescriptorSetLayout> GetSetLayouts() const { return m_SetLayouts; }
+	const VulkanPipelineLayout* GetPipelineLayout()const { return &m_PipelineLayout; }
 private:
 	VkPipeline m_Pipeline{ VK_NULL_HANDLE };
-	VkPipelineLayout m_PipelineLayout;
-	TArray<VkDescriptorSetLayout> m_SetLayouts;
+	VulkanPipelineLayout m_PipelineLayout;
 	VulkanDevice* m_Device;
 };
 

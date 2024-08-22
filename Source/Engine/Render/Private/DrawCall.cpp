@@ -36,6 +36,12 @@ namespace Render {
 		m_DrawCallQueues[(uint32)queueType].EmplaceBack().ResetFunc(MoveTemp(f));
 	}
 
+	void DrawCallContext::ExecuteDraCall(EDrawCallQueueType queueType, RHICommandBuffer* cmd) {
+		for(auto& drawCall: m_DrawCallQueues[(uint32)queueType]) {
+			drawCall.Execute(cmd);
+		}
+	}
+
 	DrawCallQueue& DrawCallContext::GetDrawCallQueue(EDrawCallQueueType queueType) {
 		return m_DrawCallQueues[(uint32)queueType];
 	}

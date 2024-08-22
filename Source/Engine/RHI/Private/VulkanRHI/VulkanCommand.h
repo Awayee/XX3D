@@ -19,7 +19,7 @@ public:
 	void EndRendering() override;
 	void BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) override;
 	void BindComputePipeline(RHIComputePipelineState* pipeline) override;
-	void SetShaderParameter(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& parameter) override;
+	void SetShaderParam(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& parameter) override;
 	void BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) override;
 	void BindIndexBuffer(RHIBuffer* buffer, uint64 offset) override;
 	void SetViewport(FRect rect, float minDepth, float maxDepth) override;
@@ -27,7 +27,7 @@ public:
 	void Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance) override;
 	void DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance) override;
 	void Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ) override;
-	void ClearColorAttachment(const float* color, const IRect& rect) override;
+	void ClearColorTarget(uint32 targetIndex, const float* color, const IRect& rect) override;
 	void CopyBufferToBuffer(RHIBuffer* srcBuffer, RHIBuffer* dstBuffer, uint64 srcOffset, uint64 dstOffset, uint64 size) override;
 	void CopyBufferToTexture(RHIBuffer* buffer, RHITexture* texture, uint32 mipLevel, uint32 baseLayer, uint32 layerCount) override;
 	void CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RHITextureCopyRegion& region) override;
@@ -45,11 +45,13 @@ private:
 	// signal semaphore
 	VkSemaphore m_Semaphore;
 	VkPipelineStageFlags m_StageMask;
+	bool m_ViewportDirty{ false };
+	bool m_ScissorDirty{ false };
 	bool m_HasBegun{ false };
 	void CheckBegin();
 	void CheckEnd();
 	// call before draw/dispatch
-	void PrepareDrawOrDispatch();
+	void PrepareDraw();
 };
 
 typedef TArray<VulkanCommandBuffer*> VulkanCommandSubmission;

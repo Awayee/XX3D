@@ -34,7 +34,6 @@ namespace Render {
 		layout.Resize(3);
 		layout[MESH_SET_SCENE] = {
 			{EBindingType::UniformBuffer, SHADER_STAGE_VERTEX_BIT | SHADER_STAGE_PIXEL_BIT},
-			{EBindingType::UniformBuffer, SHADER_STAGE_VERTEX_BIT | SHADER_STAGE_PIXEL_BIT}
 		};
 		layout[MESH_SET_OBJECT] = { {EBindingType::UniformBuffer, SHADER_STAGE_VERTEX_BIT} };
 		layout[MESH_SET_MATERIAL] = {
@@ -52,7 +51,7 @@ namespace Render {
 		};
 
 		desc.BlendDesc.BlendStates={{false}, {false}};
-		desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Back };
+		desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Null };
 		desc.DepthStencilState = { true, ECompareType::Less, false };
 		desc.PrimitiveTopology = EPrimitiveTopology::TriangleList;
 		desc.ColorFormats.Resize(colorFormats.Size());

@@ -38,6 +38,7 @@ namespace Render {
 		DrawCallContext(DrawCallContext&& rhs) noexcept;
 		DrawCallContext& operator=(DrawCallContext&& rhs)noexcept;
 		void PushDrawCall(EDrawCallQueueType queueType, Func<void(RHICommandBuffer*)>&& f);
+		void ExecuteDraCall(EDrawCallQueueType queueType, RHICommandBuffer* cmd);
 		DrawCallQueue& GetDrawCallQueue(EDrawCallQueueType queueType);
 		void Reset();
 	private:

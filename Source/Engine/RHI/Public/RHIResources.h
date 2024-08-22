@@ -184,14 +184,14 @@ struct RHIVertexInputInfo {
 };
 
 struct RHIBlendState {
-	bool Enable;
-	EBlendOption ColorBlendOp;
-	EBlendFactor ColorSrc;
-	EBlendFactor ColorDst;
-	EBlendOption AlphaBlendOp;
-	EBlendFactor AlphaSrc;
-	EBlendFactor AlphaDst;
-	EColorWriteMaskFlags ColorWriteMask;
+	bool Enable{ false };
+	EBlendOption ColorBlendOp{ EBlendOption::Add };
+	EBlendFactor ColorSrc{ EBlendFactor::One };
+	EBlendFactor ColorDst{ EBlendFactor::Zero };
+	EBlendOption AlphaBlendOp{ EBlendOption::Add };
+	EBlendFactor AlphaSrc{ EBlendFactor::One };
+	EBlendFactor AlphaDst{ EBlendFactor::Zero };
+	EColorWriteMaskFlags ColorWriteMask {COLOR_WRITE_MASK_ALL};
 };
 
 struct RHIBlendDesc {
@@ -200,8 +200,8 @@ struct RHIBlendDesc {
 };
 
 struct RHIRasterizerState {
-	ERasterizerFill FillMode;
-	ERasterizerCull CullMode;
+	ERasterizerFill FillMode{ ERasterizerFill::Solid };
+	ERasterizerCull CullMode{ ERasterizerCull::Back };
 	bool Clockwise{ false };
 	float DepthBias = 0.0f;
 	float SlopeScaleDepthBias = 0.0f;

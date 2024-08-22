@@ -18,6 +18,7 @@ namespace Object {
 		Camera* GetMainCamera() { return m_Camera.Get(); }
 		Render::DrawCallContext& GetDrawCallContext() { return m_DrawCallContext; }
 		void Update();
+		void SetViewport(const Rect& viewport);
 		static RenderScene* GetDefaultScene(); // TODO TEST
 		static void Initialize();
 		static void Release();
@@ -30,7 +31,10 @@ namespace Object {
 		static TArray<Func<void(RenderScene*)>> s_RegisterSystems;
 		TUniquePtr<DirectionalLight> m_DirectionalLight;
 		TUniquePtr<Camera> m_Camera;
-		RHIBufferPtr m_UniformBuffer;
+		RHIBufferPtr m_CameraUniform;
+		RHIBufferPtr m_LightUniform;
+		FRect m_Viewport;
+		Rect m_Scissor;
 		Render::DrawCallContext m_DrawCallContext;
 		Render::ViewportRenderer m_Renderer;// TODO separate from scene
 		void ResetSceneDrawCall();

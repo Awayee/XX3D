@@ -275,7 +275,7 @@ VkDescriptorType ToVkDescriptorType(EBindingType type) {
  VkCompareOp ToVkCompareOp(ECompareType type) {
 	switch (type) {
 	case ECompareType::Less: return VK_COMPARE_OP_LESS;
-	case ECompareType::LessEqual: return VK_COMPARE_OP_EQUAL;
+	case ECompareType::LessEqual: return VK_COMPARE_OP_LESS_OR_EQUAL;
 	case ECompareType::Greater: return VK_COMPARE_OP_GREATER;
 	case ECompareType::GreaterEqual: return VK_COMPARE_OP_GREATER_OR_EQUAL;
 	case ECompareType::Equal: return VK_COMPARE_OP_EQUAL;

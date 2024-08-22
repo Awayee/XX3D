@@ -43,7 +43,8 @@ namespace Editor {
 	}
 
 	void WndLevelHierarchy::WndContent() {
-		EditorLevel* level = EditorLevelMgr::Instance()->GetLevel();
+		EditorLevelMgr* levelMgr = EditorLevelMgr::Instance();
+		EditorLevel* level = levelMgr->GetLevel();
 		if(!level) {
 			return;
 		}
@@ -64,7 +65,7 @@ namespace Editor {
 				ImGui::PushID(static_cast<int>(i));
 				if (ImGui::Selectable(meshInfo->Name.c_str(), m_SelectIdx == i)) {
 					m_SelectIdx = i;
-					EditorLevelMgr::Instance()->SetSelected(m_SelectIdx);
+					levelMgr->SetSelected(m_SelectIdx);
 				}
 				ImGui::PopID();
 				//right click
@@ -74,7 +75,10 @@ namespace Editor {
 				if(m_PressedIdx == i) {
 					if(ImGui::BeginPopupContextItem("Popup")) {
 						if(ImGui::MenuItem("Delete")) {
-							EditorLevelMgr::Instance()->GetLevel()->DelMesh(i);
+							levelMgr->GetLevel()->DelMesh(i);
+							if(levelMgr->GetSelected() == i) {
+								levelMgr->SetSelected(INVALID_INDEX);
+							}
 							m_PressedIdx = INVALID_INDEX;
 							m_SelectIdx = INVALID_INDEX;
 						}

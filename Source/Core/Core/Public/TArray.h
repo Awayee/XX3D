@@ -298,6 +298,10 @@ public:
 		memcpy(cpyDst, pEle, count * sizeof(T));
 	}
 
+	void PushBack(const TArray& rhs) {
+		Base::insert(Base::end(), rhs.begin(), rhs.end());
+	}
+
 	template<typename ...Args>
 	T& EmplaceBack(Args&&...args) { return Base::emplace_back(std::forward<Args>(args)...); }
 

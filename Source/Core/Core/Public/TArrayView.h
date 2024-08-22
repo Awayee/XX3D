@@ -5,7 +5,7 @@ template<typename T, typename SizeType=uint32>
 class TArrayView {
 private:
 	T* m_Data;
-	const SizeType m_Size;
+	SizeType m_Size;
 public:
 	TArrayView() : m_Data(nullptr), m_Size(0) {}
 	TArrayView(const TArrayView& rhs): m_Data(rhs.m_Data), m_Size(rhs.m_Size){}
@@ -15,7 +15,7 @@ public:
 	}
 	TArrayView(T* data, const SizeType size): m_Data(data), m_Size(size){}
 	TArrayView(T& data) : m_Data(&data), m_Size(1){}
-	TArrayView& operator = (const TArrayView& rhs) {
+	TArrayView& operator=(const TArrayView& rhs) {
 		if(this == &rhs) {
 			return *this;
 		}

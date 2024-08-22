@@ -119,9 +119,9 @@ PSOutput MainPS(VSOutput pIn) {
 	float3 ambient = albedo * lightColor * 0.01;
 	float3 color = ambient + Lo;
 
-	 //gama correction
-	 //color = color / (color + float3(1.0, 1.0, 1.0));
-	 //color = pow(color, 1.0 / 2.2);
+	//gama correction
+    //color = color / (color + float3(1.0, 1.0, 1.0));
+    color = pow(color, 1.0 / 2.2);
 	PSOutput pOut;
 	pOut.OutColor = float4(color, 1.0);
 	return pOut;

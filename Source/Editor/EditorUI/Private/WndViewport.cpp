@@ -100,7 +100,7 @@ namespace Editor {
 		// if this window is hided, disable the main pass rendering
 		if (!m_Enable && m_ViewportShow) {
 			m_ViewportShow = false;
-			//Engine::Context()->Renderer()->SetRenderArea({ 0,0,0,0 });
+			//Engine::Context()->Renderer()->SetRenderViewport({ 0,0,0,0 });
 		}
 	}
 
@@ -109,11 +109,11 @@ namespace Editor {
 		auto size = ImGui::GetWindowSize();
 		auto pos = ImGui::GetWindowPos();
 		if (!m_ViewportShow || !Math::FloatEqual(pos.x, m_Viewport.x) || !Math::FloatEqual(pos.y, m_Viewport.y) || !Math::FloatEqual(size.x, m_Viewport.w) || !Math::FloatEqual(size.y, m_Viewport.h)) {
-			m_Viewport.x = static_cast<uint32>(pos.x);
-			m_Viewport.y = static_cast<uint32>(pos.y);
+			m_Viewport.x = static_cast<int32>(pos.x);
+			m_Viewport.y = static_cast<int32>(pos.y);
 			m_Viewport.w = static_cast<uint32>(size.x);
 			m_Viewport.h = static_cast<uint32>(size.y);
-			//Engine::Context()->Renderer()->SetRenderArea(m_Viewport);
+			Object::RenderScene::GetDefaultScene()->SetViewport(m_Viewport);
 			m_ViewportShow = true;
 		}
 	}

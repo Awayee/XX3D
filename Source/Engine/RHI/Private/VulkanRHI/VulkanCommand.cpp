@@ -198,6 +198,8 @@ VulkanCommandBuffer::~VulkanCommandBuffer() {
 void VulkanCommandBuffer::Reset() {
 	vkResetCommandBuffer(m_Handle, 0);
 	m_PipelineStateContainer->Reset();
+	m_ScissorDirty = true;
+	m_ViewportDirty = true;
 	CheckBegin();
 }
 
@@ -263,9 +265,9 @@ void VulkanCommandBuffer::BindComputePipeline(RHIComputePipelineState* pipeline)
 	m_PipelineStateContainer->BindPipelineState(vkPipeline);
 }
 
-void VulkanCommandBuffer::SetShaderParameter(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& parameter) {
+void VulkanCommandBuffer::SetShaderParam(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& parameter) {
 	if(VulkanPipelineDescriptorSetCache* dsCache = m_PipelineStateContainer->GetCurrentDescriptorSetCache()) {
-		dsCache->SetParameter(setIndex, bindIndex, parameter);
+		dsCache->SetParam(setIndex, bindIndex, parameter);
 	}
 }
 
@@ -280,30 +282,33 @@ void VulkanCommandBuffer::BindIndexBuffer(RHIBuffer* buffer, uint64 offset) {
 
 void VulkanCommandBuffer::SetViewport(FRect rect, float minDepth, float maxDepth) {
 	m_Viewport = { rect.x, rect.y, rect.w, rect.h, minDepth, maxDepth };
+	m_ViewportDirty = true;
 }
 
 void VulkanCommandBuffer::SetScissor(Rect rect) {
 	m_Scissor = { {rect.x, rect.y}, {rect.w, rect.h} };
+	m_ScissorDirty = true;
 }
 
 void VulkanCommandBuffer::Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance) {
-	PrepareDrawOrDispatch();
+	PrepareDraw();
 	vkCmdDraw(m_Handle, vertexCount, instanceCount, firstIndex, firstInstance);
 }
 
 void VulkanCommandBuffer::DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance) {
-	PrepareDrawOrDispatch();
+	PrepareDraw();
 	vkCmdDrawIndexed(m_Handle, indexCount, instanceCount, firstIndex, static_cast<int32>(vertexOffset), firstInstance);
 }
 
 void VulkanCommandBuffer::Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ) {
-	PrepareDrawOrDispatch();
+	PrepareDraw();
 	vkCmdDispatch(m_Handle, groupCountX, groupCountY, groupCountZ);
 }
 
-void VulkanCommandBuffer::ClearColorAttachment(const float* color, const IRect& rect) {
+void VulkanCommandBuffer::ClearColorTarget(uint32 targetIndex, const float* color, const IRect& rect) {
 	VkClearAttachment clearAttachment;
 	clearAttachment.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	clearAttachment.colorAttachment = targetIndex;
 	clearAttachment.clearValue.color.float32[0] = color[0];
 	clearAttachment.clearValue.color.float32[1] = color[1];
 	clearAttachment.clearValue.color.float32[2] = color[2];
@@ -422,18 +427,23 @@ void VulkanCommandBuffer::CheckEnd() {
 	}
 }
 
-void VulkanCommandBuffer::PrepareDrawOrDispatch() {
+void VulkanCommandBuffer::PrepareDraw() {
 	if(VulkanPipelineDescriptorSetCache* dsCache = m_PipelineStateContainer->GetCurrentDescriptorSetCache()) {
-		auto ds = dsCache->GetDescriptorSets();
 		if(VulkanRHIGraphicsPipelineState* graphicsPSO = m_PipelineStateContainer->GetCurrentGraphicsPipelineState()) {
-			vkCmdBindDescriptorSets(m_Handle, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPSO->GetLayoutHandle(), 0, ds.Size(), ds.Data(), 0, nullptr);
+			dsCache->Bind(m_Handle, VK_PIPELINE_BIND_POINT_GRAPHICS);
+			if(m_ViewportDirty) {
+				vkCmdSetViewport(m_Handle, 0, 1, &m_Viewport);
+				m_ViewportDirty = false;
+			}
+			if(m_ScissorDirty) {
+				vkCmdSetScissor(m_Handle, 0, 1, &m_Scissor);
+				m_ScissorDirty = false;
+			}
 		}
 		else if(VulkanRHIComputePipelineState* computePSO = m_PipelineStateContainer->GetCurrentComputePipelineState()) {
-			vkCmdBindDescriptorSets(m_Handle, VK_PIPELINE_BIND_POINT_COMPUTE, computePSO->GetLayoutHandle(), 0, ds.Size(), ds.Data(), 0, nullptr);
+			dsCache->Bind(m_Handle, VK_PIPELINE_BIND_POINT_COMPUTE);
 		}
 	}
-	vkCmdSetViewport(m_Handle, 0, 1, &m_Viewport);
-	vkCmdSetScissor(m_Handle, 0, 1, &m_Scissor);
 }
 
 VulkanCommandContext::VulkanCommandContext(VulkanDevice* device) :m_Device(device), m_CommandPool(VK_NULL_HANDLE) {

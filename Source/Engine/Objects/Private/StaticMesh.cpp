@@ -56,15 +56,15 @@ namespace Object {
 			drawCallContext.PushDrawCall(Render::EDrawCallQueueType::BasePass, [&primitive, uniformBuffer](RHICommandBuffer* cmd) {
 				cmd->BindVertexBuffer(primitive.VertexBuffer.Get(), 0, 0);
 				cmd->BindIndexBuffer(primitive.IndexBuffer.Get(), 0);
-				cmd->SetShaderParameter(1, 0, RHIShaderParam::UniformBuffer(uniformBuffer));
+				cmd->SetShaderParam(1, 0, RHIShaderParam::UniformBuffer(uniformBuffer));
 				// material albedo
-				cmd->SetShaderParameter(2, 0, RHIShaderParam::Texture(primitive.Texture));
+				cmd->SetShaderParam(2, 0, RHIShaderParam::Texture(primitive.Texture));
 				RHISampler* defaultSampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp);
-				cmd->SetShaderParameter(2, 1, RHIShaderParam::Sampler(defaultSampler));
+				cmd->SetShaderParam(2, 1, RHIShaderParam::Sampler(defaultSampler));
 				cmd->DrawIndexed(primitive.IndexCount, 1, 0, 0, 0);
 			});
 			drawCallContext.PushDrawCall(Render::EDrawCallQueueType::DirectionalShadow, [&primitive, uniformBuffer](RHICommandBuffer* cmd) {
-				cmd->SetShaderParameter(1, 0, RHIShaderParam::UniformBuffer(uniformBuffer));
+				cmd->SetShaderParam(1, 0, RHIShaderParam::UniformBuffer(uniformBuffer));
 				cmd->BindVertexBuffer(primitive.VertexBuffer.Get(), 0, 0);
 				cmd->BindIndexBuffer(primitive.IndexBuffer.Get(), 0);
 				cmd->DrawIndexed(primitive.IndexCount, 1, 0, 0, 0);

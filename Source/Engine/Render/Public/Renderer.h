@@ -24,17 +24,16 @@ namespace Render {
 	class ViewportRenderer {
 	public:
 		ViewportRenderer();
-		~ViewportRenderer() = default;
-		void SetRenderArea(const Rect& renderArea);
+		~ViewportRenderer();
 		void Execute(DrawCallContext* drawCallContext);
 		void WaitAllFence();
 		void WaitCurrentFence();
+		void OnWindowSizeChanged(uint32 w, uint32 h);
 	private:
 		// render resources
-		constexpr static ERHIFormat s_NormalFormat = ERHIFormat::B8G8R8A8_UNORM;
-		constexpr static ERHIFormat s_AlbedoFormat = ERHIFormat::B8G8R8A8_UNORM;
-		constexpr static ERHIFormat s_ColorFormat{ ERHIFormat::R8G8B8A8_UNORM };
-		Rect m_RenderArea;
+		constexpr static ERHIFormat s_NormalFormat{ ERHIFormat::B8G8R8A8_UNORM };
+		constexpr static ERHIFormat s_AlbedoFormat{ ERHIFormat::B8G8R8A8_UNORM };
+		USize2D m_CacheWindowSize;
 		RHITexturePtr m_GBufferNormal;
 		RHITexturePtr m_GBufferAlbedo;
 		RHITexturePtr m_Depth;
@@ -42,7 +41,8 @@ namespace Render {
 		TStaticArray<RHIFencePtr, RHI_FRAME_IN_FLIGHT_MAX> m_Fences;
 		RHIGraphicsPipelineStatePtr MeshGBufferPSO;
 		RHIGraphicsPipelineStatePtr m_DeferredLightingPSO;
+		bool m_SizeDirty;
 		void CreateTextures();
-		bool IsRenderAreaValid() const;
+		bool SizeValid() const;
 	};
 }
