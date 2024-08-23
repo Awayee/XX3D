@@ -30,7 +30,8 @@ namespace Engine {
 		uint32        MSAASampleCount{ 0 };
 		ERenderPath   RenderPath;
 		USize2D       WindowSize;
-		XString      StartLevel;
+		uint32        ShadowMapSize;
+		XString       StartLevel;
 	};
 
 	class ConfigManager {

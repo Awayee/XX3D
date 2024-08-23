@@ -61,7 +61,7 @@ namespace Math {
 	inline float FATan2(float x, float y) { return ATan2<float>(x, y); }
 
 	//data pack
-	inline unsigned char PackFloat01(float x) { return ((unsigned char)(x * 0.5f + 0.5f)) * 255; }
+	inline unsigned char PackFloat01(float x) { return (unsigned char)((x * 0.5f + 0.5f) * 255.0f); }
 	inline float UnpackFloat01(unsigned char x) { return (float)x / 255.0f * 2.0f - 1.0f; }
 
 	template<typename T> T UpperExp2(T x) {

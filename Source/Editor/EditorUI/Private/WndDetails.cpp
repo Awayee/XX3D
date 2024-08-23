@@ -47,8 +47,10 @@ namespace Editor {
 					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("File")) {
 						ASSERT(payload->DataSize == sizeof(FileNode), "");
 						const FileNode* fileNode = reinterpret_cast<const FileNode*>(payload->Data);
-						primitive.MaterialFile = fileNode->GetPathStr();
-						EditorLevelMgr::Instance()->ReloadLevel();
+						if(fileNode->GetExt() == ".texture") {
+							primitive.MaterialFile = fileNode->GetPathStr();
+							EditorLevelMgr::Instance()->ReloadLevel();
+						}
 					}
 					ImGui::EndDragDropTarget();
 				}

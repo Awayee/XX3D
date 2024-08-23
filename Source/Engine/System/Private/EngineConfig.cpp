@@ -91,6 +91,7 @@ namespace Engine {
 		data.GPUType = ParseGPUType(configMap["PreferredGPU"]);
 		data.WindowSize.w = static_cast<uint32>(std::atoi(configMap["WindowWidth"].c_str()));
 		data.WindowSize.h = static_cast<uint32>(std::atoi(configMap["WindowHeight"].c_str()));
+		data.ShadowMapSize = static_cast<uint32>(std::atoi(configMap["ShadowMapSize"].c_str()));
 		data.MSAASampleCount = static_cast<uint8>(std::atoi(configMap["MSAA"].c_str()));
 		data.StartLevel = configMap["StartLevel"];
 	}

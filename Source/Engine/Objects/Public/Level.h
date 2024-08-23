@@ -5,11 +5,11 @@
 
 namespace Object {
 	class Level {
-	private:
-		RenderScene* m_Scene;
 	public:
 		Level() = default;
-		Level(const Asset::LevelAsset & levelAsset, RenderScene* scene);
+		Level(const Asset::LevelAsset& levelAsset, RenderScene* scene);
 		~Level();
+	protected:
+		RenderScene* m_Scene;
 	};
 }

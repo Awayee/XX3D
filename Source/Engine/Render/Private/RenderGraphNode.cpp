@@ -15,9 +15,9 @@ namespace Render {
 		RGNode::Connect(node, this);
 	}
 
-	void RGRenderNode::ReadColorTarget(RGTextureNode* node, uint32 i) {
+	void RGRenderNode::ReadColorTarget(RGTextureNode* node, uint32 i, RHITextureSubDesc subRes) {
 		ASSERT(i < RHI_COLOR_TARGET_MAX, "Color target index out of range!");
-		m_ColorTargets[i] = { node, {}, ERTLoadOption::Load };
+		m_ColorTargets[i] = { node, subRes, ERTLoadOption::Load };
 		node->SetTargetState(EResourceState::ColorTarget);
 		RGNode::Connect(node, this);
 	}
@@ -28,9 +28,9 @@ namespace Render {
 		RGNode::Connect(node, this);
 	}
 
-	void RGRenderNode::WriteColorTarget(RGTextureNode* node, uint32 i) {
+	void RGRenderNode::WriteColorTarget(RGTextureNode* node, uint32 i, RHITextureSubDesc subRes) {
 		ASSERT(i < RHI_COLOR_TARGET_MAX, "Color target index out of range!");
-		m_ColorTargets[i] = {node, {}, ERTLoadOption::Clear};
+		m_ColorTargets[i] = {node, subRes, ERTLoadOption::Clear};
 		RGNode::Connect(this, node);
 	}
 
@@ -52,10 +52,10 @@ namespace Render {
 				if (!m_ColorTargets[i].Node) {
 					break;
 				}
-				m_ColorTargets[i].Node->TransitionToState(cmd, EResourceState::ColorTarget);
+				m_ColorTargets[i].Node->TransitionToState(cmd, EResourceState::ColorTarget, m_ColorTargets[i].SubRes);
 			}
 			if (m_DepthTarget.Node) {
-				m_DepthTarget.Node->TransitionToState(cmd, EResourceState::DepthStencil);
+				m_DepthTarget.Node->TransitionToState(cmd, EResourceState::DepthStencil, m_DepthTarget.SubRes);
 			}
 		}
 
@@ -99,13 +99,13 @@ namespace Render {
 				if (!m_ColorTargets[i].Node) {
 					break;
 				}
-				m_ColorTargets[i].Node->TransitionToTargetState(cmd);
+				m_ColorTargets[i].Node->TransitionToTargetState(cmd, m_ColorTargets[i].SubRes);
 				if(EResourceState::Present == m_ColorTargets[i].Node->GetTargetState()) {
 					bPresent = true;
 				}
 			}
 			if (m_DepthTarget.Node) {
-				m_DepthTarget.Node->TransitionToTargetState(cmd);
+				m_DepthTarget.Node->TransitionToTargetState(cmd, m_DepthTarget.SubRes);
 			}
 		}
 		RHI::Instance()->SubmitCommandBuffer(cmd, m_Fence, bPresent);
@@ -137,14 +137,14 @@ namespace Render {
 		return m_RHI;
 	}
 
-	void RGTextureNode::TransitionToState(RHICommandBuffer* cmd, EResourceState dstState) {
+	void RGTextureNode::TransitionToState(RHICommandBuffer* cmd, EResourceState dstState, RHITextureSubDesc subRes) {
 		if(dstState != EResourceState::Unknown && m_CurrentState != dstState) {
-			cmd->TransitionTextureState(m_RHI, m_CurrentState, dstState);
+			cmd->TransitionTextureState(m_RHI, m_CurrentState, dstState, subRes);
 			m_CurrentState = dstState;
 		}
 	}
 
-	void RGTextureNode::TransitionToTargetState(RHICommandBuffer* cmd) {
-		TransitionToState(cmd, m_TargetState);
+	void RGTextureNode::TransitionToTargetState(RHICommandBuffer* cmd, RHITextureSubDesc subRes) {
+		TransitionToState(cmd, m_TargetState, subRes);
 	}
 }

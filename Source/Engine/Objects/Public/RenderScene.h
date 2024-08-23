@@ -9,16 +9,19 @@ namespace Object {
 	class Camera;
 	class DirectionalLight;
 
-	class RenderScene: public ECSScene {
+	class RenderScene: public ECSScene, public Render::IRenderScene {
 	public:
 		NON_COPYABLE(RenderScene);
 		NON_MOVEABLE(RenderScene);
 		RenderScene();
 		~RenderScene();
 		Camera* GetMainCamera() { return m_Camera.Get(); }
+		DirectionalLight* GetDirectionalLight() { return m_DirectionalLight.Get(); }
 		Render::DrawCallContext& GetDrawCallContext() { return m_DrawCallContext; }
 		void Update();
-		void SetViewport(const Rect& viewport);
+		void SetViewportSize(const USize2D& size);
+		void SetRenderTarget(RHITexture* target, RHITextureSubDesc sub);
+		Render::RGTextureNode* Render(Render::RenderGraph& rg) override;
 		static RenderScene* GetDefaultScene(); // TODO TEST
 		static void Initialize();
 		static void Release();
@@ -33,11 +36,21 @@ namespace Object {
 		TUniquePtr<Camera> m_Camera;
 		RHIBufferPtr m_CameraUniform;
 		RHIBufferPtr m_LightUniform;
-		FRect m_Viewport;
-		Rect m_Scissor;
+		Rect m_Viewport;
 		Render::DrawCallContext m_DrawCallContext;
-		Render::ViewportRenderer m_Renderer;// TODO separate from scene
-		void ResetSceneDrawCall();
+		USize2D m_ViewportSize;
+		RHITexturePtr m_DirectionalShadowMap;
+		RHITexturePtr m_GBufferNormal;
+		RHITexturePtr m_GBufferAlbedo;
+		RHITexturePtr m_Depth;
+		RHITexture* m_RenderTarget;
+		RHITextureSubDesc m_RenderTargetSub;
+		RHIGraphicsPipelineStatePtr MeshGBufferPSO;
+		RHIGraphicsPipelineStatePtr m_DeferredLightingPSO;
+		bool m_ViewportDirty;
+		bool m_RenderTargetDirty;
+		void UpdateSceneDrawCall();
 		void CreateResources();
+		void CreateTextures();
 	};
 }

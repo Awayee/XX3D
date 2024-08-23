@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "AssetManager.h"
 #include "Core/Public/String.h"
 #include "Core/Public/TUniquePtr.h"
@@ -6,6 +6,7 @@
 #include "Core/Public/File.h"
 #include "Core/Public/Func.h"
 #include "Asset/Public/AssetLoader.h"
+#include "Asset/Public/MeshAsset.h"
 
 namespace Editor {
 
@@ -23,11 +24,13 @@ namespace Editor {
 		File::FPath m_Path;//relative path
 		XString m_PathStr;
 		XString m_Name;
+		XString m_Ext;
 		friend class AssetManager;
 	public:
 		PathNode(const File::FPath& path, NodeID id, NodeID parent);
 		_NODISCARD const XString& GetName() const { return m_Name; }
 		_NODISCARD const File::FPath& GetPath() const { return m_Path; }
+		_NODISCARD XString GetExt() const { return m_Ext; }
 		_NODISCARD File::FPath GetFullPath() const;
 		_NODISCARD const XString& GetPathStr() const { return m_PathStr; }
 		_NODISCARD NodeID GetID() const { return m_ID; }

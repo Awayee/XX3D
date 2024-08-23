@@ -15,12 +15,17 @@ namespace Asset {
 		};
 		TArray<MeshData> Meshes;
 
-		struct {
+		struct{
 			Math::FVector3 Eye;
 			Math::FVector3 At;
 			Math::FVector3 Up;
 			float Near, Far, Fov;
-		}CameraParam;
+		}CameraData;
+
+		struct{
+			Math::FVector3 Dir;
+			Math::FVector3 Color;
+		}DirectionalLightData;
 		bool Load(File::RFile& in) override;
 		bool Save(File::WFile& out) override;
 	};

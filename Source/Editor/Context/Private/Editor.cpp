@@ -12,13 +12,14 @@ namespace Editor {
 		EngineAssetMgr::Initialize();
 		ProjectAssetMgr::Initialize();
 		EditorConfig::Initialize();
-		EditorUIMgr::Initialize();
 		EditorLevelMgr::Initialize();
+		EditorUIMgr::Initialize();
 		ImGuiRHI::Initialize(Editor::EditorConfig::InitializeImGuiConfig);
 		m_UIController.Reset(new UIController);
 	}
 
 	XXEditor::~XXEditor() {
+		Render::ViewportRenderer::Instance()->WaitAllFence();
 		EngineAssetMgr::Release();
 		ProjectAssetMgr::Release();
 		EditorUIMgr::Release();

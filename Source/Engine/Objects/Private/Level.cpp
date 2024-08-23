@@ -2,31 +2,24 @@
 #include "Objects/Public/Camera.h"
 #include "Asset/Public/AssetLoader.h"
 #include "Objects/Public/StaticMesh.h"
+#include "Objects/Public/DirectionalLight.h"
 
 namespace Object {
 
-	Level::Level(const Asset::LevelAsset& levelAsset, RenderScene* scene): m_Scene(scene) {
-		//meshes
-		auto& objects = levelAsset.Meshes;
-		for(auto& mesh: objects) {
-			Asset::MeshAsset meshAsset;
-			if(Asset::AssetLoader::LoadProjectAsset(&meshAsset, mesh.File.c_str())) {
-				EntityID meshID = scene->NewEntity();
-				auto* transformCom = scene->AddComponent<TransformComponent>(meshID);
-				transformCom->SetPosition(mesh.Position);
-				transformCom->SetScale(mesh.Scale);
-				transformCom->SetRotation(Math::FQuaternion::Euler(mesh.Rotation));
-				auto* staticMeshCom = scene->AddComponent<StaticMeshComponent>(meshID);
-				staticMeshCom->BuildFromAsset(meshAsset);
-			}
-		}
+	Level::Level(const Asset::LevelAsset& asset, RenderScene* scene): m_Scene(scene) {
+
 		//camera
-		auto& cameraParam = levelAsset.CameraParam;
-		Camera* camera = scene->GetMainCamera();
+		auto& cameraParam = asset.CameraData;
+		Object::Camera* camera = scene->GetMainCamera();
 		camera->SetView(cameraParam.Eye, cameraParam.At, cameraParam.Up);
 		camera->SetNear(cameraParam.Near);
 		camera->SetFar(cameraParam.Far);
 		camera->SetFov(cameraParam.Fov);
+		// light
+		auto& lightParam = asset.DirectionalLightData;
+		Object::DirectionalLight* directionalLight = scene->GetDirectionalLight();
+		directionalLight->SetDir(lightParam.Dir);
+		directionalLight->SetColor(lightParam.Color);
 	}
 
 	Level::~Level() {

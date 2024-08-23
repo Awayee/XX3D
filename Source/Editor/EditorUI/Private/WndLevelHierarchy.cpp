@@ -48,7 +48,10 @@ namespace Editor {
 		if(!level) {
 			return;
 		}
+		auto startPos = ImGui::GetCursorPos();
+		ImGui::Dummy(ImGui::GetWindowSize());
 		if(ImGui::BeginDragDropTarget()) {
+			ImGui::Button("Add");
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("File")) {
 				ASSERT(payload->DataSize == sizeof(FileNode), "");
 				FileNode* fileNode = reinterpret_cast<FileNode*>(payload->Data);
@@ -60,6 +63,7 @@ namespace Editor {
 			ImGui::EndDragDropTarget();
 		}
 		else {
+			ImGui::SetCursorPos(startPos);
 			for (uint32 i = 0; i < level->Meshes().Size(); ++i) {
 				auto meshInfo = level->GetMesh(i);
 				ImGui::PushID(static_cast<int>(i));

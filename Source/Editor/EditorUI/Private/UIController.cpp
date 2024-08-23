@@ -7,6 +7,7 @@
 #include "WndAssetBrowser.h"
 #include "WndDetails.h"
 #include "WndLevelHierarchy.h"
+#include "WndLevelSetting.h"
 
 namespace Editor {
 
@@ -28,13 +29,9 @@ namespace Editor {
 		//windows
 		uiMgr->AddWindow(TUniquePtr(new WndAssetBrowser()));
 		uiMgr->AddWindow(TUniquePtr(new WndViewport()));
+		uiMgr->AddWindow(TUniquePtr(new WndLevelSetting()));
 		uiMgr->AddWindow(TUniquePtr(new WndLevelHierarchy()));
 		uiMgr->AddWindow(TUniquePtr(new WndDetails()));
-		uiMgr->AddWindow("FPS",
-			[]() {ImGui::Text("FPS = %u", static_cast<uint32>(Engine::CTimer::Instance()->GetFPS())); },
-			ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoBackground);
-
-		//menu items
 		uiMgr->AddMenu("Menu", "Save Layout", SaveLayout, nullptr);
 		uiMgr->AddMenu("Menu", "Exit", EditorExit, nullptr);
 	}

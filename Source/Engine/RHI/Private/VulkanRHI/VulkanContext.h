@@ -7,8 +7,8 @@ public:
 	explicit VulkanContext(bool enableDebug, uint32 apiVersion);
 	~VulkanContext();
 	VkPhysicalDevice PickPhysicalDevice();
-	XX_NODISCARD uint32 GetAPIVersion() const { return m_APIVersion; }
-	XX_NODISCARD VkInstance GetInstance() const { return m_Instance; }
+	uint32 GetAPIVersion() const { return m_APIVersion; }
+	VkInstance GetInstance() const { return m_Instance; }
 private:
 	friend class VulkanRHI;
 	uint32 m_APIVersion;

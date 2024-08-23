@@ -56,9 +56,9 @@ namespace Render {
 		RGRenderNode(uint32 nodeID): RGPassNode(nodeID), m_Fence(nullptr) {}
 		~RGRenderNode() override = default;
 		void ReadSRV(RGTextureNode* node);
-		void ReadColorTarget(RGTextureNode* node, uint32 i); // keep content written by previous pass (without clear)
+		void ReadColorTarget(RGTextureNode* node, uint32 i, RHITextureSubDesc subRes={}); // keep content written by previous pass (without clear)
 		void ReadDepthTarget(RGTextureNode* node);
-		void WriteColorTarget(RGTextureNode* node, uint32 i); // write new targets
+		void WriteColorTarget(RGTextureNode* node, uint32 i, RHITextureSubDesc subRes={}); // write new targets
 		void WriteDepthTarget(RGTextureNode* node);
 		void SetArea(const Rect& rect);
 		void SetTask(RenderTask&& f) { m_Task = MoveTemp(f); }
@@ -121,8 +121,8 @@ namespace Render {
 		RHITexture* GetRHI();
 		void SetTargetState(EResourceState targetState) { m_TargetState = targetState; }
 		EResourceState GetTargetState() const { return m_CurrentState; }
-		void TransitionToState(RHICommandBuffer* cmd, EResourceState dstState);
-		void TransitionToTargetState(RHICommandBuffer* cmd);
+		void TransitionToState(RHICommandBuffer* cmd, EResourceState dstState, RHITextureSubDesc subRes);
+		void TransitionToTargetState(RHICommandBuffer* cmd, RHITextureSubDesc subRes);
 	private:
 		RHITextureDesc m_Desc;
 		RHITexture* m_RHI;

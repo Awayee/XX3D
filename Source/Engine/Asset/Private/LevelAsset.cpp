@@ -10,12 +10,17 @@ namespace Asset {
 		}
 		if (doc.HasMember("Camera")) {
 			const rapidjson::Value& cameraParam = doc["Camera"].GetObject();
-			Json::LoadFloatArray(cameraParam["Eye"], CameraParam.Eye.Data(), 3);
-			Json::LoadFloatArray(cameraParam["At"], CameraParam.At.Data(), 3);
-			Json::LoadFloatArray(cameraParam["Up"], CameraParam.Up.Data(), 3);
-			CameraParam.Near = cameraParam["Near"].GetFloat();
-			CameraParam.Far = cameraParam["Far"].GetFloat();
-			CameraParam.Fov = cameraParam["Fov"].GetFloat();
+			Json::LoadFloatArray(cameraParam["Eye"], CameraData.Eye.Data(), 3);
+			Json::LoadFloatArray(cameraParam["At"], CameraData.At.Data(), 3);
+			Json::LoadFloatArray(cameraParam["Up"], CameraData.Up.Data(), 3);
+			CameraData.Near = cameraParam["Near"].GetFloat();
+			CameraData.Far = cameraParam["Far"].GetFloat();
+			CameraData.Fov = cameraParam["Fov"].GetFloat();
+		}
+		if (doc.HasMember("DirectionalLight")) {
+			const rapidjson::Value& directionalLightParam = doc["DirectionalLight"].GetObject();
+			Json::LoadFloatArray(directionalLightParam["Dir"], DirectionalLightData.Dir.Data(), 3);
+			Json::LoadFloatArray(directionalLightParam["Color"], DirectionalLightData.Color.Data(), 3);
 		}
 		if (doc.HasMember("Meshes")) {
 			const Json::Value& objects = doc["Meshes"];
@@ -38,13 +43,18 @@ namespace Asset {
 		// camera
 		Json::Value cameraVal(Json::Type::kObjectType);
 		auto& a = doc.GetAllocator();
-		Json::AddFloatArray(cameraVal, "Eye", CameraParam.Eye.Data(), 3, a);
-		Json::AddFloatArray(cameraVal, "At", CameraParam.At.Data(), 3, a);
-		Json::AddFloatArray(cameraVal, "Up", CameraParam.Up.Data(), 3, a);
-		cameraVal.AddMember("Near", CameraParam.Near, a);
-		cameraVal.AddMember("Far", CameraParam.Far, a);
-		cameraVal.AddMember("Fov", CameraParam.Fov, a);
+		Json::AddFloatArray(cameraVal, "Eye", CameraData.Eye.Data(), 3, a);
+		Json::AddFloatArray(cameraVal, "At", CameraData.At.Data(), 3, a);
+		Json::AddFloatArray(cameraVal, "Up", CameraData.Up.Data(), 3, a);
+		cameraVal.AddMember("Near", CameraData.Near, a);
+		cameraVal.AddMember("Far", CameraData.Far, a);
+		cameraVal.AddMember("Fov", CameraData.Fov, a);
 		doc.AddMember("Camera", cameraVal, a);
+		// directional light
+		Json::Value dLightVal(Json::Type::kObjectType);
+		Json::AddFloatArray(dLightVal, "Dir", DirectionalLightData.Dir.Data(), 3, a);
+		Json::AddFloatArray(dLightVal, "Color", DirectionalLightData.Color.Data(), 3, a);
+		doc.AddMember("DirectionalLight", dLightVal, a);
 		// meshes
 		Json::Value objectsVal(Json::Type::kObjectType);
 		objectsVal.SetArray();

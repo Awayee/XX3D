@@ -44,10 +44,9 @@ namespace Render {
 			m_DefaultTextureCube[i] = rhi->CreateTexture(desc);
 		}
 
-
 		// white;
 		auto* tex = GetDefaultTexture2D(TEX_WHITE);
-		const Color4<uint8> color{ 1,1,1,1 };
+		const Color4<uint8> color{ 255,255,255,255 };
 		const RHITextureOffset offset{ 0,0, {0,0,0} };
 		tex->UpdateData(sizeof(color), &color, offset);
 	}

@@ -93,7 +93,7 @@ public:
 	VulkanRHIShader(EShaderStageFlagBit type, const char* code, size_t codeSize, const XString& entryFunc, VulkanDevice* device);
 	~VulkanRHIShader() override;
 	void SetName(const char* name) override;
-	XX_NODISCARD VkPipelineShaderStageCreateInfo GetShaderStageInfo() const;
+	VkPipelineShaderStageCreateInfo GetShaderStageInfo() const;
 private:
 	XString m_EntryName;
 	VkShaderModule m_ShaderModule;

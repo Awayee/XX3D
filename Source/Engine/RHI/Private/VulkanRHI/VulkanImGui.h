@@ -8,6 +8,8 @@ public:
 	void FrameBegin() override;
 	void FrameEnd() override;
 	void RenderDrawData(RHICommandBuffer* cmd) override;
+	ImTextureID RegisterImGuiTexture(RHITexture* texture, RHISampler* sampler) override;
+	void RemoveImGuiTexture(ImTextureID textureID) override;
 	void ImGuiCreateFontsTexture(RHICommandBuffer* cmd) override;
 	void ImGuiDestroyFontUploadObjects() override;
 public:

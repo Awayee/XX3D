@@ -4,6 +4,12 @@
 
 namespace Editor {
 
+	// TODO internal assets
+	void CreateInternalAssets() {
+		// box
+		
+	}
+
 	EditorLevelMgr::EditorLevelMgr() {
 		File::FPath path = Engine::ConfigManager::GetData().StartLevel;
 		Asset::LevelAsset* asset;

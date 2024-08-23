@@ -1,18 +1,11 @@
 #include "Functions/Public/EditorLevel.h"
 #include "Objects/Public/Camera.h"
 #include "Functions/Public/AssetManager.h"
+#include "Objects/Public/DirectionalLight.h"
 
 namespace Editor {
 
-	EditorLevel::EditorLevel(const Asset::LevelAsset& asset, Object::RenderScene* scene): m_Scene(scene) {
-		//camera
-		auto& cameraParam = asset.CameraParam;
-		Object::Camera* camera = scene->GetMainCamera();
-		camera->SetView(cameraParam.Eye, cameraParam.At, cameraParam.Up);
-		camera->SetNear(cameraParam.Near);
-		camera->SetFar(cameraParam.Far);
-		camera->SetFov(cameraParam.Fov);
-
+	EditorLevel::EditorLevel(const Asset::LevelAsset& asset, Object::RenderScene* scene): Object::Level(asset, scene) {
 		//meshes
 		auto& meshes = asset.Meshes;
 		m_Meshes.Reserve(meshes.Size());
@@ -69,17 +62,22 @@ namespace Editor {
 	}
 
 	void EditorLevel::DelMesh(uint32 idx) {
+		m_Scene->RemoveEntity(m_Meshes[idx].ObjectEntityID);
 		m_Meshes.RemoveAt(idx);
 	}
 
 	void EditorLevel::SaveAsset(Asset::LevelAsset* asset) {
 		Object::Camera* camera = m_Scene->GetMainCamera();
-		asset->CameraParam.Eye = camera->GetView().Eye;
-		asset->CameraParam.At = camera->GetView().At;
-		asset->CameraParam.Up = camera->GetView().Up;
-		asset->CameraParam.Near = camera->GetNear();
-		asset->CameraParam.Far = camera->GetFar();
-		asset->CameraParam.Fov = camera->GetFov();
+		asset->CameraData.Eye = camera->GetView().Eye;
+		asset->CameraData.At = camera->GetView().At;
+		asset->CameraData.Up = camera->GetView().Up;
+		asset->CameraData.Near = camera->GetNear();
+		asset->CameraData.Far = camera->GetFar();
+		asset->CameraData.Fov = camera->GetFov();
+
+		Object::DirectionalLight* dLight = m_Scene->GetDirectionalLight();
+		asset->DirectionalLightData.Dir = dLight->GetLightDir();
+		asset->DirectionalLightData.Color = dLight->GetLightColor();
 
 		asset->Meshes.Reset();
 		asset->Meshes.Resize(m_Meshes.Size());

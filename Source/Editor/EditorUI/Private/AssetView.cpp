@@ -28,7 +28,6 @@ namespace Editor {
 
 	FileAssetView::FileAssetView(FileNode* node): m_Node(node) {
 		m_ID = m_Node->GetID();
-		m_Node->GetAsset<Asset::UnknownAsset>();
 	}
 
 	const XString& FileAssetView::GetName() {

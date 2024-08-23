@@ -1,7 +1,11 @@
 #include "WndViewport.h"
 #include "EditorUI/Public/EditorUIMgr.h"
+#include "Functions/Public/EditorLevelMgr.h"
 #include "Objects/Public/RenderScene.h"
 #include "Objects/Public/Camera.h"
+#include "Objects/Public/DirectionalLight.h"
+#include "Render/Public/DefaultResource.h"
+#include "System/Public/Timer.h"
 
 namespace Editor {
 
@@ -48,9 +52,16 @@ namespace Editor {
 
 	WndViewport::WndViewport() : EditorWndBase("Viewport", ImGuiWindowFlags_NoBackground) {
 		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
+		m_Flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
 	}
 
-	void WndViewport::CameraControl() {
+	WndViewport::~WndViewport() {
+		if(m_RenderTarget) {
+			ImGuiRHI::Instance()->RemoveImGuiTexture(m_RenderTargetID);
+		}
+	}
+
+	void WndViewport::CameraControl(Object::Camera* camera) {
 		if(!ImGui::IsWindowFocused()) {
 			return;
 		}
@@ -66,8 +77,7 @@ namespace Editor {
 			m_LastX = 0.0f;
 			m_LastY = 0.0f;
 		}
-
-		Object::Camera* camera = Object::RenderScene::GetDefaultScene()->GetMainCamera();
+		
 		//rotate
 		if (m_MouseDown) {
 			auto pos = ImGui::GetMousePos();
@@ -99,22 +109,64 @@ namespace Editor {
 	void WndViewport::Update() {
 		// if this window is hided, disable the main pass rendering
 		if (!m_Enable && m_ViewportShow) {
+			if(EditorLevel* level = Editor::EditorLevelMgr::Instance()->GetLevel()) {
+				if(Object::RenderScene* scene = level->GetScene()) {
+					scene->SetRenderTarget(nullptr, {});
+				}
+			}
+			ReleaseRenderTarget();
 			m_ViewportShow = false;
-			//Engine::Context()->Renderer()->SetRenderViewport({ 0,0,0,0 });
 		}
 	}
 
 	void WndViewport::WndContent() {
-		CameraControl();
+		EditorLevel* level = Editor::EditorLevelMgr::Instance()->GetLevel();
+		if(!level) {
+			return;
+		}
+		Object::RenderScene* scene = level->GetScene();
+		if(!scene) {
+			return;
+		}
+		Object::Camera* camera = scene->GetMainCamera();
+		CameraControl(camera);
 		auto size = ImGui::GetWindowSize();
-		auto pos = ImGui::GetWindowPos();
-		if (!m_ViewportShow || !Math::FloatEqual(pos.x, m_Viewport.x) || !Math::FloatEqual(pos.y, m_Viewport.y) || !Math::FloatEqual(size.x, m_Viewport.w) || !Math::FloatEqual(size.y, m_Viewport.h)) {
-			m_Viewport.x = static_cast<int32>(pos.x);
-			m_Viewport.y = static_cast<int32>(pos.y);
-			m_Viewport.w = static_cast<uint32>(size.x);
-			m_Viewport.h = static_cast<uint32>(size.y);
-			Object::RenderScene::GetDefaultScene()->SetViewport(m_Viewport);
+
+		if (!m_ViewportShow || !Math::FloatEqual(size.x, m_ViewportSize.w) || !Math::FloatEqual(size.y, m_ViewportSize.h)) {
+			m_ViewportSize = { (uint32)size.x, (uint32)size.y };
+			ReleaseRenderTarget();
+			CreateRenderTarget();
+			scene->SetViewportSize(m_ViewportSize);
+			scene->SetRenderTarget(m_RenderTarget.Get(), {});
 			m_ViewportShow = true;
+		}
+		if (m_RenderTarget) {
+			ImGui::SetCursorPos(ImVec2(0, 0));
+			ImGui::Image(m_RenderTargetID, size);
+			// show fps
+			ImGui::SetCursorPos(ImVec2(32, 32));
+			ImGui::Text("FPS = %u", static_cast<uint32>(Engine::CTimer::Instance()->GetFPS()));
+		}
+	}
+
+	void WndViewport::ReleaseRenderTarget() {
+		if (m_RenderTarget) {
+			Render::ViewportRenderer::Instance()->WaitAllFence();
+			ImGuiRHI::Instance()->RemoveImGuiTexture(m_RenderTargetID);
+			m_RenderTarget.Reset();
+		}
+	}
+
+	void WndViewport::CreateRenderTarget() {
+		if(m_ViewportSize.w > 0 && m_ViewportSize.h > 0) {
+			RHITextureDesc desc = RHITextureDesc::Texture2D();
+			desc.Format = ERHIFormat::B8G8R8A8_UNORM;
+			desc.Flags = TEXTURE_FLAG_SRV | TEXTURE_FLAG_COLOR_TARGET;
+			desc.Width = m_ViewportSize.w;
+			desc.Height = m_ViewportSize.h;
+			m_RenderTarget = RHI::Instance()->CreateTexture(desc);
+			RHISampler* sampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::AnisotropicLinear, ESamplerAddressMode::Clamp);
+			m_RenderTargetID = ImGuiRHI::Instance()->RegisterImGuiTexture(m_RenderTarget.Get(), sampler);
 		}
 	}
 }

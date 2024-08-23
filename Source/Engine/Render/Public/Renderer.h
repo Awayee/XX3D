@@ -6,6 +6,11 @@
 #include "Render/Public/RenderGraph.h"
 
 namespace Render {
+	class IRenderScene {
+	public:
+		virtual RGTextureNode* Render(RenderGraph& rg) = 0;
+	};
+
 	class CmdPool: public ICmdAllocator {
 	public:
 		NON_COPYABLE(CmdPool);
@@ -22,27 +27,21 @@ namespace Render {
 	};
 
 	class ViewportRenderer {
+		SINGLETON_INSTANCE(ViewportRenderer);
 	public:
-		ViewportRenderer();
-		~ViewportRenderer();
-		void Execute(DrawCallContext* drawCallContext);
+		void Run();
 		void WaitAllFence();
 		void WaitCurrentFence();
 		void OnWindowSizeChanged(uint32 w, uint32 h);
+		void SetRenderScene(IRenderScene* scene) { m_RenderScene = scene; }
 	private:
-		// render resources
-		constexpr static ERHIFormat s_NormalFormat{ ERHIFormat::B8G8R8A8_UNORM };
-		constexpr static ERHIFormat s_AlbedoFormat{ ERHIFormat::B8G8R8A8_UNORM };
-		USize2D m_CacheWindowSize;
-		RHITexturePtr m_GBufferNormal;
-		RHITexturePtr m_GBufferAlbedo;
-		RHITexturePtr m_Depth;
 		TStaticArray<CmdPool, RHI_FRAME_IN_FLIGHT_MAX> m_CmdPools;
 		TStaticArray<RHIFencePtr, RHI_FRAME_IN_FLIGHT_MAX> m_Fences;
-		RHIGraphicsPipelineStatePtr MeshGBufferPSO;
-		RHIGraphicsPipelineStatePtr m_DeferredLightingPSO;
+		USize2D m_CacheWindowSize;
+		IRenderScene* m_RenderScene;
 		bool m_SizeDirty;
-		void CreateTextures();
+		ViewportRenderer();
+		~ViewportRenderer();
 		bool SizeValid() const;
 	};
 }

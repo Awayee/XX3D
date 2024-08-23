@@ -3,6 +3,7 @@
 #include "Objects/Public/RenderScene.h"
 #include "Objects/Public/StaticMesh.h"
 #include "Functions/Public/AssetManager.h"
+#include "Objects/Public/Level.h"
 
 namespace Editor {
 	struct EditorLevelMesh {
@@ -15,10 +16,7 @@ namespace Editor {
 		Object::EntityID ObjectEntityID;
 	};
 
-	class EditorLevel{
-	private:
-		TArray<EditorLevelMesh> m_Meshes;
-		Object::RenderScene* m_Scene{nullptr};
+	class EditorLevel: public Object::Level{
 	public:
 		EditorLevel(const Asset::LevelAsset& asset, Object::RenderScene* scene);
 		~EditorLevel();
@@ -28,5 +26,7 @@ namespace Editor {
 		EditorLevelMesh* AddMesh(const XString& file, Asset::MeshAsset* asset);
 		void DelMesh(uint32 idx);
 		void SaveAsset(Asset::LevelAsset* asset);
+	private:
+		TArray<EditorLevelMesh> m_Meshes;
 	};
 }
