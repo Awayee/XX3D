@@ -11,6 +11,8 @@
 #define COMPILE_FILE_EXT ".spv"
 #define STR_LEN_MAX 128
 
+File::FPath s_ShaderRoot = SHADER_PATH;
+
 inline const wchar_t* GetShaderModule(ESPVShaderStage stage) {
 	switch(stage) {
 	case ESPVShaderStage::Vertex:
@@ -75,7 +77,7 @@ void SPVCompiler::ClearCompiledCache() {
 }
 
 bool SPVCompiler::CompileHLSL(const XString& hlslFile, const XString& entryPoint, ESPVShaderStage stage, TConstArrayView<SPVDefine> defines) {
-	File::FPath hlslFilePath{ SHADER_PATH };
+	File::FPath hlslFilePath = s_ShaderRoot;
 	hlslFilePath.append(hlslFile);
 	const wchar_t* hlslFileW = hlslFilePath.c_str();
 	
@@ -88,7 +90,7 @@ bool SPVCompiler::CompileHLSL(const XString& hlslFile, const XString& entryPoint
 	IDxcBlobEncoding* sourceBlob;
 	r = m_Utils->LoadFile(hlslFileW, &codePage, &sourceBlob);
 	if (FAILED(r)) {
-		wprintf(L"[HLSL2Spv] Could not load shader file: %s\n", hlslFileW);
+		LOG_ERROR("[HLSL2Spv] Could not load shader file: %s", hlslFile.c_str());
 		return false;
 	}
 
@@ -105,20 +107,11 @@ bool SPVCompiler::CompileHLSL(const XString& hlslFile, const XString& entryPoint
 	}
 
 	XWString entryPointW = String2WString(entryPoint);
-	m_Utils->BuildArguments(hlslFileW, entryPointW.c_str(), shaderModel, nullptr, 0, dxcDefines.Data(), dxcDefines.Size(), &args);
-	LPCWSTR spirv = L"-spirv";
-	args->AddArguments(&spirv, 1);
-
-	std::vector<LPCWSTR> arguments = {
-		// (Optional) name of the shader file to be displayed e.g. in an error message
-		hlslFileW,
-		// Shader main entry point
-		L"-E", entryPointW.c_str(),
-		// Shader target profile
-		L"-T", shaderModel,
-		// Compile to SPIRV
+	TArray<LPCWSTR> preArgs = {
+		L"-I", s_ShaderRoot.c_str(),
 		L"-spirv"
 	};
+	m_Utils->BuildArguments(hlslFileW, entryPointW.c_str(), shaderModel, preArgs.Data(), preArgs.Size(), dxcDefines.Data(), dxcDefines.Size(), &args);
 
 	DxcBuffer buffer;
 	buffer.Encoding = DXC_CP_ACP;
@@ -143,7 +136,7 @@ bool SPVCompiler::CompileHLSL(const XString& hlslFile, const XString& entryPoint
 		IDxcBlobEncoding* errorBlob;
 		r = result->GetErrorBuffer(&errorBlob);
 		if (SUCCEEDED(r) && errorBlob) {
-			std::cerr << "Shader compilation failed :\n\n" << (const char*)errorBlob->GetBufferPointer();
+			LOG_ERROR("Shader(%s, %s) complilation failed: %s", hlslFile.c_str(), entryPoint.c_str(), (const char*)errorBlob->GetBufferPointer());
 			return false;
 		}
 	}
@@ -155,7 +148,7 @@ bool SPVCompiler::CompileHLSL(const XString& hlslFile, const XString& entryPoint
 	XString outFile = outFilePath.string();
 	File::WFile fout(outFile.c_str(), File::EFileMode::Binary | File::EFileMode::Write);
 	if (!fout.is_open()) {
-		printf("[HLSL2Spv] write file failed: %s\n", outFile.c_str());
+		LOG_ERROR("[HLSL2Spv] write file failed: %s\n", outFile.c_str());
 		return false;
 	}
 	fout.write((char*)code->GetBufferPointer(), code->GetBufferSize());

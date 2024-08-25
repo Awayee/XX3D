@@ -191,7 +191,7 @@ namespace Math {
 
         static Matrix4x4<T> PerspectiveMatrix(T fov, T aspect, T zNear, T zFar);
 
-        static Matrix4x4<T> OrthographicMatrix(T left, T right, T bottom, T top, T znear, T zfar);
+        static Matrix4x4<T> OrthographicMatrix(T left, T right, T bottom, T top, T zNear, T zFar);
     };
 
     typedef Matrix4x4<float>  FMatrix4x4;

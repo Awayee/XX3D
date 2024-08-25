@@ -19,11 +19,12 @@ namespace Asset {
 			Math::FVector3 Eye;
 			Math::FVector3 At;
 			Math::FVector3 Up;
-			float Near, Far, Fov;
+			int ProjType;
+			float Near, Far, Fov, ViewSize;
 		}CameraData;
 
 		struct{
-			Math::FVector3 Dir;
+			Math::FVector3 Rotation;
 			Math::FVector3 Color;
 		}DirectionalLightData;
 		bool Load(File::RFile& in) override;

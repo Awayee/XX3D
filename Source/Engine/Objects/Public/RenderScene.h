@@ -6,7 +6,7 @@
 #include "Render/Public/Renderer.h"
 
 namespace Object {
-	class Camera;
+	class RenderCamera;
 	class DirectionalLight;
 
 	class RenderScene: public ECSScene, public Render::IRenderScene {
@@ -15,7 +15,7 @@ namespace Object {
 		NON_MOVEABLE(RenderScene);
 		RenderScene();
 		~RenderScene();
-		Camera* GetMainCamera() { return m_Camera.Get(); }
+		RenderCamera* GetMainCamera() { return m_Camera.Get(); }
 		DirectionalLight* GetDirectionalLight() { return m_DirectionalLight.Get(); }
 		Render::DrawCallContext& GetDrawCallContext() { return m_DrawCallContext; }
 		void Update();
@@ -33,24 +33,23 @@ namespace Object {
 		static TUniquePtr<RenderScene> s_Default;
 		static TArray<Func<void(RenderScene*)>> s_RegisterSystems;
 		TUniquePtr<DirectionalLight> m_DirectionalLight;
-		TUniquePtr<Camera> m_Camera;
+		TUniquePtr<RenderCamera> m_Camera;
 		RHIBufferPtr m_CameraUniform;
-		RHIBufferPtr m_LightUniform;
-		Rect m_Viewport;
 		Render::DrawCallContext m_DrawCallContext;
 		USize2D m_ViewportSize;
-		RHITexturePtr m_DirectionalShadowMap;
+		// fo gBuffer
 		RHITexturePtr m_GBufferNormal;
 		RHITexturePtr m_GBufferAlbedo;
 		RHITexturePtr m_Depth;
+		RHIGraphicsPipelineStatePtr MeshGBufferPSO;
+		// for deferred lighting
 		RHITexture* m_RenderTarget;
 		RHITextureSubDesc m_RenderTargetSub;
-		RHIGraphicsPipelineStatePtr MeshGBufferPSO;
 		RHIGraphicsPipelineStatePtr m_DeferredLightingPSO;
 		bool m_ViewportDirty;
-		bool m_RenderTargetDirty;
+		bool m_RenderTargetFormatDirty;
 		void UpdateSceneDrawCall();
 		void CreateResources();
-		void CreateTextures();
+		void CreateRTTextures();
 	};
 }

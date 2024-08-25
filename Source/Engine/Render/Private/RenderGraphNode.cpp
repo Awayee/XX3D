@@ -17,25 +17,29 @@ namespace Render {
 
 	void RGRenderNode::ReadColorTarget(RGTextureNode* node, uint32 i, RHITextureSubDesc subRes) {
 		ASSERT(i < RHI_COLOR_TARGET_MAX, "Color target index out of range!");
-		m_ColorTargets[i] = { node, subRes, ERTLoadOption::Load };
+		const uint8 subResIdx = node->RegisterSubRes(subRes);
+		m_ColorTargets[i] = { node, subRes, subResIdx, ERTLoadOption::Load };
 		node->SetTargetState(EResourceState::ColorTarget);
 		RGNode::Connect(node, this);
 	}
 
-	void RGRenderNode::ReadDepthTarget(RGTextureNode* node) {
-		m_DepthTarget = { node, {}, ERTLoadOption::Load };
+	void RGRenderNode::ReadDepthTarget(RGTextureNode* node, RHITextureSubDesc subRes) {
+		const uint8 subResIdx = node->RegisterSubRes(subRes);
+		m_DepthTarget = { node, subRes, subResIdx, ERTLoadOption::Load };
 		node->SetTargetState(EResourceState::DepthStencil);
 		RGNode::Connect(node, this);
 	}
 
 	void RGRenderNode::WriteColorTarget(RGTextureNode* node, uint32 i, RHITextureSubDesc subRes) {
 		ASSERT(i < RHI_COLOR_TARGET_MAX, "Color target index out of range!");
-		m_ColorTargets[i] = {node, subRes, ERTLoadOption::Clear};
+		const uint8 subResIdx = node->RegisterSubRes(subRes);
+		m_ColorTargets[i] = {node, subRes, subResIdx, ERTLoadOption::Clear};
 		RGNode::Connect(this, node);
 	}
 
-	void RGRenderNode::WriteDepthTarget(RGTextureNode* node) {
-		m_DepthTarget = { node, {}, ERTLoadOption::Clear };
+	void RGRenderNode::WriteDepthTarget(RGTextureNode* node, RHITextureSubDesc subRes) {
+		const uint8 subResIdx = node->RegisterSubRes(subRes);
+		m_DepthTarget = { node, subRes, subResIdx, ERTLoadOption::Clear };
 		RGNode::Connect(this, node);
 	}
 
@@ -46,16 +50,19 @@ namespace Render {
 	void RGRenderNode::Run(ICmdAllocator* cmdAlloc) {
 		RHICommandBuffer* cmd = cmdAlloc->GetCmd();
 		cmd->Reset();
+		if (!m_Name.empty()) {
+			cmd->BeginDebugLabel(m_Name.c_str(), nullptr);
+		}
 		// state transition before rendering
 		{
 			for (uint32 i = 0; i < RHI_COLOR_TARGET_MAX; ++i) {
 				if (!m_ColorTargets[i].Node) {
 					break;
 				}
-				m_ColorTargets[i].Node->TransitionToState(cmd, EResourceState::ColorTarget, m_ColorTargets[i].SubRes);
+				m_ColorTargets[i].Node->TransitionToState(cmd, EResourceState::ColorTarget, m_ColorTargets[i].SubResIndex);
 			}
 			if (m_DepthTarget.Node) {
-				m_DepthTarget.Node->TransitionToState(cmd, EResourceState::DepthStencil, m_DepthTarget.SubRes);
+				m_DepthTarget.Node->TransitionToState(cmd, EResourceState::DepthStencil, m_DepthTarget.SubResIndex);
 			}
 		}
 
@@ -64,32 +71,29 @@ namespace Render {
 			// setup render pass info
 			RHIRenderPassInfo renderPassInfo;
 			for (uint32 i = 0; i < RHI_COLOR_TARGET_MAX; ++i) {
-				auto& [node, sub, op] = m_ColorTargets[i];
-				if (!node) {
+				auto& target = m_ColorTargets[i];
+				if (!target.Node) {
 					break;
 				}
 				auto& colorTarget = renderPassInfo.ColorTargets[i];
-				colorTarget.Target = node->GetRHI();
-				colorTarget.MipIndex = sub.MipIndex;
-				colorTarget.LayerIndex = sub.LayerIndex;
-				colorTarget.LoadOp = op;
+				colorTarget.Target = target.Node->GetRHI();
+				colorTarget.MipIndex = target.SubRes.MipIndex;
+				colorTarget.ArrayIndex = target.SubRes.ArrayIndex;
+				colorTarget.LoadOp = target.LoadOp;
 			}
 			if (m_DepthTarget.Node) {
 				auto& depthStencilTarget = renderPassInfo.DepthStencilTarget;
 				depthStencilTarget.Target = m_DepthTarget.Node->GetRHI();
+				depthStencilTarget.MipIndex = m_DepthTarget.SubRes.MipIndex;
+				depthStencilTarget.ArrayIndex = m_DepthTarget.SubRes.ArrayIndex;
 				depthStencilTarget.DepthLoadOp = m_DepthTarget.LoadOp;
+				depthStencilTarget.DepthClear = 1.0f;
 			}
 			renderPassInfo.RenderArea = m_RenderArea;
 			// execute render task
-			if(!m_Name.empty()) {
-				cmd->BeginDebugLabel(m_Name.c_str(), nullptr);
-			}
 			cmd->BeginRendering(renderPassInfo);
 			m_Task(cmd);
 			cmd->EndRendering();
-			if (!m_Name.empty()) {
-				cmd->EndDebugLabel();
-			}
 		}
 
 		// state transition after rendering 
@@ -99,14 +103,17 @@ namespace Render {
 				if (!m_ColorTargets[i].Node) {
 					break;
 				}
-				m_ColorTargets[i].Node->TransitionToTargetState(cmd, m_ColorTargets[i].SubRes);
+				m_ColorTargets[i].Node->TransitionToTargetState(cmd, m_ColorTargets[i].SubResIndex);
 				if(EResourceState::Present == m_ColorTargets[i].Node->GetTargetState()) {
 					bPresent = true;
 				}
 			}
 			if (m_DepthTarget.Node) {
-				m_DepthTarget.Node->TransitionToTargetState(cmd, m_DepthTarget.SubRes);
+				m_DepthTarget.Node->TransitionToTargetState(cmd, m_DepthTarget.SubResIndex);
 			}
+		}
+		if (!m_Name.empty()) {
+			cmd->EndDebugLabel();
 		}
 		RHI::Instance()->SubmitCommandBuffer(cmd, m_Fence, bPresent);
 	}
@@ -137,14 +144,20 @@ namespace Render {
 		return m_RHI;
 	}
 
-	void RGTextureNode::TransitionToState(RHICommandBuffer* cmd, EResourceState dstState, RHITextureSubDesc subRes) {
-		if(dstState != EResourceState::Unknown && m_CurrentState != dstState) {
-			cmd->TransitionTextureState(m_RHI, m_CurrentState, dstState, subRes);
-			m_CurrentState = dstState;
+	uint8 RGTextureNode::RegisterSubRes(RHITextureSubDesc subRes) {
+		const uint8 index = (uint8)m_SubResStates.Size();
+		m_SubResStates.PushBack({ subRes, EResourceState::Unknown });
+		return index;
+	}
+
+	void RGTextureNode::TransitionToState(RHICommandBuffer* cmd, EResourceState dstState, uint8 subResIdx) {
+		if(dstState != EResourceState::Unknown && m_SubResStates[subResIdx].State != dstState) {
+			cmd->TransitionTextureState(m_RHI, m_SubResStates[subResIdx].State, dstState, m_SubResStates[subResIdx].SubRes);
+			m_SubResStates[subResIdx].State = dstState;
 		}
 	}
 
-	void RGTextureNode::TransitionToTargetState(RHICommandBuffer* cmd, RHITextureSubDesc subRes) {
-		TransitionToState(cmd, m_TargetState, subRes);
+	void RGTextureNode::TransitionToTargetState(RHICommandBuffer* cmd, uint8 subResIdx) {
+		TransitionToState(cmd, m_TargetState, subResIdx);
 	}
 }

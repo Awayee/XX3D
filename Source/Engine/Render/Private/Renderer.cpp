@@ -42,9 +42,6 @@ namespace Render {
 		const uint32 frameIndex = FrameCounter::GetFrame() % RHI_FRAME_IN_FLIGHT_MAX;
 		RHIFence* fence = m_Fences[frameIndex].Get();
 
-		// Wait fence before rendering.
-		fence->Wait();
-
 		if (m_SizeDirty) {
 			WaitAllFence();
 			RHI::Instance()->GetViewport()->SetSize(m_CacheWindowSize);
@@ -84,16 +81,16 @@ namespace Render {
 		cmdPool->Reset();
 		rg.Run(cmdPool);
 		cmdPool->GC();
+
+		// ========= wait next fence for beginning next frame ==============
+		RHIFence* nextFence = m_Fences[(frameIndex + 1) % RHI_FRAME_IN_FLIGHT_MAX].Get();
+		nextFence->Wait();
 	}
 
 	void ViewportRenderer::WaitAllFence() {
 		for(auto& fence: m_Fences) {
 			fence->Wait();
 		}
-	}
-
-	void ViewportRenderer::WaitCurrentFence() {
-		m_Fences[FrameCounter::GetFrame() % RHI_FRAME_IN_FLIGHT_MAX]->Wait();
 	}
 
 	void ViewportRenderer::OnWindowSizeChanged(uint32 w, uint32 h) {

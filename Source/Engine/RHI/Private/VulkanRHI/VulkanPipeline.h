@@ -14,16 +14,18 @@ public:
 	~VulkanDescriptorSetMgr();
 	VkDescriptorSetLayout GetLayoutHandle(const RHIShaderParamSetLayout& layout);
 	VkDescriptorPool GetPool();
+	VkDescriptorPool GetReservePool();
 	VkDescriptorSet AllocateDescriptorSet(VkDescriptorSetLayout layout);
-	void FreeDescriptorSet(VkDescriptorSet set);
-	void AllocateDescriptorSets(TConstArrayView<VkDescriptorSetLayout> layouts, TArrayView<VkDescriptorSet> sets);
-	void FreeDescriptorSets(TArrayView<VkDescriptorSet> sets);
-	void Update();
+	bool AllocateDescriptorSets(TConstArrayView<VkDescriptorSetLayout> layouts, TArrayView<VkDescriptorSet> sets);
+	void BeginFrame();
 private:
 	VulkanDevice* m_Device;
 	TUnorderedMap<uint64, VkDescriptorSetLayout> m_LayoutMap;
 	TArray<VkDescriptorPool> m_Pools;
-	VkDescriptorPool AddPool();
+	VkDescriptorPool m_ReservePool; // for imgui
+	uint32 m_PoolMaxIndex;
+	void CreatePool(VkDescriptorPool* poolPtr);
+	void AddPool();
 };
 
 // cache parameters for writing descriptor set

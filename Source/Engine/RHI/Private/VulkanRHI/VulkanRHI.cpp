@@ -40,7 +40,7 @@ VulkanRHI::~VulkanRHI() {
 void VulkanRHI::BeginFrame() {
 	m_Device->GetCommandContext()->BeginFrame();
 	m_Device->GetUploader()->BeginFrame();
-	m_Device->GetDescriptorMgr()->Update();
+	m_Device->GetDescriptorMgr()->BeginFrame();
 	m_Device->GetMemoryMgr()->Update();
 }
 

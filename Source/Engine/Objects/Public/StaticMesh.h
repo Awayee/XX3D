@@ -38,6 +38,7 @@ namespace Object {
 		RHIBufferPtr VertexBuffer;
 		RHIBufferPtr IndexBuffer;
 		RHITexture* Texture;
+		Math::AABB3 AABB;
 	};
 	struct StaticMeshComponent {
 		void BuildFromAsset(const Asset::MeshAsset& meshAsset);

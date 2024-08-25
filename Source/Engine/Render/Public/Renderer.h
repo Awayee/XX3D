@@ -31,7 +31,6 @@ namespace Render {
 	public:
 		void Run();
 		void WaitAllFence();
-		void WaitCurrentFence();
 		void OnWindowSizeChanged(uint32 w, uint32 h);
 		void SetRenderScene(IRenderScene* scene) { m_RenderScene = scene; }
 	private:

@@ -251,7 +251,6 @@ namespace Editor {
 	}
 
 	AssetManager::AssetManager(const char* rootPath) {
-		BakeEngineAssets();
 		m_RootPath = rootPath;
 		BuildTree();
 	}

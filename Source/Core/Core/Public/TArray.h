@@ -13,7 +13,7 @@ private:
 	T* data;
 public:
 	TFixedArray(SizeType size) {
-		data = new T[size];
+		data = size > 0 ? (new T[size]) : nullptr;
 	}
 	TFixedArray(const TFixedArray&) = delete;
 	TFixedArray(TFixedArray&& rhs)noexcept {
@@ -216,6 +216,14 @@ public:
 
 	constexpr uint32 ByteSize() const {
 		return L * sizeof(T);
+	}
+
+	T* Data() {
+		return m_Data;
+	}
+
+	const T* Data() const {
+		return m_Data;
 	}
 
 	T& operator[](uint32 i) {

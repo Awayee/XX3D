@@ -57,9 +57,9 @@ namespace Render {
 		~RGRenderNode() override = default;
 		void ReadSRV(RGTextureNode* node);
 		void ReadColorTarget(RGTextureNode* node, uint32 i, RHITextureSubDesc subRes={}); // keep content written by previous pass (without clear)
-		void ReadDepthTarget(RGTextureNode* node);
+		void ReadDepthTarget(RGTextureNode* node, RHITextureSubDesc subRes={});
 		void WriteColorTarget(RGTextureNode* node, uint32 i, RHITextureSubDesc subRes={}); // write new targets
-		void WriteDepthTarget(RGTextureNode* node);
+		void WriteDepthTarget(RGTextureNode* node, RHITextureSubDesc subRes={});
 		void SetArea(const Rect& rect);
 		void SetTask(RenderTask&& f) { m_Task = MoveTemp(f); }
 		void InsertFence(RHIFence* fence) { m_Fence = fence; }
@@ -68,6 +68,7 @@ namespace Render {
 		struct TargetInfo {
 			RGTextureNode* Node{ nullptr };
 			RHITextureSubDesc SubRes;
+			uint8 SubResIndex{ 0 };
 			ERTLoadOption LoadOp{ ERTLoadOption::NoAction };
 		};
 		TargetInfo m_DepthTarget;
@@ -120,13 +121,18 @@ namespace Render {
 		explicit RGTextureNode(uint32 nodeID, RHITexture* texture) : RGResourceNode(nodeID), m_Desc(texture->GetDesc()), m_RHI(texture) {}
 		RHITexture* GetRHI();
 		void SetTargetState(EResourceState targetState) { m_TargetState = targetState; }
-		EResourceState GetTargetState() const { return m_CurrentState; }
-		void TransitionToState(RHICommandBuffer* cmd, EResourceState dstState, RHITextureSubDesc subRes);
-		void TransitionToTargetState(RHICommandBuffer* cmd, RHITextureSubDesc subRes);
+		EResourceState GetTargetState() const { return m_TargetState; }
+		uint8 RegisterSubRes(RHITextureSubDesc subRes); // register sub resource for connected node, return the index of m_SubResStates
+		void TransitionToState(RHICommandBuffer* cmd, EResourceState dstState, uint8 subResIdx);
+		void TransitionToTargetState(RHICommandBuffer* cmd, uint8 subResIdx);
 	private:
 		RHITextureDesc m_Desc;
 		RHITexture* m_RHI;
-		EResourceState m_CurrentState{ EResourceState::Unknown }; // the state at pass output
+		struct SubResState {
+			RHITextureSubDesc SubRes{};
+			EResourceState State{EResourceState::Unknown};
+		};
+		TArray<SubResState> m_SubResStates;
 		EResourceState m_TargetState{ EResourceState::Unknown }; // the state at next pass input
 	};
 #pragma endregion

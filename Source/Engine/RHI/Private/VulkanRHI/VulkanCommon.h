@@ -109,6 +109,7 @@ typedef void* WindowHandle;
 	macroName(PFN_vkDestroyFramebuffer                       , vkDestroyFramebuffer)\
 	macroName(PFN_vkCmdPipelineBarrier                       , vkCmdPipelineBarrier)\
 	macroName(PFN_vkCreateDescriptorPool                     , vkCreateDescriptorPool)\
+	macroName(PFN_vkResetDescriptorPool                      , vkResetDescriptorPool)\
 	macroName(PFN_vkDestroyDescriptorPool                    , vkDestroyDescriptorPool)\
 	macroName(PFN_vkAllocateDescriptorSets                   , vkAllocateDescriptorSets)\
 	macroName(PFN_vkUpdateDescriptorSets                     , vkUpdateDescriptorSets)\

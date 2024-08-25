@@ -30,7 +30,7 @@ namespace Engine {
 		uint32        MSAASampleCount{ 0 };
 		ERenderPath   RenderPath;
 		USize2D       WindowSize;
-		uint32        ShadowMapSize;
+		uint32        DefaultShadowMapSize;
 		XString       StartLevel;
 	};
 

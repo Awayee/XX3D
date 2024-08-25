@@ -110,8 +110,8 @@ VkFormat ToVkFormat(ERHIFormat f) {
 
 VkImageCreateFlags ToImageCreateFlags(ETextureDimension dimension) {
 	switch (dimension) {
-	case ETextureDimension::Tex2D: return 0;
-	case ETextureDimension::Tex2DArray: return VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
+	case ETextureDimension::Tex2D: 
+	case ETextureDimension::Tex2DArray: return 0;
 	case ETextureDimension::TexCube:
 	case ETextureDimension::TexCubeArray: return VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 	case ETextureDimension::Tex3D: return 0;
@@ -320,10 +320,10 @@ VkPipelineRasterizationStateCreateInfo ToRasterizationStateCreateInfo(const RHIR
 	info.polygonMode = ToPolygonMode(desc.FillMode);
 	info.cullMode = ToVkCullMode(desc.CullMode);
 	info.frontFace = desc.Clockwise ? VK_FRONT_FACE_CLOCKWISE : VK_FRONT_FACE_COUNTER_CLOCKWISE;
-	info.depthBiasEnable = 0.0f == desc.DepthBias;
+	info.depthBiasEnable = 0.0f != desc.DepthBiasConstant;
 	if (info.depthBiasEnable) {
-		info.depthBiasConstantFactor = desc.DepthBias;
-		info.depthBiasSlopeFactor = desc.SlopeScaleDepthBias;
+		info.depthBiasConstantFactor = desc.DepthBiasConstant;
+		info.depthBiasSlopeFactor = desc.DepthBiasSlope;
 	}
 	info.lineWidth = 1.0f;
 	return info;

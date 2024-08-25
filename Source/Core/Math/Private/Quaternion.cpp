@@ -29,6 +29,13 @@ namespace Math {
 		};
     }
 
+    template <typename T> Quaternion<T> Quaternion<T>::FromTo(const Vector3<T>& from, const Vector3<T>& to) {
+        auto axis = from.Cross(to);
+        T cosAngle = from.Dot(to);
+        T angle = Math::ACos(cosAngle);
+        return AngleAxis(angle, axis);
+    }
+
     template <typename T> T Quaternion<T>::Roll() const {
         return static_cast<T>(Math::ATan2(static_cast<T>(2) * (X * Y + W * Z), W * W + X * X - Y * Y - Z * Z));
     }

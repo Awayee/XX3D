@@ -22,6 +22,24 @@ inline bool BindingIsImage(EBindingType type) {
 		type == EBindingType::TextureSampler;
 }
 
+
+VulkanDescriptorSetMgr::VulkanDescriptorSetMgr(VulkanDevice* device) : m_Device(device), m_ReservePool(VK_NULL_HANDLE), m_PoolMaxIndex(VK_INVALID_INDEX) {
+	AddPool();
+}
+
+VulkanDescriptorSetMgr::~VulkanDescriptorSetMgr() {
+	for (auto& [hs, layoutHandle] : m_LayoutMap) {
+		vkDestroyDescriptorSetLayout(m_Device->GetDevice(), layoutHandle, nullptr);
+	}
+	for (VkDescriptorPool& pool : m_Pools) {
+		vkDestroyDescriptorPool(m_Device->GetDevice(), pool, nullptr);
+		pool = VK_NULL_HANDLE;
+	}
+	if(m_ReservePool) {
+		vkDestroyDescriptorPool(m_Device->GetDevice(), m_ReservePool, nullptr);
+	}
+}
+
 VkDescriptorSetLayout VulkanDescriptorSetMgr::GetLayoutHandle(const RHIShaderParamSetLayout& layout) {
 	uint64 hs = GetLayoutHash(layout);
 	auto iter = m_LayoutMap.find(hs);
@@ -49,49 +67,62 @@ VkDescriptorSetLayout VulkanDescriptorSetMgr::GetLayoutHandle(const RHIShaderPar
 }
 
 VkDescriptorPool VulkanDescriptorSetMgr::GetPool() {
-	return m_Pools[0];
+	return m_Pools[m_PoolMaxIndex];
+}
+
+VkDescriptorPool VulkanDescriptorSetMgr::GetReservePool() {
+	if(VK_NULL_HANDLE == m_ReservePool) {
+		CreatePool(&m_ReservePool);
+	}
+	return m_ReservePool;
 }
 
 VkDescriptorSet VulkanDescriptorSetMgr::AllocateDescriptorSet(VkDescriptorSetLayout layout) {
 	VkDescriptorSet set;
-	VkDescriptorSetAllocateInfo allocateInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr };
-	allocateInfo.descriptorPool = GetPool();
-	allocateInfo.descriptorSetCount = 1;
-	allocateInfo.pSetLayouts = &layout;
-	vkAllocateDescriptorSets(m_Device->GetDevice(), &allocateInfo, &set);
+	AllocateDescriptorSets({ layout }, { set });
 	return set;
 }
 
-void VulkanDescriptorSetMgr::FreeDescriptorSet(VkDescriptorSet set) {
-	vkFreeDescriptorSets(m_Device->GetDevice(), GetPool(), 1, &set);
-}
-
-void VulkanDescriptorSetMgr::AllocateDescriptorSets(TConstArrayView<VkDescriptorSetLayout> layouts, TArrayView<VkDescriptorSet> sets) {
+bool VulkanDescriptorSetMgr::AllocateDescriptorSets(TConstArrayView<VkDescriptorSetLayout> layouts, TArrayView<VkDescriptorSet> sets) {
 	VkDescriptorSetAllocateInfo allocateInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr };
 	allocateInfo.descriptorPool = GetPool();
 	allocateInfo.descriptorSetCount = layouts.Size();
 	allocateInfo.pSetLayouts = layouts.Data();
-	vkAllocateDescriptorSets(m_Device->GetDevice(), &allocateInfo, sets.Data());
+	VkResult allocResult = vkAllocateDescriptorSets(m_Device->GetDevice(), &allocateInfo, sets.Data());
+	switch (allocResult) {
+	case VK_SUCCESS:
+		//all good, return
+		return true;
+	case VK_ERROR_FRAGMENTED_POOL:
+	case VK_ERROR_OUT_OF_POOL_MEMORY:
+		//reallocate pool
+		break;
+	default:
+		LOG_WARNING("[VulkanDescriptorSetMgr::AllocateDescriptorSets] Could not allocate descriptor sets!");
+		//unrecoverable error
+		return false;
+	}
+	
+	AddPool();
+	return AllocateDescriptorSets(layouts, sets);
 }
 
-void VulkanDescriptorSetMgr::FreeDescriptorSets(TArrayView<VkDescriptorSet> sets) {
-	vkFreeDescriptorSets(m_Device->GetDevice(), GetPool(), sets.Size(), sets.Data());
-	for(VkDescriptorSet& set: sets) {
-		set = VK_NULL_HANDLE;
+void VulkanDescriptorSetMgr::BeginFrame() {
+	// reset pools every frame
+	m_PoolMaxIndex = 0;
+	for(auto pool: m_Pools) {
+		vkResetDescriptorPool(m_Device->GetDevice(), pool, 0);
 	}
 }
 
-void VulkanDescriptorSetMgr::Update() {
-}
-
-VkDescriptorPool VulkanDescriptorSetMgr::AddPool() {
-	VkDescriptorPoolCreateInfo info{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, nullptr};
+void VulkanDescriptorSetMgr::CreatePool(VkDescriptorPool* poolPtr) {
+	VkDescriptorPoolCreateInfo info{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, nullptr };
 	info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 	constexpr uint8 bindingCount = static_cast<uint8>(EBindingType::MaxNum);
-	static const uint32 s_CountPerType[bindingCount] = {8, 128, 64, 128, 16, 128};
+	static const uint32 s_CountPerType[bindingCount] = { 32, 64, 128, 64, 128, 64 };
 	VkDescriptorPoolSize sizes[bindingCount];
 	uint32 allCount = 0;
-	for(uint8 i=0; i<static_cast<uint8>(EBindingType::MaxNum); ++i) {
+	for (uint8 i = 0; i < static_cast<uint8>(EBindingType::MaxNum); ++i) {
 		sizes[i].type = ToVkDescriptorType(static_cast<EBindingType>(i));
 		sizes[i].descriptorCount = s_CountPerType[i];
 		allCount += sizes[i].descriptorCount;
@@ -99,10 +130,18 @@ VkDescriptorPool VulkanDescriptorSetMgr::AddPool() {
 	info.poolSizeCount = bindingCount;
 	info.pPoolSizes = sizes;
 	info.maxSets = allCount;
-	VkDescriptorPool handle;
-	vkCreateDescriptorPool(m_Device->GetDevice(), &info, nullptr, &handle);
-	m_Pools.PushBack(handle);
-	return handle;
+	VK_CHECK(vkCreateDescriptorPool(m_Device->GetDevice(), &info, nullptr, poolPtr));
+}
+
+void VulkanDescriptorSetMgr::AddPool() {
+	m_PoolMaxIndex = (VK_INVALID_INDEX == m_PoolMaxIndex) ? 0 : (m_PoolMaxIndex + 1);
+	if(m_PoolMaxIndex < m_Pools.Size()) {
+		return;
+	}
+	CreatePool(&m_Pools.EmplaceBack());
+	if(m_Pools.Size() > 1) {
+		LOG_WARNING("[VulkanDescriptorSetMgr::AddPool] Pool Size = %u", m_Pools.Size());
+	}
 }
 
 VulkanDescriptorSetParamCache::VulkanDescriptorSetParamCache(const RHIShaderParamSetLayout& layout): m_LayoutRef(layout) {
@@ -191,20 +230,6 @@ void VulkanPipelineLayout::Build(VulkanDevice* device, TConstArrayView<RHIShader
 	PipelineLayoutMeta = meta;
 }
 
-VulkanDescriptorSetMgr::VulkanDescriptorSetMgr(VulkanDevice* device) : m_Device(device) {
-	AddPool();
-}
-
-VulkanDescriptorSetMgr::~VulkanDescriptorSetMgr() {
-	for (auto& [hs, layoutHandle] : m_LayoutMap) {
-		vkDestroyDescriptorSetLayout(m_Device->GetDevice(), layoutHandle, nullptr);
-	}
-	for (VkDescriptorPool& pool : m_Pools) {
-		vkDestroyDescriptorPool(m_Device->GetDevice(), pool, nullptr);
-		pool = VK_NULL_HANDLE;
-	}
-}
-
 VulkanPipelineDescriptorSetCache::VulkanPipelineDescriptorSetCache(VulkanDevice* device, const VulkanPipelineLayout* layout):
 	m_Device(device), m_Layout(layout) {
 	const uint32 setCount = layout->PipelineLayoutMeta.Size();
@@ -218,7 +243,6 @@ VulkanPipelineDescriptorSetCache::VulkanPipelineDescriptorSetCache(VulkanDevice*
 }
 
 VulkanPipelineDescriptorSetCache::~VulkanPipelineDescriptorSetCache() {
-	m_Device->GetDescriptorMgr()->FreeDescriptorSets(m_AllDescriptorSets);
 }
 
 void VulkanPipelineDescriptorSetCache::SetParam(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& param) {

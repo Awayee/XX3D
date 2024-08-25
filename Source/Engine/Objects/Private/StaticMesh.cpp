@@ -1,4 +1,6 @@
 #include "Objects/Public/StaticMesh.h"
+
+#include "Objects/Public/DirectionalLight.h"
 #include "Objects/Public/RenderScene.h"
 #include "Objects/Public/TextureResource.h"
 #include "Render/Public/DefaultResource.h"
@@ -41,6 +43,8 @@ namespace Object {
 			primitive.IndexBuffer->UpdateData(srcPrimitive.Indices.Data(), srcPrimitive.Indices.ByteSize(), 0);
 			// texture
 			primitive.Texture = TextureResourceMgr::Instance()->GetTexture(srcPrimitive.MaterialFile);
+			// aabb
+			primitive.AABB = srcPrimitive.AABB;
 		}
 		UniformBuffer = r->CreateBuffer({ EBufferFlagBit::BUFFER_FLAG_UNIFORM, sizeof(TransformComponent::TransformInfo), 0});
 	}
@@ -49,26 +53,39 @@ namespace Object {
 		// update uniform
 		RHIBuffer* uniformBuffer = staticMesh->UniformBuffer.Get();
 		uniformBuffer->UpdateData((void*)(&transform->GetTransformInfo()), sizeof(TransformComponent::TransformInfo), 0);
-
+		// create draw call
 		Object::RenderScene* scene = (Object::RenderScene*)ecsScene;
+		Object::RenderCamera* mainCamera = scene->GetMainCamera();
+		Object::DirectionalLight* light = scene->GetDirectionalLight();
 		Render::DrawCallContext& drawCallContext = scene->GetDrawCallContext();
 		for(auto& primitive: staticMesh->Primitives) {
-			drawCallContext.PushDrawCall(Render::EDrawCallQueueType::BasePass, [&primitive, uniformBuffer](RHICommandBuffer* cmd) {
-				cmd->BindVertexBuffer(primitive.VertexBuffer.Get(), 0, 0);
-				cmd->BindIndexBuffer(primitive.IndexBuffer.Get(), 0);
-				cmd->SetShaderParam(1, 0, RHIShaderParam::UniformBuffer(uniformBuffer));
-				// material albedo
-				cmd->SetShaderParam(2, 0, RHIShaderParam::Texture(primitive.Texture));
-				RHISampler* defaultSampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp);
-				cmd->SetShaderParam(2, 1, RHIShaderParam::Sampler(defaultSampler));
-				cmd->DrawIndexed(primitive.IndexCount, 1, 0, 0, 0);
-			});
-			drawCallContext.PushDrawCall(Render::EDrawCallQueueType::DirectionalShadow, [&primitive, uniformBuffer](RHICommandBuffer* cmd) {
-				cmd->SetShaderParam(1, 0, RHIShaderParam::UniformBuffer(uniformBuffer));
-				cmd->BindVertexBuffer(primitive.VertexBuffer.Get(), 0, 0);
-				cmd->BindIndexBuffer(primitive.IndexBuffer.Get(), 0);
-				cmd->DrawIndexed(primitive.IndexCount, 1, 0, 0, 0);
-			});
+			const Math::AABB3 aabb = primitive.AABB.Transform(transform->GetTransformMat());
+			if(mainCamera->GetFrustum().Cull(aabb)) {
+				drawCallContext.PushDrawCall(Render::EDrawCallQueueType::BasePass, [&primitive, uniformBuffer](RHICommandBuffer* cmd) {
+					cmd->BindVertexBuffer(primitive.VertexBuffer.Get(), 0, 0);
+					cmd->BindIndexBuffer(primitive.IndexBuffer.Get(), 0);
+					cmd->SetShaderParam(1, 0, RHIShaderParam::UniformBuffer(uniformBuffer));
+					// material albedo
+					cmd->SetShaderParam(2, 0, RHIShaderParam::Texture(primitive.Texture));
+					RHISampler* defaultSampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp);
+					cmd->SetShaderParam(2, 1, RHIShaderParam::Sampler(defaultSampler));
+					cmd->DrawIndexed(primitive.IndexCount, 1, 0, 0, 0);
+				});
+			}
+			// for shadow map
+			for(uint32 i=0; i<light->GetCascadeNum(); ++i) {
+				const auto& frustum = light->GetFrustum(i);
+				//if(frustum.Cull(aabb)) {
+				if(1){
+					auto& dcQueue = light->GetDrawCallQueue(i);
+					dcQueue.PushDrawCall([&primitive, uniformBuffer](RHICommandBuffer* cmd) {
+						cmd->SetShaderParam(1, 0, RHIShaderParam::UniformBuffer(uniformBuffer));
+						cmd->BindVertexBuffer(primitive.VertexBuffer.Get(), 0, 0);
+						cmd->BindIndexBuffer(primitive.IndexBuffer.Get(), 0);
+						cmd->DrawIndexed(primitive.IndexCount, 1, 0, 0, 0);
+					});
+				}
+			}
 		}
 	}
 

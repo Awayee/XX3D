@@ -31,7 +31,9 @@ namespace Editor {
 	}
 
 	EditorLevel::~EditorLevel() {
-		
+		for(auto& mesh: m_Meshes) {
+			m_Scene->RemoveEntity(mesh.ObjectEntityID);
+		}
 	}
 
 	Object::RenderScene* EditorLevel::GetScene() {
@@ -67,17 +69,21 @@ namespace Editor {
 	}
 
 	void EditorLevel::SaveAsset(Asset::LevelAsset* asset) {
-		Object::Camera* camera = m_Scene->GetMainCamera();
-		asset->CameraData.Eye = camera->GetView().Eye;
-		asset->CameraData.At = camera->GetView().At;
-		asset->CameraData.Up = camera->GetView().Up;
-		asset->CameraData.Near = camera->GetNear();
-		asset->CameraData.Far = camera->GetFar();
-		asset->CameraData.Fov = camera->GetFov();
+		Object::RenderCamera* camera = m_Scene->GetMainCamera();
+		auto& view = camera->GetView();
+		auto& projection = camera->GetProjection();
+		asset->CameraData.Eye = view.Eye;
+		asset->CameraData.At = view.At;
+		asset->CameraData.Up = view.Up;
+		asset->CameraData.ProjType = (int)projection.ProjType;
+		asset->CameraData.Near = projection.Near;
+		asset->CameraData.Far = projection.Far;
+		asset->CameraData.Fov = projection.Fov;
+		asset->CameraData.ViewSize = projection.ViewSize;
 
 		Object::DirectionalLight* dLight = m_Scene->GetDirectionalLight();
-		asset->DirectionalLightData.Dir = dLight->GetLightDir();
-		asset->DirectionalLightData.Color = dLight->GetLightColor();
+		asset->DirectionalLightData.Rotation = dLight->GetRotation();
+		asset->DirectionalLightData.Color = dLight->GetColor();
 
 		asset->Meshes.Reset();
 		asset->Meshes.Resize(m_Meshes.Size());

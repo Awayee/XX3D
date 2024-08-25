@@ -31,17 +31,19 @@ namespace Object {
 	}
 
 	RHITexture* TextureResourceMgr::GetTexture(const XString& fileName) {
-		if(auto iter = m_All.find(fileName); iter != m_All.end()) {
-			return iter->second.GetRHI();
+		if(!fileName.empty()) {
+			if (auto iter = m_All.find(fileName); iter != m_All.end()) {
+				return iter->second.GetRHI();
+			}
+			Asset::TextureAsset imageAsset;
+			if (Asset::AssetLoader::LoadProjectAsset(&imageAsset, fileName.c_str())) {
+				TextureResource texRes{ imageAsset };
+				auto* texRHI = texRes.GetRHI();
+				m_All.emplace(fileName, MoveTemp(texRes));
+				return texRHI;
+			}
+			LOG_WARNING("Failed to load texture file: %s", fileName.c_str());
 		}
-		Asset::TextureAsset imageAsset;
-		if(Asset::AssetLoader::LoadProjectAsset(&imageAsset, fileName.c_str())) {
-			TextureResource texRes{ imageAsset };
-			auto* texRHI = texRes.GetRHI();
-			m_All.emplace(fileName, MoveTemp(texRes));
-			return texRHI;
-		}
-		LOG_WARNING("Failed to load texture file: %s", fileName.c_str());
 		return Render::DefaultResources::Instance()->GetDefaultTexture2D(Render::DefaultResources::TEX_WHITE);
 	}
 }

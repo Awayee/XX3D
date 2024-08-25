@@ -1,5 +1,6 @@
 #pragma once
 #include "AssetCommon.h"
+#include "Math/Public/Geometry.h"
 
 namespace Asset {
 
@@ -21,6 +22,7 @@ namespace Asset {
 			XString BinaryFile;
 			XString MaterialFile;
 			XString Name;
+			Math::AABB3 AABB;
 			TArray<XString> Textures;
 			TArray<AssetVertex> Vertices;
 			TArray<IndexType> Indices;

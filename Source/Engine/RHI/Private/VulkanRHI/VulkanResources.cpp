@@ -65,8 +65,8 @@ VulkanRHITexture::~VulkanRHITexture() {
 VkImageView VulkanRHITexture::GetView(ETextureSRVType type, RHITextureSubDesc sub) {
 	switch (type) {
 	case ETextureSRVType::Default: return GetDefaultView();
-	case ETextureSRVType::Texture2D: return Get2DView(sub.MipIndex, sub.LayerIndex);
-	case ETextureSRVType::CubeMap: return GetCubeView(sub.MipIndex, sub.LayerIndex);
+	case ETextureSRVType::Texture2D: return Get2DView(sub.MipIndex, sub.ArrayIndex);
+	case ETextureSRVType::CubeMap: return GetCubeView(sub.MipIndex, sub.ArrayIndex);
 	default: LOG_ERROR("[VulkanRHITexture::GetView] Vinalid src type!");
 	}
 }
@@ -192,15 +192,17 @@ VkImageView VulkanDepthStencilTexture::GetView(ETextureSRVType type, RHITextureS
 }
 
 VkImageView VulkanDepthStencilTexture::GetDepthView() {
+	CHECK(m_Desc.Flags & ETextureFlagBit::TEXTURE_FLAG_DEPTH_TARGET);
 	if(VK_INVALID_INDEX == m_DepthViewIndex) {
-		m_DepthViewIndex = CreateView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1);
+		m_DepthViewIndex = CreateView(ToImageViewType(m_Desc.Dimension), VK_IMAGE_ASPECT_DEPTH_BIT, 0, m_Desc.MipSize, 0, m_Desc.ArraySize);
 	}
 	return m_AllViews[m_DepthViewIndex];
 }
 
 VkImageView VulkanDepthStencilTexture::GetStencilView() {
+	CHECK(m_Desc.Flags & ETextureFlagBit::TEXTURE_FLAG_STENCIL);
 	if (VK_INVALID_INDEX == m_StencilViewIndex) {
-		m_StencilViewIndex = CreateView(VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1);
+		m_StencilViewIndex = CreateView(ToImageViewType(m_Desc.Dimension), VK_IMAGE_ASPECT_STENCIL_BIT, 0, m_Desc.MipSize, 0, m_Desc.ArraySize);
 	}
 	return m_AllViews[m_StencilViewIndex];
 }

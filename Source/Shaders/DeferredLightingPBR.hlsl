@@ -1,3 +1,7 @@
+//#include "ShadowMap.hlsli"
+#define CASCADE_NUM 4
+#define SHADOW_VAL 0.1
+
 struct VSOutput {
 	float4 Position:SV_POSITION;
 	float2 UV: TEXCOORD0;
@@ -21,7 +25,7 @@ VSOutput MainVS(VSInput vIn, uint vID: SV_VertexID) {
 }
 
 //ps
-struct CameraUBO {
+struct ShadowCameraUBO {
 	float4x4 View;
 	float4x4 Proj;
 	float4x4 VP;
@@ -31,19 +35,22 @@ struct CameraUBO {
 struct LightUBO {
 	float4 Dir;
 	float4 Color;
+    float4 FarDistances;
+    float4x4 VPMats[CASCADE_NUM];
 };
 
-[[vk::binding(0, 0)]] cbuffer uCamera { CameraUBO uCamera; };
+[[vk::binding(0, 0)]] cbuffer uCamera { ShadowCameraUBO uCamera; };
 [[vk::binding(1, 0)]] cbuffer uLight { LightUBO uLight; };
-[[vk::binding(2, 0)]] Texture2D<float4> inNormal;
-[[vk::binding(3, 0)]] Texture2D<float4> inAlbedo;
-[[vk::binding(4, 0)]] Texture2D<float> inDepth;
-[[vk::binding(5, 0)]] SamplerState inPointSampler;
+[[vk::binding(2, 0)]] Texture2DArray<float> inShadowMap;
+[[vk::binding(3, 0)]] Texture2D<float4> inNormal;
+[[vk::binding(4, 0)]] Texture2D<float4> inAlbedo;
+[[vk::binding(5, 0)]] Texture2D<float> inDepth;
+[[vk::binding(6, 0)]] SamplerState inPointSampler;
+[[vk::binding(6, 0)]] SamplerState inLinearSampler;
 
 struct PSOutput {
 	half4 OutColor:SV_TARGET;
 };
-
 
 float3 RebuildWorldPos(float2 uv) {
 	// get depth val
@@ -61,7 +68,6 @@ static float METALIC = 0.1;
 static float LIGHT_STRENGTH = 3.0;
 static float GLOSS = 16.0;
 static float3 AMBIENT = float3(0.1, 0.1, 0.1);
-
 
 // Normal distribution
 float DistributionGGX(float3 N, float3 H, float roughness) {
@@ -100,7 +106,106 @@ float3 PBRDirectLight(float3 V, float3 L, float3 N, float3 albedo, float3 irradi
 	return irradiance * (Kd * albedo / PI + Fs) * NdotL;
 }
 
-PSOutput MainPS(VSOutput pIn) {
+float2 GetTexelSize2D(Texture2DArray<float> tex) {
+    uint w, h, l, m;
+    tex.GetDimensions(0, w, h, l, m);
+    return float2(1.0 / (float) w, 1.0 / (float) h);
+}
+
+float PCF25(Texture2DArray<float> inShadowMap, SamplerState inSampler, float2 uv, uint cascade, float testZ){
+#define PCF_NUM 25
+    float2 texelSize = GetTexelSize2D(inShadowMap);
+    const float2 PoissonDist[PCF_NUM] = {
+        float2(-0.978698, -0.0884121),
+	    float2(-0.841121, 0.521165),
+	    float2(-0.71746, -0.50322),
+	    float2(-0.702933, 0.903134),
+	    float2(-0.663198, 0.15482),
+	    float2(-0.495102, -0.232887),
+	    float2(-0.364238, -0.961791),
+	    float2(-0.345866, -0.564379),
+	    float2(-0.325663, 0.64037),
+	    float2(-0.182714, 0.321329),
+	    float2(-0.142613, -0.0227363),
+	    float2(-0.0564287, -0.36729),
+	    float2(-0.0185858, 0.918882),
+	    float2(0.0381787, -0.728996),
+	    float2(0.16599, 0.093112),
+	    float2(0.253639, 0.719535),
+	    float2(0.369549, -0.655019),
+	    float2(0.423627, 0.429975),
+	    float2(0.530747, -0.364971),
+	    float2(0.566027, -0.940489),
+	    float2(0.639332, 0.0284127),
+	    float2(0.652089, 0.669668),
+	    float2(0.773797, 0.345012),
+	    float2(0.968871, 0.840449),
+	    float2(0.991882, -0.657338)
+    };
+    float shadowVal = 0.0f;
+    const float dilation = 1.0f;
+	[unroll]
+    for (uint i = 0; i < PCF_NUM; ++i){
+        float2 offsetUV = uv + texelSize * PoissonDist[i] * dilation;
+        float closestZ = inShadowMap.Sample(inLinearSampler, float3(offsetUV, (float) cascade));
+        shadowVal += (1.0 + (SHADOW_VAL - 1.0) * step(closestZ, testZ)); // in shadow distance and current z is greater than closest z.
+    }
+    return shadowVal / PCF_NUM;
+}
+
+float CalcShadowVal(Texture2DArray<float> inShadowMap, SamplerState inSampler, float2 uv, uint cascade, float testZ) {
+    float closestZ = inShadowMap.Sample(inLinearSampler, float3(uv, (float) cascade)).r;
+    return (1.0 + (SHADOW_VAL - 1.0) * step(closestZ, testZ));
+}
+
+float PCFByMicrosoft(Texture2DArray<float> inShadowMap, SamplerState inSampler, float2 uv, uint cascade, float testZ) {
+    float2 texelSize = GetTexelSize2D(inShadowMap);
+    const float dilation = 1.0f;
+    float d1 = dilation * texelSize.x * 0.125;
+    float d2 = dilation * texelSize.x * 0.875;
+    float d3 = dilation * texelSize.x * 0.625;
+    float d4 = dilation * texelSize.x * 0.375;
+    float result = (
+        2.0 * CalcShadowVal(inShadowMap, inSampler, uv, cascade, testZ) +
+        CalcShadowVal(inShadowMap, inSampler, uv + float2(-d2, d1), cascade, testZ) +
+        CalcShadowVal(inShadowMap, inSampler, uv + float2(-d1, -d2), cascade, testZ) +
+        CalcShadowVal(inShadowMap, inSampler, uv + float2(d2, -d1), cascade, testZ) +
+        CalcShadowVal(inShadowMap, inSampler, uv + float2(d1, d2), cascade, testZ) +
+        CalcShadowVal(inShadowMap, inSampler, uv + float2(-d4, d3), cascade, testZ) +
+        CalcShadowVal(inShadowMap, inSampler, uv + float2(-d3, -d4), cascade, testZ) +
+        CalcShadowVal(inShadowMap, inSampler, uv + float2(d4, -d3), cascade, testZ)+
+        CalcShadowVal(inShadowMap, inSampler, uv + float2(d4, d3), cascade, testZ)
+    ) / 10.0f;
+    return result;
+}
+
+// compute csm
+float ComputeCascadeShadow(float3 worldPos){
+	// to view space
+    float viewZ = abs(mul(uCamera.View, float4(worldPos, 1.0)).z);
+    uint cascade = 0;
+	// if out of shadow distance, return no shadow
+	if(viewZ > uLight.FarDistances[CASCADE_NUM-1]) {
+        return 1.0f;
+    }
+	[unroll]
+    for (uint i = 0; i < CASCADE_NUM; ++i){
+        if (viewZ < uLight.FarDistances[i]){
+            cascade = i;
+            break;
+        }
+    }
+    float4 clipPos = mul(uLight.VPMats[cascade], float4(worldPos, 1.0));
+    clipPos.xyz /= clipPos.w;
+    float currentZ = clipPos.z;
+	if(currentZ > 1.0f) {
+        return 1.0f;
+    }
+    float2 shadowMapUV = clamp(clipPos.xy * 0.5 + 0.5, 0.0f, 1.0f);
+    return PCFByMicrosoft(inShadowMap, inLinearSampler, shadowMapUV, cascade, currentZ);
+}
+
+PSOutput MainPS(VSOutput pIn){
 	float4 gNormal = inNormal.Sample(inPointSampler, pIn.UV).rgba;
 	float4 gAlbedo = inAlbedo.Sample(inPointSampler, pIn.UV).rgba;
 	float3 lightColor = uLight.Color.xyz;
@@ -118,6 +223,10 @@ PSOutput MainPS(VSOutput pIn) {
 	//ambient
 	float3 ambient = albedo * lightColor * 0.01;
 	float3 color = ambient + Lo;
+
+	//shadow
+    float shadowVal = ComputeCascadeShadow(worldPos);
+    color = color * shadowVal;
 
 	//gama correction
     //color = color / (color + float3(1.0, 1.0, 1.0));

@@ -23,7 +23,7 @@ namespace Editor {
 	}
 
 	void FolderAssetView::OnDrag() {
-		ImGui::SetDragDropPayload("Folder", m_Node, sizeof(FolderNode));
+		//ImGui::SetDragDropPayload("Folder", m_Node, sizeof(FolderNode));
 	}
 
 	FileAssetView::FileAssetView(FileNode* node): m_Node(node) {
@@ -54,9 +54,11 @@ namespace Editor {
 					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("File")) {
 						ASSERT(payload->DataSize == sizeof(FileNode), "");
 						const FileNode* fileNode = reinterpret_cast<const FileNode*>(payload->Data);
-						primitive.MaterialFile = fileNode->GetPathStr();
-						node->Save();
-						EditorLevelMgr::Instance()->ReloadLevel();
+						if(fileNode->GetExt() == ".texture") {
+							primitive.MaterialFile = fileNode->GetPathStr();
+							node->Save();
+							EditorLevelMgr::Instance()->ReloadLevel();
+						}
 					}
 					ImGui::EndDragDropTarget();
 				}

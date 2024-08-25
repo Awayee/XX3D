@@ -62,4 +62,8 @@ namespace Render {
 		}
 	}
 
+	RHISampler* GetDefaultSampler(ESamplerFilter filter, ESamplerAddressMode addressMode) {
+		return DefaultResources::Instance()->GetDefaultSampler(filter, addressMode);
+	}
+
 }

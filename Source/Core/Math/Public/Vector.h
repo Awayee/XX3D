@@ -101,17 +101,18 @@ namespace Math {
         Vector3<T>& operator/=(T scalar);
         Vector3<T>& operator/=(const Vector3<T>& rhs);
         T Length() const;
-        T SquaredLength() const { return X * X + Y * Y + Z * Z; }
+        T LengthSquared() const { return X * X + Y * Y + Z * Z; }
         T Distance(const Vector3<T>& rhs) const { return (*this - rhs).Length(); }
-        T SquaredDistance(const Vector3<T>& rhs) const { return (*this - rhs).SquaredLength(); }
-        T Dot(const Vector3<T>& vec) const { return X * vec.X + Y * vec.Y + Z * vec.Z; }
-        void Normalize();
-        Vector3<T> NormalizeCopy() const { Vector3<T> r{ X, Y, Z }; r.Normalize(); return r; }
-        void Cross(const Vector3<T>& rhs) { X = Y * rhs.Z - Z * rhs.Y; Y = Z * rhs.X - X * rhs.Z; Z = X * rhs.Y - Y * rhs.X; }
+        T DistanceSquared(const Vector3<T>& rhs) const { return (*this - rhs).LengthSquared(); }
+        T Dot(const Vector3<T>& rhs) const { return X * rhs.X + Y * rhs.Y + Z * rhs.Z; }
+        Vector3<T> Cross(const Vector3<T>& rhs) const { return Vector3<T>(Y * rhs.Z - Z * rhs.Y, Z * rhs.X - X * rhs.Z, X * rhs.Y - Y * rhs.X); }
+        void NormalizeSelf();
+        Vector3<T> Normalize() const { Vector3<T> r{ X, Y, Z }; r.NormalizeSelf(); return r; }
 
         static const Vector3<T> ZERO;
-        static T Dot(const Vector3<T>& v0, const Vector3<T>& v1) { return v0.X * v1.X + v0.Y * v1.Y + v0.Z * v1.Z; }
-        static Vector3<T> Cross(const Vector3<T>& v0, const Vector3<T>& v1) { return Vector3<T>(v0.Y * v1.Z - v0.Z * v1.Y, v0.Z * v1.X - v0.X * v1.Z, v0.X * v1.Y - v0.Y * v1.X); }
+        static const Vector3<T> ONE;
+        static T Dot(const Vector3<T>& v0, const Vector3<T>& v1) { return v0.Dot(v1); }
+        static Vector3<T> Cross(const Vector3<T>& v0, const Vector3<T>& v1) { return v0.Cross(v1); }
         static Vector3<T> Max(const Vector3<T>& v0, const Vector3<T>& v1);
         static Vector3<T> Min(const Vector3<T>& v0, const Vector3<T>& v1);
         static Vector3<T> Abs(const Vector3<T>& v);

@@ -4,11 +4,11 @@
 
 namespace Math {
 
-	const float PI = 3.14159265358979323846264338327950288f;
+	constexpr  float PI = 3.14159265358979323846264338327950288f;
 	//const float Deg2Rad = PI / 180.0f;
-	const float Deg2Rad = 0.017453292519943295f;
+	constexpr  float Deg2Rad = 0.017453292519943295f;
 	//const float Rad2Deg = 180.0f / PI;
-	const float Rad2Deg = 57.29577951308232f;
+	constexpr  float Rad2Deg = 57.29577951308232f;
 	template<typename T> T Min(T a, T b) { return a < b ? a : b; }
 	template<typename T> T Max(T a, T b) { return a > b ? a : b; }
 	template<typename T> T Abs(T x) { return x < (T)0 ? -x : x; }
@@ -77,6 +77,9 @@ namespace Math {
 	}
 
 	template<typename T> T LowerExp2(T x) {
+		if (!(x & (x - 1))) {
+			return x;
+		}
 		return UpperExp2<T>(x >> 1);
 	}
 }

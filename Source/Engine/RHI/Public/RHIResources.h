@@ -64,13 +64,14 @@ struct RHITextureDesc {
 	uint8 _Padding{ 0 };
 	static RHITextureDesc Texture2D();
 	static RHITextureDesc TextureCube();
+	static RHITextureDesc Texture2DArray(uint8 arraySize);
 };
 
 struct RHITextureSubDesc {
 	uint8 MipIndex{ 0 };
 	uint8 MipCount{ 1 };
-	uint8 LayerIndex{ 0 };
-	uint8 LayerCount{ 1 };
+	uint8 ArrayIndex{ 0 };
+	uint8 ArrayCount{ 1 };
 };
 
 struct RHITextureOffset {
@@ -146,7 +147,7 @@ protected:
 struct RHIRenderPassInfo {
 	struct ColorTargetInfo {
 		RHITexture* Target{ nullptr };
-		uint8 LayerIndex{ 0 };
+		uint8 ArrayIndex{ 0 };
 		uint8 MipIndex{ 0 };
 		ERTLoadOption LoadOp{ ERTLoadOption::Clear };
 		ERTStoreOption StoreOp{ ERTStoreOption::EStore };
@@ -154,6 +155,8 @@ struct RHIRenderPassInfo {
 	};
 	struct DepthStencilTargetInfo {
 		RHITexture* Target{ nullptr };
+		uint8 ArrayIndex{ 0 };
+		uint8 MipIndex{ 0 };
 		ERTLoadOption DepthLoadOp{ ERTLoadOption::Clear };
 		ERTStoreOption DepthStoreOp{ ERTStoreOption::EStore };
 		ERTLoadOption StencilLoadOp{ ERTLoadOption::NoAction };
@@ -203,8 +206,8 @@ struct RHIRasterizerState {
 	ERasterizerFill FillMode{ ERasterizerFill::Solid };
 	ERasterizerCull CullMode{ ERasterizerCull::Back };
 	bool Clockwise{ false };
-	float DepthBias = 0.0f;
-	float SlopeScaleDepthBias = 0.0f;
+	float DepthBiasConstant = 0.0f;
+	float DepthBiasSlope = 0.0f;
 };
 
 struct RHIDepthStencilState {

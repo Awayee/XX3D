@@ -3,7 +3,7 @@
 #include "Math/Public/Math.h"
 
 namespace Object {
-	class Camera;
+	class RenderCamera;
 }
 
 namespace Editor {
@@ -21,7 +21,7 @@ namespace Editor {
 		bool m_MouseDown{ false };
 		bool m_ViewportShow{ false };
 
-		void CameraControl(Object::Camera* camera);
+		void CameraControl(Object::RenderCamera* camera);
 		void Update() override;
 		void WndContent() override;
 		void ReleaseRenderTarget();

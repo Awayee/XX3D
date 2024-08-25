@@ -10,7 +10,7 @@
 namespace Editor {
 
 
-	void MoveCamera(Object::Camera* camera, float x, float y, float z, bool local) {
+	void MoveCamera(Object::RenderCamera* camera, float x, float y, float z, bool local) {
 		Math::FVector3 eye = camera->GetView().Eye;
 		Math::FVector3 at = camera->GetView().At;
 		Math::FVector3 up = camera->GetView().Up;
@@ -25,18 +25,18 @@ namespace Editor {
 		}
 		eye += delta;
 		at += delta;
-		camera->SetView(eye, at, up);
+		camera->SetView({eye, at, up});
 	}
 
-	void RotateCamera(Object::Camera* camera, float x, float y, float z, bool localSpace) {
+	void RotateCamera(Object::RenderCamera* camera, float x, float y, float z, bool localSpace) {
 		Math::FVector3 eye = camera->GetView().Eye;
 		Math::FVector3 at = camera->GetView().At;
 		Math::FVector3 tempUp = camera->GetView().Up;
 		if (localSpace) {
 			Math::FVector3 forward = at - eye;
-			forward.Normalize();
+			forward.NormalizeSelf();
 			Math::FVector3 right = Math::FVector3::Cross(tempUp, forward);
-			right.Normalize();
+			right.NormalizeSelf();
 			Math::FVector3 up = Math::FVector3::Cross(forward, right);
 			Math::FQuaternion rotateQuat =
 				Math::FQuaternion::AngleAxis(z * 0.004f, forward) *
@@ -47,7 +47,7 @@ namespace Editor {
 		}
 		else {
 		}
-		camera->SetView(eye, at, tempUp);
+		camera->SetView({eye, at, tempUp});
 	}
 
 	WndViewport::WndViewport() : EditorWndBase("Viewport", ImGuiWindowFlags_NoBackground) {
@@ -61,7 +61,7 @@ namespace Editor {
 		}
 	}
 
-	void WndViewport::CameraControl(Object::Camera* camera) {
+	void WndViewport::CameraControl(Object::RenderCamera* camera) {
 		if(!ImGui::IsWindowFocused()) {
 			return;
 		}
@@ -128,7 +128,7 @@ namespace Editor {
 		if(!scene) {
 			return;
 		}
-		Object::Camera* camera = scene->GetMainCamera();
+		Object::RenderCamera* camera = scene->GetMainCamera();
 		CameraControl(camera);
 		auto size = ImGui::GetWindowSize();
 
@@ -165,7 +165,7 @@ namespace Editor {
 			desc.Width = m_ViewportSize.w;
 			desc.Height = m_ViewportSize.h;
 			m_RenderTarget = RHI::Instance()->CreateTexture(desc);
-			RHISampler* sampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::AnisotropicLinear, ESamplerAddressMode::Clamp);
+			RHISampler* sampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp);
 			m_RenderTargetID = ImGuiRHI::Instance()->RegisterImGuiTexture(m_RenderTarget.Get(), sampler);
 		}
 	}

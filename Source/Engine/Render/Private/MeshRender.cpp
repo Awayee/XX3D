@@ -1,6 +1,7 @@
 #include "Render/Public/MeshRender.h"
 #include "Render/Public/GlobalShader.h"
 #include "Math/Public/Math.h"
+#include "Asset/Public/AssetCommon.h"
 
 namespace Render {
 	IMPLEMENT_GLOBAL_SHADER(GBufferVS, "GBuffer.hlsl", "MainVS", SHADER_STAGE_VERTEX_BIT);
@@ -16,13 +17,6 @@ namespace Render {
 		MESH_SET_MATERIAL = 2,
 	};
 
-	struct FVertex {
-		Math::FVector3 Position;
-		Math::FVector3 Normal;
-		Math::FVector3 Tangent;
-		Math::FVector2 UV;
-	};
-
 	RHIGraphicsPipelineStatePtr CreateMeshGBufferRenderPSO(TConstArrayView<ERHIFormat> colorFormats, ERHIFormat depthFormat) {
 		// Create PSO
 		RHIGraphicsPipelineStateDesc desc{};
@@ -35,19 +29,21 @@ namespace Render {
 		layout[MESH_SET_SCENE] = {
 			{EBindingType::UniformBuffer, SHADER_STAGE_VERTEX_BIT | SHADER_STAGE_PIXEL_BIT},
 		};
-		layout[MESH_SET_OBJECT] = { {EBindingType::UniformBuffer, SHADER_STAGE_VERTEX_BIT} };
+		layout[MESH_SET_OBJECT] = {
+			{EBindingType::UniformBuffer, SHADER_STAGE_VERTEX_BIT}
+		};
 		layout[MESH_SET_MATERIAL] = {
 			{EBindingType::Texture, SHADER_STAGE_PIXEL_BIT},
 			{EBindingType::Sampler, SHADER_STAGE_PIXEL_BIT},
 		};
 		// vertex input
-		auto& vertexInput = desc.VertexInput;
-		vertexInput.Bindings = { {0, sizeof(FVertex), false} };
-		vertexInput.Attributes = {
+		auto& vi = desc.VertexInput;
+		vi.Bindings = { {0, sizeof(Asset::AssetVertex), false} };
+		vi.Attributes = {
 			{0, 0, ERHIFormat::R32G32B32_SFLOAT, 0},// position
-			{1, 0, ERHIFormat::R32G32B32_SFLOAT, offsetof(FVertex, Normal)},//normal
-			{2, 0, ERHIFormat::R32G32B32_SFLOAT, offsetof(FVertex, Tangent)},//tangent
-			{3, 0, ERHIFormat::R32G32_SFLOAT, offsetof(FVertex, UV)}
+			{1, 0, ERHIFormat::R32G32B32_SFLOAT, offsetof(Asset::AssetVertex, Normal)},//normal
+			{2, 0, ERHIFormat::R32G32B32_SFLOAT, offsetof(Asset::AssetVertex, Tangent)},//tangent
+			{3, 0, ERHIFormat::R32G32_SFLOAT, offsetof(Asset::AssetVertex, UV)},// uv
 		};
 
 		desc.BlendDesc.BlendStates={{false}, {false}};
@@ -72,11 +68,13 @@ namespace Render {
 		layout.Resize(1);
 		layout[0] = {
 			{EBindingType::UniformBuffer, SHADER_STAGE_PIXEL_BIT},// camera
-			{EBindingType::UniformBuffer, SHADER_STAGE_PIXEL_BIT},// light
+			{EBindingType::UniformBuffer, SHADER_STAGE_PIXEL_BIT},// light uniform
+			{EBindingType::Texture, SHADER_STAGE_PIXEL_BIT}, // shadow map
 			{EBindingType::Texture, SHADER_STAGE_PIXEL_BIT},// normal tex
 			{EBindingType::Texture, SHADER_STAGE_PIXEL_BIT},// albedo tex
 			{EBindingType::Texture, SHADER_STAGE_PIXEL_BIT},// depth tex
-			{EBindingType::Sampler, SHADER_STAGE_PIXEL_BIT},// sampler
+			{EBindingType::Sampler, SHADER_STAGE_PIXEL_BIT},// point sampler
+			{EBindingType::Sampler, SHADER_STAGE_PIXEL_BIT},// linear sampler
 		};
 		desc.VertexInput = {};
 		desc.BlendDesc.BlendStates = { {false} };

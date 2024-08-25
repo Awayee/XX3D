@@ -74,6 +74,16 @@ RHITextureDesc RHITextureDesc::TextureCube() {
     return desc;
 }
 
+RHITextureDesc RHITextureDesc::Texture2DArray(uint8 arraySize) {
+    RHITextureDesc desc{};
+    desc.Dimension = ETextureDimension::Tex2DArray;
+    desc.Depth = 1;
+    desc.ArraySize = arraySize;
+    desc.MipSize = 1;
+    desc.Samples = 1;
+    return desc;
+}
+
 uint32 RHITexture::GetPixelByteSize() {
     return g_FormatPixelByteSize[(uint32)m_Desc.Format].PixelByteSize;
 }

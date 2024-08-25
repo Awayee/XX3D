@@ -22,7 +22,7 @@ VulkanImGui::VulkanImGui(void(*configInitializer)()) {
 	initInfo.Device = device->GetDevice();
 	initInfo.QueueFamily = device->GetGraphicsQueue().FamilyIndex;
 	initInfo.Queue = device->GetGraphicsQueue().Handle;
-	initInfo.DescriptorPool = device->GetDescriptorMgr()->GetPool();
+	initInfo.DescriptorPool = device->GetDescriptorMgr()->GetReservePool();
 	VulkanViewport* vkViewport = (VulkanViewport*)(vkRHI->GetViewport());
 	initInfo.MinImageCount = vkViewport->GetImageCount();
 	initInfo.ImageCount = initInfo.MinImageCount;

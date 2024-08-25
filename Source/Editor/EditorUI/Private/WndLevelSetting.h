@@ -2,7 +2,7 @@
 #include "EditorUI/Public/EditorWindow.h"
 
 namespace Object {
-	class Camera;
+	class RenderCamera;
 }
 
 namespace Editor {

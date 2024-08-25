@@ -1,4 +1,3 @@
-#include "System/Public/EngineConfig.h"
 #include "Core/Public/Concurrency.h"
 #include "Objects/Public/RenderScene.h"
 #include "Objects/Public/Camera.h"
@@ -9,11 +8,11 @@
 
 namespace Object {
 
+    static constexpr ERHIFormat s_NormalFormat{ ERHIFormat::B8G8R8A8_UNORM };
+    static constexpr ERHIFormat s_AlbedoFormat{ ERHIFormat::B8G8R8A8_UNORM };
+
     TUniquePtr<RenderScene> RenderScene::s_Default;
     TArray<Func<void(RenderScene*)>> RenderScene::s_RegisterSystems;
-
-    constexpr static ERHIFormat s_NormalFormat{ ERHIFormat::B8G8R8A8_UNORM };
-    constexpr static ERHIFormat s_AlbedoFormat{ ERHIFormat::B8G8R8A8_UNORM };
 
     struct LightUBO {
         Math::FVector3 LightDir; float _padding;
@@ -33,17 +32,19 @@ namespace Object {
         CameraUBO CameraUbo;
     };
 
-    RenderScene::RenderScene(): m_RenderTarget(nullptr), m_ViewportDirty(false), m_RenderTargetDirty(false) {
+    RenderScene::RenderScene(): m_RenderTarget(nullptr), m_ViewportDirty(false), m_RenderTargetFormatDirty(false) {
         // register systems
         for(auto& func: s_RegisterSystems) {
             func(this);
         }
+        // create pso
+        const TStaticArray<ERHIFormat, 2> formats = { s_NormalFormat, s_AlbedoFormat };
+        const ERHIFormat depthFormat = RHI::Instance()->GetDepthFormat();
+        MeshGBufferPSO = Render::CreateMeshGBufferRenderPSO(formats, depthFormat);
+        // create camera and lights
         CreateResources();
         const auto windowSize = Engine::EngineWindow::Instance()->GetWindowSize();
         SetViewportSize(windowSize);
-        // create pso
-        const TStaticArray<ERHIFormat, 2> formats = { s_NormalFormat, s_AlbedoFormat };
-        MeshGBufferPSO = Render::CreateMeshGBufferRenderPSO(formats, RHI::Instance()->GetDepthFormat());
         Render::ViewportRenderer::Instance()->SetRenderScene(this);
     }
 
@@ -52,6 +53,8 @@ namespace Object {
 
     void RenderScene::Update() {
         // draw call
+        m_DirectionalLight->UpdateShadowCameras(m_Camera);
+        m_DirectionalLight->UpdateShadowMapDrawCalls();
         m_DrawCallContext.Reset();
         UpdateSceneDrawCall();
         SystemUpdate();
@@ -64,24 +67,26 @@ namespace Object {
     }
 
     void RenderScene::SetRenderTarget(RHITexture* target, RHITextureSubDesc sub) {
+        // check if the format of render target changed
+        auto getFormat = [](RHITexture* tex) {return tex ? tex->GetDesc().Format : ERHIFormat::Undefined; };
+        m_RenderTargetFormatDirty = getFormat(m_RenderTarget) != getFormat(target);
         m_RenderTarget = target;
         m_RenderTargetSub = sub;
-        m_RenderTargetDirty = true;
     }
 
     Render::RGTextureNode* RenderScene::Render(Render::RenderGraph& rg) {
         if(!m_RenderTarget) {
             return nullptr;
         }
-        if(m_ViewportDirty || m_RenderTargetDirty) {
+        if(m_ViewportDirty || m_RenderTargetFormatDirty) {
             Render::ViewportRenderer::Instance()->WaitAllFence();
             if(m_ViewportDirty) {
-                CreateTextures();
+                CreateRTTextures();
                 m_ViewportDirty = false;
             }
-            if (m_RenderTargetDirty) {
+            if (m_RenderTargetFormatDirty) {
                 m_DeferredLightingPSO = Render::CreateDeferredLightingPSO(m_RenderTarget->GetDesc().Format);
-                m_RenderTargetDirty = false;
+                m_RenderTargetFormatDirty = false;
             }
         }
         // ========= create resource nodes ==========
@@ -91,6 +96,7 @@ namespace Object {
         Render::RGTextureNode* targetNode = rg.CreateTextureNode(m_RenderTarget, "SceneRenderTarget");
 
         // ========= create pass nodes ==============
+        // TODO parallel run directionalShadow and gBuffer
         // gBuffer node
         const Rect renderArea = { 0, 0, m_ViewportSize.w, m_ViewportSize.h };
         Render::RGRenderNode* gBufferNode = rg.CreateRenderNode("GBufferPass");
@@ -102,8 +108,25 @@ namespace Object {
             cmd->BindGraphicsPipeline(MeshGBufferPSO);
             m_DrawCallContext.ExecuteDraCall(Render::EDrawCallQueueType::BasePass, cmd);
         });
+
+        // directional shadow
+        RHITexture* directionalShadowMap = m_DirectionalLight->GetShadowMap();
+        Render::RGTextureNode* shadowMapNode = rg.CreateTextureNode(directionalShadowMap, "DirectionalShadowMap");
+        if(m_DirectionalLight->GetEnableShadow()){
+            const Rect shadowArea = { 0, 0, directionalShadowMap->GetDesc().Width, directionalShadowMap->GetDesc().Height };
+            for (uint32 i = 0; i < m_DirectionalLight->GetCascadeNum(); ++i) {
+                Render::RGRenderNode* csmNode = rg.CreateRenderNode(StringFormat("CSM%u", i));
+                csmNode->SetArea(shadowArea);
+                csmNode->WriteDepthTarget(shadowMapNode, { 0, 1, (uint8)i, 1 });
+                csmNode->SetTask([this, i](RHICommandBuffer* cmd) {
+                    m_DirectionalLight->GetDrawCallQueue(i).Execute(cmd);
+                });
+            }
+        }
+
         // deferred lighting
         Render::RGRenderNode* deferredLightingNode = rg.CreateRenderNode("DeferredLightingPass");
+        deferredLightingNode->ReadSRV(shadowMapNode);
         deferredLightingNode->ReadSRV(normalNode);
         deferredLightingNode->ReadSRV(albedoNode);
         deferredLightingNode->ReadSRV(depthNode);
@@ -140,34 +163,32 @@ namespace Object {
 		cameraUBO.InvVP = m_Camera->GetInvViewProjectMatrix();
 		cameraUBO.CamPos = m_Camera->GetView().Eye;
         m_CameraUniform->UpdateData(&cameraUBO, sizeof(SceneData), 0);
-        LightUBO lightUBO;
-        lightUBO.LightDir = m_DirectionalLight->GetLightDir();
-        lightUBO.LightColor = m_DirectionalLight->GetLightColor();
-        m_LightUniform->UpdateData(&lightUBO, sizeof(LightUBO), 0);
+
         m_DrawCallContext.PushDrawCall(Render::EDrawCallQueueType::BasePass, [this](RHICommandBuffer* cmd) {
             cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(m_CameraUniform));
         });
         m_DrawCallContext.PushDrawCall(Render::EDrawCallQueueType::DeferredLighting, [this](RHICommandBuffer* cmd) {
             cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(m_CameraUniform));
-            cmd->SetShaderParam(0, 1, RHIShaderParam::UniformBuffer(m_LightUniform));
-            cmd->SetShaderParam(0, 2, RHIShaderParam::Texture(m_GBufferNormal));
-            cmd->SetShaderParam(0, 3, RHIShaderParam::Texture(m_GBufferAlbedo));
-            cmd->SetShaderParam(0, 4, RHIShaderParam::Texture(m_Depth, ETextureSRVType::Depth, {}));
-            cmd->SetShaderParam(0, 5, RHIShaderParam::Sampler(Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Point, ESamplerAddressMode::Clamp)));
-            cmd->Draw(6, 1, 0, 0);
+            cmd->SetShaderParam(0, 1, RHIShaderParam::UniformBuffer(m_DirectionalLight->GetUniform()));
+            cmd->SetShaderParam(0, 2, RHIShaderParam::Texture(m_DirectionalLight->GetShadowMap(), ETextureSRVType::Depth));
+            cmd->SetShaderParam(0, 3, RHIShaderParam::Texture(m_GBufferNormal));
+            cmd->SetShaderParam(0, 4, RHIShaderParam::Texture(m_GBufferAlbedo));
+            cmd->SetShaderParam(0, 5, RHIShaderParam::Texture(m_Depth, ETextureSRVType::Depth, {}));
+            cmd->SetShaderParam(0, 6, RHIShaderParam::Sampler(Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Point, ESamplerAddressMode::Clamp)));
+            cmd->SetShaderParam(0, 7, RHIShaderParam::Sampler(Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp)));
+        	cmd->Draw(6, 1, 0, 0);
         });
     }
 
     void RenderScene::CreateResources() {
         m_DirectionalLight.Reset(new DirectionalLight);
-        m_DirectionalLight->SetDir({ -1, -1, -1 });
-        m_Camera.Reset(new Camera(EProjectiveType::Perspective, (float)m_ViewportSize.w / (float)m_ViewportSize.h, 0.1f, 1000.0f, Math::Deg2Rad * 75.0f));
-        m_Camera->SetView({ 0, 4, -4 }, { 0, 2, 0 }, { 0, 1, 0 });
+        m_DirectionalLight->SetRotation({ 0.0f, 0.0f, 0.0f });
+        m_Camera.Reset(new RenderCamera());
+        m_Camera->SetView({{ 0, 4, -4 }, { 0, 2, 0 }, { 0, 1, 0 }});
         m_CameraUniform = RHI::Instance()->CreateBuffer({ EBufferFlagBit::BUFFER_FLAG_UNIFORM, sizeof(CameraUBO), 0 });
-        m_LightUniform = RHI::Instance()->CreateBuffer({ EBufferFlagBit::BUFFER_FLAG_UNIFORM, sizeof(LightUBO), 0 });
     }
 
-    void RenderScene::CreateTextures() {
+    void RenderScene::CreateRTTextures() {
         RHI* r = RHI::Instance();
         RHITextureDesc desc = RHITextureDesc::Texture2D();
         desc.Flags = TEXTURE_FLAG_COLOR_TARGET | TEXTURE_FLAG_SRV;
@@ -179,7 +200,7 @@ namespace Object {
         desc.Format = s_AlbedoFormat;
         m_GBufferAlbedo = r->CreateTexture(desc);
 
-        desc.Format = RHI::Instance()->GetDepthFormat();
+        desc.Format = r->GetDepthFormat();
         desc.Flags = TEXTURE_FLAG_DEPTH_TARGET | TEXTURE_FLAG_STENCIL | TEXTURE_FLAG_SRV;
         m_Depth = r->CreateTexture(desc);
     }

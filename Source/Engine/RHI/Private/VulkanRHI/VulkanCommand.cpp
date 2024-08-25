@@ -214,7 +214,7 @@ void VulkanCommandBuffer::BeginRendering(const RHIRenderPassInfo& info) {
 	for(uint32 i=0; i<colorAttachmentCount; ++i) {
 		colorAttachments[i] = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO , nullptr };
 		const auto& target = info.ColorTargets[i];
-		colorAttachments[i].imageView = ((VulkanRHITexture*)target.Target)->Get2DView(target.MipIndex, target.LayerIndex);
+		colorAttachments[i].imageView = ((VulkanRHITexture*)target.Target)->Get2DView(target.MipIndex, target.ArrayIndex);
 		colorAttachments[i].imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		colorAttachments[i].resolveMode = VK_RESOLVE_MODE_NONE;
 		colorAttachments[i].resolveImageView = VK_NULL_HANDLE;
@@ -234,7 +234,7 @@ void VulkanCommandBuffer::BeginRendering(const RHIRenderPassInfo& info) {
 	VkRenderingAttachmentInfo dsAttachment{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO, nullptr };
 	auto& depthStencilTarget = info.DepthStencilTarget;
 	if(depthStencilTarget.Target) {
-		dsAttachment.imageView = ((VulkanRHITexture*)depthStencilTarget.Target)->GetDefaultView();
+		dsAttachment.imageView = ((VulkanRHITexture*)depthStencilTarget.Target)->Get2DView(depthStencilTarget.MipIndex, depthStencilTarget.ArrayIndex);
 		dsAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 		dsAttachment.loadOp = ToVkAttachmentLoadOp(depthStencilTarget.DepthLoadOp);
 		dsAttachment.storeOp = ToVkAttachmentStoreOp(depthStencilTarget.DepthStoreOp);
@@ -376,8 +376,8 @@ void VulkanCommandBuffer::TransitionTextureState(RHITexture* texture, EResourceS
 	barrier.subresourceRange.aspectMask = ToImageAspectFlags(vkTex->GetDesc().Flags);
 	barrier.subresourceRange.baseMipLevel = subDesc.MipIndex;
 	barrier.subresourceRange.levelCount = subDesc.MipCount;
-	barrier.subresourceRange.baseArrayLayer = subDesc.LayerIndex;
-	barrier.subresourceRange.layerCount = subDesc.LayerCount;
+	barrier.subresourceRange.baseArrayLayer = subDesc.ArrayIndex;
+	barrier.subresourceRange.layerCount = subDesc.ArrayCount;
 	VkPipelineStageFlags srcStage;
 	VkPipelineStageFlags dstStage;
 	GetPipelineBarrierStage(barrier.oldLayout, barrier.newLayout, barrier.srcAccessMask, barrier.dstAccessMask, srcStage, dstStage);

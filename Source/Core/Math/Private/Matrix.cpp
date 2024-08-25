@@ -443,8 +443,8 @@ namespace Math {
 		Vector3<T> left = Vector3<T>::Cross(up, normal);
 		up = Vector3<T>::Cross(normal, left);
 
-		left.Normalize();
-		up.Normalize();
+		left.NormalizeSelf();
+		up.NormalizeSelf();
 
 		Matrix4x4<T> result = Matrix4x4::IDENTITY;
 		result.SetMatrix3x3(Matrix3x3(left, up, normal));
@@ -489,11 +489,11 @@ namespace Math {
     MATH_GENERIC void Matrix4x4<T>::ExtractAxies(Vector3<T>& outX, Vector3<T>& outY, Vector3<T>& outZ)
     {
         outX = Vector3<T>(Mat[0][0], Mat[1][0], Mat[2][0]);
-        outX.Normalize();
+        outX.NormalizeSelf();
         outY = Vector3<T>(Mat[0][1], Mat[1][1], Mat[2][1]);
-        outY.Normalize();
+        outY.NormalizeSelf();
         outZ = Vector3<T>(Mat[0][2], Mat[1][2], Mat[2][2]);
-        outZ.Normalize();
+        outZ.NormalizeSelf();
     }
     MATH_GENERIC void Matrix4x4<T>::MakeTransform(const Vector3<T>& position, const Vector3<T>& scale, const Quaternion<T>& rotation)
     {
@@ -789,12 +789,12 @@ namespace Math {
     }
     MATH_GENERIC Matrix4x4<T> Matrix4x4<T>::LookAtMatrix(const Vector3<T>& eye, const Vector3<T>& at, const Vector3<T>& up)
     {
-        Vector3<T> upNormalized = up.NormalizeCopy();
+        Vector3<T> upNormalized = up.Normalize();
 
         Vector3<T> f = (at - eye); // forward
-        f.Normalize();
+        f.NormalizeSelf();
         Vector3<T> r = Vector3<T>::Cross(upNormalized, f); // right
-        r.Normalize();
+        r.NormalizeSelf();
         Vector3<T> u = Vector3<T>::Cross(f, r); // up
 #ifdef MATRIX_COL_MAJOR
         return{
@@ -816,61 +816,51 @@ namespace Math {
     MATH_GENERIC Matrix4x4<T> Matrix4x4<T>::PerspectiveMatrix(T fov, T aspect, T zNear, T zFar)
     {
         T tanHalfFov = Math::Tan<T>(fov / (T)2);
+        // [1][1]negative for vulkan
 #ifdef MATRIX_COL_MAJOR
         return{
 		    (T)1 / (aspect * tanHalfFov),  0, 0,  0,
-		    0, (T)1 / tanHalfFov,  0,  0,
+		    0, -(T)1 / tanHalfFov,  0,  0,
 		    0,  0, -zFar / (zFar - zNear), -1,
 		    0, 0, -zFar * zNear / (zFar - zNear), 0
         };
 #else
         return {
             (T)1 / (aspect * tanHalfFov),  0, 0,  0,
-            0, (T)1 / tanHalfFov,  0,  0,
+            0, -(T)1 / tanHalfFov,  0,  0,
             0,  0, -zFar / (zFar - zNear), -zFar * zNear / (zFar - zNear),
             0, 0, -1, 0
         };
 #endif
     }
 
-    MATH_GENERIC Matrix4x4<T> Matrix4x4<T>::OrthographicMatrix(T left, T right, T bottom, T top, T znear, T zfar)
+    MATH_GENERIC Matrix4x4<T> Matrix4x4<T>::OrthographicMatrix(T left, T right, T bottom, T top, T zNear, T zFar)
     {
-        float invWidth    = (T)1 / (right - left);
-        float invHeight   = (T)1 / (top - bottom);
-        float invDistance = (T)1 / (zfar - znear);
-
-        float A = 2 * invWidth;
-        float B = 2 * invHeight;
-        float C = -(right + left) * invWidth;
-        float D = -(top + bottom) * invHeight;
-        float q = -2 * invDistance;
-        float qn = -(zfar + znear) * invDistance;
-
-        // NB: This creates 'uniform' orthographic projection matrix,
-        // which depth range [-1,1], right-handed rules
-        //
-        // [ A   0   0   C  ]
-        // [ 0   B   0   D  ]
-        // [ 0   0   q   qn ]
-        // [ 0   0   0   1  ]
-        //
-        // A = 2 * / (right - left)
-        // B = 2 * / (top - bottom)
-        // C = - (right + left) / (right - left)
-        // D = - (top + bottom) / (top - bottom)
-        // q = - 2 / (far - near)
-        // qn = - (far + near) / (far - near)
-
-        Matrix4x4<T> proj_matrix = Matrix4x4<T>::ZERO;
-        proj_matrix[0][0] = A;
-        proj_matrix[0][3] = C;
-        proj_matrix[1][1] = B;
-        proj_matrix[1][3] = D;
-        proj_matrix[2][2] = q;
-        proj_matrix[2][3] = qn;
-        proj_matrix[3][3] = 1;
-
-        return proj_matrix;
+        T invWidth    = (T)1 / (right - left);
+        T invHeight   = (T)1 / (top - bottom);
+        T invDistance = (T)1 / (zFar - zNear);
+        T A = 2 * invWidth;
+        T B = -2 * invHeight; // negative for vulkan
+        T C = -(right + left) * invWidth;
+        T D = -(top + bottom) * invHeight;
+        // z from 0 to 1
+        T q = -invDistance;
+        T qn = -zNear * invDistance;
+#ifdef MATRIX_COL_MAJOR
+        return {
+		    A, 0, 0, 0,
+		    0, B, 0, 0,
+		    0, 0, q, 0,
+		    C, D ,qn, 1
+        };
+#else
+        return {
+            A, 0, 0, C,
+            0, B, 0, D,
+            0, 0, q, qn,
+            0, 0 ,0, 1
+        };
+#endif
     }
 
 

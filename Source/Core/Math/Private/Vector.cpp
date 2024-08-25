@@ -200,7 +200,7 @@ namespace Math {
     template<typename T> T Vector3<T>::Length() const{
         return Hypot<T>(X, Y, Z);
     }
-    template<typename T> void Vector3<T>::Normalize(){
+    template<typename T> void Vector3<T>::NormalizeSelf(){
         T length = Hypot<T>(X, Y, Z);
         if (length == 0)
             return;
@@ -212,6 +212,7 @@ namespace Math {
     }
 
     template<typename T> const Vector3<T> Vector3<T>::ZERO{ 0,0,0 };
+    template<typename T> const Vector3<T> Vector3<T>::ONE{ 1,1,1 };
     template<typename T> Vector3<T> Vector3<T>::Max(const Vector3<T>& v0, const Vector3<T>& v1){
         return { Math::Max<T>(v0.X, v1.X), Math::Max<T>(v0.Y, v1.Y), Math::Max<T>(v0.Z, v1.Z) };
     }

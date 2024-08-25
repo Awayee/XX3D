@@ -15,6 +15,7 @@ namespace Math {
 
         static Quaternion<T> AngleAxis(T a, const Vector3<T>& axis);
 		static Quaternion<T> Euler(const Vector3<T>& euler);//z->x->y
+		static Quaternion<T> FromTo(const Vector3<T>& from, const Vector3<T>& to);
 		T Roll()const;
 		T Pitch() const;
 		T Yaw() const;

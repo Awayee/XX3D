@@ -28,6 +28,15 @@ namespace Asset {
 		}
 	};
 
+	void CalcAABB(TConstArrayView<AssetVertex> vertices, Math::FVector3& outMin, Math::FVector3& outMax) {
+		outMin = { FLT_MAX };
+		outMax = { -FLT_MAX };
+		for(auto& vertex: vertices) {
+			outMin = Math::FVector3::Min(vertex.Position, outMin);
+			outMax = Math::FVector3::Max(vertex.Position, outMax);
+		}
+	}
+
 	bool MeshAsset::Load(File::RFile& in) {
 		Json::Document doc;
 		if (!Json::ReadFile(in, doc)) {
@@ -50,6 +59,7 @@ namespace Asset {
 
 				//load primitive binary
 				MeshAsset::LoadPrimitiveFile(Primitives[i].BinaryFile.c_str(), Primitives[i].Vertices, Primitives[i].Indices);
+				CalcAABB(Primitives[i].Vertices, Primitives[i].AABB.Min, Primitives[i].AABB.Max);
 			}
 		}
 		return true;

@@ -2,7 +2,7 @@
 #include "Core/Public/Defines.h"
 
 enum : uint32 {
-    RHI_FRAME_IN_FLIGHT_MAX = 2,
+    RHI_FRAME_IN_FLIGHT_MAX = 1,// TODO solve the errors when RHI_FRAME_IN_FLIGHT_MAX greater than 1
     RHI_COLOR_TARGET_MAX = 8,
 };           
 
@@ -92,6 +92,7 @@ typedef uint32 ETextureFlags;
 enum class ETextureSRVType : uint8 {
     Default = 0,
     Texture2D,
+    Texture2DArray,
     CubeMap,
     Depth,
     Stencil,
