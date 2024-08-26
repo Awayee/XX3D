@@ -22,8 +22,8 @@ namespace Math {
 	struct AABB3 {
 		FVector3 Min {0.0f, 0.0f, 0.0f};
 		FVector3 Max {0.0f, 0.0f, 0.0f};
-		AABB3();
-		AABB3(const FVector3& center, const FVector3& extent);
+		static AABB3 MinMax(const FVector3& min, const FVector3& max);
+		static AABB3 CenterExtent(const FVector3& center, const FVector3& extent);
 		FVector3 Center() const;
 		FVector3 Extent() const;
 		bool IsValid() const;

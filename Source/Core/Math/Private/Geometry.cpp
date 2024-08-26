@@ -45,11 +45,12 @@ namespace Math {
 		Max = FVector2::Max(Max, aabb.Max);
 	}
 
-	AABB3::AABB3() = default;
+	AABB3 AABB3::MinMax(const FVector3& min, const FVector3& max) {
+		return { min, max };
+	}
 
-	AABB3::AABB3(const FVector3& center, const FVector3& extent) {
-		Min = center - extent;
-		Max = center + extent;
+	AABB3 AABB3::CenterExtent(const FVector3& center, const FVector3& extent) {
+		return { center - extent, center + extent };
 	}
 
 	FVector3 AABB3::Center() const {

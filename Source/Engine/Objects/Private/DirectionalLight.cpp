@@ -17,6 +17,7 @@ namespace Object {
 		Math::FVector3 Color; float _Padding1;
 		float FarDistances[4]; // means supports cascades up to 4
 		Math::FMatrix4x4 VPMats[4];
+		Math::FVector4 ShadowDebug;
 	};
 
 	inline void SplitFrustum(TArrayView<float> out, float zNear, float zFar, float logLambda) {
@@ -97,7 +98,7 @@ namespace Object {
 		const auto& srcView = renderCamera->GetView();
 		const auto& srcProj = renderCamera->GetProjection();
 		TStaticArray<float, CASCADE_NUM + 1> splits;
-		SplitFrustum(splits, srcProj.Near, m_ShadowDistance, 0.5f);
+		SplitFrustum(splits, srcProj.Near, m_ShadowDistance, m_LogDistribution);
 		for(uint32 i=0; i<CASCADE_NUM; ++i) {
 			// get 8 frustum corners
 			Object::FrustumCorner fc;
@@ -115,27 +116,17 @@ namespace Object {
 			dstView.At = dstView.Eye + m_LightDir;
 			dstView.Up = { 0.0f, 1.0f, 0.0f };
 			auto viewMat = dstView.GetViewMatrix();
-			Math::Vector3 min{ FLT_MAX }, max{ -FLT_MAX };
+			Math::FVector3 min{ FLT_MAX }, max{ -FLT_MAX };
 			for(const auto& corner: fc.Corners) {
 				auto transformedCornerW = viewMat * Math::FVector4(corner.X, corner.Y, corner.Z, 1.0f);
-				Math::FVector3 transformedCorner = { transformedCornerW.X, transformedCornerW.Y, transformedCornerW.X };
+				Math::FVector3 transformedCorner = { transformedCornerW.X, transformedCornerW.Y, transformedCornerW.Z };
 				min = Math::FVector3::Min(transformedCorner, min);
 				max = Math::FVector3::Max(transformedCorner, max);
 			}
-			Math::AABB3 aabb; aabb.Min = min; aabb.Max = max;
+			Math::AABB3 aabb = Math::AABB3::MinMax(min, max);
 			Math::FVector3 extent = aabb.Extent();
-			// expand XY for contains objects
-			extent.X *= 1.2f;
-			extent.Y *= 1.2f;
-			// expand Z, for objects more far from camera, because of precision of texture will clamped depth to 0, witch may be clipped.
-			extent.Z += 10.0f;
-			// move camera back at near clip plane
-			Math::FVector3 zOffset = -extent.Z * m_LightDir;
-			dstView.Eye += zOffset;
-			dstView.At += zOffset;
-			// compute the projection
 			Object::CameraProjection dstProj;
-			dstProj.SetOrtho(0.0f, 2.0f * extent.Z, extent.Y, extent.X / extent.Y);
+			dstProj.SetOrtho(-extent.Z, extent.Z, extent.Y, extent.X / extent.Y);
 			// set camera
 			m_CascadeCameras[i].Set(dstView, dstProj);
 			m_FarDistances[i] = cascadeFar;
@@ -151,6 +142,7 @@ namespace Object {
 			ubo.VPMats[i] = m_VPMats[i];
 			m_ShadowUniforms[i]->UpdateData(&ubo.VPMats[i], sizeof(Math::FMatrix4x4), 0);
 		}
+		ubo.ShadowDebug.X = m_EnableShadowDebug ? 1.0f : 0.0f;
 		m_Uniform->UpdateData(&ubo, sizeof(ubo), 0);
 	}
 
@@ -165,12 +157,13 @@ namespace Object {
 			m_ShadowMapPSODirty = false;
 		}
 		for(uint32 i=0; i<CASCADE_NUM; ++i) {
-			auto& dcQueue = m_DrawCallQueues[i];
-			dcQueue.Reset();
-			dcQueue.PushDrawCall([this, i](RHICommandBuffer* cmd) {
-				cmd->BindGraphicsPipeline(m_ShadowMapPSO);
-				cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(m_ShadowUniforms[i]));
-			});
+			m_DrawCallQueues[i].Reset();
+			if (m_EnableShadow) {
+				m_DrawCallQueues[i].PushDrawCall([this, i](RHICommandBuffer* cmd) {
+					cmd->BindGraphicsPipeline(m_ShadowMapPSO);
+					cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(m_ShadowUniforms[i]));
+				});
+			}
 		}
 	}
 

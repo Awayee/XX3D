@@ -110,8 +110,8 @@ namespace Object {
 		LeftTopNear = center - right + up;
 		RightTopNear = center + right + up;
 		center = cameraPos + f * cameraFront;
-		up = up = f * tanHalfFov * cameraUp;
-		right = n * tanHalfFov * aspect * cameraRight;
+		up = f * tanHalfFov * cameraUp;
+		right = f * tanHalfFov * aspect * cameraRight;
 		LeftBottomFar = center - right - up;
 		RightBottomFar = center + right - up;
 		LeftTopFar = center - right + up;

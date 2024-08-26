@@ -37,6 +37,7 @@ struct LightUBO {
 	float4 Color;
     float4 FarDistances;
     float4x4 VPMats[CASCADE_NUM];
+    float4 ShadowDebug;
 };
 
 [[vk::binding(0, 0)]] cbuffer uCamera { ShadowCameraUBO uCamera; };
@@ -179,15 +180,24 @@ float PCFByMicrosoft(Texture2DArray<float> inShadowMap, SamplerState inSampler, 
     return result;
 }
 
+// test whether components in range (0, 1)
+float3 TestRange01(float3 projectCoords) {
+    return float3(
+		step(0.0, projectCoords.x) * step(projectCoords.x, 1.0),
+		step(0.0, projectCoords.y) * step(projectCoords.y, 1.0),
+		step(0.0, projectCoords.z) * step(projectCoords.z, 1.0));
+}
+
 // compute csm
-float ComputeCascadeShadow(float3 worldPos){
+float3 ComputeCascadeShadow(float3 worldPos, float3 sceneColor){
 	// to view space
     float viewZ = abs(mul(uCamera.View, float4(worldPos, 1.0)).z);
     uint cascade = 0;
 	// if out of shadow distance, return no shadow
 	if(viewZ > uLight.FarDistances[CASCADE_NUM-1]) {
-        return 1.0f;
+        return sceneColor;
     }
+
 	[unroll]
     for (uint i = 0; i < CASCADE_NUM; ++i){
         if (viewZ < uLight.FarDistances[i]){
@@ -196,13 +206,26 @@ float ComputeCascadeShadow(float3 worldPos){
         }
     }
     float4 clipPos = mul(uLight.VPMats[cascade], float4(worldPos, 1.0));
-    clipPos.xyz /= clipPos.w;
-    float currentZ = clipPos.z;
-	if(currentZ > 1.0f) {
-        return 1.0f;
+    float3 projCoords = clipPos.xyz / clipPos.w;
+    projCoords.xy = projCoords.xy * 0.5 + 0.5;
+	// clip the coords out of view
+	if(all(TestRange01(projCoords))) {
+        float2 shadowMapUV = projCoords.xy;
+        float shadowVal = PCFByMicrosoft(inShadowMap, inLinearSampler, shadowMapUV, cascade, projCoords.z);
+        sceneColor *= shadowVal;
     }
-    float2 shadowMapUV = clamp(clipPos.xy * 0.5 + 0.5, 0.0f, 1.0f);
-    return PCFByMicrosoft(inShadowMap, inLinearSampler, shadowMapUV, cascade, currentZ);
+
+	// debug csm
+    if (uLight.ShadowDebug.x > 0.0f){
+        const float3 debugColors[CASCADE_NUM] = {
+            float3(1.0f, 0.0f, 0.0f),
+			float3(0.0f, 1.0f, 0.0f),
+			float3(0.0f, 0.0f, 1.0f),
+			float3(1.0f, 1.0f, 0.0f)
+        };
+        sceneColor = lerp(sceneColor, debugColors[cascade], 0.2);
+    }
+    return sceneColor;
 }
 
 PSOutput MainPS(VSOutput pIn){
@@ -225,8 +248,7 @@ PSOutput MainPS(VSOutput pIn){
 	float3 color = ambient + Lo;
 
 	//shadow
-    float shadowVal = ComputeCascadeShadow(worldPos);
-    color = color * shadowVal;
+    color = ComputeCascadeShadow(worldPos, color);
 
 	//gama correction
     //color = color / (color + float3(1.0, 1.0, 1.0));

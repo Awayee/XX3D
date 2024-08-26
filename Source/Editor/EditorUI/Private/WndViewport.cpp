@@ -52,6 +52,7 @@ namespace Editor {
 
 	WndViewport::WndViewport() : EditorWndBase("Viewport", ImGuiWindowFlags_NoBackground) {
 		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
+		EditorUIMgr::Instance()->AddMenu("Render", "Capture", []() {RHI::Instance()->CaptureFrame(); }, nullptr);
 		m_Flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
 	}
 

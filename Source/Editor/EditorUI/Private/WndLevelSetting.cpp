@@ -35,9 +35,17 @@ namespace Editor {
 			if(ImGui::Checkbox("Enable Shadow", &isEnableShadow)) {
 				light->SetEnableShadow(isEnableShadow);
 			}
+			bool isEnableShadowDebug = light->GetEnableShadowDebug();
+			if(ImGui::Checkbox("Shadow Debug", &isEnableShadowDebug)) {
+				light->SetEnableShadowDebug(isEnableShadowDebug);
+			}
 			float shadowDistance = light->GetShadowDistance();
 			if(ImGui::DragFloat("Shadow Distance", &shadowDistance, 1.0f, 0.0f, 9999.0f)) {
 				light->SetShadowDistance(shadowDistance);
+			}
+			float logDistribution = light->GetLogDistribution();
+			if(ImGui::DragFloat("Log Distribution", &logDistribution, 0.01f, 0.0f, 1.0f)) {
+				light->SetLogDistribution(logDistribution);
 			}
 			static TStaticArray<uint32, 5> s_ShadowMapSizes{ 256, 512, 1024, 2048, 4096 };
 			static TStaticArray<const char*, 5> s_ShadowMapSizeNames{ "256", "512", "1024", "2048", "4096" };

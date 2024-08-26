@@ -112,16 +112,14 @@ namespace Object {
         // directional shadow
         RHITexture* directionalShadowMap = m_DirectionalLight->GetShadowMap();
         Render::RGTextureNode* shadowMapNode = rg.CreateTextureNode(directionalShadowMap, "DirectionalShadowMap");
-        if(m_DirectionalLight->GetEnableShadow()){
-            const Rect shadowArea = { 0, 0, directionalShadowMap->GetDesc().Width, directionalShadowMap->GetDesc().Height };
-            for (uint32 i = 0; i < m_DirectionalLight->GetCascadeNum(); ++i) {
-                Render::RGRenderNode* csmNode = rg.CreateRenderNode(StringFormat("CSM%u", i));
-                csmNode->SetArea(shadowArea);
-                csmNode->WriteDepthTarget(shadowMapNode, { 0, 1, (uint8)i, 1 });
-                csmNode->SetTask([this, i](RHICommandBuffer* cmd) {
-                    m_DirectionalLight->GetDrawCallQueue(i).Execute(cmd);
-                });
-            }
+        const Rect shadowArea = { 0, 0, directionalShadowMap->GetDesc().Width, directionalShadowMap->GetDesc().Height };
+        for (uint32 i = 0; i < m_DirectionalLight->GetCascadeNum(); ++i) {
+            Render::RGRenderNode* csmNode = rg.CreateRenderNode(StringFormat("CSM%u", i));
+            csmNode->SetArea(shadowArea);
+            csmNode->WriteDepthTarget(shadowMapNode, { 0, 1, (uint8)i, 1 });
+            csmNode->SetTask([this, i](RHICommandBuffer* cmd) {
+                m_DirectionalLight->GetDrawCallQueue(i).Execute(cmd);
+            });
         }
 
         // deferred lighting

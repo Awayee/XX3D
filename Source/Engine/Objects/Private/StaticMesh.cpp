@@ -73,17 +73,18 @@ namespace Object {
 				});
 			}
 			// for shadow map
-			for(uint32 i=0; i<light->GetCascadeNum(); ++i) {
-				const auto& frustum = light->GetFrustum(i);
-				//if(frustum.Cull(aabb)) {
-				if(1){
-					auto& dcQueue = light->GetDrawCallQueue(i);
-					dcQueue.PushDrawCall([&primitive, uniformBuffer](RHICommandBuffer* cmd) {
-						cmd->SetShaderParam(1, 0, RHIShaderParam::UniformBuffer(uniformBuffer));
-						cmd->BindVertexBuffer(primitive.VertexBuffer.Get(), 0, 0);
-						cmd->BindIndexBuffer(primitive.IndexBuffer.Get(), 0);
-						cmd->DrawIndexed(primitive.IndexCount, 1, 0, 0, 0);
-					});
+			if(light->GetEnableShadow()) {
+				for (uint32 i = 0; i < light->GetCascadeNum(); ++i) {
+					const auto& frustum = light->GetFrustum(i);
+					if(frustum.Cull(aabb)) {
+						auto& dcQueue = light->GetDrawCallQueue(i);
+						dcQueue.PushDrawCall([&primitive, uniformBuffer](RHICommandBuffer* cmd) {
+							cmd->SetShaderParam(1, 0, RHIShaderParam::UniformBuffer(uniformBuffer));
+							cmd->BindVertexBuffer(primitive.VertexBuffer.Get(), 0, 0);
+							cmd->BindIndexBuffer(primitive.IndexBuffer.Get(), 0);
+							cmd->DrawIndexed(primitive.IndexCount, 1, 0, 0, 0);
+						});
+					}
 				}
 			}
 		}

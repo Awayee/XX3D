@@ -15,10 +15,14 @@ namespace Object {
 		// for shadow map
 		void SetEnableShadow(bool isEnable);
 		bool GetEnableShadow() const { return m_EnableShadow; }
+		void SetEnableShadowDebug(bool isEnable) { m_EnableShadowDebug = isEnable; }
+		bool GetEnableShadowDebug()const { return m_EnableShadowDebug; }
 		void SetShadowMapSize(uint32 size);
 		uint32 GetShadowMapSize()const { return m_ShadowMapSize; }
 		void SetShadowDistance(float distance) { m_ShadowDistance = distance; }
 		float GetShadowDistance()const { return m_ShadowDistance; }
+		float GetLogDistribution() const { return m_LogDistribution; }
+		void SetLogDistribution(float distribution) { m_LogDistribution = distribution; }
 		void SetShadowBias(float biasConst, float biasSlope);
 		void GetShadowBias(float* outBiasConst, float* outBiasSlope);
 
@@ -41,7 +45,9 @@ namespace Object {
 
 		// for shadow
 		bool m_EnableShadow{ true };
+		bool m_EnableShadowDebug{ false };
 		float m_ShadowDistance{ 100 };
+		float m_LogDistribution{ 0.8f };
 		uint32 m_ShadowMapSize{ 1024 };
 		float m_ShadowBiasConstant{ 6.0f };
 		float m_ShadowBiasSlope{ 6.0f };
@@ -54,6 +60,7 @@ namespace Object {
 		TStaticArray<RHIBufferPtr, CASCADE_NUM> m_ShadowUniforms;// for shadow map
 		bool m_ShadowMapTextureDirty{ true };
 		bool m_ShadowMapPSODirty{ true };
+
 		void CreateShadowMapTexture();
 		void CreateShadowMapPSO();
 	};
