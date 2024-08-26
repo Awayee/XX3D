@@ -123,6 +123,30 @@ void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TArr
 					textureNames[0].append(imageFile);
 				}
 			}
+
+			// correct the triangles to counter-clockwise
+			auto& primIndices = primitives[index].Indices;
+			auto& primVertices = primitives[index].Vertices;
+			const uint32 triangleCount = primIndices.Size() / 3;
+			for(uint32 triangle=0; triangle<triangleCount; ++triangle) {
+				uint32 i0 = triangle * 3;
+				uint32 i1 = triangle * 3 + 1;
+				uint32 i2 = triangle * 3 + 2;
+				uint32 idx0 = primIndices[i0];
+				uint32 idx1 = primIndices[i1];
+				uint32 idx2 = primIndices[i2];
+				auto& v0 = primVertices[idx0].Position;
+				auto& v1 = primVertices[idx1].Position;
+				auto& v2 = primVertices[idx2].Position;
+				auto& n0 = primVertices[idx0].Normal;
+				auto& n1 = primVertices[idx1].Normal;
+				auto& n2 = primVertices[idx2].Normal;
+				auto aveNormal = (n0 + n1 + n2) / 3;
+				auto faceNormal = (v2 - v0).Cross(v1 - v0);
+				if(faceNormal.Dot(aveNormal) < 0.0f) {
+					std::swap<uint32>(primIndices[i1], primIndices[i2]);
+				}
+			}
 			++index;
 		}
 	}
@@ -142,11 +166,11 @@ uint32 GetPrimitiveCount(const aiScene* aScene, aiNode* aNode) {
 	return count;
 }
 
-void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TArray<Asset::MeshAsset::SPrimitive>& meshInfos) {
+void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TArray<Asset::MeshAsset::SPrimitive>& primitives) {
 	for (uint32 i = 0; i < aNode->mNumMeshes; i++) {
 		aiMesh* aMesh = aScene->mMeshes[aNode->mMeshes[i]];
-		TArray<Asset::AssetVertex>& vertices = meshInfos[i].Vertices;
-		TArray<uint32>& indices = meshInfos[i].Indices;
+		TArray<Asset::AssetVertex>& vertices = primitives[i].Vertices;
+		TArray<uint32>& indices = primitives[i].Indices;
 		//TArray<std::string>& textures = meshInfos[i].textures;
 
 		// vertices
@@ -182,6 +206,32 @@ void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TArray<Asset::MeshAsset::
 			}
 		}
 
+
+
+		// correct the triangles to counter-clockwise
+		auto& primIndices = primitives[i].Indices;
+		auto& primVertices = primitives[i].Vertices;
+		const uint32 triangleCount = primIndices.Size() / 3;
+		for (uint32 triangle = 0; triangle < triangleCount; ++triangle) {
+			uint32 i0 = triangle * 3;
+			uint32 i1 = triangle * 3 + 1;
+			uint32 i2 = triangle * 3 + 2;
+			uint32 idx0 = primIndices[i0];
+			uint32 idx1 = primIndices[i1];
+			uint32 idx2 = primIndices[i2];
+			auto& v0 = primVertices[idx0].Position;
+			auto& v1 = primVertices[idx1].Position;
+			auto& v2 = primVertices[idx2].Position;
+			auto& n0 = primVertices[idx0].Normal;
+			auto& n1 = primVertices[idx1].Normal;
+			auto& n2 = primVertices[idx2].Normal;
+			auto aveNormal = (n0 + n1 + n2) / 3;
+			auto faceNormal = (v2 - v0).Cross(v1 - v0);
+			if (faceNormal.Dot(aveNormal) < 0.0f) {
+				std::swap<uint32>(primIndices[i1], primIndices[i2]);
+			}
+		}
+
 		// textures TODO
 		//if (aMesh->mMaterialIndex >= 0) {
 		//	aiMaterial* aMat = aScene->mMaterials[aMesh->mMaterialIndex];
@@ -205,7 +255,7 @@ void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TArray<Asset::MeshAsset::
 	}
 
 	for (uint32 i = 0; i < aNode->mNumChildren; i++) {
-		LoadFbxNode(aScene, aNode->mChildren[i], meshInfos);
+		LoadFbxNode(aScene, aNode->mChildren[i], primitives);
 	}
 }
 
@@ -236,7 +286,7 @@ bool MeshImporter::ImportGLB(const char* file) {
 	XString warning;
 	XString fullPath(file);
 	if (!gltfContext.LoadBinaryFromFile(&gltfModel, &error, &warning, fullPath)) {
-		LOG_INFO("Failed to load GLTF mesh: %s", file);
+		LOG_WARNING("Failed to load GLTF mesh: %s", file);
 		return false;
 	}
 	const tinygltf::Scene& scene = gltfModel.scenes[gltfModel.defaultScene > -1 ? gltfModel.defaultScene : 0];
@@ -251,6 +301,7 @@ bool MeshImporter::ImportGLB(const char* file) {
 		LoadGLTFNode(gltfModel, gltfModel.nodes[scene.nodes[i]], m_Asset->Primitives, primitiveCount);
 	}
 	m_Asset->Name = File::FPath(fullPath).stem().string();
+	LOG_INFO("Succeed to load GLTF mesh: %s", file);
 	return true;
 }
 
@@ -267,6 +318,7 @@ bool MeshImporter::ImportFBX(const char* file) {
 	m_Asset->Primitives.Resize(primitiveCount);
 	LoadFbxNode(aScene, aScene->mRootNode, m_Asset->Primitives);
 	m_Asset->Name = File::FPath(fullPath).stem().string();
+	LOG_INFO("Succeed to load GLTF mesh: %s", file);
 	return true;
 }
 

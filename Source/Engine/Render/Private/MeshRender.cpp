@@ -47,7 +47,7 @@ namespace Render {
 		};
 
 		desc.BlendDesc.BlendStates={{false}, {false}};
-		desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Null };
+		desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Back };
 		desc.DepthStencilState = { true, ECompareType::Less, false };
 		desc.PrimitiveTopology = EPrimitiveTopology::TriangleList;
 		desc.ColorFormats.Resize(colorFormats.Size());
