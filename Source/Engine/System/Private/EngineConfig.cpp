@@ -93,6 +93,7 @@ namespace Engine {
 		data.WindowSize.h = static_cast<uint32>(std::atoi(configMap["WindowHeight"].c_str()));
 		data.DefaultShadowMapSize = static_cast<uint32>(std::atoi(configMap["DefaultShadowMapSize"].c_str()));
 		data.MSAASampleCount = static_cast<uint8>(std::atoi(configMap["MSAA"].c_str()));
+		data.EnableRenderDoc = (bool)(std::atoi(configMap["EnableRenderDoc"].c_str()));
 		data.StartLevel = configMap["StartLevel"];
 	}
 

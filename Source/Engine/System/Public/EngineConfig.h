@@ -24,7 +24,7 @@ namespace Engine {
 	};
 
 	struct ConfigData {
-		XString      DefaultFontPath;
+		XString       DefaultFontPath;
 		EGPUType      GPUType;
 		ERHIType      RHIType;
 		uint32        MSAASampleCount{ 0 };
@@ -32,6 +32,7 @@ namespace Engine {
 		USize2D       WindowSize;
 		uint32        DefaultShadowMapSize;
 		XString       StartLevel;
+		bool          EnableRenderDoc;
 	};
 
 	class ConfigManager {

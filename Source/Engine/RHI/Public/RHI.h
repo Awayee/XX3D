@@ -4,8 +4,6 @@
 #include "Core/Public/String.h"
 #include "Core/Public/TUniquePtr.h"
 
-typedef void(*DebugFunc)(const char*);
-
 struct RHIInitDesc {
 	XString AppName;
 	bool EnableDebug;
@@ -44,6 +42,8 @@ public:
 	// Submit command buffer(s), if bPresent is true, the command buffers will execute after viewport acquired back buffer.
 	virtual void SubmitCommandBuffer(RHICommandBuffer* cmd, RHIFence* fence, bool bPresent) = 0;
 	virtual void SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence, bool bPresent) = 0;
+
+	void CaptureFrame();
 protected:
 	friend TUniquePtr<RHI>;
 	static TUniquePtr<RHI> s_Instance;

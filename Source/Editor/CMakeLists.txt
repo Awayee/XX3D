@@ -27,6 +27,8 @@ target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/tinygltf)
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/assimpWin64/include)
 target_link_libraries(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/assimpWin64/lib/assimp-vc140-mt.lib)
 
+#RenderDoc
+target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/RenderDoc)
 
 add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different

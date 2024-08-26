@@ -60,3 +60,6 @@ target_link_libraries(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/assimpWin64/lib/assi
 
 #lz4
 target_link_libraries(${TARGET_NAME} PRIVATE "lz4")
+
+#RenderDoc
+target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/RenderDoc)
