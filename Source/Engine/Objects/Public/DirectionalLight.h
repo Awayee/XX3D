@@ -46,8 +46,8 @@ namespace Object {
 		// for shadow
 		bool m_EnableShadow{ true };
 		bool m_EnableShadowDebug{ false };
-		float m_ShadowDistance{ 100 };
-		float m_LogDistribution{ 0.8f };
+		float m_ShadowDistance{ 128.0f };
+		float m_LogDistribution{ 0.9f };
 		uint32 m_ShadowMapSize{ 1024 };
 		float m_ShadowBiasConstant{ 6.0f };
 		float m_ShadowBiasSlope{ 6.0f };

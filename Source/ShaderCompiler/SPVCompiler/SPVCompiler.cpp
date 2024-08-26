@@ -26,6 +26,55 @@ inline const wchar_t* GetShaderModule(ESPVShaderStage stage) {
 	}
 }
 
+class CustomIncludeHandler : public IDxcIncludeHandler{
+public:
+	HRESULT STDMETHODCALLTYPE LoadSource(_In_ LPCWSTR pFilename, _COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource) override
+	{
+		IDxcBlobEncoding* pEncoding;
+		std::string path = WString2String(pFilename);
+		if (IncludedFiles.find(path) != IncludedFiles.end())
+		{
+			// Return empty string blob if this file has been included before
+			static const char nullStr[] = " ";
+			pUtils->CreateBlobFromPinned(nullStr, ARRAYSIZE(nullStr), DXC_CP_ACP, &pEncoding);
+			*ppIncludeSource = pEncoding;
+			return S_OK;
+		}
+
+		HRESULT hr = pUtils->LoadFile(pFilename, nullptr, &pEncoding);
+		if (SUCCEEDED(hr))
+		{
+			IncludedFiles.insert(path);
+			*ppIncludeSource = pEncoding;
+		}
+		return hr;
+	}
+	ULONG STDMETHODCALLTYPE AddRef() override {
+		return InterlockedIncrement(&m_refCount);
+	}
+
+	ULONG STDMETHODCALLTYPE Release() override {
+		ULONG refCount = InterlockedDecrement(&m_refCount);
+		if (refCount == 0) {
+			delete this;
+		}
+		return refCount;
+	}
+	HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override {
+		if (riid == __uuidof(IUnknown) || riid == __uuidof(IDxcIncludeHandler)) {
+			*ppvObject = static_cast<IDxcIncludeHandler*>(this);
+			AddRef();
+			return S_OK;
+		}
+		*ppvObject = nullptr;
+		return E_NOINTERFACE;
+	}
+private:
+	ULONG m_refCount = 1;
+	IDxcUtils* pUtils;
+	std::unordered_set<std::string> IncludedFiles;
+};
+
 SPVCompiler::SPVCompiler() {
 	HRESULT r;
 	// Initialize DXC library
@@ -105,6 +154,9 @@ bool SPVCompiler::CompileHLSL(const XString& hlslFile, const XString& entryPoint
 		defineW.second = String2WString(define.Value);
 		dxcDefines.PushBack({ defineW.first.c_str(), defineW.second.c_str() });
 	}
+	//CustomIncludeHandler* includeHandler = new CustomIncludeHandler;
+	IDxcIncludeHandler* includeHandler;
+	m_Utils->CreateDefaultIncludeHandler(&includeHandler);
 
 	XWString entryPointW = String2WString(entryPoint);
 	TArray<LPCWSTR> preArgs = {
@@ -123,7 +175,7 @@ bool SPVCompiler::CompileHLSL(const XString& hlslFile, const XString& entryPoint
 		&buffer,
 		args->GetArguments(),
 		args->GetCount(),
-		nullptr,
+		includeHandler,
 		IID_PPV_ARGS(&result)
 	);
 

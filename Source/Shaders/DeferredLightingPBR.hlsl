@@ -1,6 +1,4 @@
-//#include "ShadowMap.hlsli"
-#define CASCADE_NUM 4
-#define SHADOW_VAL 0.1
+#include "ShadowCommon.hlsli"
 
 struct VSOutput {
 	float4 Position:SV_POSITION;
@@ -107,87 +105,6 @@ float3 PBRDirectLight(float3 V, float3 L, float3 N, float3 albedo, float3 irradi
 	return irradiance * (Kd * albedo / PI + Fs) * NdotL;
 }
 
-float2 GetTexelSize2D(Texture2DArray<float> tex) {
-    uint w, h, l, m;
-    tex.GetDimensions(0, w, h, l, m);
-    return float2(1.0 / (float) w, 1.0 / (float) h);
-}
-
-float PCF25(Texture2DArray<float> inShadowMap, SamplerState inSampler, float2 uv, uint cascade, float testZ){
-#define PCF_NUM 25
-    float2 texelSize = GetTexelSize2D(inShadowMap);
-    const float2 PoissonDist[PCF_NUM] = {
-        float2(-0.978698, -0.0884121),
-	    float2(-0.841121, 0.521165),
-	    float2(-0.71746, -0.50322),
-	    float2(-0.702933, 0.903134),
-	    float2(-0.663198, 0.15482),
-	    float2(-0.495102, -0.232887),
-	    float2(-0.364238, -0.961791),
-	    float2(-0.345866, -0.564379),
-	    float2(-0.325663, 0.64037),
-	    float2(-0.182714, 0.321329),
-	    float2(-0.142613, -0.0227363),
-	    float2(-0.0564287, -0.36729),
-	    float2(-0.0185858, 0.918882),
-	    float2(0.0381787, -0.728996),
-	    float2(0.16599, 0.093112),
-	    float2(0.253639, 0.719535),
-	    float2(0.369549, -0.655019),
-	    float2(0.423627, 0.429975),
-	    float2(0.530747, -0.364971),
-	    float2(0.566027, -0.940489),
-	    float2(0.639332, 0.0284127),
-	    float2(0.652089, 0.669668),
-	    float2(0.773797, 0.345012),
-	    float2(0.968871, 0.840449),
-	    float2(0.991882, -0.657338)
-    };
-    float shadowVal = 0.0f;
-    const float dilation = 1.0f;
-	[unroll]
-    for (uint i = 0; i < PCF_NUM; ++i){
-        float2 offsetUV = uv + texelSize * PoissonDist[i] * dilation;
-        float closestZ = inShadowMap.Sample(inLinearSampler, float3(offsetUV, (float) cascade));
-        shadowVal += (1.0 + (SHADOW_VAL - 1.0) * step(closestZ, testZ)); // in shadow distance and current z is greater than closest z.
-    }
-    return shadowVal / PCF_NUM;
-}
-
-float CalcShadowVal(Texture2DArray<float> inShadowMap, SamplerState inSampler, float2 uv, uint cascade, float testZ) {
-    float closestZ = inShadowMap.Sample(inLinearSampler, float3(uv, (float) cascade)).r;
-    return (1.0 + (SHADOW_VAL - 1.0) * step(closestZ, testZ));
-}
-
-float PCFByMicrosoft(Texture2DArray<float> inShadowMap, SamplerState inSampler, float2 uv, uint cascade, float testZ) {
-    float2 texelSize = GetTexelSize2D(inShadowMap);
-    const float dilation = 1.0f;
-    float d1 = dilation * texelSize.x * 0.125;
-    float d2 = dilation * texelSize.x * 0.875;
-    float d3 = dilation * texelSize.x * 0.625;
-    float d4 = dilation * texelSize.x * 0.375;
-    float result = (
-        2.0 * CalcShadowVal(inShadowMap, inSampler, uv, cascade, testZ) +
-        CalcShadowVal(inShadowMap, inSampler, uv + float2(-d2, d1), cascade, testZ) +
-        CalcShadowVal(inShadowMap, inSampler, uv + float2(-d1, -d2), cascade, testZ) +
-        CalcShadowVal(inShadowMap, inSampler, uv + float2(d2, -d1), cascade, testZ) +
-        CalcShadowVal(inShadowMap, inSampler, uv + float2(d1, d2), cascade, testZ) +
-        CalcShadowVal(inShadowMap, inSampler, uv + float2(-d4, d3), cascade, testZ) +
-        CalcShadowVal(inShadowMap, inSampler, uv + float2(-d3, -d4), cascade, testZ) +
-        CalcShadowVal(inShadowMap, inSampler, uv + float2(d4, -d3), cascade, testZ)+
-        CalcShadowVal(inShadowMap, inSampler, uv + float2(d4, d3), cascade, testZ)
-    ) / 10.0f;
-    return result;
-}
-
-// test whether components in range (0, 1)
-float3 TestRange01(float3 projectCoords) {
-    return float3(
-		step(0.0, projectCoords.x) * step(projectCoords.x, 1.0),
-		step(0.0, projectCoords.y) * step(projectCoords.y, 1.0),
-		step(0.0, projectCoords.z) * step(projectCoords.z, 1.0));
-}
-
 // compute csm
 float3 ComputeCascadeShadow(float3 worldPos, float3 sceneColor){
 	// to view space
@@ -210,8 +127,8 @@ float3 ComputeCascadeShadow(float3 worldPos, float3 sceneColor){
     projCoords.xy = projCoords.xy * 0.5 + 0.5;
 	// clip the coords out of view
 	if(all(TestRange01(projCoords))) {
-        float2 shadowMapUV = projCoords.xy;
-        float shadowVal = PCFByMicrosoft(inShadowMap, inLinearSampler, shadowMapUV, cascade, projCoords.z);
+        //float shadowVal = PCSS(inShadowMap, inLinearSampler, cascade, projCoords);
+        float shadowVal = PCF25(inShadowMap, inLinearSampler, cascade, projCoords, 1.5);
         sceneColor *= shadowVal;
     }
 

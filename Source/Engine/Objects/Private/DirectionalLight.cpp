@@ -125,6 +125,8 @@ namespace Object {
 			}
 			Math::AABB3 aabb = Math::AABB3::MinMax(min, max);
 			Math::FVector3 extent = aabb.Extent();
+			// expand Z, to ensure objects locate far from camera, to avoid clip by projection
+			extent.Z *= (1.4f - (float)i * 0.1f);
 			Object::CameraProjection dstProj;
 			dstProj.SetOrtho(-extent.Z, extent.Z, extent.Y, extent.X / extent.Y);
 			// set camera

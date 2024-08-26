@@ -1,0 +1,9 @@
+{
+    "Name": "Sphere",
+    "Primitives": [
+        {
+            "Material": "",
+            "BinaryFile": "Meshes/Sphere.primitive"
+        }
+    ]
+}

@@ -1,0 +1,9 @@
+{
+    "Name": "Cube",
+    "Primitives": [
+        {
+            "Material": "",
+            "BinaryFile": "Meshes/Cube.primitive"
+        }
+    ]
+}
