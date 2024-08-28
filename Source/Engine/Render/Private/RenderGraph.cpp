@@ -30,6 +30,15 @@ namespace Render {
 		return (RGPresentNode*)m_Nodes[m_PresentNodeID].Get();
 	}
 
+	void RenderGraph::InsertFence(RHIFence* fence, RGNode* node) {
+		if(ERGNodeType::Pass == node->GetNodeType()) {
+			((RGPassNode*)node)->InsertFence(fence);
+		}
+		else if(!node->m_PrevNodes.IsEmpty()){
+			InsertFence(fence, m_Nodes[node->m_PrevNodes.Back()]);
+		}
+	}
+
 	void RenderGraph::Run(ICmdAllocator* cmdAlloc) {
 		ASSERT(RG_INVALID_NODE != m_PresentNodeID, "[RenderGraph::Run] No present node!");
 		m_NodesSolved.Resize(m_Nodes.Size(), false);

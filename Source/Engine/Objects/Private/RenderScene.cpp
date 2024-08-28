@@ -32,7 +32,7 @@ namespace Object {
         CameraUBO CameraUbo;
     };
 
-    RenderScene::RenderScene(): m_RenderTarget(nullptr), m_ViewportDirty(false), m_RenderTargetFormatDirty(false) {
+    RenderScene::RenderScene(): m_TargetFormat(ERHIFormat::Undefined) {
         // register systems
         for(auto& func: s_RegisterSystems) {
             func(this);
@@ -43,9 +43,6 @@ namespace Object {
         MeshGBufferPSO = Render::CreateMeshGBufferRenderPSO(formats, depthFormat);
         // create camera and lights
         CreateResources();
-        const auto windowSize = Engine::EngineWindow::Instance()->GetWindowSize();
-        SetViewportSize(windowSize);
-        Render::ViewportRenderer::Instance()->SetRenderScene(this);
     }
 
     RenderScene::~RenderScene() {
@@ -60,47 +57,31 @@ namespace Object {
         SystemUpdate();
     }
 
-    void RenderScene::SetViewportSize(const USize2D& size) {
-        m_Camera->SetAspect((float)size.w / (float)size.h);
-        m_ViewportSize = { size.w, size.h };
-        m_ViewportDirty = true;
-    }
-
-    void RenderScene::SetRenderTarget(RHITexture* target, RHITextureSubDesc sub) {
-        // check if the format of render target changed
-        auto getFormat = [](RHITexture* tex) {return tex ? tex->GetDesc().Format : ERHIFormat::Undefined; };
-        m_RenderTargetFormatDirty = getFormat(m_RenderTarget) != getFormat(target);
-        m_RenderTarget = target;
-        m_RenderTargetSub = sub;
-    }
-
-    Render::RGTextureNode* RenderScene::Render(Render::RenderGraph& rg) {
-        if(!m_RenderTarget) {
-            return nullptr;
+    void RenderScene::Render(Render::RenderGraph& rg, Render::RGTextureNode* targetNode) {
+        const RHITextureDesc& desc = targetNode->GetDesc();
+        // check if size or format changed
+        USize2D targetSize = { desc.Width, desc.Height };
+        ERHIFormat targetFormat = desc.Format;
+        if(m_TargetSize != targetSize) {
+            m_TargetSize = targetSize;
+            CreateTextureResources();
         }
-        if(m_ViewportDirty || m_RenderTargetFormatDirty) {
-            Render::ViewportRenderer::Instance()->WaitAllFence();
-            if(m_ViewportDirty) {
-                CreateRTTextures();
-                m_ViewportDirty = false;
-            }
-            if (m_RenderTargetFormatDirty) {
-                m_DeferredLightingPSO = Render::CreateDeferredLightingPSO(m_RenderTarget->GetDesc().Format);
-                m_RenderTargetFormatDirty = false;
-            }
+        if(m_TargetFormat != targetFormat) {
+            m_DeferredLightingPSO = Render::CreateDeferredLightingPSO(targetFormat);
+            m_TargetFormat = targetFormat;
         }
+
         // ========= create resource nodes ==========
         Render::RGTextureNode* normalNode = rg.CreateTextureNode(m_GBufferNormal, "GBufferNormal");
         Render::RGTextureNode* albedoNode = rg.CreateTextureNode(m_GBufferAlbedo, "GBufferAlbedo");
         Render::RGTextureNode* depthNode = rg.CreateTextureNode(m_Depth, "DepthBuffer");
-        Render::RGTextureNode* targetNode = rg.CreateTextureNode(m_RenderTarget, "SceneRenderTarget");
 
         // ========= create pass nodes ==============
         // TODO parallel run directionalShadow and gBuffer
         // gBuffer node
-        const Rect renderArea = { 0, 0, m_ViewportSize.w, m_ViewportSize.h };
+        const Rect renderArea = { 0, 0, m_TargetSize.w, m_TargetSize.h };
         Render::RGRenderNode* gBufferNode = rg.CreateRenderNode("GBufferPass");
-        gBufferNode->SetArea(renderArea);
+        gBufferNode->SetRenderArea(renderArea);
         gBufferNode->WriteColorTarget(normalNode, 0);
         gBufferNode->WriteColorTarget(albedoNode, 1);
         gBufferNode->WriteDepthTarget(depthNode);
@@ -115,7 +96,7 @@ namespace Object {
         const Rect shadowArea = { 0, 0, directionalShadowMap->GetDesc().Width, directionalShadowMap->GetDesc().Height };
         for (uint32 i = 0; i < m_DirectionalLight->GetCascadeNum(); ++i) {
             Render::RGRenderNode* csmNode = rg.CreateRenderNode(StringFormat("CSM%u", i));
-            csmNode->SetArea(shadowArea);
+            csmNode->SetRenderArea(shadowArea);
             csmNode->WriteDepthTarget(shadowMapNode, { 0, 1, (uint8)i, 1 });
             csmNode->SetTask([this, i](RHICommandBuffer* cmd) {
                 m_DirectionalLight->GetDrawCallQueue(i).Execute(cmd);
@@ -129,12 +110,11 @@ namespace Object {
         deferredLightingNode->ReadSRV(albedoNode);
         deferredLightingNode->ReadSRV(depthNode);
         deferredLightingNode->WriteColorTarget(targetNode, 0);
-        deferredLightingNode->SetArea(renderArea);
+        deferredLightingNode->SetRenderArea(renderArea);
         deferredLightingNode->SetTask([this](RHICommandBuffer* cmd) {
             cmd->BindGraphicsPipeline(m_DeferredLightingPSO.Get());
             m_DrawCallContext.ExecuteDraCall(Render::EDrawCallQueueType::DeferredLighting, cmd);
         });
-        return targetNode;
     }
 
     RenderScene* RenderScene::GetDefaultScene() {
@@ -186,12 +166,12 @@ namespace Object {
         m_CameraUniform = RHI::Instance()->CreateBuffer({ EBufferFlagBit::BUFFER_FLAG_UNIFORM, sizeof(CameraUBO), 0 });
     }
 
-    void RenderScene::CreateRTTextures() {
+    void RenderScene::CreateTextureResources() {
         RHI* r = RHI::Instance();
         RHITextureDesc desc = RHITextureDesc::Texture2D();
         desc.Flags = TEXTURE_FLAG_COLOR_TARGET | TEXTURE_FLAG_SRV;
-        desc.Width = m_ViewportSize.w;
-        desc.Height = m_ViewportSize.h;
+        desc.Width = m_TargetSize.w;
+        desc.Height = m_TargetSize.h;
         desc.Format = s_NormalFormat;
         m_GBufferNormal = r->CreateTexture(desc);
 

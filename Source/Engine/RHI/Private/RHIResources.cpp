@@ -88,6 +88,10 @@ uint32 RHITexture::GetPixelByteSize() {
     return g_FormatPixelByteSize[(uint32)m_Desc.Format].PixelByteSize;
 }
 
+RHITextureSubDesc RHITexture::GetDefaultSubRes() const {
+    return { 0, m_Desc.MipSize, 0, m_Desc.ArraySize };
+}
+
 uint32 RHIRenderPassInfo::GetNumColorTargets() const {
     for(uint32 i=0; i<ColorTargets.Size(); ++i) {
 	    if(!ColorTargets[i].Target) {

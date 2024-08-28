@@ -30,10 +30,7 @@ namespace Render {
 		RHITextureDesc desc = RHITextureDesc::Texture2D();
 		desc.Format = ERHIFormat::R8G8B8A8_UNORM;
 		desc.Flags = TEXTURE_FLAG_SRV | TEXTURE_FLAG_CPY_DST;
-		desc.Width = 1;
-		desc.Height = 1;
-		desc.MipSize = 1;
-		desc.Samples = 1;
+		desc.Width = desc.Height = 1;
 
 		for (uint32 i = 0; i < DefaultTextureType::TEX_MAX_NUM; ++i) {
 			m_DefaultTexture2D[i] = rhi->CreateTexture(desc);

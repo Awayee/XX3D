@@ -154,14 +154,11 @@ bool SPVCompiler::CompileHLSL(const XString& hlslFile, const XString& entryPoint
 		defineW.second = String2WString(define.Value);
 		dxcDefines.PushBack({ defineW.first.c_str(), defineW.second.c_str() });
 	}
-	//CustomIncludeHandler* includeHandler = new CustomIncludeHandler;
-	IDxcIncludeHandler* includeHandler;
-	m_Utils->CreateDefaultIncludeHandler(&includeHandler);
 
 	XWString entryPointW = String2WString(entryPoint);
 	TArray<LPCWSTR> preArgs = {
-		L"-I", s_ShaderRoot.c_str(),
 		L"-spirv"
+		//L"-I", s_ShaderRoot.c_str(),
 	};
 	m_Utils->BuildArguments(hlslFileW, entryPointW.c_str(), shaderModel, preArgs.Data(), preArgs.Size(), dxcDefines.Data(), dxcDefines.Size(), &args);
 
@@ -169,6 +166,9 @@ bool SPVCompiler::CompileHLSL(const XString& hlslFile, const XString& entryPoint
 	buffer.Encoding = DXC_CP_ACP;
 	buffer.Ptr = sourceBlob->GetBufferPointer();
 	buffer.Size = sourceBlob->GetBufferSize();
+
+	IDxcIncludeHandler* includeHandler{ nullptr };
+	m_Utils->CreateDefaultIncludeHandler(&includeHandler);
 
 	IDxcResult* result{ nullptr };
 	r = m_Compiler->Compile(
@@ -205,6 +205,7 @@ bool SPVCompiler::CompileHLSL(const XString& hlslFile, const XString& entryPoint
 	}
 	fout.write((char*)code->GetBufferPointer(), code->GetBufferSize());
 	fout.close();
+	DX_RELEASE(includeHandler);
 	DX_RELEASE(sourceBlob);
 	DX_RELEASE(args);
 	DX_RELEASE(result);

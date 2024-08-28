@@ -33,7 +33,9 @@ VulkanImGui::VulkanImGui(void(*configInitializer)()) {
 	VkFormat format = vkViewport->GetSwapchainFormat();
 	initInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats = &format;
 	ImGui_ImplVulkan_Init(&initInfo);
-	configInitializer();
+	if(configInitializer) {
+		configInitializer();
+	}
 	ImGui_ImplVulkan_CreateFontsTexture();
 	m_IsInitialized = false;
 }

@@ -43,26 +43,27 @@ namespace Render {
 #pragma region PassNode
 	class RGPassNode: public RGNode {
 	public:
-		RGPassNode(RGNodeID nodeID) : RGNode(nodeID) {}
+		RGPassNode(RGNodeID nodeID) : RGNode(nodeID), m_Fence(nullptr) {}
 	protected:
 		friend RenderGraph;
+		RHIFence* m_Fence;
 		ERGNodeType GetNodeType() const override { return ERGNodeType::Pass; }
 		virtual void Run(ICmdAllocator* cmdAlloc) = 0;
+		void InsertFence(RHIFence* fence) { m_Fence = fence; }
 	};
 
 	class RGRenderNode: public RGPassNode {
 	public:
 		typedef Func<void(RHICommandBuffer*)> RenderTask;
-		RGRenderNode(uint32 nodeID): RGPassNode(nodeID), m_Fence(nullptr) {}
+		RGRenderNode(uint32 nodeID): RGPassNode(nodeID) {}
 		~RGRenderNode() override = default;
 		void ReadSRV(RGTextureNode* node);
 		void ReadColorTarget(RGTextureNode* node, uint32 i, RHITextureSubDesc subRes={}); // keep content written by previous pass (without clear)
 		void ReadDepthTarget(RGTextureNode* node, RHITextureSubDesc subRes={});
 		void WriteColorTarget(RGTextureNode* node, uint32 i, RHITextureSubDesc subRes={}); // write new targets
 		void WriteDepthTarget(RGTextureNode* node, RHITextureSubDesc subRes={});
-		void SetArea(const Rect& rect);
+		void SetRenderArea(const Rect& rect);
 		void SetTask(RenderTask&& f) { m_Task = MoveTemp(f); }
-		void InsertFence(RHIFence* fence) { m_Fence = fence; }
 	private:
 		TArray<RGTextureNode*> m_SRVs;
 		struct TargetInfo {
@@ -75,8 +76,27 @@ namespace Render {
 		TStaticArray<TargetInfo, RHI_COLOR_TARGET_MAX> m_ColorTargets;
 		Rect m_RenderArea;
 		RenderTask m_Task;
-		RHIFence* m_Fence;
 		void Run(ICmdAllocator* cmdAlloc) override;
+	};
+
+	class RGComputeNode: public RGPassNode {
+	public:
+		typedef Func<void(RHICommandBuffer*)> ComputeTask;
+		RGComputeNode(uint32 nodeID) :RGPassNode(nodeID) {}
+		~RGComputeNode() override = default;
+		void ReadSRV(RGTextureNode* node);
+		void WriteUAV(RGTextureNode* node);
+		void SetTask(ComputeTask&& f) { m_Task = MoveTemp(f); }
+	private:
+		TArray<RGTextureNode*> m_SRVs;
+		TArray<RGTextureNode*> m_UAVs;
+		ComputeTask m_Task;
+		void Run(ICmdAllocator* cmdAlloc) override;
+	};
+
+	class RGTransferNode: public RGPassNode {
+	public:
+		RGTransferNode(uint32 nodeID): RGPassNode(nodeID){}
 	};
 
 	class RGPresentNode: public RGNode {
@@ -119,12 +139,15 @@ namespace Render {
 	public:
 		RGTextureNode(RGNodeID nodeID, const RHITextureDesc& desc) : RGResourceNode(nodeID), m_Desc(desc), m_RHI(nullptr) {}
 		explicit RGTextureNode(uint32 nodeID, RHITexture* texture) : RGResourceNode(nodeID), m_Desc(texture->GetDesc()), m_RHI(texture) {}
+		const RHITextureDesc& GetDesc() const { return m_Desc; }
 		RHITexture* GetRHI();
 		void SetTargetState(EResourceState targetState) { m_TargetState = targetState; }
 		EResourceState GetTargetState() const { return m_TargetState; }
 		uint8 RegisterSubRes(RHITextureSubDesc subRes); // register sub resource for connected node, return the index of m_SubResStates
 		void TransitionToState(RHICommandBuffer* cmd, EResourceState dstState, uint8 subResIdx);
+		void TransitionToState(RHICommandBuffer* cmd, EResourceState dstState);
 		void TransitionToTargetState(RHICommandBuffer* cmd, uint8 subResIdx);
+		void TransitionToTargetState(RHICommandBuffer* cmd);
 	private:
 		RHITextureDesc m_Desc;
 		RHITexture* m_RHI;
@@ -133,6 +156,7 @@ namespace Render {
 			EResourceState State{EResourceState::Unknown};
 		};
 		TArray<SubResState> m_SubResStates;
+		EResourceState m_CurrentState{ EResourceState::Unknown };
 		EResourceState m_TargetState{ EResourceState::Unknown }; // the state at next pass input
 	};
 #pragma endregion

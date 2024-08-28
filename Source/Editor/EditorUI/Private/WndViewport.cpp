@@ -57,7 +57,7 @@ namespace Editor {
 	}
 
 	WndViewport::~WndViewport() {
-		if(m_RenderTarget) {
+		if(m_RenderTargetID) {
 			ImGuiRHI::Instance()->RemoveImGuiTexture(m_RenderTargetID);
 		}
 	}
@@ -110,12 +110,7 @@ namespace Editor {
 	void WndViewport::Update() {
 		// if this window is hided, disable the main pass rendering
 		if (!m_Enable && m_ViewportShow) {
-			if(EditorLevel* level = Editor::EditorLevelMgr::Instance()->GetLevel()) {
-				if(Object::RenderScene* scene = level->GetScene()) {
-					scene->SetRenderTarget(nullptr, {});
-				}
-			}
-			ReleaseRenderTarget();
+			Editor::EditorUIMgr::Instance()->SetSceneTexture(nullptr);
 			m_ViewportShow = false;
 		}
 	}
@@ -131,43 +126,40 @@ namespace Editor {
 		}
 		Object::RenderCamera* camera = scene->GetMainCamera();
 		CameraControl(camera);
-		auto size = ImGui::GetWindowSize();
 
-		if (!m_ViewportShow || !Math::FloatEqual(size.x, m_ViewportSize.w) || !Math::FloatEqual(size.y, m_ViewportSize.h)) {
-			m_ViewportSize = { (uint32)size.x, (uint32)size.y };
-			ReleaseRenderTarget();
-			CreateRenderTarget();
-			scene->SetViewportSize(m_ViewportSize);
-			scene->SetRenderTarget(m_RenderTarget.Get(), {});
+		// check render size;
+		auto size = ImGui::GetWindowSize();
+		USize2D windowSize = { (uint32)size.x, (uint32)size.y };
+		if(m_ViewportSize != windowSize || !m_ViewportShow) {
+			m_ViewportSize = windowSize;
+			SetupRenderTarget();
+			camera->SetAspect((float)m_ViewportSize.w / (float)m_ViewportSize.h);
 			m_ViewportShow = true;
 		}
-		if (m_RenderTarget) {
-			ImGui::SetCursorPos(ImVec2(0, 0));
-			ImGui::Image(m_RenderTargetID, size);
-			// show fps
-			ImGui::SetCursorPos(ImVec2(32, 32));
-			ImGui::Text("FPS = %u", static_cast<uint32>(Engine::CTimer::Instance()->GetFPS()));
-		}
+		ImGui::SetCursorPos(ImVec2(0, 0));
+		ImGui::Image(m_RenderTargetID, size);
+		// show fps
+		ImGui::SetCursorPos(ImVec2(32, 32));
+		ImGui::Text("FPS = %u", static_cast<uint32>(Engine::CTimer::Instance()->GetFPS()));
 	}
 
-	void WndViewport::ReleaseRenderTarget() {
-		if (m_RenderTarget) {
-			Render::ViewportRenderer::Instance()->WaitAllFence();
-			ImGuiRHI::Instance()->RemoveImGuiTexture(m_RenderTargetID);
-			m_RenderTarget.Reset();
-		}
-	}
-
-	void WndViewport::CreateRenderTarget() {
-		if(m_ViewportSize.w > 0 && m_ViewportSize.h > 0) {
+	void WndViewport::SetupRenderTarget() {
+		// check need recreate render target
+		if(!m_RenderTarget || m_RenderTarget->GetDesc().Width != m_ViewportSize.w || m_RenderTarget->GetDesc().Height != m_ViewportSize.h) {
+			if (m_RenderTargetID) {
+				ImGuiRHI::Instance()->RemoveImGuiTexture(m_RenderTargetID);
+				m_RenderTargetID = nullptr;
+			}
 			RHITextureDesc desc = RHITextureDesc::Texture2D();
-			desc.Format = ERHIFormat::B8G8R8A8_UNORM;
-			desc.Flags = TEXTURE_FLAG_SRV | TEXTURE_FLAG_COLOR_TARGET;
 			desc.Width = m_ViewportSize.w;
 			desc.Height = m_ViewportSize.h;
+			desc.Format = ERHIFormat::B8G8R8A8_UNORM;
+			desc.Flags = ETextureFlagBit::TEXTURE_FLAG_SRV | ETextureFlagBit::TEXTURE_FLAG_COLOR_TARGET;
 			m_RenderTarget = RHI::Instance()->CreateTexture(desc);
 			RHISampler* sampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp);
-			m_RenderTargetID = ImGuiRHI::Instance()->RegisterImGuiTexture(m_RenderTarget.Get(), sampler);
+			m_RenderTargetID = ImGuiRHI::Instance()->RegisterImGuiTexture(m_RenderTarget, sampler);
 		}
+		
+		Editor::EditorUIMgr::Instance()->SetSceneTexture(m_RenderTarget);
 	}
 }

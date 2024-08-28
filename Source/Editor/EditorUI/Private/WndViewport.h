@@ -13,9 +13,8 @@ namespace Editor {
 		~WndViewport() override;
 	private:
 		RHITexturePtr m_RenderTarget;
-		ImTextureID m_RenderTargetID;
+		ImTextureID m_RenderTargetID{ nullptr };
 		USize2D m_ViewportSize{ 0, 0 };
-		Rect m_Viewport{ 0,0,0,0 };
 		float m_LastX{ 0.0f };
 		float m_LastY{ 0.0f	};
 		bool m_MouseDown{ false };
@@ -24,7 +23,6 @@ namespace Editor {
 		void CameraControl(Object::RenderCamera* camera);
 		void Update() override;
 		void WndContent() override;
-		void ReleaseRenderTarget();
-		void CreateRenderTarget();
+		void SetupRenderTarget();
 	};
 }

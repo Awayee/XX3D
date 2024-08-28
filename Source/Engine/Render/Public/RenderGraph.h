@@ -16,6 +16,10 @@ namespace Render {
 		RGBufferNode* CreateBufferNode(RHIBuffer* buffer, XString&& name);
 		RGTextureNode* CreateTextureNode(RHITexture* texture, XString&& name);
 		RGPresentNode* CreatePresentNode();
+
+		// Insert a fence signed after node finished.
+		// if node is not a PassNode, find the previous pass node to insert.
+		void InsertFence(RHIFence* fence, RGNode* node);
 		void Run(ICmdAllocator* cmdAlloc);
 	private:
 		TArray<TUniquePtr<RGNode>> m_Nodes;

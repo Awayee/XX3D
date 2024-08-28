@@ -23,7 +23,7 @@ namespace Engine {
 		RHI::Initialize();
 		Render::DefaultResources::Initialize();
 		Render::GlobalShaderMap::Initialize();
-		Render::ViewportRenderer::Initialize();
+		Render::Renderer::Initialize();
 		Object::TextureResourceMgr::Initialize();
 		Object::MeshRenderSystem::Initialize();
 		Object::RenderScene::Initialize();
@@ -32,7 +32,7 @@ namespace Engine {
 
 	XXEngine::~XXEngine() {
 		// wait renderer
-		Render::ViewportRenderer::Release();
+		Render::Renderer::Release();
 		Object::RenderScene::Release();
 		Object::TextureResourceMgr::Release();
 		Render::GlobalShaderMap::Release();
@@ -47,7 +47,7 @@ namespace Engine {
 		RHI::Instance()->BeginFrame();// RHI Update must run at the beginning.
 		EngineWindow::Instance()->Update();
 		Object::RenderScene::Tick();
-		Render::ViewportRenderer::Instance()->Run();
+		Render::Renderer::Instance()->Run();
 		CTimer::Instance()->Tick();
 		FrameCounter::Update();// Frame counter ticks at last.
 	}

@@ -94,6 +94,7 @@ public:
 	XX_NODISCARD const RHITextureDesc& GetDesc() const { return m_Desc; }
 	virtual void UpdateData(uint32 byteSize, const void* data, RHITextureOffset offset) = 0;
 	uint32 GetPixelByteSize();
+	RHITextureSubDesc GetDefaultSubRes() const;
 };
 
 class RHIViewport {

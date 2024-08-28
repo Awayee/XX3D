@@ -43,7 +43,7 @@ namespace Render {
 		RGNode::Connect(this, node);
 	}
 
-	void RGRenderNode::SetArea(const Rect& rect) {
+	void RGRenderNode::SetRenderArea(const Rect& rect) {
 		m_RenderArea = rect;
 	}
 
@@ -118,6 +118,51 @@ namespace Render {
 		RHI::Instance()->SubmitCommandBuffer(cmd, m_Fence, bPresent);
 	}
 
+	void RGComputeNode::ReadSRV(RGTextureNode* node) {
+		m_SRVs.PushBack(node);
+		node->SetTargetState(EResourceState::ShaderResourceView);
+		RGNode::Connect(node, this);
+	}
+
+	void RGComputeNode::WriteUAV(RGTextureNode* node) {
+		m_UAVs.PushBack(node);
+		node->SetTargetState(EResourceState::UnorderedAccessView);
+		RGNode::Connect(this, node);
+	}
+
+	void RGComputeNode::Run(ICmdAllocator* cmdAlloc) {
+		RHICommandBuffer* cmd = cmdAlloc->GetCmd();
+		cmd->Reset();
+		if (!m_Name.empty()) {
+			cmd->BeginDebugLabel(m_Name.c_str(), nullptr);
+		}
+		// state transition before dispatch
+		{
+			for(auto& srv: m_SRVs) {
+				srv->TransitionToState(cmd, EResourceState::ShaderResourceView);
+			}
+			for(auto& uav: m_UAVs) {
+				uav->TransitionToState(cmd, EResourceState::UnorderedAccessView);
+			}
+		}
+		if(m_Task) {
+			m_Task(cmd);
+		}
+		// state transition after dispatch
+		{
+			for (auto& srv : m_SRVs) {
+				srv->TransitionToTargetState(cmd);
+			}
+			for (auto& uav : m_UAVs) {
+				uav->TransitionToTargetState(cmd);
+			}
+		}
+		if (!m_Name.empty()) {
+			cmd->EndDebugLabel();
+		}
+		RHI::Instance()->SubmitCommandBuffer(cmd, m_Fence, false);
+	}
+
 	void RGPresentNode::SetPrevNode(RGTextureNode* node) {
 		m_PrevNode = node;
 		node->SetTargetState(EResourceState::Present);
@@ -157,7 +202,19 @@ namespace Render {
 		}
 	}
 
+	void RGTextureNode::TransitionToState(RHICommandBuffer* cmd, EResourceState dstState) {
+		if(dstState != EResourceState::Unknown && m_TargetState != dstState) {
+			cmd->TransitionTextureState(m_RHI, m_CurrentState, dstState, m_RHI->GetDefaultSubRes());
+			m_CurrentState = dstState;
+		}
+	}
+
+
 	void RGTextureNode::TransitionToTargetState(RHICommandBuffer* cmd, uint8 subResIdx) {
 		TransitionToState(cmd, m_TargetState, subResIdx);
+	}
+
+	void RGTextureNode::TransitionToTargetState(RHICommandBuffer* cmd) {
+		TransitionToState(cmd, m_TargetState);
 	}
 }

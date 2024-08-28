@@ -9,7 +9,7 @@ namespace Object {
 	class RenderCamera;
 	class DirectionalLight;
 
-	class RenderScene: public ECSScene, public Render::IRenderScene {
+	class RenderScene: public ECSScene{
 	public:
 		NON_COPYABLE(RenderScene);
 		NON_MOVEABLE(RenderScene);
@@ -19,9 +19,7 @@ namespace Object {
 		DirectionalLight* GetDirectionalLight() { return m_DirectionalLight.Get(); }
 		Render::DrawCallContext& GetDrawCallContext() { return m_DrawCallContext; }
 		void Update();
-		void SetViewportSize(const USize2D& size);
-		void SetRenderTarget(RHITexture* target, RHITextureSubDesc sub);
-		Render::RGTextureNode* Render(Render::RenderGraph& rg) override;
+		void Render(Render::RenderGraph& rg, Render::RGTextureNode* targetNode);
 		static RenderScene* GetDefaultScene(); // TODO TEST
 		static void Initialize();
 		static void Release();
@@ -36,20 +34,18 @@ namespace Object {
 		TUniquePtr<RenderCamera> m_Camera;
 		RHIBufferPtr m_CameraUniform;
 		Render::DrawCallContext m_DrawCallContext;
-		USize2D m_ViewportSize;
 		// fo gBuffer
+		USize2D m_TargetSize;
+		ERHIFormat m_TargetFormat;
 		RHITexturePtr m_GBufferNormal;
 		RHITexturePtr m_GBufferAlbedo;
 		RHITexturePtr m_Depth;
 		RHIGraphicsPipelineStatePtr MeshGBufferPSO;
 		// for deferred lighting
-		RHITexture* m_RenderTarget;
-		RHITextureSubDesc m_RenderTargetSub;
 		RHIGraphicsPipelineStatePtr m_DeferredLightingPSO;
-		bool m_ViewportDirty;
-		bool m_RenderTargetFormatDirty;
+
 		void UpdateSceneDrawCall();
 		void CreateResources();
-		void CreateRTTextures();
+		void CreateTextureResources();
 	};
 }

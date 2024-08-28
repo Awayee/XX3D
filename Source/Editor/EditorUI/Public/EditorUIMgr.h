@@ -23,6 +23,7 @@ namespace Editor {
 		};
 		TArray<MenuColumn> m_MenuBar;
 		TArray<TUniquePtr<WidgetBase>> m_Widgets;
+		RHITexture* m_SceneTexture{ nullptr };
 		EditorUIMgr();
 		~EditorUIMgr();
 	public:
@@ -33,5 +34,7 @@ namespace Editor {
 		void AddWindow(TUniquePtr<EditorWndBase>&& wnd);
 		void DeleteWindow(EditorWndBase*& pWnd);
 		EditorPopup* AddPopUp(Func<void()>&& func);
+		RHITexture* GetSceneTexture() { return m_SceneTexture; }
+		void SetSceneTexture(RHITexture* texture) { m_SceneTexture = texture; }
 	};
 }

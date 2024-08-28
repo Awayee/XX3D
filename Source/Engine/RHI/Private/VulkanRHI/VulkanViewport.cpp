@@ -211,8 +211,6 @@ void VulkanViewport::CreateSwapchain() {
 	backBufferDesc.Flags = TEXTURE_FLAG_PRESENT;
 	backBufferDesc.Width = swapchainExtent.width;
 	backBufferDesc.Height = swapchainExtent.height;
-	backBufferDesc.MipSize = 1;
-	backBufferDesc.Samples = 1;
 	m_BackBuffers.Resize(swapchainImageCount);
 	for(uint32 i=0; i<swapchainImageCount; ++i) {
 		m_BackBuffers[i].Reset(new VulkanBackBuffer(backBufferDesc, m_Device, swapchainImages[i]));

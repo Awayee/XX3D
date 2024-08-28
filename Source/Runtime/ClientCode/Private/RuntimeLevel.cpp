@@ -1,5 +1,6 @@
 #include "ClientCode/Public/RuntimeLevel.h"
 #include "Asset/Public/AssetLoader.h"
+#include "System/Public/EngineConfig.h"
 
 namespace Runtime {
 	RuntimeLevel::RuntimeLevel(const Asset::LevelAsset& asset, Object::RenderScene* scene): Level(asset, scene) {
@@ -17,5 +18,15 @@ namespace Runtime {
 				staticMeshCom->BuildFromAsset(meshAsset);
 			}
 		}
+	}
+
+	RuntimeLevelMgr::RuntimeLevelMgr() {
+		auto& levelFile = Engine::ConfigManager::GetData().StartLevel;
+		Asset::LevelAsset asset;
+		Asset::AssetLoader::LoadProjectAsset(&asset, levelFile.c_str());
+		m_Level.Reset(new RuntimeLevel(asset, Object::RenderScene::GetDefaultScene()));
+	}
+
+	RuntimeLevelMgr::~RuntimeLevelMgr() {
 	}
 }

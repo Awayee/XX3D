@@ -7,10 +7,6 @@
 
 namespace Render {
 
-	ERHIFormat GetPresentFormat() {
-		return RHI::Instance()->GetViewport()->GetCurrentBackBuffer()->GetDesc().Format;
-	}
-
 	CmdPool::CmdPool(): m_AllocatedIndex(0) {}
 
 	RHICommandBuffer* CmdPool::GetCmd() {
@@ -35,7 +31,7 @@ namespace Render {
 		}
 	}
 
-	void ViewportRenderer::Run() {
+	void Renderer::Run() {
 		if(!SizeValid()) {
 			return;
 		}
@@ -54,29 +50,22 @@ namespace Render {
 			return;
 		}
 
-		const Rect renderArea = { 0, 0, m_CacheWindowSize.w, m_CacheWindowSize.h };
 		RenderGraph rg;
+		// get back buffer
 		RGTextureNode* backBufferNode = rg.CreateTextureNode(backBuffer, "BackBuffer");
-		RGRenderNode* imGuiNode = rg.CreateRenderNode("ImGui");
-		if(m_RenderScene) {
-			if(RGTextureNode* renderTargetNode = m_RenderScene->Render(rg)) {
-				imGuiNode->ReadSRV(renderTargetNode);
-			}
+		// render scene
+		if(m_SceneRenderer) {
+			m_SceneRenderer->Render(rg, backBufferNode);
 		}
-		imGuiNode->WriteColorTarget(backBufferNode, 0);
-		imGuiNode->SetArea(renderArea);
-		imGuiNode->SetTask([this](RHICommandBuffer* cmd) {
-			// draw imgui
-			ImGuiRHI::Instance()->RenderDrawData(cmd);
-		});
-		imGuiNode->InsertFence(fence);
+		// fence after back buffer written
+		rg.InsertFence(fence, backBufferNode);
 		// present
 		RGPresentNode* presentNode = rg.CreatePresentNode();
 		presentNode->SetPrevNode(backBufferNode);
 		presentNode->SetTask([]() { RHI::Instance()->GetViewport()->Present(); });
 
 		// ========= run the graph ==============
-		fence->Reset();
+		fence->Reset ();
 		CmdPool* cmdPool = &m_CmdPools[frameIndex];
 		cmdPool->Reset();
 		rg.Run(cmdPool);
@@ -87,20 +76,20 @@ namespace Render {
 		nextFence->Wait();
 	}
 
-	void ViewportRenderer::WaitAllFence() {
+	void Renderer::WaitAllFence() {
 		for(auto& fence: m_Fences) {
 			fence->Wait();
 		}
 	}
 
-	void ViewportRenderer::OnWindowSizeChanged(uint32 w, uint32 h) {
+	void Renderer::OnWindowSizeChanged(uint32 w, uint32 h) {
 		if(w != m_CacheWindowSize.w || h != m_CacheWindowSize.h) {
 			m_CacheWindowSize = { w, h };
 			m_SizeDirty = true;
 		}
 	}
 
-	ViewportRenderer::ViewportRenderer() : m_RenderScene(nullptr), m_SizeDirty(false) {
+	Renderer::Renderer() : m_SizeDirty(false) {
 		// Create fences
 		for (uint32 i = 0; i < RHI_FRAME_IN_FLIGHT_MAX; ++i) {
 			m_Fences[i] = RHI::Instance()->CreateFence(true);
@@ -111,11 +100,11 @@ namespace Render {
 		Engine::EngineWindow::Instance()->RegisterOnWindowSizeFunc([this](uint32 w, uint32 h) {OnWindowSizeChanged(w, h); });
 	}
 
-	ViewportRenderer::~ViewportRenderer() {
+	Renderer::~Renderer() {
 		WaitAllFence();
 	}
 
-	bool ViewportRenderer::SizeValid() const {
+	bool Renderer::SizeValid() const {
 		return m_CacheWindowSize.w > 0 && m_CacheWindowSize.h > 0;
 	}
 

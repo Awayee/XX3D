@@ -2,13 +2,13 @@
 #include "RHI/Public/RHI.h"
 #include "Core/Public/TUniquePtr.h"
 #include "Render/Public/DrawCall.h"
-#include "Core/Public/TArrayView.h"
 #include "Render/Public/RenderGraph.h"
 
 namespace Render {
-	class IRenderScene {
+	class ISceneRenderer {
 	public:
-		virtual RGTextureNode* Render(RenderGraph& rg) = 0;
+		virtual ~ISceneRenderer() = default;
+		virtual void Render(RenderGraph& rg, RGTextureNode* backBufferNode) = 0;
 	};
 
 	class CmdPool: public ICmdAllocator {
@@ -26,21 +26,22 @@ namespace Render {
 		uint32 m_AllocatedIndex;
 	};
 
-	class ViewportRenderer {
-		SINGLETON_INSTANCE(ViewportRenderer);
+	// run rendering process
+	class Renderer {
+		SINGLETON_INSTANCE(Renderer);
 	public:
 		void Run();
 		void WaitAllFence();
 		void OnWindowSizeChanged(uint32 w, uint32 h);
-		void SetRenderScene(IRenderScene* scene) { m_RenderScene = scene; }
+		template <class T> void SetSceneRenderer() { m_SceneRenderer.Reset(new T); }
 	private:
 		TStaticArray<CmdPool, RHI_FRAME_IN_FLIGHT_MAX> m_CmdPools;
 		TStaticArray<RHIFencePtr, RHI_FRAME_IN_FLIGHT_MAX> m_Fences;
 		USize2D m_CacheWindowSize;
-		IRenderScene* m_RenderScene;
+		TUniquePtr<ISceneRenderer> m_SceneRenderer;
 		bool m_SizeDirty;
-		ViewportRenderer();
-		~ViewportRenderer();
+		Renderer();
+		~Renderer();
 		bool SizeValid() const;
 	};
 }
