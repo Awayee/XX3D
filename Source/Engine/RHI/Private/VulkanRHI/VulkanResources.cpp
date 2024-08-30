@@ -1,11 +1,11 @@
 #include "VulkanResources.h"
-
 #include "VulkanCommand.h"
 #include "VulkanRHI.h"
 #include "VulkanConverter.h"
 #include "VulkanPipeline.h"
 #include "VulkanDevice.h"
 #include "VulkanUploader.h"
+#include "Math/Public/Math.h"
 
 VulkanRHIBuffer::VulkanRHIBuffer(const RHIBufferDesc& desc, VulkanDevice* device, BufferAllocation&& alloc):
 RHIBuffer(desc), m_Device(device), m_Allocation(std::forward<BufferAllocation>(alloc)) {}
@@ -107,11 +107,15 @@ void VulkanRHITexture::UpdateData(uint32 byteSize, const void* data, RHITextureO
 	void* mappedPointer = staging->Map();
 	memcpy(mappedPointer, data, byteSize);
 	staging->Unmap();
+	// calc layer count by byteSize
+	uint32 sliceSize = m_Desc.Width * m_Desc.Height * GetPixelByteSize();
+	uint32 arrayCount = (uint32)Math::Ceil<float>((float)byteSize / (float)sliceSize);
+	CHECK(arrayCount <= m_Desc.ArraySize);
 	// TODO replace with vulkan functions
 	auto cmd = m_Device->GetCommandContext()->GetUploadCmd();
-	RHITextureSubDesc desc{ offset.MipLevel, 1, offset.ArrayLayer, 1 };
+	RHITextureSubDesc desc{ offset.MipLevel, 1, offset.ArrayLayer, (uint8)arrayCount};
 	cmd->TransitionTextureState(this, EResourceState::Unknown, EResourceState::TransferDst, desc);
-	cmd->CopyBufferToTexture(staging, this, offset.MipLevel, offset.ArrayLayer, 1);
+	cmd->CopyBufferToTexture(staging, this, offset.MipLevel, offset.ArrayLayer, arrayCount);
 	cmd->TransitionTextureState(this, EResourceState::TransferDst, EResourceState::ShaderResourceView, desc);
 }
 

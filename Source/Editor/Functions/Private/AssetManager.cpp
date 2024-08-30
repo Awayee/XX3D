@@ -2,8 +2,7 @@
 #include "Core/Public/File.h"
 #include "Core/Public/Log.h"
 #include "Core/Public/String.h"
-#include "Functions/Public/TextureImporter.h"
-#include "Functions/Public/MeshImporter.h"
+#include "Functions/Public/AssetImporter.h"
 #include "Math/Public/Math.h"
 
 
@@ -309,16 +308,10 @@ namespace Editor {
 
 	void AssetManager::ImportAsset(const char* srcFile, const char* dstFile) {
 		if(StrEndsWith(srcFile, ".png")) {
-			Asset::TextureAsset asset;
-			TextureImporter importer(&asset, dstFile);
-			importer.Import(srcFile);
-			importer.Save();
+			ImportTexture2DAsset(srcFile, dstFile);
 		}
 		else if (StrEndsWith(srcFile, ".glb") || StrEndsWith(srcFile, "fbx")) {
-			Asset::MeshAsset asset;
-			MeshImporter importer(&asset, dstFile);
-			importer.Import(srcFile);
-			importer.Save();
+			ImportMeshAsset(srcFile, dstFile);
 		}
 	}
 }

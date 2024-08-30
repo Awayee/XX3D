@@ -1,4 +1,4 @@
-#include "Shadow\ShadowCommon.hlsli"
+#include "ShadowCommon.hlsli"
 
 struct VSOutput {
 	float4 Position:SV_POSITION;

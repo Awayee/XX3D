@@ -29,7 +29,7 @@ typedef Offset2D<uint32> UOffset2D;
 template<typename T> struct Offset3D {
 	T x{ 0 }, y{ 0 }, z{ 0 };
 };
-typedef Offset3D<uint32> UOffset3D;
+typedef Offset3D<int32>  IOffset3D;
 typedef Offset3D<float>  FOffset3D;
 
 template<typename offset, typename TSize> struct RectTemplate {

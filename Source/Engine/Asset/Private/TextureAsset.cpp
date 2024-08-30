@@ -1,4 +1,5 @@
 #include "Asset/Public/TextureAsset.h"
+#include "Asset/Public/TextureAsset.h"
 #include "lz4.h"
 #include "Core/Public/File.h"
 #include "Core/Public/Log.h"
@@ -10,14 +11,27 @@ namespace Asset {
 		CXIMAGE
 	};
 
+	uint32 GetTextureByteSize(ETextureAssetType type, uint32 width, uint32 height) {
+		uint32 pixelSize = width * height;
+		switch(type) {
+		case ETextureAssetType::RGBA8_2D: return pixelSize * 4;
+		case ETextureAssetType::RGB8_2D: return pixelSize * 3;
+		case ETextureAssetType::RG8_2D: return pixelSize * 2;
+		case ETextureAssetType::RGBA8_Cube: return pixelSize * 4 * 6;
+		case ETextureAssetType::R8_2D: return pixelSize;
+		default:
+			LOG_ERROR("Texture type is not supported! %i", type);
+		}
+	}
+
 	const ETexCompressMode COMPRESS_MODE = ETexCompressMode::LZ4;
 
 	bool TextureAsset::Load(File::RFile& in) {
 		in.seekg(0);
 		in.read(BYTE_PTR(&Width), sizeof(uint32));
 		in.read(BYTE_PTR(&Height), sizeof(uint32));
-		in.read(BYTE_PTR(&Channels), sizeof(uint8));
-		const uint32 byteSize = Width * Height * Channels;
+		in.read(BYTE_PTR(&Type), sizeof(uint8));
+		const uint32 byteSize = GetTextureByteSize(Type, Width, Height);
 		Pixels.Resize(byteSize);
 
 		ETexCompressMode compressMode;
@@ -44,7 +58,7 @@ namespace Asset {
 
 		out.write(CBYTE_PTR(&Width), sizeof(uint32));
 		out.write(CBYTE_PTR(&Height), sizeof(uint32));
-		out.write(CBYTE_PTR(&Channels), sizeof(uint8));
+		out.write(CBYTE_PTR(&Type), sizeof(uint8));
 		out.write(CBYTE_PTR(&compressMode), sizeof(ETexCompressMode));
 
 		if (ETexCompressMode::NONE == compressMode) {
@@ -67,5 +81,4 @@ namespace Asset {
 
 	TextureAsset::~TextureAsset() {
 	}
-	
 }

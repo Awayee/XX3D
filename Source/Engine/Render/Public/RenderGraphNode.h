@@ -68,7 +68,7 @@ namespace Render {
 		TArray<RGTextureNode*> m_SRVs;
 		struct TargetInfo {
 			RGTextureNode* Node{ nullptr };
-			RHITextureSubDesc SubRes;
+			RHITextureSubDesc SubRes{};
 			uint8 SubResIndex{ 0 };
 			ERTLoadOption LoadOp{ ERTLoadOption::NoAction };
 		};
@@ -97,6 +97,18 @@ namespace Render {
 	class RGTransferNode: public RGPassNode {
 	public:
 		RGTransferNode(uint32 nodeID): RGPassNode(nodeID){}
+		void CopyTexture(RGTextureNode* src, RGTextureNode* dst, RHITextureSubDesc subRes);
+	private:
+		struct CpyResourcePair {
+			RGTextureNode* Src;
+			RGTextureNode* Dst;
+			USize2D CpySize;
+			RHITextureSubDesc SubRes;
+			uint8 SrcSubResIndex;
+			uint8 DstSubResIndex;
+		};
+		TArray<CpyResourcePair> m_Cpy;
+		void Run(ICmdAllocator* cmdAlloc) override;
 	};
 
 	class RGPresentNode: public RGNode {

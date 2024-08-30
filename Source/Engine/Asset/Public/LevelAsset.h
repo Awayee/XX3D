@@ -27,6 +27,8 @@ namespace Asset {
 			Math::FVector3 Rotation;
 			Math::FVector3 Color;
 		}DirectionalLightData;
+
+		XString SkyBox;
 		bool Load(File::RFile& in) override;
 		bool Save(File::WFile& out) override;
 	};

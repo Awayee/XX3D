@@ -1,4 +1,5 @@
 #include "Render/Public/RenderGraphNode.h"
+#include "Math/Public/Math.h"
 
 namespace Render {
 
@@ -163,6 +164,44 @@ namespace Render {
 		RHI::Instance()->SubmitCommandBuffer(cmd, m_Fence, false);
 	}
 
+	void RGTransferNode::CopyTexture(RGTextureNode* src, RGTextureNode* dst, RHITextureSubDesc subRes) {
+		auto& cpyPair = m_Cpy.EmplaceBack();
+		cpyPair.Src = src;
+		cpyPair.Dst = dst;
+		cpyPair.SubRes = subRes;
+		uint32 w = Math::Min<uint32>(src->GetDesc().Width, dst->GetDesc().Width);
+		uint32 h = Math::Min<uint32>(src->GetDesc().Height, dst->GetDesc().Height);
+		cpyPair.CpySize = {w, h};
+		cpyPair.SrcSubResIndex = src->RegisterSubRes(subRes);
+		cpyPair.DstSubResIndex = dst->RegisterSubRes(subRes);
+		RGNode::Connect(src, this);
+		RGNode::Connect(this, dst);
+	}
+
+	void RGTransferNode::Run(ICmdAllocator* cmdAlloc) {
+		RHICommandBuffer* cmd = cmdAlloc->GetCmd();
+		cmd->Reset();
+		if(!m_Name.empty()) {
+			cmd->BeginDebugLabel(m_Name.c_str(), nullptr);
+		}
+		for(auto& cpyPair: m_Cpy) {
+			// transition state
+			cpyPair.Src->TransitionToState(cmd, EResourceState::TransferSrc, cpyPair.SrcSubResIndex);
+			cpyPair.Dst->TransitionToState(cmd, EResourceState::TransferDst, cpyPair.DstSubResIndex);
+			RHITextureCopyRegion region{};
+			region.SrcSub = { cpyPair.SubRes.MipIndex, cpyPair.SubRes.ArrayIndex, {0,0,0} };
+			region.DstSub = region.SrcSub;
+			region.Extent = { cpyPair.CpySize.w, cpyPair.CpySize.h, 1 };
+			cmd->CopyTextureToTexture(cpyPair.Src->GetRHI(), cpyPair.Dst->GetRHI(), region);
+			cpyPair.Src->TransitionToTargetState(cmd, cpyPair.SrcSubResIndex);
+			cpyPair.Dst->TransitionToTargetState(cmd, cpyPair.DstSubResIndex);
+		}
+		if (!m_Name.empty()) {
+			cmd->EndDebugLabel();
+		}
+		RHI::Instance()->SubmitCommandBuffer(cmd, m_Fence, false);
+	}
+
 	void RGPresentNode::SetPrevNode(RGTextureNode* node) {
 		m_PrevNode = node;
 		node->SetTargetState(EResourceState::Present);
@@ -190,6 +229,11 @@ namespace Render {
 	}
 
 	uint8 RGTextureNode::RegisterSubRes(RHITextureSubDesc subRes) {
+		for(uint32 i=0; i< m_SubResStates.Size(); ++i) {
+			if(m_SubResStates[i].SubRes == subRes) {
+				return (uint8)i;
+			}
+		}
 		const uint8 index = (uint8)m_SubResStates.Size();
 		m_SubResStates.PushBack({ subRes, EResourceState::Unknown });
 		return index;

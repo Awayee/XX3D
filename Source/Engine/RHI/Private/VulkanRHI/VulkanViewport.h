@@ -16,11 +16,11 @@ public:
 	USize2D GetSize() override;
 	RHITexture* AcquireBackBuffer() override;
 	RHITexture* GetCurrentBackBuffer() override;
+	ERHIFormat GetBackBufferFormat() override;
 	void Present() override;
 	VkSemaphore GetCurrentSemaphore() const;
 	USize2D GetSize() const;
 	uint32 GetImageCount() const;
-	VkFormat GetSwapchainFormat() const;
 private:
 	const VulkanContext* m_Context;
 	VulkanDevice* m_Device;
@@ -28,7 +28,7 @@ private:
 	USize2D m_Size;
 	VkSurfaceKHR m_Surface;
 	VkSwapchainKHR m_Swapchain {VK_NULL_HANDLE};
-	VkSurfaceFormatKHR m_SurfaceFormat;
+	ERHIFormat m_BackBufferFormat;
 	TArray<TUniquePtr<VulkanBackBuffer>> m_BackBuffers;
 	TStaticArray<VkSemaphore, RHI_FRAME_IN_FLIGHT_MAX> m_Semaphores;
 	bool m_SizeDirty{ false };

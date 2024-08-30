@@ -91,9 +91,9 @@ VkFormat ToVkFormat(ERHIFormat f) {
 }
 
  VkMemoryPropertyFlags ToImageMemoryProperty(ETextureFlags flags) {
-	if (flags & (ETextureFlagBit::TEXTURE_FLAG_CPY_SRC)) {
-		return VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-	}
+	//if (flags & (ETextureFlagBit::TEXTURE_USAGE_CPY_SRC)) {
+	//	return VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+	//}
 	return VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 }
 

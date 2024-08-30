@@ -72,12 +72,15 @@ struct RHITextureSubDesc {
 	uint8 MipCount{ 1 };
 	uint8 ArrayIndex{ 0 };
 	uint8 ArrayCount{ 1 };
+	bool operator ==(const RHITextureSubDesc& rhs) const {
+		return MipIndex == rhs.MipIndex && MipCount == rhs.MipCount && ArrayIndex == rhs.ArrayIndex && ArrayCount == rhs.ArrayCount;
+	}
 };
 
 struct RHITextureOffset {
 	uint8 MipLevel{ 0 };
 	uint8 ArrayLayer{ 0 };
-	UOffset3D Offset{ 0,0,0 };
+	IOffset3D Offset{ 0,0,0 };
 };
 
 struct RHITextureCopyRegion {
@@ -104,6 +107,7 @@ public:
 	virtual USize2D GetSize() = 0;
 	virtual RHITexture* AcquireBackBuffer() = 0;
 	virtual RHITexture* GetCurrentBackBuffer() = 0;
+	virtual ERHIFormat GetBackBufferFormat() = 0;
 	virtual void Present() = 0;
 };
 

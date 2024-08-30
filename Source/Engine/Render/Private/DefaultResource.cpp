@@ -41,11 +41,45 @@ namespace Render {
 			m_DefaultTextureCube[i] = rhi->CreateTexture(desc);
 		}
 
-		// white;
-		auto* tex = GetDefaultTexture2D(TEX_WHITE);
-		const Color4<uint8> color{ 255,255,255,255 };
-		const RHITextureOffset offset{ 0,0, {0,0,0} };
-		tex->UpdateData(sizeof(color), &color, offset);
+		// white
+		{
+			auto* tex = GetDefaultTexture2D(TEX_WHITE);
+			const U8Color4 color{ 255,255,255,255 };
+			const RHITextureOffset offset{ 0,0, {0,0,0} };
+			tex->UpdateData(sizeof(color), &color, offset);
+			auto* texCube = GetDefaultTextureCube(TEX_WHITE);
+			TStaticArray<U8Color4, 6> colors;
+			for(auto& c: colors) {
+				c = color;
+			}
+			texCube->UpdateData(colors.ByteSize(), colors.Data(), offset);
+		}
+		// black
+		{
+			auto* tex = GetDefaultTexture2D(TEX_BLACK);
+			const U8Color4 color{ 0,0,0,255 };
+			const RHITextureOffset offset{ 0,0, {0,0,0} };
+			tex->UpdateData(sizeof(color), &color, offset);
+			auto* texCube = GetDefaultTextureCube(TEX_BLACK);
+			TStaticArray<U8Color4, 6> colors;
+			for (auto& c : colors) {
+				c = color;
+			}
+			texCube->UpdateData(colors.ByteSize(), colors.Data(), offset);
+		}
+		// gray
+		{
+			auto* tex = GetDefaultTexture2D(TEX_GRAY);
+			const U8Color4 color{ 127,127,127,255 };
+			const RHITextureOffset offset{ 0,0, {0,0,0} };
+			tex->UpdateData(sizeof(color), &color, offset);
+			auto* texCube = GetDefaultTextureCube(TEX_GRAY);
+			TStaticArray<U8Color4, 6> colors;
+			for (auto& c : colors) {
+				c = color;
+			}
+			texCube->UpdateData(colors.ByteSize(), colors.Data(), offset);
+		}
 	}
 
 	void DefaultResources::CreateDefaultSamplers() {

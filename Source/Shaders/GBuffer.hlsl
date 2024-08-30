@@ -13,7 +13,7 @@ struct VSInput {
     [[vk::location(3)]] float2 inUV: TEXCOORD0;
 };
 
-struct ShadowCameraUBO {
+struct CameraUBO {
     float4x4 View;
     float4x4 Proj;
     float4x4 VP;
@@ -26,7 +26,7 @@ struct ModelUBO {
     float4x4 ModelInvMat;
 };
 
-[[vk::binding(0, 0)]] cbuffer uCamera { ShadowCameraUBO uCamera; };
+[[vk::binding(0, 0)]] cbuffer uCamera { CameraUBO uCamera; };
 [[vk::binding(0, 1)]] cbuffer uModel { ModelUBO uModel; };
 
 //cbuffer cameraUbo : register(b0, space0) { CameraUBO uCamera; }

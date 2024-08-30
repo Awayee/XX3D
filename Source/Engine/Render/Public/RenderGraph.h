@@ -13,6 +13,7 @@ namespace Render {
 		NON_MOVEABLE(RenderGraph);
 		RenderGraph();
 		RGRenderNode* CreateRenderNode(XString&& name);
+		RGTransferNode* CreateTransferNode(XString&& name);
 		RGBufferNode* CreateBufferNode(RHIBuffer* buffer, XString&& name);
 		RGTextureNode* CreateTextureNode(RHITexture* texture, XString&& name);
 		RGPresentNode* CreatePresentNode();

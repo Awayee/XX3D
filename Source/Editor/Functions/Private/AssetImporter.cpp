@@ -1,16 +1,20 @@
-#include "Functions/Public/MeshImporter.h"
+#include "Functions/Public/AssetImporter.h"
 #include "Core/Public/Log.h"
 #include "Core/Public/String.h"
+#include "Core/Public/Container.h"
+#include "Asset/Public/AssetLoader.h"
+#include "Asset/Public/MeshAsset.h"
+#include "Asset/Public/TextureAsset.h"
+
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #define TINYGLTF_IMPLEMENTATION
 #include <tiny_gltf.h>
-
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-#include "Core/Public/Container.h"
-#include "Asset/Public/AssetLoader.h"
 
 
 uint32 GetPrimitiveCount(const tinygltf::Model& model, const tinygltf::Node& node) {
@@ -259,27 +263,7 @@ void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TArray<Asset::MeshAsset::
 	}
 }
 
-MeshImporter::MeshImporter(Asset::MeshAsset* asset, const char* saveFile) {
-	m_Asset = asset;
-	m_SaveFile = saveFile;
-}
-
-bool MeshImporter::Import(const char* fullPath) {
-	if (m_SaveFile.empty()) {
-		File::FPath relativePath = File::RelativePath(File::FPath(fullPath), Asset::AssetLoader::AssetPath());
-		relativePath.replace_extension(".mesh");
-		m_SaveFile = relativePath.string();
-	}
-	if(StrEndsWith(fullPath, ".glb")) {
-		return ImportGLB(fullPath);
-	}
-	else if (StrEndsWith(fullPath, ".fbx")) {
-		return ImportFBX(fullPath);
-	}
-	return false;
-}
-
-bool MeshImporter::ImportGLB(const char* file) {
+bool ImportGLB(const char* file, Asset::MeshAsset& asset) {
 	tinygltf::Model gltfModel;
 	tinygltf::TinyGLTF gltfContext;
 	XString error;
@@ -295,17 +279,17 @@ bool MeshImporter::ImportGLB(const char* file) {
 	for (auto& node : scene.nodes) {
 		primitiveCount += GetPrimitiveCount(gltfModel, gltfModel.nodes[node]);
 	}
-	m_Asset->Primitives.Resize(primitiveCount);
+	asset.Primitives.Resize(primitiveCount);
 	primitiveCount = 0;
 	for (uint32 i = 0; i < scene.nodes.size(); i++) {
-		LoadGLTFNode(gltfModel, gltfModel.nodes[scene.nodes[i]], m_Asset->Primitives, primitiveCount);
+		LoadGLTFNode(gltfModel, gltfModel.nodes[scene.nodes[i]], asset.Primitives, primitiveCount);
 	}
-	m_Asset->Name = File::FPath(fullPath).stem().string();
+	asset.Name = File::FPath(fullPath).stem().string();
 	LOG_INFO("Succeed to load GLTF mesh: %s", file);
 	return true;
 }
 
-bool MeshImporter::ImportFBX(const char* file) {
+bool ImportFBX(const char* file, Asset::MeshAsset& asset) {
 	File::FPath fullPath(file);
 	Assimp::Importer importer;
 	const aiScene* aScene = importer.ReadFile(fullPath.string().c_str(), aiProcess_Triangulate | aiProcess_FlipUVs);
@@ -315,21 +299,41 @@ bool MeshImporter::ImportFBX(const char* file) {
 	}
 	// 先获取总面数
 	uint32 primitiveCount = GetPrimitiveCount(aScene, aScene->mRootNode);
-	m_Asset->Primitives.Resize(primitiveCount);
-	LoadFbxNode(aScene, aScene->mRootNode, m_Asset->Primitives);
-	m_Asset->Name = File::FPath(fullPath).stem().string();
+	asset.Primitives.Resize(primitiveCount);
+	LoadFbxNode(aScene, aScene->mRootNode, asset.Primitives);
+	asset.Name = File::FPath(fullPath).stem().string();
 	LOG_INFO("Succeed to load GLTF mesh: %s", file);
 	return true;
 }
 
-bool MeshImporter::Save() {
-	//write primitives
+bool ImportMeshAsset(const XString& srcFile, const XString& dstFile) {
+	Asset::MeshAsset asset;
+	auto saveFile = dstFile;
 	bool r = true;
-	const File::FPath FullPath(m_SaveFile.c_str());
+	if (saveFile.empty()) {
+		File::FPath relativePath = File::RelativePath(File::FPath(srcFile), Asset::AssetLoader::AssetPath());
+		relativePath.replace_extension(".mesh");
+		saveFile = relativePath.string();
+	}
+	if (StrEndsWith(srcFile.c_str(), ".glb")) {
+		r = ImportGLB(srcFile.c_str(), asset);
+	}
+	else if (StrEndsWith(srcFile.c_str(), ".fbx")) {
+		r = ImportFBX(srcFile.c_str(), asset);
+	}
+	if(!r) {
+		LOG_WARNING("Can not import mesh %s", srcFile.c_str());
+		return r;
+	}
 
+	// save
+
+	const File::FPath FullPath(saveFile.c_str());
+
+	//write primitives
 	TUnorderedSet<XString> usedNames;
-	for (uint32 i = 0; i < m_Asset->Primitives.Size(); ++i) {
-		auto& primitive = m_Asset->Primitives[i];
+	for (uint32 i = 0; i < asset.Primitives.Size(); ++i) {
+		auto& primitive = asset.Primitives[i];
 		//generate name if empty
 		if (primitive.Name.empty() || usedNames.find(primitive.Name) != usedNames.end()) {
 			primitive.Name = FullPath.stem().filename().string() + ToString<uint32>(i);
@@ -344,6 +348,87 @@ bool MeshImporter::Save() {
 		r |= Asset::MeshAsset::ExportPrimitiveFile(binaryFile.c_str(), primitive.Vertices, primitive.Indices, Asset::EMeshCompressMode::NONE);
 		primitive.BinaryFile.swap(binaryFile);
 	}
-	r |= Asset::AssetLoader::SaveProjectAsset(m_Asset, m_SaveFile.c_str());
+	r |= Asset::AssetLoader::SaveProjectAsset(&asset, saveFile.c_str());
 	return r;
+}
+
+struct StbiImageScope {
+	uint8* Data{ nullptr };
+	uint8* Load(const char* filename, int* width, int* height, int* channels, int desiredChannels) {
+		Data = stbi_load(filename, width, height, channels, desiredChannels);
+		return Data;
+	}	
+	~StbiImageScope() {
+		if(Data) {
+			stbi_image_free(Data);
+		}
+	}
+};
+
+bool ImportTexture2DAsset(const XString& srcFile, const XString& dstFile) {
+	XString saveFile = dstFile;
+	if (saveFile.empty()) {
+		File::FPath relativePath = File::RelativePath(File::FPath(srcFile), Asset::AssetLoader::AssetPath());
+		relativePath.replace_extension(".texture");
+		saveFile = relativePath.string();
+	}
+
+	int width, height, channels;
+	constexpr int desiredChannels = STBI_rgb_alpha;
+	uint8* pixels = stbi_load(srcFile.c_str(), &width, &height, &channels, desiredChannels);
+	if (!pixels) {
+		LOG_INFO("loaded image is empty!");
+		return false;
+	}
+
+	Asset::TextureAsset asset;
+	asset.Width = width;
+	asset.Height = height;
+	asset.Type = Asset::ETextureAssetType::RGBA8_2D;
+	uint32 byteSize = width * height * desiredChannels;
+	asset.Pixels.Resize(byteSize);
+	memcpy(asset.Pixels.Data(), pixels, byteSize);
+	stbi_image_free(pixels);
+
+	// save
+	return Asset::AssetLoader::SaveProjectAsset(&asset, saveFile.c_str());
+}
+
+bool ImportTextureCubeAsset(TConstArrayView<XString> srcFiles, const XString& dstFile) {
+	if(srcFiles.Size() < 6) {
+		LOG_WARNING("[ImportTextureCubeAsset] src files error!");
+		return false;
+	}
+	XString saveFile = dstFile;
+	if(saveFile.empty()) {
+		File::FPath relativePath = File::RelativePath(File::FPath(srcFiles[0]), Asset::AssetLoader::AssetPath());
+		relativePath.replace_extension(".texture");
+		saveFile = relativePath.string();
+	}
+	Asset::TextureAsset asset;
+	asset.Type = Asset::ETextureAssetType::RGBA8_Cube;
+	bool flag = false;
+	uint32 sliceByteSize = 0;
+	for(uint32 i=0; i<6; ++i) {
+		int width, height, channels;
+		constexpr int desiredChannels = STBI_rgb_alpha;
+		StbiImageScope s;
+		uint8* pixels = s.Load(srcFiles[i].c_str(), &width, &height, &channels, desiredChannels);
+		if (!pixels) {
+			LOG_WARNING("[ImportTextureCubeAsset]loaded image is empty!");
+			return false;
+		}
+		if(!flag) {
+			asset.Width = width;
+			asset.Height = height;
+			sliceByteSize = width * height * 4;
+			flag = true;
+		}
+		else if(asset.Width != width || asset.Height != height) {
+			LOG_WARNING("[ImportTextureCubeAsset]Elements size are not equal!");
+			return false;
+		}
+		memcpy(asset.Pixels.Data() + i * sliceByteSize, pixels, sliceByteSize);
+	}
+	return Asset::AssetLoader::SaveProjectAsset(&asset, dstFile.c_str());
 }

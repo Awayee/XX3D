@@ -10,6 +10,12 @@ namespace Render {
 		return node;
 	}
 
+	RGTransferNode* RenderGraph::CreateTransferNode(XString&& name) {
+		RGTransferNode* node = (RGTransferNode*)m_Nodes.EmplaceBack(new RGTransferNode(m_Nodes.Size())).Get();
+		node->SetName(MoveTemp(name));
+		return node;
+	}
+
 	RGBufferNode* RenderGraph::CreateBufferNode(RHIBuffer* buffer, XString&& name) {
 		RGBufferNode* node = (RGBufferNode*)m_Nodes.EmplaceBack(new RGBufferNode(m_Nodes.Size(), buffer)).Get();
 		node->SetName(MoveTemp(name));

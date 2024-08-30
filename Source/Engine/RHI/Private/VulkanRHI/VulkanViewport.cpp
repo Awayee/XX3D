@@ -112,6 +112,10 @@ RHITexture* VulkanViewport::GetCurrentBackBuffer() {
 	return m_BackBuffers[m_BackBufferIdx].Get();
 }
 
+ERHIFormat VulkanViewport::GetBackBufferFormat() {
+	return m_BackBufferFormat;
+}
+
 void VulkanViewport::Present() {
 	TArray<VkSemaphore> waitSemaphores;
 	m_Device->GetCommandContext()->GetLastSubmissionSemaphores(waitSemaphores);
@@ -134,10 +138,6 @@ USize2D VulkanViewport::GetSize() const {
 
 uint32 VulkanViewport::GetImageCount() const {
 	return m_BackBuffers.Size();
-}
-
-VkFormat VulkanViewport::GetSwapchainFormat() const {
-	return m_SurfaceFormat.format;
 }
 
 void VulkanViewport::CreateSwapchain() {
@@ -206,17 +206,16 @@ void VulkanViewport::CreateSwapchain() {
 	LOG_DEBUG("Image count of swapchain is %u.", swapchainImageCount);
 
 	// Create back buffers and semaphores.
+	m_BackBufferFormat = SurfaceFormatToRHIFormat(surfaceFormat.format);
 	RHITextureDesc backBufferDesc = RHITextureDesc::Texture2D();
-	backBufferDesc.Format = SurfaceFormatToRHIFormat(surfaceFormat.format);
-	backBufferDesc.Flags = TEXTURE_FLAG_PRESENT;
+	backBufferDesc.Format = m_BackBufferFormat;
+	backBufferDesc.Flags = TEXTURE_FLAG_COLOR_TARGET | TEXTURE_FLAG_PRESENT | TEXTURE_FLAG_SRV;
 	backBufferDesc.Width = swapchainExtent.width;
 	backBufferDesc.Height = swapchainExtent.height;
 	m_BackBuffers.Resize(swapchainImageCount);
 	for(uint32 i=0; i<swapchainImageCount; ++i) {
 		m_BackBuffers[i].Reset(new VulkanBackBuffer(backBufferDesc, m_Device, swapchainImages[i]));
 	}
-
-	m_SurfaceFormat = surfaceFormat;
 }
 
 void VulkanViewport::DestroySwapchain() {

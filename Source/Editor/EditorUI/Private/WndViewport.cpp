@@ -153,7 +153,7 @@ namespace Editor {
 			RHITextureDesc desc = RHITextureDesc::Texture2D();
 			desc.Width = m_ViewportSize.w;
 			desc.Height = m_ViewportSize.h;
-			desc.Format = ERHIFormat::B8G8R8A8_UNORM;
+			desc.Format = RHI::Instance()->GetViewport()->GetBackBufferFormat();
 			desc.Flags = ETextureFlagBit::TEXTURE_FLAG_SRV | ETextureFlagBit::TEXTURE_FLAG_COLOR_TARGET;
 			m_RenderTarget = RHI::Instance()->CreateTexture(desc);
 			RHISampler* sampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp);

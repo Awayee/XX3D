@@ -16,7 +16,6 @@ namespace Asset {
 
 
 	struct MeshAsset : public AssetBase {
-	public:
 		XString Name;
 		struct SPrimitive {
 			XString BinaryFile;

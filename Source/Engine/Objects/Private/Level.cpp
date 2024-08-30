@@ -3,6 +3,7 @@
 #include "Asset/Public/AssetLoader.h"
 #include "Objects/Public/StaticMesh.h"
 #include "Objects/Public/DirectionalLight.h"
+#include "Objects/Public/SkyBox.h"
 
 namespace Object {
 
@@ -24,6 +25,17 @@ namespace Object {
 			Object::DirectionalLight* directionalLight = scene->GetDirectionalLight();
 			directionalLight->SetRotation(lightParam.Rotation);
 			directionalLight->SetColor(lightParam.Color);
+		}
+		// sky box
+		{
+			auto& file = asset.SkyBox;
+			Object::SkyBox* skyBox = scene->GetSkyBox();
+			if(!file.empty()) {
+				skyBox->ResetCubeMap(file);
+			}
+			else {
+				skyBox->ResetCubeMap();
+			}
 		}
 	}
 

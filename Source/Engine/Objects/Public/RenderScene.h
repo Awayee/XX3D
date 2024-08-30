@@ -8,6 +8,7 @@
 namespace Object {
 	class RenderCamera;
 	class DirectionalLight;
+	class SkyBox;
 
 	class RenderScene: public ECSScene{
 	public:
@@ -17,6 +18,7 @@ namespace Object {
 		~RenderScene();
 		RenderCamera* GetMainCamera() { return m_Camera.Get(); }
 		DirectionalLight* GetDirectionalLight() { return m_DirectionalLight.Get(); }
+		SkyBox* GetSkyBox() { return m_SkyBox.Get(); }
 		Render::DrawCallContext& GetDrawCallContext() { return m_DrawCallContext; }
 		void Update();
 		void Render(Render::RenderGraph& rg, Render::RGTextureNode* targetNode);
@@ -32,20 +34,21 @@ namespace Object {
 		static TArray<Func<void(RenderScene*)>> s_RegisterSystems;
 		TUniquePtr<DirectionalLight> m_DirectionalLight;
 		TUniquePtr<RenderCamera> m_Camera;
-		RHIBufferPtr m_CameraUniform;
+		TUniquePtr<SkyBox> m_SkyBox;
 		Render::DrawCallContext m_DrawCallContext;
 		// fo gBuffer
 		USize2D m_TargetSize;
-		ERHIFormat m_TargetFormat;
 		RHITexturePtr m_GBufferNormal;
 		RHITexturePtr m_GBufferAlbedo;
 		RHITexturePtr m_Depth;
-		RHIGraphicsPipelineStatePtr MeshGBufferPSO;
+		RHITexturePtr m_DepthSRV;
+		RHIGraphicsPipelineStatePtr m_GBufferPSO;
 		// for deferred lighting
 		RHIGraphicsPipelineStatePtr m_DeferredLightingPSO;
 
 		void UpdateSceneDrawCall();
 		void CreateResources();
 		void CreateTextureResources();
+		void CreatePSOs();
 	};
 }

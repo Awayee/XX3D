@@ -36,6 +36,9 @@ namespace Asset {
 				Json::LoadFloatArray(meshVal["Rotation"], Meshes[i].Rotation.Data(), 3);
 			}
 		}
+		if(doc.HasMember("SkyBox")) {
+			SkyBox = doc["SkyBox"].GetString();
+		}
 		return true;
 	}
 
@@ -72,6 +75,8 @@ namespace Asset {
 			objectsVal.PushBack(meshVal, a);
 		}
 		doc.AddMember("Meshes", objectsVal, a);
+		// sky box
+		Json::AddStringMember(doc, "SkyBox", SkyBox, a);
 		return Json::WriteFile(out, doc);
 	}
 

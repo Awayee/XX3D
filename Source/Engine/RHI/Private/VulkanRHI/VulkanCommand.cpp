@@ -13,6 +13,12 @@ namespace {
 			srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 			dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 		}
+		else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
+			srcAccessMask = 0;
+			dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+			srcStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		}
 		else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
 			srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -336,7 +342,7 @@ void VulkanCommandBuffer::CopyBufferToTexture(RHIBuffer* buffer, RHITexture* tex
 	region.bufferImageHeight = 0;
 	region.imageSubresource.aspectMask = ToImageAspectFlags(texture->GetDesc().Flags);
 	region.imageSubresource.mipLevel = mipLevel;
-	region.imageSubresource.baseArrayLayer = 0;
+	region.imageSubresource.baseArrayLayer = baseLayer;
 	region.imageSubresource.layerCount = layerCount;
 	region.imageOffset = { 0, 0, 0 };
 	const auto& desc = vkTex->GetDesc();
@@ -353,12 +359,13 @@ void VulkanCommandBuffer::CopyTextureToTexture(RHITexture* srcTex, RHITexture* d
 	copy.srcSubresource.aspectMask = srcAsp;
 	copy.srcSubresource.baseArrayLayer = region.SrcSub.ArrayLayer;
 	copy.srcSubresource.layerCount = 1;
-	memcpy(&copy.srcOffset, &region.SrcSub.Offset, sizeof(VkOffset3D));
+	copy.srcOffset = { region.SrcSub.Offset.x, region.SrcSub.Offset.y, region.SrcSub.Offset.z };
 	copy.dstSubresource.aspectMask = dstAsp;
 	copy.dstSubresource.baseArrayLayer = region.DstSub.ArrayLayer;
 	copy.dstSubresource.layerCount = 1;
-	memcpy(&copy.dstOffset, &region.DstSub.Offset, sizeof(VkOffset3D));
-	vkCmdCopyImage(m_Handle, ((VulkanRHITexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, ((VulkanRHITexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
+	copy.dstOffset = { region.DstSub.Offset.x, region.DstSub.Offset.y, region.DstSub.Offset.z };
+	copy.extent = { region.Extent.w, region.Extent.h, region.Extent.d };
+	vkCmdCopyImage(m_Handle, ((VulkanRHITexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, ((VulkanRHITexture*)dstTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
 }
 
 void VulkanCommandBuffer::TransitionTextureState(RHITexture* texture, EResourceState stateBefore, EResourceState stateAfter, RHITextureSubDesc subDesc) {

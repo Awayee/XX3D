@@ -26,6 +26,8 @@ namespace Math {
 	template<typename T> T Square(T x) { return x * x; }
 	template<typename T> T Cube(T x) { return x * x * x; }
 	template<typename T> T Pow(T x, T exp) { return (T)std::pow(x, exp); }
+	template<typename T> T Ceil(T x) { return (T)std::ceil(x); }
+	template<typename T> T Floor(T x) { return (T)std::floor(x); }
 
 	// triangle func
 #ifdef MATH_DEG

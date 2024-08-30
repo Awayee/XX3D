@@ -3,6 +3,7 @@
 #include "VulkanPipeline.h"
 #include "VulkanViewport.h"
 #include "VulkanCommand.h"
+#include "VulkanConverter.h"
 #include "Window/Public/EngineWIndow.h"
 #include <backends/imgui_impl_vulkan.h>
 #include <backends/imgui_impl_glfw.h>
@@ -30,7 +31,7 @@ VulkanImGui::VulkanImGui(void(*configInitializer)()) {
 	//dynamic rendering parameters for imgui to use
 	initInfo.PipelineRenderingCreateInfo = {VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
 	initInfo.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-	VkFormat format = vkViewport->GetSwapchainFormat();
+	VkFormat format = ToVkFormat(vkViewport->GetBackBufferFormat());
 	initInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats = &format;
 	ImGui_ImplVulkan_Init(&initInfo);
 	if(configInitializer) {

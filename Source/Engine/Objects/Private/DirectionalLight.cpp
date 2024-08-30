@@ -2,7 +2,6 @@
 #include "System/Public/EngineConfig.h"
 #include "Math/Public/Math.h"
 #include "Render/Public/GlobalShader.h"
-#include "Render/Public/MeshRender.h"
 
 namespace {
 

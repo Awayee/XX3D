@@ -1,4 +1,5 @@
 #include "Objects/Public/Camera.h"
+#include "Window/Public/EngineWindow.h"
 namespace Object {
 	Math::FMatrix4x4 CameraView::GetViewMatrix() const {
 		return Math::FMatrix4x4::LookAtMatrix(Eye, At, Up);
@@ -145,9 +146,20 @@ namespace Object {
 		return center;
 	}
 
+	struct CameraUBO {
+		Math::FMatrix4x4 View;
+		Math::FMatrix4x4 Proj;
+		Math::FMatrix4x4 VP;
+		Math::FMatrix4x4 InvVP;
+		Math::FVector3 CamPos;
+	};
+
 	RenderCamera::RenderCamera() {
+		// get window size for aspect
+		m_Uniform = RHI::Instance()->CreateBuffer({ EBufferFlagBit::BUFFER_FLAG_UNIFORM, sizeof(CameraUBO), 0 });
 		m_ViewMatrix = Math::FMatrix4x4::IDENTITY;
-		UpdateProjectMatrix();
+		USize2D size = Engine::EngineWindow::Instance()->GetWindowSize();
+		SetAspect((float)size.w / (float)size.h);
 	}
 
 	void RenderCamera::SetView(const CameraView& view) {
@@ -167,6 +179,20 @@ namespace Object {
 		proj.Aspect = aspect;
 		m_Camera.SetProjection(proj);
 		UpdateProjectMatrix();
+	}
+
+	void RenderCamera::UpdateBuffer() {
+		CameraUBO cameraUBO;
+		cameraUBO.View = GetViewMatrix();
+		cameraUBO.Proj = GetProjectMatrix();
+		cameraUBO.VP = GetViewProjectMatrix();
+		cameraUBO.InvVP = GetInvViewProjectMatrix();
+		cameraUBO.CamPos = GetView().Eye;
+		m_Uniform->UpdateData(&cameraUBO, sizeof(CameraUBO), 0);
+	}
+
+	RHIBuffer* RenderCamera::GetBuffer() {
+		return m_Uniform.Get();
 	}
 
 	RenderCamera::~RenderCamera(){}
