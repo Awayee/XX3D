@@ -21,8 +21,6 @@ enum class ERHIFormat: uint8 {
     R8G8B8A8_UINT,
     R8G8B8A8_SINT,
     R8G8B8A8_SRGB,
-    B8G8R8A8_UNORM,
-    B8G8R8A8_SRGB,
     R16_UNORM,
     R16_SNORM,
     R16_UINT,

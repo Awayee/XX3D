@@ -2,6 +2,7 @@
 #include "Objects/Public/Camera.h"
 #include "Functions/Public/AssetManager.h"
 #include "Objects/Public/DirectionalLight.h"
+#include "Objects/Public/SkyBox.h"
 
 namespace Editor {
 
@@ -28,6 +29,7 @@ namespace Editor {
 				staticMesh->BuildFromAsset(*levelMesh.Asset);
 			}
 		}
+		m_SkyBoxFile = asset.SkyBox;
 	}
 
 	EditorLevel::~EditorLevel() {
@@ -96,5 +98,11 @@ namespace Editor {
 			savedMesh.Scale = mesh.Scale;
 			savedMesh.Rotation = mesh.Rotation;
 		}
+		asset->SkyBox = m_SkyBoxFile;
+	}
+
+	void EditorLevel::SetSkyBoxFile(const XString& file) {
+		m_SkyBoxFile = file;
+		m_Scene->GetSkyBox()->ResetCubeMap(file);
 	}
 }

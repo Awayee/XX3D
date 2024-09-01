@@ -30,12 +30,7 @@ namespace Object {
 		{
 			auto& file = asset.SkyBox;
 			Object::SkyBox* skyBox = scene->GetSkyBox();
-			if(!file.empty()) {
-				skyBox->ResetCubeMap(file);
-			}
-			else {
-				skyBox->ResetCubeMap();
-			}
+			skyBox->ResetCubeMap(file);
 		}
 	}
 

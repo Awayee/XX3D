@@ -25,6 +25,9 @@ namespace File {
 	bool LoadFileCode(const char* file, TArray<char>& code);
 
 	inline FPath RelativePath(const FPath& path, const FPath& base) {
+		if(path == base) {
+			return {};
+		}
 		return std::filesystem::relative(path, base);
 	}
 

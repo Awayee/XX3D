@@ -6,7 +6,7 @@ namespace Engine {
 	class RHID3D12 final: RHI {
 	private:
 		static const uint8 BACK_BUFFER_COUNT = 2;
-		ERHIFormat                 m_SwapchainFormat{ERHIFormat::B8G8R8A8_UNORM };
+		ERHIFormat                 m_SwapchainFormat{ERHIFormat::R8G8B8A8_UNORM };
 		ERHIFormat                 m_DepthFormat{ERHIFormat::D24_UNORM_S8_UINT };
 		uint32                  m_MsaaSampleCount{ 4 };
 		uint32                  m_MsaaQuality{ 0 };

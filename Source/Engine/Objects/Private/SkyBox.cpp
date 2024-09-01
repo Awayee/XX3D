@@ -3,6 +3,7 @@
 #include "Asset/Public/AssetLoader.h"
 #include "Render/Public/GlobalShader.h"
 #include "Asset/Public/TextureAsset.h"
+#include "Objects/Public/TextureResource.h"
 #include "Render/Public/DefaultResource.h"
 
 namespace {
@@ -24,7 +25,9 @@ namespace Object {
 
 	void SkyBox::ResetCubeMap(const XString& file) {
 		m_CubeMap.Reset();
-		RHITextureDesc desc = RHITextureDesc::TextureCube();
+		if(file.empty()) {
+			return;
+		}
 		Asset::TextureAsset asset;
 		if (!Asset::AssetLoader::LoadProjectAsset(&asset, file.c_str())) {
 			LOG_WARNING("Failed to load cube map file: %s", file.c_str());
@@ -35,16 +38,13 @@ namespace Object {
 			return;
 		}
 
+		RHITextureDesc desc = RHITextureDesc::TextureCube();
 		desc.Width = asset.Width;
 		desc.Height = asset.Height;
-		desc.Format = ERHIFormat::B8G8R8A8_UNORM;
+		desc.Format = Object::TextureResource::ConvertTextureFormat(asset.Type);
 		desc.Flags = TEXTURE_FLAG_SRV | TEXTURE_FLAG_CPY_DST;
 		m_CubeMap = RHI::Instance()->CreateTexture(desc);
 		m_CubeMap->UpdateData(asset.Pixels.Size(), asset.Pixels.Data(), {});
-	}
-
-	void SkyBox::ResetCubeMap() {
-		m_CubeMap.Reset();
 	}
 
 	void SkyBox::CreateDrawCall(Render::DrawCallQueue& dcQueue) {

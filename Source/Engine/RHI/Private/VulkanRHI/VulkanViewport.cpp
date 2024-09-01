@@ -5,7 +5,7 @@
 #include <GLFW/glfw3.h>
 
 inline VkSurfaceFormatKHR ChooseSurfaceFormat(const VkSurfaceFormatKHR* data, uint32 count) {
-	static VkSurfaceFormatKHR s_PreferredFormat{ VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
+	static VkSurfaceFormatKHR s_PreferredFormat{ VK_FORMAT_R8G8B8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
 	ASSERT(0 != count, "No surface format available!");
 	if(1 == count && data[0].format == VK_FORMAT_UNDEFINED) {
 		return  s_PreferredFormat;
@@ -20,8 +20,8 @@ inline VkSurfaceFormatKHR ChooseSurfaceFormat(const VkSurfaceFormatKHR* data, ui
 
 inline ERHIFormat SurfaceFormatToRHIFormat(VkFormat f) {
 	// only support preferred formats
-	if(VK_FORMAT_B8G8R8A8_UNORM == f) {
-		return ERHIFormat::B8G8R8A8_UNORM;
+	if(VK_FORMAT_R8G8B8A8_UNORM == f) {
+		return ERHIFormat::R8G8B8A8_UNORM;
 	}
 	return ERHIFormat::Undefined;
 }

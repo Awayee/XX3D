@@ -11,7 +11,7 @@ namespace {
 namespace Object {
 	TextureResource::TextureResource(const Asset::TextureAsset& asset) {
 		RHITextureDesc desc = RHITextureDesc::Texture2D();
-		desc.Format = FORMAT;
+		desc.Format = ConvertTextureFormat(asset.Type);
 		desc.Flags = USAGE;
 		desc.Width = asset.Width;
 		desc.Height = asset.Height;
@@ -28,6 +28,16 @@ namespace Object {
 
 	RHITexture* TextureResource::GetRHI() {
 		return m_RHI;
+	}
+
+	ERHIFormat TextureResource::ConvertTextureFormat(Asset::ETextureAssetType assetType) {
+		static TStaticArray<ERHIFormat, (uint32)Asset::ETextureAssetType::MaxNum> s_FormatMap{
+			ERHIFormat::R8G8B8A8_SRGB,
+			ERHIFormat::R8G8_UNORM,
+			ERHIFormat::R8_UNORM,
+			ERHIFormat::R8G8B8A8_UNORM,
+		};
+		return s_FormatMap[(uint32)assetType];
 	}
 
 	RHITexture* TextureResourceMgr::GetTexture(const XString& fileName) {

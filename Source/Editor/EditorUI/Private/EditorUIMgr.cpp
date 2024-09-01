@@ -4,12 +4,6 @@
 
 namespace Editor {
 
-	EditorUIMgr::EditorUIMgr() {
-	}
-
-	EditorUIMgr::~EditorUIMgr() {
-	}
-
 	void EditorUIMgr::Tick() {
 		ImGuiRHI::Instance()->FrameBegin();
 
@@ -51,10 +45,10 @@ namespace Editor {
 
 		ImGui::End();
 		//windows
-		for (uint32 i = 0; i < m_Widgets.Size();) {
-			auto& wnd = m_Widgets[i];
+		for (uint32 i = 0; i < m_Windows.Size();) {
+			auto& wnd = m_Windows[i];
 			if(wnd->m_ToDelete) {
-				m_Widgets.SwapRemoveAt(i);
+				m_Windows.SwapRemoveAt(i);
 			}
 			else {
 				++i;
@@ -65,7 +59,7 @@ namespace Editor {
 		ImGuiRHI::Instance()->FrameEnd();
 	}
 
-	void EditorUIMgr::AddMenuBar(const char* barName) {
+	void EditorUIMgr::AddMenuBar(const XString& barName) {
 		for (auto& column : m_MenuBar) {
 			if (column.Name == barName) {
 				return;
@@ -74,7 +68,7 @@ namespace Editor {
 		m_MenuBar.PushBack({ barName, {} });
 	}
 
-	void EditorUIMgr::AddMenu(const char* barName, const char* name, Func<void()>&& func, bool* pToggle) {
+	void EditorUIMgr::AddMenu(const XString& barName, const XString& name, Func<void()>&& func, bool* pToggle) {
 		for(auto& column: m_MenuBar) {
 			if(column.Name == barName) {
 				column.Items.PushBack({name, func, pToggle });
@@ -85,25 +79,20 @@ namespace Editor {
 	}
 
 	EditorWndBase* EditorUIMgr::AddWindow(const char* name, Func<void()>&& func, ImGuiWindowFlags flags) {
+		// check if exist
+		for(auto& widget: m_Windows) {
+			if(widget->m_Name == name) {
+				widget.Reset(new EditorFuncWnd(name, func, flags));
+				return (EditorWndBase*)widget.Get();
+			}
+		}
 		TUniquePtr<EditorFuncWnd> wndPtr(new EditorFuncWnd(name, func, flags));
 		EditorWndBase* ptr = wndPtr.Get();
-		m_Widgets.PushBack(MoveTemp(wndPtr));
+		m_Windows.PushBack(MoveTemp(wndPtr));
 		return ptr;
 	}
 
 	void EditorUIMgr::AddWindow(TUniquePtr<EditorWndBase>&& wnd) {
-		m_Widgets.PushBack(MoveTemp(wnd));
-	}
-
-	void EditorUIMgr::DeleteWindow(EditorWndBase*& pWnd) {
-		pWnd->m_ToDelete = true;
-		pWnd = nullptr;
-	}
-
-	EditorPopup* EditorUIMgr::AddPopUp(Func<void()>&& func) {
-		TUniquePtr<EditorPopup> popPtr(new EditorPopup(func));
-		EditorPopup* ptr = popPtr.Get();
-		m_Widgets.PushBack(MoveTemp(popPtr));
-		return ptr;
+		m_Windows.PushBack(MoveTemp(wnd));
 	}
 }

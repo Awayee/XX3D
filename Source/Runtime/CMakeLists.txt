@@ -16,3 +16,8 @@ target_include_directories(${TARGET_NAME} PRIVATE ${SOURCE_PATH}/Runtime)
 
 #imgui
 target_link_libraries(${TARGET_NAME} PRIVATE "imgui")
+
+add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    ${THIRD_PARTY}/zlib/lib/zlib.dll
+    $<TARGET_FILE_DIR:${TARGET_NAME}>)

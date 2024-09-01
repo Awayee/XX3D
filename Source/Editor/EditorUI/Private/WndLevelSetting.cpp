@@ -96,5 +96,24 @@ namespace Editor {
 				}
 			}
 		}
+
+		if(ImGui::CollapsingHeader("SkyBox", ImGuiTreeNodeFlags_DefaultOpen)) {
+			const XString& skyBoxFile = level->GetSkyBoxFile();
+			ImGui::Text(skyBoxFile.empty()? "None" : skyBoxFile.c_str()); ImGui::SameLine();
+			if (ImGui::BeginDragDropTarget()) {
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("File")) {
+					ASSERT(payload->DataSize == sizeof(FileNode), "");
+					const FileNode* fileNode = reinterpret_cast<const FileNode*>(payload->Data);
+					if (fileNode->GetExt() == ".texture") {
+						level->SetSkyBoxFile(fileNode->GetPathStr());
+					}
+				}
+				ImGui::EndDragDropTarget();
+			}
+			else if(ImGui::Button("Browse")) {
+				const XString file = Editor::OpenFileDialog("*.texture");
+				level->SetSkyBoxFile(file);
+			}
+		}
 	}
 }

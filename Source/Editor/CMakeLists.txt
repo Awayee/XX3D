@@ -39,3 +39,8 @@ add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
     ${THIRD_PARTY}/DirectXShaderCompiler/bin/x64/dxcompiler.dll
     $<TARGET_FILE_DIR:${TARGET_NAME}>)
+
+add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    ${THIRD_PARTY}/zlib/lib/zlib.dll
+    $<TARGET_FILE_DIR:${TARGET_NAME}>)

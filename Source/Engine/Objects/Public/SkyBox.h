@@ -9,7 +9,6 @@ namespace Object {
 		SkyBox(Object::RenderCamera* camera);
 		~SkyBox();
 		void ResetCubeMap(const XString& file);
-		void ResetCubeMap();
 		void CreateDrawCall(Render::DrawCallQueue& dcQueue);
 	private:
 		uint32 m_VertexCount{ 0 };

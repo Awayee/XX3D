@@ -108,9 +108,10 @@ void VulkanRHITexture::UpdateData(uint32 byteSize, const void* data, RHITextureO
 	memcpy(mappedPointer, data, byteSize);
 	staging->Unmap();
 	// calc layer count by byteSize
-	uint32 sliceSize = m_Desc.Width * m_Desc.Height * GetPixelByteSize();
-	uint32 arrayCount = (uint32)Math::Ceil<float>((float)byteSize / (float)sliceSize);
-	CHECK(arrayCount <= m_Desc.ArraySize);
+	const uint32 sliceByteSize = m_Desc.Width * m_Desc.Height * GetPixelByteSize();
+	uint32 arrayCount = (uint32)Math::Ceil<float>((float)byteSize / (float)sliceByteSize);
+	uint32 dstArraySize = ConvertImageArraySize(m_Desc);
+	CHECK(arrayCount <= dstArraySize);
 	// TODO replace with vulkan functions
 	auto cmd = m_Device->GetCommandContext()->GetUploadCmd();
 	RHITextureSubDesc desc{ offset.MipLevel, 1, offset.ArrayLayer, (uint8)arrayCount};
@@ -142,7 +143,7 @@ inline bool CheckViewable(ETextureDimension dimension, VkImageViewType type) {
 	return false;
 }
 
-inline uint32 ConvertVulkanLayerCount(VkImageViewType type, uint32 layerCount) {
+inline uint32 ConvertVulkanArraySize(VkImageViewType type, uint32 layerCount) {
 
 	switch (type) {
 	case VK_IMAGE_VIEW_TYPE_2D:
@@ -164,7 +165,7 @@ inline uint32 ConvertVulkanLayerCount(VkImageViewType type, uint32 layerCount) {
 
 uint32 VulkanRHITexture::CreateView(VkImageViewType type, VkImageAspectFlags aspectFlags, uint8 mipIndex, uint8 mipCount, uint32 arrayIndex, uint32 arrayCount) {
 	ASSERT(CheckViewable(m_Desc.Dimension, type), "Type is not viewable!");
-	arrayCount = ConvertVulkanLayerCount(type, arrayCount);
+	arrayCount = ConvertVulkanArraySize(type, arrayCount);
 	uint32 index = m_AllViews.Size();
 	// correct layer count
 	VkImageViewCreateInfo imageViewCreateInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0 };

@@ -19,8 +19,8 @@ namespace {
 
 namespace Object {
 
-    static constexpr ERHIFormat s_NormalFormat{ ERHIFormat::B8G8R8A8_UNORM };
-    static constexpr ERHIFormat s_AlbedoFormat{ ERHIFormat::B8G8R8A8_UNORM };
+    static constexpr ERHIFormat s_NormalFormat{ ERHIFormat::R8G8B8A8_UNORM };
+    static constexpr ERHIFormat s_AlbedoFormat{ ERHIFormat::R8G8B8A8_UNORM };
 
     TUniquePtr<RenderScene> RenderScene::s_Default;
     TArray<Func<void(RenderScene*)>> RenderScene::s_RegisterSystems;

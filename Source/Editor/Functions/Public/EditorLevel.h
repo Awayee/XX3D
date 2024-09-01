@@ -26,7 +26,10 @@ namespace Editor {
 		EditorLevelMesh* AddMesh(const XString& file, Asset::MeshAsset* asset);
 		void DelMesh(uint32 idx);
 		void SaveAsset(Asset::LevelAsset* asset);
+		const XString& GetSkyBoxFile() { return m_SkyBoxFile; }
+		void SetSkyBoxFile(const XString& file);
 	private:
 		TArray<EditorLevelMesh> m_Meshes;
+		XString m_SkyBoxFile;
 	};
 }

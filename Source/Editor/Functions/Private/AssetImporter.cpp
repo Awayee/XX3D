@@ -3,8 +3,6 @@
 #include "Core/Public/String.h"
 #include "Core/Public/Container.h"
 #include "Asset/Public/AssetLoader.h"
-#include "Asset/Public/MeshAsset.h"
-#include "Asset/Public/TextureAsset.h"
 
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_STB_IMAGE_WRITE
@@ -12,9 +10,12 @@
 #include <tiny_gltf.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+#define STB_IMAGE_RESIZE2_IMPLEMENTATION
+#include <stb_image_resize2.h>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+#include "Math/Public/Math.h"
 
 
 uint32 GetPrimitiveCount(const tinygltf::Model& model, const tinygltf::Node& node) {
@@ -297,7 +298,6 @@ bool ImportFBX(const char* file, Asset::MeshAsset& asset) {
 		LOG_DEBUG("ASSIMP ERROR: %s", importer.GetErrorString());
 		return false;
 	}
-	// 先获取总面数
 	uint32 primitiveCount = GetPrimitiveCount(aScene, aScene->mRootNode);
 	asset.Primitives.Resize(primitiveCount);
 	LoadFbxNode(aScene, aScene->mRootNode, asset.Primitives);
@@ -309,7 +309,7 @@ bool ImportFBX(const char* file, Asset::MeshAsset& asset) {
 bool ImportMeshAsset(const XString& srcFile, const XString& dstFile) {
 	Asset::MeshAsset asset;
 	auto saveFile = dstFile;
-	bool r = true;
+	bool r = false;
 	if (saveFile.empty()) {
 		File::FPath relativePath = File::RelativePath(File::FPath(srcFile), Asset::AssetLoader::AssetPath());
 		relativePath.replace_extension(".mesh");
@@ -327,7 +327,6 @@ bool ImportMeshAsset(const XString& srcFile, const XString& dstFile) {
 	}
 
 	// save
-
 	const File::FPath FullPath(saveFile.c_str());
 
 	//write primitives
@@ -354,10 +353,9 @@ bool ImportMeshAsset(const XString& srcFile, const XString& dstFile) {
 
 struct StbiImageScope {
 	uint8* Data{ nullptr };
-	uint8* Load(const char* filename, int* width, int* height, int* channels, int desiredChannels) {
+	StbiImageScope(const char* filename, int* width, int* height, int*channels, int desiredChannels) {
 		Data = stbi_load(filename, width, height, channels, desiredChannels);
-		return Data;
-	}	
+	}
 	~StbiImageScope() {
 		if(Data) {
 			stbi_image_free(Data);
@@ -365,7 +363,7 @@ struct StbiImageScope {
 	}
 };
 
-bool ImportTexture2DAsset(const XString& srcFile, const XString& dstFile) {
+bool ImportTexture2DAsset(const XString& srcFile, const XString& dstFile, int downsize, Asset::ETextureCompressMode compressMode) {
 	XString saveFile = dstFile;
 	if (saveFile.empty()) {
 		File::FPath relativePath = File::RelativePath(File::FPath(srcFile), Asset::AssetLoader::AssetPath());
@@ -375,28 +373,41 @@ bool ImportTexture2DAsset(const XString& srcFile, const XString& dstFile) {
 
 	int width, height, channels;
 	constexpr int desiredChannels = STBI_rgb_alpha;
-	uint8* pixels = stbi_load(srcFile.c_str(), &width, &height, &channels, desiredChannels);
-	if (!pixels) {
-		LOG_INFO("loaded image is empty!");
+	StbiImageScope s(srcFile.c_str(), &width, &height, &channels, desiredChannels);
+	if (!s.Data) {
+		LOG_INFO("[ImportTexture2DAsset] Image is empty!");
 		return false;
 	}
 
 	Asset::TextureAsset asset;
-	asset.Width = width;
-	asset.Height = height;
 	asset.Type = Asset::ETextureAssetType::RGBA8_2D;
-	uint32 byteSize = width * height * desiredChannels;
-	asset.Pixels.Resize(byteSize);
-	memcpy(asset.Pixels.Data(), pixels, byteSize);
-	stbi_image_free(pixels);
+	asset.CompressMode = compressMode;
+	// downsize
+	if(downsize > 1) {
+		const int downsizedWidth = Math::Max(width / downsize, 1);
+		const int downsizeHeight = Math::Max(height / downsize, 1);
+		const uint32 downsizedByteSize = downsizedWidth * downsizeHeight * desiredChannels;
+		asset.Pixels.Resize(downsizedByteSize);
+		stbir_resize_uint8_linear(s.Data, width, height, 0, 
+			asset.Pixels.Data(), downsizedWidth, downsizeHeight, 0, stbir_pixel_layout::STBIR_4CHANNEL);
+		asset.Width = width;
+		asset.Height = height;
+	}
+	else {
+		asset.Width = width;
+		asset.Height = height;
+		uint32 byteSize = width * height * desiredChannels;
+		asset.Pixels.Resize(byteSize);
+		memcpy(asset.Pixels.Data(), s.Data, byteSize);
+	}
 
 	// save
 	return Asset::AssetLoader::SaveProjectAsset(&asset, saveFile.c_str());
 }
 
-bool ImportTextureCubeAsset(TConstArrayView<XString> srcFiles, const XString& dstFile) {
+bool ImportTextureCubeAsset(TConstArrayView<XString> srcFiles, const XString& dstFile, int downsize, Asset::ETextureCompressMode compressMode) {
 	if(srcFiles.Size() < 6) {
-		LOG_WARNING("[ImportTextureCubeAsset] src files error!");
+		LOG_WARNING("[ImportTextureCubeAsset] Input files error!");
 		return false;
 	}
 	XString saveFile = dstFile;
@@ -407,28 +418,40 @@ bool ImportTextureCubeAsset(TConstArrayView<XString> srcFiles, const XString& ds
 	}
 	Asset::TextureAsset asset;
 	asset.Type = Asset::ETextureAssetType::RGBA8_Cube;
+	asset.CompressMode = compressMode;
+	// get the first slice for size
 	bool flag = false;
 	uint32 sliceByteSize = 0;
 	for(uint32 i=0; i<6; ++i) {
-		int width, height, channels;
+		int srcWidth, srcHeight, channels;
 		constexpr int desiredChannels = STBI_rgb_alpha;
-		StbiImageScope s;
-		uint8* pixels = s.Load(srcFiles[i].c_str(), &width, &height, &channels, desiredChannels);
-		if (!pixels) {
-			LOG_WARNING("[ImportTextureCubeAsset]loaded image is empty!");
+		StbiImageScope s(srcFiles[i].c_str(), &srcWidth, &srcHeight, &channels, desiredChannels);
+		if (!s.Data) {
+			LOG_WARNING("[ImportTextureCubeAsset] Image is empty!");
 			return false;
 		}
+		const int trueWidth = downsize > 1 ? Math::Max(srcWidth / downsize, 1) : srcWidth;
+		const int trueHeight = downsize > 1 ? Math::Max(srcHeight / downsize, 1) : srcHeight;
 		if(!flag) {
-			asset.Width = width;
-			asset.Height = height;
-			sliceByteSize = width * height * 4;
+			asset.Width = trueWidth;
+			asset.Height = trueHeight;
+			sliceByteSize = trueWidth * trueHeight * desiredChannels;
+			asset.Pixels.Resize(sliceByteSize * 6);
 			flag = true;
 		}
-		else if(asset.Width != width || asset.Height != height) {
-			LOG_WARNING("[ImportTextureCubeAsset]Elements size are not equal!");
+		else if(asset.Width != trueWidth || asset.Height != trueHeight) {
+			LOG_WARNING("[ImportTextureCubeAsset] Elements are not equal!");
 			return false;
 		}
-		memcpy(asset.Pixels.Data() + i * sliceByteSize, pixels, sliceByteSize);
+		uint8* dstData = asset.Pixels.Data() + i * sliceByteSize;
+		// downsize
+		if(downsize > 1) {
+			stbir_resize_uint8_linear(s.Data, srcWidth, srcHeight, 0,
+				dstData, trueWidth, trueHeight, 0, stbir_pixel_layout::STBIR_4CHANNEL);
+		}
+		else {
+			memcpy(dstData, s.Data, sliceByteSize);
+		}
 	}
-	return Asset::AssetLoader::SaveProjectAsset(&asset, dstFile.c_str());
+	return Asset::AssetLoader::SaveProjectAsset(&asset, saveFile.c_str());
 }

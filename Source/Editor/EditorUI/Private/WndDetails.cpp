@@ -59,6 +59,6 @@ namespace Editor {
 	}
 
 	WndDetails::WndDetails(): EditorWndBase("Details") {
-		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
+		EditorUIMgr::Instance()->AddMenu("Window", m_Name.c_str(), {}, &m_Enable);
 	}
 }

@@ -13,7 +13,6 @@ cls##Vk* cls##Ptr = new cls##Vk;\
 cls##Ptr->handle = hd; \
 return reinterpret_cast<cls*>(cls##Ptr)
 
-static constexpr ERHIFormat SWAPCHAIN_FORMAT{ ERHIFormat::B8G8R8A8_SRGB };
 static constexpr uint32 MIN_API_VERSION{ VK_VERSION_1_2 };
 
 VulkanRHI::VulkanRHI(const RHIInitDesc& desc) {

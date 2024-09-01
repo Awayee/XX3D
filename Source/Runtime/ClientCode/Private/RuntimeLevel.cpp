@@ -1,5 +1,7 @@
 #include "ClientCode/Public/RuntimeLevel.h"
 #include "Asset/Public/AssetLoader.h"
+#include "Asset/Public/MeshAsset.h"
+#include "Objects/Public/StaticMesh.h"
 #include "System/Public/EngineConfig.h"
 
 namespace Runtime {

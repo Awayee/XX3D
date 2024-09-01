@@ -14,6 +14,7 @@ namespace Object {
 		TextureResource(TextureResource&& rhs) noexcept;
 		TextureResource& operator=(TextureResource&& rhs) noexcept;
 		RHITexture* GetRHI();
+		static ERHIFormat ConvertTextureFormat(Asset::ETextureAssetType assetType);
 	private:
 		RHITexturePtr m_RHI;
 	};

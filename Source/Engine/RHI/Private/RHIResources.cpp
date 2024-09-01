@@ -19,8 +19,6 @@ FormatTexelInfo g_FormatPixelByteSize[(uint32)ERHIFormat::FORMAT_MAX_ENUM] = {
     {ERHIFormat::R8G8B8A8_UINT,        4             },
     {ERHIFormat::R8G8B8A8_SINT,        4             },
     {ERHIFormat::R8G8B8A8_SRGB,        4             },
-    {ERHIFormat::B8G8R8A8_UNORM,       4             },
-    {ERHIFormat::B8G8R8A8_SRGB,        4             },
     {ERHIFormat::R16_UNORM,            2             },
     {ERHIFormat::R16_SNORM,            2             },
     {ERHIFormat::R16_UINT,             2             },
