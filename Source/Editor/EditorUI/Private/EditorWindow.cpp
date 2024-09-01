@@ -18,7 +18,8 @@ namespace Editor {
 		if (m_Enable) {
 			if (ImGui::Begin(m_Name.c_str(), &m_Enable, m_Flags)) {
 				// support right click to focus window
-				if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+				constexpr auto flag = ImGuiHoveredFlags_ChildWindows;// hover checking include child window
+				if (ImGui::IsWindowHovered(flag) && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
 					ImGui::SetWindowFocus();
 				}
 				WndContent();

@@ -49,8 +49,8 @@ namespace Object {
 		float m_ShadowDistance{ 128.0f };
 		float m_LogDistribution{ 0.9f };
 		uint32 m_ShadowMapSize{ 1024 };
-		float m_ShadowBiasConstant{ 6.0f };
-		float m_ShadowBiasSlope{ 6.0f };
+		float m_ShadowBiasConstant{ 3.0f };
+		float m_ShadowBiasSlope{ 3.0f };
 		RHITexturePtr m_ShadowMapTexture; // lazy create
 		RHIGraphicsPipelineStatePtr m_ShadowMapPSO;// lazy create
 		TStaticArray<Object::Camera, CASCADE_NUM> m_CascadeCameras;

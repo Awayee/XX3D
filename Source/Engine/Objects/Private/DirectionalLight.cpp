@@ -48,6 +48,8 @@ namespace Object {
 			uniform = RHI::Instance()->CreateBuffer({ EBufferFlagBit::BUFFER_FLAG_UNIFORM, sizeof(Math::FMatrix4x4), 0 });
 		}
 		m_Uniform = RHI::Instance()->CreateBuffer({ EBufferFlagBit::BUFFER_FLAG_UNIFORM, sizeof(LightUBO), 0 });
+		// load shadow map size
+		SetShadowMapSize(Engine::ConfigManager::GetData().DefaultShadowMapSize);
 	}
 
 	void DirectionalLight::SetRotation(const Math::FVector3& euler) {

@@ -1,5 +1,5 @@
 #define CASCADE_NUM 4
-#define SHADOW_VAL 0.1
+#define SHADOW_VAL 0.2
 
 
 float2 GetTexelSize2D(Texture2DArray<float> tex){
