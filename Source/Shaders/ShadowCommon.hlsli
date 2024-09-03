@@ -11,7 +11,7 @@ float2 GetTexelSize2D(Texture2DArray<float> tex){
 
 #define PCF_NUM 25
 float2 PoissonDisk25(uint num){
-    const float2 PoissonDistVal[PCF_NUM] ={
+    static const float2 PoissonDistVal[PCF_NUM] ={
         float2(-0.978698, -0.0884121),
 	    float2(-0.841121, 0.521165),
 	    float2(-0.71746, -0.50322),
