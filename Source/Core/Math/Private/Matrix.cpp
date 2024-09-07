@@ -816,18 +816,17 @@ namespace Math {
     MATH_GENERIC Matrix4x4<T> Matrix4x4<T>::PerspectiveMatrix(T fov, T aspect, T zNear, T zFar)
     {
         T tanHalfFov = Math::Tan<T>(fov / (T)2);
-        // [1][1]negative for vulkan
 #ifdef MATRIX_COL_MAJOR
         return{
 		    (T)1 / (aspect * tanHalfFov),  0, 0,  0,
-		    0, -(T)1 / tanHalfFov,  0,  0,
+		    0, (T)1 / tanHalfFov,  0,  0,
 		    0,  0, -zFar / (zFar - zNear), -1,
 		    0, 0, -zFar * zNear / (zFar - zNear), 0
         };
 #else
         return {
             (T)1 / (aspect * tanHalfFov),  0, 0,  0,
-            0, -(T)1 / tanHalfFov,  0,  0,
+            0, (T)1 / tanHalfFov,  0,  0,
             0,  0, -zFar / (zFar - zNear), -zFar * zNear / (zFar - zNear),
             0, 0, -1, 0
         };
@@ -840,7 +839,7 @@ namespace Math {
         T invHeight   = (T)1 / (top - bottom);
         T invDistance = (T)1 / (zFar - zNear);
         T A = 2 * invWidth;
-        T B = -2 * invHeight; // negative for vulkan
+        T B = 2 * invHeight;
         T C = -(right + left) * invWidth;
         T D = -(top + bottom) * invHeight;
         // z from 0 to 1

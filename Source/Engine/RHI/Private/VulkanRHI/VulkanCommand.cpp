@@ -251,7 +251,7 @@ void VulkanCommandBuffer::BeginRendering(const RHIRenderPassInfo& info) {
 	}
 
 	vkCmdBeginRendering(m_Handle, &renderingInfo);
-	m_Viewport = { (float)area.x, (float)area.y, (float)area.w, (float)area.h, 0.0f, 1.0f };
+	m_Viewport = { (float)area.x, (float)area.y + (float)area.h, (float)area.w, -(float)area.h, 0.0f, 1.0f };
 	m_Scissor = { {area.x, area.y}, {area.w, area.h} };
 }
 
@@ -287,7 +287,7 @@ void VulkanCommandBuffer::BindIndexBuffer(RHIBuffer* buffer, uint64 offset) {
 }
 
 void VulkanCommandBuffer::SetViewport(FRect rect, float minDepth, float maxDepth) {
-	m_Viewport = { rect.x, rect.y, rect.w, rect.h, minDepth, maxDepth };
+	m_Viewport = { rect.x, rect.y + rect.h, rect.w, -rect.h, minDepth, maxDepth };
 	m_ViewportDirty = true;
 }
 

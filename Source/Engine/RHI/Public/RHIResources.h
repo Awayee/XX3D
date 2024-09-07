@@ -210,7 +210,7 @@ struct RHIBlendDesc {
 struct RHIRasterizerState {
 	ERasterizerFill FillMode{ ERasterizerFill::Solid };
 	ERasterizerCull CullMode{ ERasterizerCull::Back };
-	bool Clockwise{ false };
+	bool FrontClockwise{ false };
 	float DepthBiasConstant = 0.0f;
 	float DepthBiasSlope = 0.0f;
 };

@@ -6,8 +6,8 @@ struct VSOutput {
 };
 //vs
 static float2 g_Vertices[6] = {
-	float2(-1.0, -1.0), float2(-1.0,  1.0), float2(1.0, -1.0),
-	float2(-1.0,  1.0), float2(1.0,  1.0), float2(1.0, -1.0)
+	float2(-1.0, -1.0), float2(1.0, -1.0), float2(-1.0,  1.0),
+	float2(-1.0,  1.0), float2(1.0, -1.0), float2( 1.0,  1.0),
 };
 
 static float g_Depth = 0.5;
@@ -19,6 +19,7 @@ VSOutput MainVS(VSInput vIn, uint vID: SV_VertexID) {
 	VSOutput vOut;
 	vOut.Position = float4(v.xy, g_Depth, 1.0);
 	vOut.UV = v * 0.5 + 0.5;
+    vOut.UV.y = 1.0 - vOut.UV.y; // y-down in texture coords for DX12 and Vulkan
 	return vOut;
 }
 
@@ -55,7 +56,8 @@ float3 RebuildWorldPos(float2 uv) {
 	// get depth val
 	float depth = inDepth.Sample(inPointSampler, uv);
 	// to ndc
-	float2 ndcXY = uv * 2 - 1;
+    float2 ndcUV = float2(uv.x, 1.0 - uv.y); // restore to y-up
+    float2 ndcXY = ndcUV * 2 - 1;
 	float4 ndcPos = float4(ndcXY.x, ndcXY.y, depth, 1);
 	float4 worldPos = mul(uCamera.InvVP, ndcPos);
 	return worldPos.xyz / worldPos.w;
@@ -125,6 +127,7 @@ float3 ComputeCascadeShadow(float3 worldPos, float3 sceneColor){
     float4 clipPos = mul(uLight.VPMats[cascade], float4(worldPos, 1.0));
     float3 projCoords = clipPos.xyz / clipPos.w;
     projCoords.xy = projCoords.xy * 0.5 + 0.5;
+    projCoords.y = 1.0 - projCoords.y; // y-down in texture coords
 	// clip the coords out of view
 	if(all(TestRange01(projCoords))) {
         //float shadowVal = PCSS(inShadowMap, inLinearSampler, cascade, projCoords);

@@ -317,7 +317,7 @@ VkPipelineRasterizationStateCreateInfo ToRasterizationStateCreateInfo(const RHIR
 	info.rasterizerDiscardEnable = false; // todo
 	info.polygonMode = ToPolygonMode(desc.FillMode);
 	info.cullMode = ToVkCullMode(desc.CullMode);
-	info.frontFace = desc.Clockwise ? VK_FRONT_FACE_CLOCKWISE : VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	info.frontFace = desc.FrontClockwise ? VK_FRONT_FACE_CLOCKWISE : VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	info.depthBiasEnable = 0.0f != desc.DepthBiasConstant;
 	if (info.depthBiasEnable) {
 		info.depthBiasConstantFactor = desc.DepthBiasConstant;
