@@ -24,5 +24,7 @@ Future:
 
 Preview
 
+![image](https://github.com/user-attachments/assets/9307a172-b144-464f-9ad7-fcb5ce090544)
+
 ![image](https://github.com/user-attachments/assets/164f1cc3-ac0a-468b-9de7-50b09bc88e32)
 
