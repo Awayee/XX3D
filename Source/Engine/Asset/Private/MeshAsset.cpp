@@ -12,18 +12,18 @@ namespace Asset {
 		float UV[2];
 		void Pack(const AssetVertex& v) {
 			memcpy(Position, &v.Position.X, sizeof(float) * 3);
-			Normal[0] = Math::PackFloat01(v.Normal.X);
-			Normal[1] = Math::PackFloat01(v.Normal.Y);
-			Normal[2] = Math::PackFloat01(v.Normal.Z);
-			Tangent[0] = Math::PackFloat01(v.Tangent.X);
-			Tangent[1] = Math::PackFloat01(v.Tangent.Y);
-			Tangent[2] = Math::PackFloat01(v.Tangent.Z);
+			Normal[0] = Math::PackFloatS1(v.Normal.X);
+			Normal[1] = Math::PackFloatS1(v.Normal.Y);
+			Normal[2] = Math::PackFloatS1(v.Normal.Z);
+			Tangent[0] = Math::PackFloatS1(v.Tangent.X);
+			Tangent[1] = Math::PackFloatS1(v.Tangent.Y);
+			Tangent[2] = Math::PackFloatS1(v.Tangent.Z);
 			memcpy(UV, &v.UV.X, sizeof(float) * 2);
 		}
 		void Unpack(AssetVertex& v) {
 			memcpy(&v.Position.X, Position, sizeof(float) * 3);
-			v.Normal = { Math::UnpackFloat01(Normal[0]), Math::UnpackFloat01(Normal[1]), Math::UnpackFloat01(Normal[2]) };
-			v.Tangent = { Math::UnpackFloat01(Tangent[0]), Math::UnpackFloat01(Tangent[1]), Math::UnpackFloat01(Tangent[2]) };
+			v.Normal = { Math::UnpackFloatS1(Normal[0]), Math::UnpackFloatS1(Normal[1]), Math::UnpackFloatS1(Normal[2]) };
+			v.Tangent = { Math::UnpackFloatS1(Tangent[0]), Math::UnpackFloatS1(Tangent[1]), Math::UnpackFloatS1(Tangent[2]) };
 			memcpy(&v.UV.X, UV, sizeof(float) * 2);
 		}
 	};

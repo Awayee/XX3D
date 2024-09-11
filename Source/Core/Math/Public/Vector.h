@@ -37,8 +37,7 @@ namespace Math {
 	        return Vector2<T>(X * rhs.X, Y * rhs.Y);
         }
         Vector2<T> operator/(T scalar) const {
-	        T inv = (T)1 / scalar;
-        	return Vector2<T>(X * inv, Y * inv);
+        	return Vector2<T>(X / scalar, Y / scalar);
         }
         Vector2<T> operator/(const Vector2<T>& rhs) const {
 	        return Vector2<T>(X / rhs.X, Y / rhs.Y);
@@ -94,9 +93,8 @@ namespace Math {
             return *this;
         };
         Vector2<T>& operator/=(T scalar) {
-            T inv = (T)1 / scalar;
-            X *= inv;
-            Y *= inv;
+            X /= scalar;
+            Y /= scalar;
             return *this;
         }
         Vector2<T>& operator/=(const Vector2<T>& rhs) {
@@ -107,7 +105,7 @@ namespace Math {
         T Length() const {
 	        return Hypot<T>(X, Y);
         }
-        T SquaredLength() const {
+        T LengthSquared() const {
 	        return X * X + Y * Y;
         }
         T Cross(const Vector2<T>& rhs) const {
@@ -132,6 +130,12 @@ namespace Math {
 	        Vector2<T> r = { X, Y };
         	r.NormalizeSelf();
         	return r;
+        }
+    	bool IsNormalized()const {
+            return Math::FloatEqual(LengthSquared(), 1.0f);
+        }
+        bool IsNearlyZero() const {
+            return Math::IsNearlyZero(X) && Math::IsNearlyZero(Y);
         }
         static Vector2<T> Max(const Vector2<T>& v0, const Vector2<T>& v1) {
 	        return { Math::Max<T>(v0.X, v1.X), Math::Max<T>(v0.Y, v1.Y) };
@@ -172,7 +176,6 @@ namespace Math {
         const T* Data() const {
 	        return &X;
         }
-
         T operator[](int i) const {
 	        return *(&X + i);
         }
@@ -302,6 +305,12 @@ namespace Math {
 	        Vector3<T> r{ X, Y, Z };
         	r.NormalizeSelf();
         	return r;
+        }
+        bool IsNormalized()const {
+            return Math::FloatEqual(LengthSquared(), 1.0f);
+        }
+        bool IsNearlyZero() const {
+            return Math::IsNearlyZero(X) && Math::IsNearlyZero(Y) && Math::IsNearlyZero(Z);
         }
 
         static T Dot(const Vector3<T>& v0, const Vector3<T>& v1) {
@@ -457,6 +466,9 @@ namespace Math {
         }
         T Dot(const Vector4<T> & vec) const {
 	        return X * vec.X + Y * vec.Y + Z * vec.Z + W * vec.W;
+        }
+        bool IsNearlyZero() const {
+            return Math::IsNearlyZero(X) && Math::IsNearlyZero(Y) && Math::IsNearlyZero(Z) && Math::IsNearlyZero(W);
         }
 
         static Vector4<T> Max(const Vector4<T>& v0, const Vector4<T>& v1) {

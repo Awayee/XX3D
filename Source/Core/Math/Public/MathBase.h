@@ -63,8 +63,10 @@ namespace Math {
 	inline float FATan2(float x, float y) { return ATan2<float>(x, y); }
 
 	//data pack
-	inline unsigned char PackFloat01(float x) { return (unsigned char)((x * 0.5f + 0.5f) * 255.0f); }
-	inline float UnpackFloat01(unsigned char x) { return (float)x / 255.0f * 2.0f - 1.0f; }
+	inline unsigned char PackFloatS1(float x) { return (unsigned char)((x * 0.5f + 0.5f) * 255.0f); }
+	inline float UnpackFloatS1(unsigned char x) { return (float)x / 255.0f * 2.0f - 1.0f; }
+	inline unsigned char PackFloat01(float x) { return (unsigned char)(x * 255.0f); }
+	inline float PackFloat01(unsigned char x) { return (float)x / 255.0f; }
 
 	template<typename T> T UpperExp2(T x) {
 		if (!(x & (x - 1))) {
@@ -83,5 +85,17 @@ namespace Math {
 			return x;
 		}
 		return UpperExp2<T>(x >> 1);
+	}
+
+	template<typename T> bool IsNearlyZero(T val) { return val == (T)0; }
+
+	template<> inline bool IsNearlyZero(float val) {
+		constexpr float e = 1e-6f;
+		return Abs(val) < e;
+	}
+
+	template<> inline bool IsNearlyZero(double val) {
+		constexpr double e = 1e-6;
+		return Abs(val) < e;
 	}
 }
