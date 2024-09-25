@@ -28,10 +28,8 @@ namespace Engine {
 
 		virtual ~EngineWindow() {}
 		virtual void Update() = 0;
-		virtual bool ShouldClose() = 0;
         virtual void Close() = 0;
 		virtual void SetTitle(const char* title) = 0;
-        virtual const USize2D& GetWindowSize() = 0;
 
         typedef std::function<void()>                   OnResetFunc;
         typedef std::function<void(EKey, EInput)>       OnKeyFunc;
@@ -55,7 +53,9 @@ namespace Engine {
 
         virtual bool GetFocusMode() = 0;
         virtual void* GetWindowHandle() = 0;
-        virtual void GetWindowContentScale(float* x, float* y) = 0;
+        virtual USize2D GetWindowSize() = 0;
+        virtual FSize2D GetWindowContentScale() = 0;
+        virtual FOffset2D GetCursorPos() = 0;
 
         virtual void SetFocusMode(bool focusMode) = 0;
         virtual void SetWindowIcon(int count, const WindowIcon* icons) = 0;

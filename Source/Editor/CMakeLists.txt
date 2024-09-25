@@ -30,17 +30,16 @@ target_link_libraries(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/assimpWin64/lib/assi
 #RenderDoc
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/RenderDoc)
 
-add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+set(COPY_DLLS
     ${THIRD_PARTY}/assimpWin64/lib/assimp-vc140-mt.dll
-    $<TARGET_FILE_DIR:${TARGET_NAME}>)
-
-add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
     ${THIRD_PARTY}/DirectXShaderCompiler/bin/x64/dxcompiler.dll
-    $<TARGET_FILE_DIR:${TARGET_NAME}>)
-
-add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    ${THIRD_PARTY}/DirectXShaderCompiler/bin/x64/dxil.dll
     ${THIRD_PARTY}/zlib/lib/zlib.dll
-    $<TARGET_FILE_DIR:${TARGET_NAME}>)
+    ${THIRD_PARTY}/WinPixEventRuntime/bin/x64/WinPixEventRuntime.dll
+)
+foreach(COPY_DLL ${COPY_DLLS})
+    add_custom_command(TARGET ${TARGET_NAME}
+        POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${COPY_DLL}
+        $<TARGET_FILE_DIR:${TARGET_NAME}>)
+endforeach()

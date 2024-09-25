@@ -1,4 +1,6 @@
 #pragma once
+#include "Core/Public/Container.h"
+#include "Core/Public/TArray.h"
 #include "Window/Public/EngineWindow.h"
 #include <GLFW/glfw3.h>
 #include <unordered_map>
@@ -6,38 +8,19 @@
 
 namespace Engine {
 	class WindowSystemGLFW final: public EngineWindow {
-	private:
-		static std::unordered_map<int, EKey> s_GLFWKeyCodeMap;
-		static std::unordered_map<int, EBtn> s_GLFWButtonCodeMap;
-		static std::unordered_map<int, EInput> s_GLFWInputMap;
-
-		GLFWwindow* m_Window {nullptr};
-		USize2D m_Size;
-		bool m_FocusMode {false};
-
-		std::vector<OnKeyFunc>         m_OnKeyFunc;
-		std::vector<OnMouseButtonFunc> m_OnMouseButtonFunc;
-		std::vector<OnCursorPosFunc>   m_OnCursorPosFunc;
-		std::vector<OnCursorEnterFunc> m_OnCursorEnterFunc;
-		std::vector<OnScrollFunc>      m_OnScrollFunc;
-		std::vector<OnDropFunc>        m_OnDropFunc;
-		std::vector<OnWindowSizeFunc>  m_OnWindowSizeFunc;
-		std::vector<OnWindowCloseFunc> m_OnWindowCloseFunc;
-		std::vector<OnWindowFocus>     m_OnWindowFocusFunc;
 	public:
 		explicit WindowSystemGLFW(const WindowInitInfo& initInfo);
 		~WindowSystemGLFW() override;
 		void Update() override;
-		bool ShouldClose() override;
 		void Close() override;
 		void SetTitle(const char* title) override;
-		const USize2D& GetWindowSize() override;
 		void SetFocusMode(bool focusMode) override;
+		void SetWindowIcon(int count, const WindowIcon* icons)override;
 		bool GetFocusMode()override;
 		void* GetWindowHandle()override;
-		void GetWindowContentScale(float* x, float* y)override;
-
-		void SetWindowIcon(int count, const WindowIcon* icons)override;
+		USize2D GetWindowSize() override;
+		FSize2D GetWindowContentScale() override;
+		FOffset2D GetCursorPos() override;
 
 		// register func
 		void RegisterOnKeyFunc(OnKeyFunc&& func)override;
@@ -46,11 +29,26 @@ namespace Engine {
 		void RegisterOnCursorEnterFunc(OnCursorEnterFunc&& func)override;
 		void RegisterOnScrollFunc(OnScrollFunc&& func)override;
 		void RegisterOnWindowSizeFunc(OnWindowSizeFunc&& func)override;
-		
 
 	private:
-		void InitKeyButtonCodeMap(); // 注册keycode枚举映射
-		void InitEvents(); // 注册所有事件
+		static TUnorderedMap<int, EKey> s_GLFWKeyCodeMap;
+		static TUnorderedMap<int, EBtn> s_GLFWButtonCodeMap;
+		static TUnorderedMap<int, EInput> s_GLFWInputMap;
+
+		GLFWwindow* m_Window {nullptr};
+		USize2D m_Size;
+		bool m_FocusMode {false};
+		TArray<OnKeyFunc>         m_OnKeyFunc;
+		TArray<OnMouseButtonFunc> m_OnMouseButtonFunc;
+		TArray<OnCursorPosFunc>   m_OnCursorPosFunc;
+		TArray<OnCursorEnterFunc> m_OnCursorEnterFunc;
+		TArray<OnScrollFunc>      m_OnScrollFunc;
+		TArray<OnDropFunc>        m_OnDropFunc;
+		TArray<OnWindowSizeFunc>  m_OnWindowSizeFunc;
+		TArray<OnWindowCloseFunc> m_OnWindowCloseFunc;
+		TArray<OnWindowFocus>     m_OnWindowFocusFunc;
+		void InitKeyButtonCodeMap();
+		void InitEvents();
 		static void OnKey(GLFWwindow* window, int key, int scancode, int action, int mods);
 		static void OnMouseButton(GLFWwindow* window, int button, int action, int mods);
 		static void OnCursorPos(GLFWwindow* window, double x, double y);

@@ -34,11 +34,11 @@ namespace Object {
 			primitive.VertexCount = srcPrimitive.Vertices.Size();
 			primitive.IndexCount = srcPrimitive.Indices.Size();
 			// vb
-			RHIBufferDesc vbDesc{ BUFFER_FLAG_VERTEX | BUFFER_FLAG_COPY_DST, srcPrimitive.Vertices.ByteSize(), sizeof(Asset::IndexType) };
+			RHIBufferDesc vbDesc{EBufferFlags::Vertex | EBufferFlags::CopyDst, srcPrimitive.Vertices.ByteSize(), sizeof(Asset::AssetVertex) };
 			primitive.VertexBuffer = r->CreateBuffer(vbDesc);
 			primitive.VertexBuffer->UpdateData(srcPrimitive.Vertices.Data(), srcPrimitive.Vertices.ByteSize(), 0);
 			// ib
-			RHIBufferDesc ibDesc{ BUFFER_FLAG_INDEX | BUFFER_FLAG_COPY_DST, srcPrimitive.Indices.ByteSize(), sizeof(Asset::IndexType) };
+			RHIBufferDesc ibDesc{EBufferFlags::Index | EBufferFlags::CopyDst, srcPrimitive.Indices.ByteSize(), sizeof(Asset::IndexType) };
 			primitive.IndexBuffer = r->CreateBuffer(ibDesc);
 			primitive.IndexBuffer->UpdateData(srcPrimitive.Indices.Data(), srcPrimitive.Indices.ByteSize(), 0);
 			// texture
@@ -46,7 +46,7 @@ namespace Object {
 			// aabb
 			primitive.AABB = srcPrimitive.AABB;
 		}
-		UniformBuffer = r->CreateBuffer({ EBufferFlagBit::BUFFER_FLAG_UNIFORM, sizeof(TransformComponent::TransformInfo), 0});
+		UniformBuffer = r->CreateBuffer({ EBufferFlags::Uniform, sizeof(TransformComponent::TransformInfo), 0});
 	}
 
 	void MeshRenderSystem::Update(ECSScene* ecsScene, TransformComponent* transform, StaticMeshComponent* staticMesh) {

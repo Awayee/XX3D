@@ -5,7 +5,14 @@
 
 class VulkanBackBuffer: public VulkanRHITexture {
 public:
-	VulkanBackBuffer(const RHITextureDesc& desc, VulkanDevice* device, VkImage image);
+	VulkanBackBuffer(const RHITextureDesc& desc) : VulkanRHITexture(desc), m_Image(nullptr), m_View(nullptr) {}
+	void ResetImage(VkImage image, VkImageView view);
+	void UpdateData(const void* data, uint32 byteSize, RHITextureSubRes subRes, IOffset3D offset) override { CHECK(0); }
+	VkImageView GetView(RHITextureSubRes subRes) override { return m_View; }
+	VkImage GetImage() override { return m_Image; }
+private:
+	VkImage m_Image;
+	VkImageView m_View;
 };
 
 class VulkanViewport: public RHIViewport {
@@ -14,8 +21,8 @@ public:
 	~VulkanViewport() override;
 	void SetSize(USize2D size) override;
 	USize2D GetSize() override;
-	RHITexture* AcquireBackBuffer() override;
-	RHITexture* GetCurrentBackBuffer() override;
+	bool PrepareBackBuffer() override;
+	RHITexture* GetBackBuffer() override;
 	ERHIFormat GetBackBufferFormat() override;
 	void Present() override;
 	VkSemaphore GetCurrentSemaphore() const;
@@ -29,7 +36,12 @@ private:
 	VkSurfaceKHR m_Surface;
 	VkSwapchainKHR m_Swapchain {VK_NULL_HANDLE};
 	ERHIFormat m_BackBufferFormat;
-	TArray<TUniquePtr<VulkanBackBuffer>> m_BackBuffers;
+	TUniquePtr<VulkanBackBuffer> m_BackBuffer;
+	struct VulkanImage {
+		VkImage Image;
+		VkImageView View;
+	};
+	TArray<VulkanImage> m_SwapchainImages;
 	TStaticArray<VkSemaphore, RHI_FRAME_IN_FLIGHT_MAX> m_Semaphores;
 	bool m_SizeDirty{ false };
 	uint32 m_BackBufferIdx{ 0 };

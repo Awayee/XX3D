@@ -4,7 +4,7 @@
 
 namespace {
 	static constexpr ERHIFormat FORMAT = ERHIFormat::R8G8B8A8_SRGB;
-	static constexpr ETextureFlags USAGE = ETextureFlagBit::TEXTURE_FLAG_SRV | ETextureFlagBit::TEXTURE_FLAG_CPY_DST;
+	static constexpr ETextureFlags USAGE = ETextureFlags::SRV | ETextureFlags::CopyDst;
 	static constexpr int CHANNELS = 4;
 }
 
@@ -16,7 +16,7 @@ namespace Object {
 		desc.Width = asset.Width;
 		desc.Height = asset.Height;
 		m_RHI = RHI::Instance()->CreateTexture(desc);
-		m_RHI->UpdateData(desc.Width * desc.Height * CHANNELS, asset.Pixels.Data(), {});
+		m_RHI->UpdateData(desc.Width * desc.Height * CHANNELS, asset.Pixels.Data());
 	}
 
 	TextureResource::TextureResource(TextureResource&& rhs) noexcept : m_RHI(MoveTemp(rhs.m_RHI)) {}

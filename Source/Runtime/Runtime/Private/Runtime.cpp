@@ -1,5 +1,5 @@
 #include "Runtime/Public/Runtime.h"
-#include "RHI/Public/ImGuiRHI.h"
+#include "RHI/Public/RHIImGui.h"
 #include "ClientCode/Public/RuntimeLevel.h"
 #include "Render/Public/Renderer.h"
 
@@ -12,7 +12,7 @@ namespace Runtime {
 			if (Object::RenderScene* defaultScene = Object::RenderScene::GetDefaultScene()) {
 				// push ImGui draw call to deferred lighting pass
 				defaultScene->GetDrawCallContext().PushDrawCall(Render::EDrawCallQueueType::DeferredLighting,
-					[](RHICommandBuffer* cmd) {ImGuiRHI::Instance()->RenderDrawData(cmd); });
+					[](RHICommandBuffer* cmd) {RHIImGui::Instance()->RenderDrawData(cmd); });
 				defaultScene->Render(rg, backBufferNode);
 			}
 		}
@@ -20,18 +20,18 @@ namespace Runtime {
 
 	XXRuntime::XXRuntime(): XXEngine() {
 		Render::Renderer::Instance()->SetSceneRenderer<RuntimeSceneRenderer>();
-		ImGuiRHI::Initialize(nullptr);
+		RHIImGui::Initialize(nullptr);
 		RuntimeLevelMgr::Initialize();
 	}
 
 	XXRuntime::~XXRuntime() {
-		ImGuiRHI::Release();
+		RHIImGui::Release();
 		RuntimeLevelMgr::Release();
 	}
 
 	void XXRuntime::Update() {
-		ImGuiRHI::Instance()->FrameBegin();
-		ImGuiRHI::Instance()->FrameEnd();
+		RHIImGui::Instance()->FrameBegin();
+		RHIImGui::Instance()->FrameEnd();
 		XXEngine::Update();
 	}
 }

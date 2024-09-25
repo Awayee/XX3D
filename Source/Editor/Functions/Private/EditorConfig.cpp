@@ -1,8 +1,9 @@
 #include "Functions/Public/EditorConfig.h"
 #include "Asset/Public/AssetLoader.h"
-#include "RHI/Public/ImGuiRHI.h"
+#include "RHI/Public/RHIImGui.h"
 #include "System/Public/EngineConfig.h"
 #include "Window/Public/EngineWindow.h"
+#include "Math/Public/Math.h"
 
 namespace Editor {
 	void SetImGuiStyle() {
@@ -80,9 +81,8 @@ namespace Editor {
 
 	void EditorConfig::InitializeImGuiConfig() {
 		// imgui
-		float scaleX, scaleY;
-		Engine::EngineWindow::Instance()->GetWindowContentScale(&scaleX, &scaleY);
-		float contentScale = fmaxf(1.0f, fmaxf(scaleX, scaleY));
+		FSize2D scale = Engine::EngineWindow::Instance()->GetWindowContentScale();
+		float contentScale = Math::Max(1.0f, Math::Max(scale.w, scale.h));
 
 		// load font for imgui
 		ImGuiIO& io = ImGui::GetIO();

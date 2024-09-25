@@ -1,6 +1,6 @@
 #pragma once
 #include "Core/Public/Func.h"
-#include "RHI/Public/ImGuiRHI.h"
+#include "RHI/Public/RHIImGui.h"
 
 namespace Editor {
 	class EditorUIMgr;

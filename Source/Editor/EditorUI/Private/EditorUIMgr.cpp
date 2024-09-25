@@ -1,11 +1,11 @@
 #include "EditorUI/Public/EditorUIMgr.h"
 #include "Window/Public/EngineWindow.h"
-#include "RHI/Public/ImGuiRHI.h"
+#include "RHI/Public/RHIImGui.h"
 
 namespace Editor {
 
 	void EditorUIMgr::Tick() {
-		ImGuiRHI::Instance()->FrameBegin();
+		RHIImGui::Instance()->FrameBegin();
 
 		// title bar
 		const ImGuiViewport* mainViewport = ImGui::GetMainViewport();
@@ -56,7 +56,7 @@ namespace Editor {
 				wnd->Display();
 			}
 		}
-		ImGuiRHI::Instance()->FrameEnd();
+		RHIImGui::Instance()->FrameEnd();
 	}
 
 	void EditorUIMgr::AddMenuBar(const XString& barName) {

@@ -4,7 +4,6 @@
 #include "VulkanMemory.h"
 #include "VulkanPipeline.h"
 #include "VulkanCommand.h"
-#include "VulkanUploader.h"
 
 inline TArray<const char*> GetDeviceExtensions(const VulkanContext* context) {
 	TArray<const char*> extensions;
@@ -60,13 +59,15 @@ VulkanDevice::~VulkanDevice() {
 
 const VulkanQueue* VulkanDevice::FindPresentQueue(VkSurfaceKHR surface) const {
 	VkBool32 isSupport = VK_FALSE;
-	vkGetPhysicalDeviceSurfaceSupportKHR(m_PhysicalDevice, m_GraphicsQueue.FamilyIndex, surface, &isSupport);
+	const VulkanQueue& graphicsQueue = GetQueue(EQueueType::Graphics);
+	vkGetPhysicalDeviceSurfaceSupportKHR(m_PhysicalDevice, graphicsQueue.FamilyIndex, surface, &isSupport);
 	if(isSupport) {
-		return &m_GraphicsQueue;
+		return &graphicsQueue;
 	}
-	vkGetPhysicalDeviceSurfaceSupportKHR(m_PhysicalDevice, m_ComputeQueue.FamilyIndex, surface, &isSupport); 
+	const VulkanQueue& computeQueue = GetQueue(EQueueType::Compute);
+	vkGetPhysicalDeviceSurfaceSupportKHR(m_PhysicalDevice, computeQueue.FamilyIndex, surface, &isSupport);
 	if(isSupport) {
-		return &m_ComputeQueue;
+		return &computeQueue;
 	}
 	return nullptr;
 }
@@ -164,13 +165,16 @@ void VulkanDevice::CreateDevice(const VulkanContext* context) {
 
 	// get queues
 	constexpr uint32 fixedQueueIndex = 0;// Always get the first queue.
-	m_GraphicsQueue.FamilyIndex = graphicsQueueFamilyIdx;
-	m_GraphicsQueue.QueueIndex = fixedQueueIndex;
-	vkGetDeviceQueue(m_Device, graphicsQueueFamilyIdx, fixedQueueIndex, &m_GraphicsQueue.Handle);
-	m_ComputeQueue.FamilyIndex = computeQueueFamilyIdx;
-	m_ComputeQueue.QueueIndex = fixedQueueIndex;
-	vkGetDeviceQueue(m_Device, computeQueueFamilyIdx, fixedQueueIndex, &m_ComputeQueue.Handle);
-	m_TransferQueue.FamilyIndex = transferQueueFamilyIdx;
-	m_TransferQueue.QueueIndex = fixedQueueIndex;
-	vkGetDeviceQueue(m_Device, transferQueueFamilyIdx, fixedQueueIndex, &m_TransferQueue.Handle);
+	VulkanQueue& graphicsQueue = m_Queues[EnumCast(EQueueType::Graphics)];
+	graphicsQueue.FamilyIndex = graphicsQueueFamilyIdx;
+	graphicsQueue.QueueIndex = fixedQueueIndex;
+	vkGetDeviceQueue(m_Device, graphicsQueueFamilyIdx, fixedQueueIndex, &graphicsQueue.Handle);
+	VulkanQueue& computeQueue = m_Queues[EnumCast(EQueueType::Compute)];
+	computeQueue.FamilyIndex = computeQueueFamilyIdx;
+	computeQueue.QueueIndex = fixedQueueIndex;
+	vkGetDeviceQueue(m_Device, computeQueueFamilyIdx, fixedQueueIndex, &computeQueue.Handle);
+	VulkanQueue& transferQueue = m_Queues[EnumCast(EQueueType::Transfer)];
+	transferQueue.FamilyIndex = transferQueueFamilyIdx;
+	transferQueue.QueueIndex = fixedQueueIndex;
+	vkGetDeviceQueue(m_Device, transferQueueFamilyIdx, fixedQueueIndex, &transferQueue.Handle);
 }

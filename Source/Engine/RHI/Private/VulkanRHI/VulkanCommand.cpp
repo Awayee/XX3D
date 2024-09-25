@@ -4,6 +4,7 @@
 #include "VulkanPipeline.h"
 #include "Core/Public/TArray.h"
 #include "VulkanDevice.h"
+#include "System/Public/FrameCounter.h"
 
 namespace {
 	void GetPipelineBarrierStage(VkImageLayout oldLayout, VkImageLayout newLayout, VkAccessFlags& srcAccessMask, VkAccessFlags& dstAccessMask, VkPipelineStageFlags& srcStage, VkPipelineStageFlags& dstStage) {
@@ -187,10 +188,42 @@ namespace {
 	}
 }
 
-VulkanCommandBuffer::VulkanCommandBuffer(VulkanCommandContext* context, VkCommandBuffer handle, VkSemaphore smp) :
+
+
+VulkanStagingBuffer::VulkanStagingBuffer(uint32 bufferSize, VulkanDevice* device) : VulkanBuffer(RHIBufferDesc{ EBufferFlags::CopySrc, bufferSize }, device) {
+	m_CreateFrame = FrameCounter::GetFrame();
+}
+
+VulkanUploader::VulkanUploader(VulkanDevice* device) : m_Device(device) {
+}
+
+VulkanUploader::~VulkanUploader() {
+}
+
+VulkanStagingBuffer* VulkanUploader::AcquireBuffer(uint32 bufferSize) {
+	auto& bufferPtr = m_StagingBuffers.EmplaceBack(new VulkanStagingBuffer(bufferSize, m_Device));
+	bufferPtr->SetName("UploadBuffer");
+	return bufferPtr.Get();
+}
+
+void VulkanUploader::BeginFrame() {
+	const uint32 frame = FrameCounter::GetFrame();
+	for (uint32 i = 0; i < m_StagingBuffers.Size(); ) {
+		const uint32 createFrame = m_StagingBuffers[i]->GetCreateFrame();
+		if (createFrame + RHI_FRAME_IN_FLIGHT_MAX < frame) {
+			m_StagingBuffers.SwapRemoveAt(i);
+		}
+		else {
+			++i;
+		}
+	}
+}
+
+VulkanCommandBuffer::VulkanCommandBuffer(VulkanCommandContext* context, VkCommandBuffer handle, VkSemaphore smp, EQueueType queue) :
 m_Owner(context),
 m_Handle(handle),
 m_Semaphore(smp),
+m_QueueType(queue),
 // TODO stage mask would be reset
 m_StageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT){
 	m_PipelineStateContainer.Reset(new VulkanPipelineStateContainer(context->GetDevice()));
@@ -220,7 +253,8 @@ void VulkanCommandBuffer::BeginRendering(const RHIRenderPassInfo& info) {
 	for(uint32 i=0; i<colorAttachmentCount; ++i) {
 		colorAttachments[i] = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO , nullptr };
 		const auto& target = info.ColorTargets[i];
-		colorAttachments[i].imageView = ((VulkanRHITexture*)target.Target)->Get2DView(target.MipIndex, target.ArrayIndex);
+		RHITextureSubRes subRes{target.ArrayIndex, 1, target.MipIndex, 1, ETextureDimension::Tex2D, ETextureViewFlags::Color};
+		colorAttachments[i].imageView = ((VulkanRHITexture*)target.Target)->GetView(subRes);
 		colorAttachments[i].imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		colorAttachments[i].resolveMode = VK_RESOLVE_MODE_NONE;
 		colorAttachments[i].resolveImageView = VK_NULL_HANDLE;
@@ -240,7 +274,8 @@ void VulkanCommandBuffer::BeginRendering(const RHIRenderPassInfo& info) {
 	VkRenderingAttachmentInfo dsAttachment{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO, nullptr };
 	auto& depthStencilTarget = info.DepthStencilTarget;
 	if(depthStencilTarget.Target) {
-		dsAttachment.imageView = ((VulkanRHITexture*)depthStencilTarget.Target)->Get2DView(depthStencilTarget.MipIndex, depthStencilTarget.ArrayIndex);
+		RHITextureSubRes subRes{depthStencilTarget.ArrayIndex, 1, depthStencilTarget.MipIndex, 1, ETextureDimension::Tex2D, ETextureViewFlags::Depth|ETextureViewFlags::Stencil};
+		dsAttachment.imageView = ((VulkanRHITexture*)depthStencilTarget.Target)->GetView(subRes);
 		dsAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 		dsAttachment.loadOp = ToVkAttachmentLoadOp(depthStencilTarget.DepthLoadOp);
 		dsAttachment.storeOp = ToVkAttachmentStoreOp(depthStencilTarget.DepthStoreOp);
@@ -278,12 +313,12 @@ void VulkanCommandBuffer::SetShaderParam(uint32 setIndex, uint32 bindIndex, cons
 }
 
 void VulkanCommandBuffer::BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) {
-	VkBuffer vkBuffer = static_cast<VulkanRHIBuffer*>(buffer)->GetBuffer();
+	VkBuffer vkBuffer = static_cast<VulkanBufferImpl*>(buffer)->GetBuffer();
 	vkCmdBindVertexBuffers(m_Handle, first, 1, &vkBuffer, &offset);
 }
 
 void VulkanCommandBuffer::BindIndexBuffer(RHIBuffer* buffer, uint64 offset) {
-	vkCmdBindIndexBuffer(m_Handle, static_cast<VulkanRHIBuffer*>(buffer)->GetBuffer(), offset, VK_INDEX_TYPE_UINT32);
+	vkCmdBindIndexBuffer(m_Handle, static_cast<VulkanBufferImpl*>(buffer)->GetBuffer(), offset, ToIndexType(buffer->GetDesc().IndexFormat));
 }
 
 void VulkanCommandBuffer::SetViewport(FRect rect, float minDepth, float maxDepth) {
@@ -329,46 +364,35 @@ void VulkanCommandBuffer::ClearColorTarget(uint32 targetIndex, const float* colo
 	vkCmdClearAttachments(m_Handle, 1, &clearAttachment, 1, &clearRect);
 }
 
-void VulkanCommandBuffer::CopyBufferToBuffer(RHIBuffer* srcBuffer, RHIBuffer* dstBuffer, uint64 srcOffset, uint64 dstOffset, uint64 size) {
-	VkBufferCopy copy{ srcOffset, dstOffset, size };
-	vkCmdCopyBuffer(m_Handle, static_cast<VulkanRHIBuffer*>(srcBuffer)->GetBuffer(), static_cast<VulkanRHIBuffer*>(dstBuffer)->GetBuffer(), 1, &copy);
+void VulkanCommandBuffer::CopyBufferToBuffer(RHIBuffer* srcBuffer, RHIBuffer* dstBuffer, uint32 srcOffset, uint32 dstOffset, uint32 byteSize) {
+	VkBufferCopy copy{ srcOffset, dstOffset, byteSize };
+	vkCmdCopyBuffer(m_Handle, static_cast<VulkanBufferImpl*>(srcBuffer)->GetBuffer(), static_cast<VulkanBufferImpl*>(dstBuffer)->GetBuffer(), 1, &copy);
 }
 
-void VulkanCommandBuffer::CopyBufferToTexture(RHIBuffer* buffer, RHITexture* texture, uint32 mipLevel, uint32 baseLayer, uint32 layerCount) {
+void VulkanCommandBuffer::CopyBufferToTexture(RHIBuffer* buffer, RHITexture* texture, RHITextureSubRes dstSubRes, IOffset3D dstOffset) {
 	VulkanRHITexture* vkTex = static_cast<VulkanRHITexture*>(texture);
 	VkBufferImageCopy region;
 	region.bufferOffset = 0;
 	region.bufferRowLength = 0;
 	region.bufferImageHeight = 0;
-	region.imageSubresource.aspectMask = ToImageAspectFlags(texture->GetDesc().Flags);
-	region.imageSubresource.mipLevel = mipLevel;
-	region.imageSubresource.baseArrayLayer = baseLayer;
-	region.imageSubresource.layerCount = layerCount;
-	region.imageOffset = { 0, 0, 0 };
+	ToImageSubResourceLayers(dstSubRes, region.imageSubresource);
+	region.imageOffset = { dstOffset.x, dstOffset.y, dstOffset.z };
 	const auto& desc = vkTex->GetDesc();
-	region.imageExtent = { desc.Width, desc.Height, desc.Depth };
-	vkCmdCopyBufferToImage(m_Handle, ((VulkanRHIBuffer*)buffer)->GetBuffer(), vkTex->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+	region.imageExtent = { desc.GetMipLevelHeight(dstSubRes.MipIndex), desc.GetMipLevelHeight(dstSubRes.MipIndex), desc.Depth };
+	vkCmdCopyBufferToImage(m_Handle, ((VulkanBufferImpl*)buffer)->GetBuffer(), vkTex->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
-void VulkanCommandBuffer::CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RHITextureCopyRegion& region)
-{
-	VkImageAspectFlags srcAsp = ToImageAspectFlags(srcTex->GetDesc().Flags);
-	VkImageAspectFlags dstAsp = ToImageAspectFlags(dstTex->GetDesc().Flags);
-	ASSERT(srcAsp == dstAsp, "");
+void VulkanCommandBuffer::CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RHITextureCopyRegion& region){
 	VkImageCopy copy{};
-	copy.srcSubresource.aspectMask = srcAsp;
-	copy.srcSubresource.baseArrayLayer = region.SrcSub.ArrayLayer;
-	copy.srcSubresource.layerCount = 1;
-	copy.srcOffset = { region.SrcSub.Offset.x, region.SrcSub.Offset.y, region.SrcSub.Offset.z };
-	copy.dstSubresource.aspectMask = dstAsp;
-	copy.dstSubresource.baseArrayLayer = region.DstSub.ArrayLayer;
-	copy.dstSubresource.layerCount = 1;
-	copy.dstOffset = { region.DstSub.Offset.x, region.DstSub.Offset.y, region.DstSub.Offset.z };
+	ToImageSubResourceLayers(region.SrcSubRes, copy.srcSubresource);
+	ToImageSubResourceLayers(region.DstSubRes, copy.dstSubresource);
+	copy.srcOffset = { (int)region.SrcOffset.x, (int)region.SrcOffset.y, (int)region.SrcOffset.z };
+	copy.dstOffset = { (int)region.DstOffset.x, (int)region.DstOffset.y, (int)region.DstOffset.z };
 	copy.extent = { region.Extent.w, region.Extent.h, region.Extent.d };
 	vkCmdCopyImage(m_Handle, ((VulkanRHITexture*)srcTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, ((VulkanRHITexture*)dstTex)->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
 }
 
-void VulkanCommandBuffer::TransitionTextureState(RHITexture* texture, EResourceState stateBefore, EResourceState stateAfter, RHITextureSubDesc subDesc) {
+void VulkanCommandBuffer::TransitionTextureState(RHITexture* texture, EResourceState stateBefore, EResourceState stateAfter, RHITextureSubRes subRes) {
 	VulkanRHITexture* vkTex = static_cast<VulkanRHITexture*>(texture);
 	const VkImageLayout oldLayout = ToImageLayout(stateBefore);
 	const VkImageLayout newLayout = ToImageLayout(stateAfter);
@@ -380,22 +404,18 @@ void VulkanCommandBuffer::TransitionTextureState(RHITexture* texture, EResourceS
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.image = vkTex->GetImage();
-	barrier.subresourceRange.aspectMask = ToImageAspectFlags(vkTex->GetDesc().Flags);
-	barrier.subresourceRange.baseMipLevel = subDesc.MipIndex;
-	barrier.subresourceRange.levelCount = subDesc.MipCount;
-	barrier.subresourceRange.baseArrayLayer = subDesc.ArrayIndex;
-	barrier.subresourceRange.layerCount = subDesc.ArrayCount;
+	ToImageSubResourceRange(subRes, barrier.subresourceRange);
 	VkPipelineStageFlags srcStage;
 	VkPipelineStageFlags dstStage;
 	GetPipelineBarrierStage(barrier.oldLayout, barrier.newLayout, barrier.srcAccessMask, barrier.dstAccessMask, srcStage, dstStage);
 	vkCmdPipelineBarrier(m_Handle, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
-void VulkanCommandBuffer::GenerateMipmap(RHITexture* texture, uint32 levelCount, uint32 baseLayer, uint32 layerCount) {
+void VulkanCommandBuffer::GenerateMipmap(RHITexture* texture, uint8 mipSize, uint16 arrayIndex, uint16 arraySize, ETextureViewFlags viewFlags) {
 	VulkanRHITexture* vkTex = static_cast<VulkanRHITexture*>(texture);
 	const auto& desc = vkTex->GetDesc();
-	const VkImageAspectFlags aspect = ToImageAspectFlags(vkTex->GetDesc().Flags);
-	GenerateMipMap(m_Handle, vkTex->GetImage(), levelCount, desc.Width, desc.Height, aspect, baseLayer, layerCount);
+	const VkImageAspectFlags aspect = ToImageAspectFlags(viewFlags);
+	GenerateMipMap(m_Handle, vkTex->GetImage(), mipSize, desc.Width, desc.Height, aspect, arrayIndex, arraySize);
 }
 
 void VulkanCommandBuffer::BeginDebugLabel(const char* msg, const float* color) {
@@ -453,23 +473,32 @@ void VulkanCommandBuffer::PrepareDraw() {
 	}
 }
 
-VulkanCommandContext::VulkanCommandContext(VulkanDevice* device) :m_Device(device), m_CommandPool(VK_NULL_HANDLE) {
-	VkCommandPoolCreateInfo commandPoolCreateInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr };
-	commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-	commandPoolCreateInfo.queueFamilyIndex = m_Device->GetGraphicsQueue().FamilyIndex;
+VulkanCommandContext::VulkanCommandContext(VulkanDevice* device) :m_Device(device) {
 	VkDevice vkDevice = m_Device->GetDevice();
-	VK_ASSERT(vkCreateCommandPool(vkDevice, &commandPoolCreateInfo, nullptr, &m_CommandPool), "VkCreateCommandPool");
-	m_UploadCmd = AllocateCommandBuffer();
+	for(uint8 i=0; i<EnumCast(EQueueType::Count); ++i) {
+		VkCommandPoolCreateInfo commandPoolCreateInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr };
+		commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		commandPoolCreateInfo.queueFamilyIndex = m_Device->GetQueue((EQueueType)i).FamilyIndex;
+		VK_ASSERT(vkCreateCommandPool(vkDevice, &commandPoolCreateInfo, nullptr, &m_CommandPools[i]), "VkCreateCommandPool");
+	}
+	for(uint8 i=0; i<EnumCast(EQueueType::Count); ++i) {
+		m_UploadCmds[i] = AllocateCommandBuffer((EQueueType)i);
+	}
 }
 
 VulkanCommandContext::~VulkanCommandContext() {
-	m_UploadCmd.Reset();// cmds must be freed before command pool destroyed.
-	vkDestroyCommandPool(m_Device->GetDevice(), m_CommandPool, nullptr);
+	// cmds must be freed before command pool destroyed.
+	for(auto& cmd: m_UploadCmds) {
+		cmd.Reset();
+	}
+	for(VkCommandPool pool: m_CommandPools) {
+		vkDestroyCommandPool(m_Device->GetDevice(), pool, nullptr);
+	}
 }
 
-RHICommandBufferPtr VulkanCommandContext::AllocateCommandBuffer() {
+RHICommandBufferPtr VulkanCommandContext::AllocateCommandBuffer(EQueueType queue) {
 	VkCommandBufferAllocateInfo allocateInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, nullptr };
-	allocateInfo.commandPool = m_CommandPool;
+	allocateInfo.commandPool = GetCommandPool(queue);
 	allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocateInfo.commandBufferCount = 1;
 	VkCommandBuffer handle;
@@ -477,19 +506,16 @@ RHICommandBufferPtr VulkanCommandContext::AllocateCommandBuffer() {
 	VkSemaphore smp;
 	VkSemaphoreCreateInfo semaphoreInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0 };
 	vkCreateSemaphore(m_Device->GetDevice(), &semaphoreInfo, nullptr, &smp);
-	return RHICommandBufferPtr(new VulkanCommandBuffer(this, handle, smp));
+	return RHICommandBufferPtr(new VulkanCommandBuffer(this, handle, smp, queue));
 }
 
 void VulkanCommandContext::FreeCommandBuffer(VulkanCommandBuffer* cmd) {
-	vkFreeCommandBuffers(m_Device->GetDevice(), m_CommandPool, 1, &cmd->m_Handle);
+	VkCommandPool pool = GetCommandPool(cmd->GetQueueType());
+	vkFreeCommandBuffers(m_Device->GetDevice(), pool, 1, &cmd->m_Handle);
 	vkDestroySemaphore(m_Device->GetDevice(), cmd->m_Semaphore, nullptr);
 }
 
-void VulkanCommandContext::SubmitCommandBuffer(VulkanCommandBuffer* cmd, VkSemaphore waitSemaphore, VkFence fence) {
-	SubmitCommandBuffers({ cmd }, waitSemaphore, fence);
-}
-
-void VulkanCommandContext::SubmitCommandBuffers(TArrayView<VulkanCommandBuffer*> cmds, VkSemaphore waitSemaphore, VkFence fence) {
+void VulkanCommandContext::SubmitCommandBuffers(TArrayView<VulkanCommandBuffer*> cmds, EQueueType queue, VkSemaphore waitSemaphore, VkFence fence) {
 	VkSubmitInfo info{ VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr };
 
 	// collect the wait semaphores
@@ -532,7 +558,7 @@ void VulkanCommandContext::SubmitCommandBuffers(TArrayView<VulkanCommandBuffer*>
 	info.pCommandBuffers = vkCmds.Data();
 	info.signalSemaphoreCount = semaphores.Size();
 	info.pSignalSemaphores = semaphores.Data();
-	vkQueueSubmit(m_Device->GetGraphicsQueue().Handle, 1, &info, fence);
+	vkQueueSubmit(m_Device->GetQueue(queue).Handle, 1, &info, fence);
 
 	// record cmds for the next submission or present
 	auto& submission = m_Submissions.EmplaceBack();
@@ -547,9 +573,12 @@ void VulkanCommandContext::BeginFrame() {
 	// clear submission cache
 	m_Submissions.Reset();
 	// submit upload cmd if need.
-	if(m_UploadCmd->m_HasBegun) {
-		m_UploadCmd->CheckEnd();
-		SubmitCommandBuffer(m_UploadCmd.Get(), VK_NULL_HANDLE, VK_NULL_HANDLE);
+	for(uint8 i=0; i<EnumCast(EQueueType::Count); ++i) {
+		VulkanCommandBuffer* cmd = m_UploadCmds[i];
+		if(cmd->m_HasBegun) {
+			cmd->CheckEnd();
+			SubmitCommandBuffers({ cmd }, (EQueueType)i, VK_NULL_HANDLE, VK_NULL_HANDLE);
+		}
 	}
 }
 
@@ -572,11 +601,16 @@ const void VulkanCommandContext::GetLastSubmissionSemaphores(TArray<VkSemaphore>
 	}
 }
 
-VulkanCommandBuffer* VulkanCommandContext::GetUploadCmd() {
-	m_UploadCmd->CheckBegin();
-	return m_UploadCmd.Get();
+VulkanCommandBuffer* VulkanCommandContext::GetUploadCmd(EQueueType queue) {
+	VulkanCommandBuffer* cmd = m_UploadCmds[EnumCast(queue)].Get();
+	cmd->CheckBegin();
+	return cmd;
 }
 
 VulkanDevice* VulkanCommandContext::GetDevice() {
 	return m_Device;
+}
+
+VkCommandPool VulkanCommandContext::GetCommandPool(EQueueType queue) {
+	return m_CommandPools[EnumCast(queue)];
 }

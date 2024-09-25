@@ -21,12 +21,11 @@ public:
 	RHITexturePtr CreateTexture(const RHITextureDesc& desc) override;
 	RHISamplerPtr CreateSampler(const RHISamplerDesc& desc) override;
 	RHIFencePtr CreateFence(bool sig) override;
-	RHIShaderPtr CreateShader(EShaderStageFlagBit type, const char* codeData, size_t codeSize, const XString& entryFunc) override;
+	RHIShaderPtr CreateShader(EShaderStageFlags type, const char* codeData, uint32 codeSize, const XString& entryFunc) override;
 	RHIGraphicsPipelineStatePtr CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) override;
 	RHIComputePipelineStatePtr CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) override;
-	RHICommandBufferPtr CreateCommandBuffer() override;
-	void SubmitCommandBuffer(RHICommandBuffer* cmd, RHIFence* fence, bool bPresent) override;
-	void SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence, bool bPresent) override;
+	RHICommandBufferPtr CreateCommandBuffer(EQueueType queue) override;
+	void SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, EQueueType queue, RHIFence* fence, bool bPresent) override;
 private:
 	TUniquePtr<VulkanContext> m_Context;
 	TUniquePtr<VulkanDevice> m_Device;

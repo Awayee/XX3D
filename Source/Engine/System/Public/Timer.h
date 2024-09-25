@@ -10,7 +10,6 @@ namespace Engine {
 		void Reset();
 		void Pause();
 		float GetFPS() { return m_FPS; }
-		float GetTime() { return static_cast<float>(m_NowTime.time_since_epoch().count()); }
 		float GetDeltaTime() { return m_DeltaTime; }
 	private:
 		TimePoint m_NowTime{ NowTimePoint()};
@@ -24,5 +23,15 @@ namespace Engine {
 		NON_MOVEABLE(CTimer);
 		CTimer() = default;
 		~CTimer() = default;
+	};
+
+	// LOG the time duration of a code segment
+	class DurationScope {
+	public:
+		DurationScope(const char* name);
+		~DurationScope();
+	private:
+		TimePoint m_TimePoint;
+		const char* m_Name;
 	};
 }

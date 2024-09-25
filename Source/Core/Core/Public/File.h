@@ -43,6 +43,14 @@ namespace File {
 		std::filesystem::remove(path);
 	}
 
+	inline void RemoveDir(const FPath& path) {
+		std::filesystem::remove_all(path);
+	}
+
+	inline void MakeDir(const FPath& path) {
+		std::filesystem::create_directory(path);
+	}
+
 	typedef std::function<void(const FPathEntry&)> FForEachPathFunc;
 	void ForeachPath(const char* folder, FForEachPathFunc&& func, bool recursively = false);
 	void ForeachPath(const FPathEntry& path, FForEachPathFunc&& func, bool recursively = false);

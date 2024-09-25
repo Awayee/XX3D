@@ -4,12 +4,6 @@
 #include "RHI/Public/RHI.h"
 namespace Engine {
 
-	enum class ERenderPath {
-		RENDER_FORWARD,
-		RENDER_DEFERRED,
-		RENDER_NONE
-	};
-
 	enum class EGPUType {
 		GPU_INTEGRATED,
 		GPU_DISCRETE,
@@ -17,8 +11,8 @@ namespace Engine {
 	};
 	enum class ERHIType {
 		Vulkan,
-		DX12,
-		DX11,
+		D3D12,
+		D3D11,
 		OpenGL,
 		Invalid
 	};
@@ -28,7 +22,6 @@ namespace Engine {
 		EGPUType      GPUType;
 		ERHIType      RHIType;
 		uint32        MSAASampleCount{ 0 };
-		ERenderPath   RenderPath;
 		USize2D       WindowSize;
 		uint32        DefaultShadowMapSize;
 		XString       StartLevel;

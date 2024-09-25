@@ -1,12 +1,14 @@
 #include "Render/Public/GlobalShader.h"
 #include "Core/Public/File.h"
-#include "SPVCompiler/SPVCompiler.h"
+#include "System/Public/EngineConfig.h"
+#include "HLSLCompiler/HLSLCompiler.h"
 
 namespace Render {
 
+	static TUniquePtr<HLSLCompiler::HLSLCompilerBase> s_HLSLCompiler;
+
 	inline bool LoadShaderCode(const XString& shaderFile, TArray<int8>& outCode) {
-		File::FPath shaderFilePath{ SHADER_PATH };
-		shaderFilePath.append(shaderFile);
+		const File::FPath shaderFilePath{ shaderFile };
 		const XString shaderFileAbs = shaderFilePath.string();
 		File::RFile f(shaderFileAbs, File::EFileMode::AtEnd | File::EFileMode::Binary);
 		if (!f.is_open()) {
@@ -21,19 +23,19 @@ namespace Render {
 		return true;
 	}
 
-	inline ESPVShaderStage ToSPVShaderStage(EShaderStageFlagBit type) {
+	inline HLSLCompiler::ESPVShaderStage ToSPVShaderStage(EShaderStageFlags type) {
 		switch(type) {
-		case EShaderStageFlagBit::SHADER_STAGE_VERTEX_BIT: return ESPVShaderStage::Vertex;
-		case EShaderStageFlagBit::SHADER_STAGE_PIXEL_BIT: return ESPVShaderStage::Pixel;
-		case EShaderStageFlagBit::SHADER_STAGE_COMPUTE_BIT: return ESPVShaderStage::Compute;
-		default: return ESPVShaderStage::Invalid;
+		case EShaderStageFlags::Vertex: return HLSLCompiler::ESPVShaderStage::Vertex;
+		case EShaderStageFlags::Pixel: return HLSLCompiler::ESPVShaderStage::Pixel;
+		case EShaderStageFlags::Compute: return HLSLCompiler::ESPVShaderStage::Compute;
+		default: return HLSLCompiler::ESPVShaderStage::Invalid;
 		}
 	}
-	GlobalShader::GlobalShader(const XString& shaderFile, const XString& entry, EShaderStageFlagBit type) {
-		const XString spvFile = SPVCompiler::GetShaderOutputFile(shaderFile, entry);
+	GlobalShader::GlobalShader(const XString& shaderFile, const XString& entry, EShaderStageFlags type) {
 		TArray<int8> codeData;
+		const XString spvFile = s_HLSLCompiler->GetCompileOutputFile(shaderFile, entry);
 		if(!LoadShaderCode(spvFile, codeData)) {
-			if(SPVCompiler{}.CompileHLSL(shaderFile, entry, ToSPVShaderStage(type), {})) {
+			if(s_HLSLCompiler->Compile(shaderFile, entry, ToSPVShaderStage(type), {})) {
 				LOG_DEBUG("Shader compiled: %s, %s, %s", shaderFile.c_str(), entry.c_str(), spvFile.c_str());
 				if (!LoadShaderCode(spvFile, codeData)) {
 					LOG_ERROR("Could not load shader file: %s", spvFile.c_str());
@@ -54,6 +56,17 @@ namespace Render {
 	}
 
 	GlobalShaderMap::GlobalShaderMap() {
+		// initialize shader compiler
+		auto rhiType = Engine::ConfigManager::GetData().RHIType;
+		if(Engine::ERHIType::Vulkan == rhiType) {
+			s_HLSLCompiler.Reset(new HLSLCompiler::SPVCompiler());
+		}
+		else if (Engine::ERHIType::D3D12 == rhiType) {
+			s_HLSLCompiler.Reset(new HLSLCompiler::DXSCompiler());
+		}
+		else {
+			CHECK(0);
+		}
 	}
 
 	GlobalShaderMap::~GlobalShaderMap() {

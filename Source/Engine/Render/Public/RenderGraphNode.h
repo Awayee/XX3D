@@ -21,14 +21,14 @@ namespace Render {
 	class ICmdAllocator {
 	public:
 		virtual ~ICmdAllocator() = default;
-		virtual RHICommandBuffer* GetCmd() = 0;
+		virtual RHICommandBuffer* GetCmd(EQueueType queue) = 0;
 	};
 
 	class RGNode {
 	public:
 		RGNode(RGNodeID nodeID) : m_NodeID(nodeID), m_RefCount(0) {}
 		virtual ~RGNode() = default;
-		void SetName(XString&& name) { m_Name = MoveTemp(name); }
+		void SetName(XString&& name) { m_Name = MoveTemp(name);  }
 	protected:
 		friend RenderGraph;
 		RGNodeID m_NodeID;
@@ -58,17 +58,21 @@ namespace Render {
 		RGRenderNode(uint32 nodeID): RGPassNode(nodeID) {}
 		~RGRenderNode() override = default;
 		void ReadSRV(RGTextureNode* node);
-		void ReadColorTarget(RGTextureNode* node, uint32 i, RHITextureSubDesc subRes={}); // keep content written by previous pass (without clear)
-		void ReadDepthTarget(RGTextureNode* node, RHITextureSubDesc subRes={});
-		void WriteColorTarget(RGTextureNode* node, uint32 i, RHITextureSubDesc subRes={}); // write new targets
-		void WriteDepthTarget(RGTextureNode* node, RHITextureSubDesc subRes={});
+		void ReadColorTarget(RGTextureNode* node, uint32 i, RHITextureSubRes subRes); // keep content written by previous pass (without clear)
+		void ReadColorTarget(RGTextureNode* node, uint32 i); // default subres
+		void WriteColorTarget(RGTextureNode* node, uint32 i, RHITextureSubRes subRes); // write new targets
+		void WriteColorTarget(RGTextureNode* node, uint32 i);
+		void ReadDepthTarget(RGTextureNode* node, RHITextureSubRes subRes);
+		void ReadDepthTarget(RGTextureNode* node);
+		void WriteDepthTarget(RGTextureNode* node, RHITextureSubRes subRes);
+		void WriteDepthTarget(RGTextureNode* node);
 		void SetRenderArea(const Rect& rect);
 		void SetTask(RenderTask&& f) { m_Task = MoveTemp(f); }
 	private:
 		TArray<RGTextureNode*> m_SRVs;
 		struct TargetInfo {
 			RGTextureNode* Node{ nullptr };
-			RHITextureSubDesc SubRes{};
+			RHITextureSubRes SubRes{};
 			uint8 SubResIndex{ 0 };
 			ERTLoadOption LoadOp{ ERTLoadOption::NoAction };
 		};
@@ -97,13 +101,14 @@ namespace Render {
 	class RGTransferNode: public RGPassNode {
 	public:
 		RGTransferNode(uint32 nodeID): RGPassNode(nodeID){}
-		void CopyTexture(RGTextureNode* src, RGTextureNode* dst, RHITextureSubDesc subRes);
+		void CopyTexture(RGTextureNode* src, RGTextureNode* dst, RHITextureSubRes subRes);
+		void CopyTexture(RGTextureNode* src, RGTextureNode* dst);
 	private:
 		struct CpyResourcePair {
 			RGTextureNode* Src;
 			RGTextureNode* Dst;
 			USize2D CpySize;
-			RHITextureSubDesc SubRes;
+			RHITextureSubRes SubRes;
 			uint8 SrcSubResIndex;
 			uint8 DstSubResIndex;
 		};
@@ -155,7 +160,7 @@ namespace Render {
 		RHITexture* GetRHI();
 		void SetTargetState(EResourceState targetState) { m_TargetState = targetState; }
 		EResourceState GetTargetState() const { return m_TargetState; }
-		uint8 RegisterSubRes(RHITextureSubDesc subRes); // register sub resource for connected node, return the index of m_SubResStates
+		uint8 RegisterSubRes(RHITextureSubRes subRes); // register sub resource for connected node, return the index of m_SubResStates
 		void TransitionToState(RHICommandBuffer* cmd, EResourceState dstState, uint8 subResIdx);
 		void TransitionToState(RHICommandBuffer* cmd, EResourceState dstState);
 		void TransitionToTargetState(RHICommandBuffer* cmd, uint8 subResIdx);
@@ -164,7 +169,7 @@ namespace Render {
 		RHITextureDesc m_Desc;
 		RHITexture* m_RHI;
 		struct SubResState {
-			RHITextureSubDesc SubRes{};
+			RHITextureSubRes SubRes{};
 			EResourceState State{EResourceState::Unknown};
 		};
 		TArray<SubResState> m_SubResStates;

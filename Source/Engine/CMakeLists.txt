@@ -26,10 +26,8 @@ target_include_directories(${TARGET_NAME} PUBLIC ${SOURCE_PATH}/Engine)
 #dx
 target_link_libraries(${TARGET_NAME} PRIVATE
 d3d12.lib
-d3d11.lib
 dxgi.lib
 dxguid.lib
-D3DCompiler.lib
 winmm.lib
 )
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/DirectX/include)
@@ -68,3 +66,7 @@ target_link_libraries(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/zlib/lib/zlibstatic.
 
 #RenderDoc
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/RenderDoc)
+
+#WinPixEventRuntime
+target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/WinPixEventRuntime/Include)
+target_link_libraries(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/WinPixEventRuntime/bin/x64/WinPixEventRuntime.lib)

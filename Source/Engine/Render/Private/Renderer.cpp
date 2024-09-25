@@ -5,27 +5,49 @@
 
 namespace Render {
 
-	CmdPool::CmdPool(): m_AllocatedIndex(0) {}
-
-	RHICommandBuffer* CmdPool::GetCmd() {
-		if(m_AllocatedIndex >= m_Cmds.Size()) {
-			for(uint32 i=m_Cmds.Size(); i<= m_AllocatedIndex; ++i) {
-				m_Cmds.PushBack(RHI::Instance()->CreateCommandBuffer());
+	RHICommandBuffer* CmdPool::CmdArray::Get() {
+		if (AllocIndex >= Cmds.Size()) {
+			for (uint32 i = Cmds.Size(); i <= AllocIndex; ++i) {
+				Cmds.PushBack(RHI::Instance()->CreateCommandBuffer(QueueType));
 			}
 		}
-		return m_Cmds[m_AllocatedIndex++].Get();
+		return Cmds[AllocIndex++].Get();
+	}
+
+	void CmdPool::CmdArray::Reset() {
+		AllocIndex = 0;
+	}
+
+	void CmdPool::CmdArray::GC() {
+		if (!Cmds.IsEmpty()) {
+			for (uint32 i = Cmds.Size() - 1; i > AllocIndex; --i) {
+				Cmds.PopBack();
+			}
+		}
+	}
+
+	CmdPool::CmdPool() {
+		for(uint8 i=0; i<EnumCast(EQueueType::Count); ++i) {
+			m_CmdArrays[i].QueueType = (EQueueType)i;
+		}
+	}
+
+	RHICommandBuffer* CmdPool::GetCmd(EQueueType queue) {
+		RHICommandBuffer* cmd = m_CmdArrays[EnumCast(queue)].Get();
+		cmd->Reset();
+		return cmd;
 
 	}
 
 	void CmdPool::Reset() {
-		m_AllocatedIndex = 0;
+		for(auto& cmdArray: m_CmdArrays) {
+			cmdArray.Reset();
+		}
 	}
 
 	void CmdPool::GC() {
-		if(!m_Cmds.IsEmpty()) {
-			for (uint32 i = m_Cmds.Size() - 1; i > m_AllocatedIndex; --i) {
-				m_Cmds.PopBack();
-			}
+		for(auto& cmdArray: m_CmdArrays) {
+			cmdArray.GC();
 		}
 	}
 
@@ -43,11 +65,11 @@ namespace Render {
 		}
 
 		RHIViewport* viewport = RHI::Instance()->GetViewport();
-		RHITexture* backBuffer = viewport->AcquireBackBuffer();
-		if (!backBuffer) {
+		if (!viewport->PrepareBackBuffer()) {
 			return;
 		}
 
+		RHITexture* backBuffer = viewport->GetBackBuffer();
 		RenderGraph rg;
 		// get back buffer
 		RGTextureNode* backBufferNode = rg.CreateTextureNode(backBuffer, "BackBuffer");
@@ -63,7 +85,7 @@ namespace Render {
 		presentNode->SetTask([]() { RHI::Instance()->GetViewport()->Present(); });
 
 		// ========= run the graph ==============
-		fence->Reset ();
+		fence->Reset();
 		CmdPool* cmdPool = &m_CmdPools[frameIndex];
 		cmdPool->Reset();
 		rg.Run(cmdPool);
@@ -91,6 +113,8 @@ namespace Render {
 		// Create fences
 		for (uint32 i = 0; i < RHI_FRAME_IN_FLIGHT_MAX; ++i) {
 			m_Fences[i] = RHI::Instance()->CreateFence(true);
+			auto name = StringFormat("RenderCompleteFence%u", i);
+			m_Fences[i]->SetName(name.c_str());
 		}
 
 		// init window area

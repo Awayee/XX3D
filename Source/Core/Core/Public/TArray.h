@@ -192,6 +192,9 @@ public:
 	TStaticArray(std::initializer_list<T> params) {
 		memcpy(m_Data, params.begin(), params.size() * sizeof(T));
 	}
+	TStaticArray(const T& fillValue) {
+		Reset(fillValue);
+	}
 
 	TStaticArray& operator =(const TStaticArray& rhs) {
 		if(this != &rhs) {
@@ -224,6 +227,12 @@ public:
 
 	const T* Data() const {
 		return m_Data;
+	}
+
+	void Reset(const T& fillValue) {
+		for (uint32 i = 0; i < L; ++i) {
+			m_Data[i] = fillValue;
+		}
 	}
 
 	T& operator[](uint32 i) {

@@ -1,28 +1,140 @@
 #include "WindowSystemWin32.h"
 #include "Core/Public/Log.h"
+#include "Engine/Public/Engine.h"
 #include <windowsx.h>
 #include <wingdi.h>
+#include <imgui_internal.h>
+
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 namespace Engine {
 
-	std::unordered_map<int, EKey> WindowSystemWin32::s_GLFWKeyCodeMap;
-	std::unordered_map<int, EBtn> WindowSystemWin32::s_GLFWButtonCodeMap;
-	std::unordered_map<int, EInput> WindowSystemWin32::s_GLFWInputMap;
+	TUnorderedMap<int, EKey> WindowSystemWin32::s_GLFWKeyCodeMap;
+	TUnorderedMap<int, EBtn> WindowSystemWin32::s_GLFWButtonCodeMap;
+	TUnorderedMap<int, EInput> WindowSystemWin32::s_GLFWInputMap;
 
+	WindowSystemWin32::WindowSystemWin32() {
+		m_HAppInst = GetModuleHandle(nullptr);
+	}
+
+	WindowSystemWin32::~WindowSystemWin32(){
+	}
+
+	void WindowSystemWin32::Initialize(const WindowInitInfo& initInfo) {
+		WNDCLASS wc;
+		wc.style = CS_HREDRAW | CS_VREDRAW;
+		wc.lpfnWndProc = WindowSystemWin32::SMainWndProc;
+		wc.cbClsExtra = 0;
+		wc.cbWndExtra = 0;
+		wc.hInstance = m_HAppInst;
+		wc.hIcon = LoadIcon(0, IDI_APPLICATION);
+		wc.hCursor = LoadCursor(0, IDC_ARROW);
+		wc.hbrBackground = (HBRUSH)GetStockObject(NULL_BRUSH);
+		wc.lpszMenuName = 0;
+		wc.lpszClassName = initInfo.title;
+		if (!RegisterClass(&wc)) {
+			MessageBox(nullptr, "RegisterClass Failed.", nullptr, 0);
+			ASSERT(0, "");
+		}
+		RECT R = { 0, 0, initInfo.width, initInfo.height };
+		AdjustWindowRect(&R, WS_OVERLAPPEDWINDOW, false);
+		int width = R.right - R.left;
+		int height = R.bottom - R.top;
+		m_HWnd = CreateWindow(initInfo.title, initInfo.title,
+			WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, width, height, 0, 0, m_HAppInst, 0);
+		if (!m_HWnd) {
+			MessageBox(0, "CreateWindow Failed.", 0, 0);
+			ASSERT(0, "");
+		}
+		ShowWindow(m_HWnd, SW_SHOW);
+		UpdateWindow(m_HWnd);
+	}
+
+	void WindowSystemWin32::Update(){
+		MSG msg = { 0 };
+		if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		if (msg.message == WM_QUIT || msg.message == WM_CLOSE) {
+			Engine::XXEngine::ShutDown();
+		}
+	}
+
+	void WindowSystemWin32::Close(){
+		CloseWindow(m_HWnd);
+	}
+
+	void WindowSystemWin32::SetTitle(const char* title){
+	}
+
+	void WindowSystemWin32::SetFocusMode(bool focusMode){
+		m_FocusMode = focusMode;
+	}
+
+	void WindowSystemWin32::SetWindowIcon(int count, const WindowIcon* icons) {
+	}
+
+	bool WindowSystemWin32::GetFocusMode(){
+		return m_FocusMode;
+	}
+
+	void* WindowSystemWin32::GetWindowHandle(){
+		return (void*)m_HWnd;
+	}
+
+	USize2D WindowSystemWin32::GetWindowSize() {
+		return m_Size;
+	}
+
+	FSize2D WindowSystemWin32::GetWindowContentScale() {
+		const uint32 dpi = GetDpiForWindow(m_HWnd);
+		const float contentScale = (float)dpi / 96.0f;
+		return { contentScale, contentScale };
+	}
+
+	FOffset2D WindowSystemWin32::GetCursorPos() {
+		POINT cursorPos;
+		::GetCursorPos(&cursorPos);
+		::ScreenToClient(m_HWnd, &cursorPos);
+		return { (float)cursorPos.x, (float)cursorPos.y };
+	}
+
+	void WindowSystemWin32::RegisterOnKeyFunc(OnKeyFunc&& func) {
+		m_OnKeyFunc.PushBack(MoveTemp(func));
+	}
+
+	void WindowSystemWin32::RegisterOnMouseButtonFunc(OnMouseButtonFunc&& func){
+		m_OnMouseButtonFunc.PushBack(MoveTemp(func));
+	}
+
+	void WindowSystemWin32::RegisterOnCursorPosFunc(OnCursorPosFunc&& func){
+		m_OnCursorPosFunc.PushBack(MoveTemp(func));
+	}
+
+	void WindowSystemWin32::RegisterOnCursorEnterFunc(OnCursorEnterFunc&& func){
+		m_OnCursorEnterFunc.PushBack(MoveTemp(func));
+	}
+
+	void WindowSystemWin32::RegisterOnScrollFunc(OnScrollFunc&& func){
+		m_OnScrollFunc.PushBack(MoveTemp(func));
+	}
+
+	void WindowSystemWin32::RegisterOnWindowSizeFunc(OnWindowSizeFunc&& func){
+		m_OnWindowSizeFunc.PushBack(MoveTemp(func));
+	}
 
 	LRESULT WindowSystemWin32::MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-		switch (msg)
-		{
+		ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam);
+		switch (msg){
 			// WM_ACTIVATE is sent when the window is activated or deactivated.  
 			// We pause the game when the window is deactivated and unpause it 
 			// when it becomes active.  
 		case WM_ACTIVATE:
-			if (LOWORD(wParam) == WA_INACTIVE)
-			{
+			if (LOWORD(wParam) == WA_INACTIVE){
 				m_AppPaused = true;
 			}
-			else
-			{
+			else{
 				m_AppPaused = false;
 			}
 			return 0;
@@ -31,27 +143,21 @@ namespace Engine {
 		case WM_SIZE:
 			// Save the new client area dimensions.
 			m_Size.w = LOWORD(lParam);
-			m_Size.h = HIWORD(lParam);
-			{
-				if (wParam == SIZE_MINIMIZED)
-				{
+			m_Size.h = HIWORD(lParam);{
+				if (wParam == SIZE_MINIMIZED){
 					m_AppPaused = true;
 					m_Minimized = true;
 					m_Maximized = false;
 				}
-				else if (wParam == SIZE_MAXIMIZED)
-				{
+				else if (wParam == SIZE_MAXIMIZED){
 					m_AppPaused = false;
 					m_Minimized = false;
 					m_Maximized = true;
 					OnResize();
 				}
-				else if (wParam == SIZE_RESTORED)
-				{
-
+				else if (wParam == SIZE_RESTORED){
 					// Restoring from minimized state?
-					if (m_Minimized)
-					{
+					if (m_Minimized){
 						m_AppPaused = false;
 						m_Minimized = false;
 						OnResize();
@@ -59,13 +165,12 @@ namespace Engine {
 
 					// Restoring from maximized state?
 					else if (m_Maximized)
-					{
+{
 						m_AppPaused = false;
 						m_Maximized = false;
 						OnResize();
 					}
-					else if (m_Resizing)
-					{
+					else if (m_Resizing){
 						// If user is dragging the resize bars, we do not resize 
 						// the buffers here because as the user continuously 
 						// drags the resize bars, a stream of WM_SIZE messages are
@@ -75,8 +180,7 @@ namespace Engine {
 						// done resizing the window and releases the resize bars, which 
 						// sends a WM_EXITSIZEMOVE message.
 					}
-					else // API call such as SetWindowPos or mSwapchain->SetFullscreenState.
-					{
+					else{
 						OnResize();
 					}
 				}
@@ -136,108 +240,9 @@ namespace Engine {
 		return static_cast<WindowSystemWin32*>(Instance())->MainWndProc(hwnd, msg, wParam, lParam);
 	}
 
-	WindowSystemWin32::WindowSystemWin32(const WindowInitInfo& initInfo) {
-		WNDCLASS wc;
-		wc.style = CS_HREDRAW | CS_VREDRAW;
-		wc.lpfnWndProc = WindowSystemWin32::SMainWndProc;
-		wc.cbClsExtra = 0;
-		wc.cbWndExtra = 0;
-		wc.hInstance = m_HAppInst;
-		wc.hIcon = LoadIcon(0, IDI_APPLICATION);
-		wc.hCursor = LoadCursor(0, IDC_ARROW);
-		wc.hbrBackground = (HBRUSH)GetStockObject(NULL_BRUSH);
-		wc.lpszMenuName = 0;
-		wc.lpszClassName = initInfo.title;
-		if (!RegisterClass(&wc)) {
-			MessageBox(nullptr, "RegisterClass Failed.", nullptr, 0);
-			ASSERT(0, "");
-		}
-		RECT R = { 0, 0, initInfo.width, initInfo.height };
-		AdjustWindowRect(&R, WS_OVERLAPPEDWINDOW, false);
-		int width = R.right - R.left;
-		int height = R.bottom - R.top;
-		m_MainWnd = CreateWindow(initInfo.title, initInfo.title,
-			WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, width, height, 0, 0, m_HAppInst, 0);
-		if (!m_MainWnd) {
-			MessageBox(0, "CreateWindow Failed.", 0, 0);
-			ASSERT(0, "");
-		}
-		ShowWindow(m_MainWnd, SW_SHOW);
-		UpdateWindow(m_MainWnd);
-	}
-
-	WindowSystemWin32::~WindowSystemWin32(){
-	}
-
-	void WindowSystemWin32::Update(){
-
-	}
-	bool WindowSystemWin32::ShouldClose(){
-		return false;
-	}
-	void WindowSystemWin32::Close(){
-	}
-	void WindowSystemWin32::SetTitle(const char* title){
-	}
-
-	const USize2D& WindowSystemWin32::GetWindowSize() {
-		return m_Size;
-	}
-
-	void WindowSystemWin32::SetFocusMode(bool focusMode){
-		m_FocusMode = focusMode;
-	}
-
-	bool WindowSystemWin32::GetFocusMode(){
-		return m_FocusMode;
-	}
-
-	void* WindowSystemWin32::GetWindowHandle(){
-		return (void*)m_MainWnd;
-	}
-
-	void WindowSystemWin32::GetWindowContentScale(float* x, float* y){
-	}
-
-	void WindowSystemWin32::SetWindowIcon(int count, const WindowIcon* icons){
-	}
-
-	void WindowSystemWin32::RegisterOnMouseButtonFunc(OnMouseButtonFunc&& func)
-	{
-		m_OnMouseButtonFunc.push_back(func);
-	}
-
-	void WindowSystemWin32::RegisterOnCursorPosFunc(OnCursorPosFunc&& func)
-	{
-		m_OnCursorPosFunc.push_back(func);
-	}
-
-	void WindowSystemWin32::RegisterOnCursorEnterFunc(OnCursorEnterFunc&& func)
-	{
-		m_OnCursorEnterFunc.push_back(func);
-	}
-
-	void WindowSystemWin32::RegisterOnScrollFunc(OnScrollFunc&& func)
-	{
-		m_OnScrollFunc.push_back(func);
-	}
-
-	void WindowSystemWin32::RegisterOnWindowSizeFunc(OnWindowSizeFunc&& func)
-	{
-		m_OnWindowSizeFunc.push_back(func);
-	}
-
-	void WindowSystemWin32::RegisterOnKeyFunc(OnKeyFunc&& func)
-	{
-		m_OnKeyFunc.push_back(func);
-	}
-
-
-
 	// There is no distinct VK_xxx for keypad enter, instead it is VK_RETURN + KF_EXTENDED, we assign it an arbitrary value to make code more readable (VK_ codes go up to 255)
 #define IM_VK_KEYPAD_ENTER      (VK_RETURN + 256)
-	void WindowSystemWin32::InitKeyButtonCodeMap()
-	{
+	void WindowSystemWin32::InitKeyButtonCodeMap(){
 		s_GLFWKeyCodeMap[VK_SPACE] = EKey::SPACE;
 		s_GLFWKeyCodeMap[VK_OEM_7] = EKey::APOSTROPHE; /* ' */
 		s_GLFWKeyCodeMap[VK_OEM_COMMA] = EKey::COMMA; /* ; */

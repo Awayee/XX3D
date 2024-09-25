@@ -4,7 +4,7 @@
 #include "Core/Public/Func.h"
 #include "EditorUI/Public/EditorWindow.h"
 #include "Core/Public/String.h"
-#include "RHI/Public/ImGuiRHI.h"
+#include "RHI/Public/RHIImGui.h"
 
 namespace Editor {
 

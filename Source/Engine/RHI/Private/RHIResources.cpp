@@ -1,4 +1,5 @@
 #include "RHI/Public/RHIResources.h"
+#include "Math/Public/Math.h"
 
 struct FormatTexelInfo {
     ERHIFormat Format;
@@ -51,6 +52,57 @@ FormatTexelInfo g_FormatPixelByteSize[(uint32)ERHIFormat::FORMAT_MAX_ENUM] = {
     {ERHIFormat::D32_SFLOAT,           4             },
 };
 
+uint32 RHITextureDesc::GetPixelByteSize() const {
+    return g_FormatPixelByteSize[EnumCast(Format)].PixelByteSize;
+
+}
+
+RHITextureSubRes RHITextureDesc::GetDefaultSubRes() const {
+    ETextureViewFlags defaultView;
+    if (EnumHasAnyFlags(Flags, ETextureFlags::DepthStencilTarget)) {
+        defaultView = ETextureViewFlags::DepthStencil;
+    }
+    else {
+        defaultView = ETextureViewFlags::Color;
+    }
+    return { 0, ArraySize, 0, MipSize, Dimension, defaultView };
+}
+
+RHITextureSubRes RHITextureDesc::GetSubRes2D(uint16 arrayIndex, ETextureViewFlags viewFlags) const {
+    CHECK(arrayIndex < ArraySize);
+    return RHITextureSubRes{ arrayIndex, 1, 0, MipSize, ETextureDimension::Tex2D, viewFlags };
+}
+
+RHITextureSubRes RHITextureDesc::GetSubRes2DArray(ETextureViewFlags viewFlags) const {
+    return RHITextureSubRes{ 0, ArraySize, 0, MipSize, ETextureDimension::Tex2DArray, viewFlags };
+}
+
+uint32 RHITextureDesc::GetMipLevelWidth(uint8 mipLevel) const {
+    return Math::Max<uint32>(1u, Width >> mipLevel);
+}
+
+uint32 RHITextureDesc::GetMipLevelHeight(uint8 mipLevel) const {
+    return Math::Max<uint32>(1u, Height >> mipLevel);
+}
+
+void RHITextureDesc::LimitSubRes(RHITextureSubRes& subRes) const {
+    subRes.MipIndex = Math::Min<decltype(MipSize)>(subRes.MipIndex, MipSize - 1);
+    subRes.MipSize = Math::Min<decltype(MipSize)>(subRes.MipSize, MipSize - subRes.MipIndex);
+    if(Dimension == ETextureDimension::Tex2D) {
+        subRes.Dimension = ETextureDimension::Tex2D;
+        subRes.ArrayIndex = 0;
+        subRes.ArraySize = 1;
+    }
+    else {
+        subRes.ArrayIndex = Math::Min<decltype(ArraySize)>(subRes.ArrayIndex, ArraySize - 1);
+        subRes.ArraySize = Math::Min<decltype(ArraySize)>(subRes.ArraySize, ArraySize - subRes.ArrayIndex);
+    }
+}
+
+bool RHITextureDesc::IsAllSubRes(RHITextureSubRes subRes) const {
+    return subRes.ArrayIndex == 0 && subRes.ArraySize == ArraySize &&
+        subRes.MipIndex == 0 && subRes.MipSize == MipSize;
+}
 
 RHITextureDesc RHITextureDesc::Texture2D() {
     RHITextureDesc desc{};
@@ -59,6 +111,7 @@ RHITextureDesc RHITextureDesc::Texture2D() {
     desc.ArraySize = 1;
     desc.MipSize = 1;
     desc.Samples = 1;
+    desc.ClearValue.Color = { 0.0f, 0.0f, 0.0f, 0.0f };
     return desc;
 }
 
@@ -69,6 +122,7 @@ RHITextureDesc RHITextureDesc::TextureCube() {
     desc.ArraySize = 1;
     desc.MipSize = 1;
     desc.Samples = 1;
+    desc.ClearValue.Color = { 0.0f, 0.0f, 0.0f, 0.0f };
     return desc;
 }
 
@@ -79,15 +133,40 @@ RHITextureDesc RHITextureDesc::Texture2DArray(uint8 arraySize) {
     desc.ArraySize = arraySize;
     desc.MipSize = 1;
     desc.Samples = 1;
+    desc.ClearValue.Color = { 0.0f, 0.0f, 0.0f, 0.0f };
     return desc;
 }
 
-uint32 RHITexture::GetPixelByteSize() {
-    return g_FormatPixelByteSize[(uint32)m_Desc.Format].PixelByteSize;
+void RHITexture::UpdateData(uint32 byteSize, const void* data) {
+    UpdateData(data, byteSize, m_Desc.GetDefaultSubRes(), { 0,0,0 });
 }
 
-RHITextureSubDesc RHITexture::GetDefaultSubRes() const {
-    return { 0, m_Desc.MipSize, 0, m_Desc.ArraySize };
+bool RHITexture::IsDimensionCompatible(ETextureDimension baseDimension, ETextureDimension targetDimension) {
+    if (baseDimension == ETextureDimension::Tex2D) {
+        return targetDimension == ETextureDimension::Tex2D;
+    }
+    if (baseDimension == ETextureDimension::Tex2DArray) {
+        return targetDimension == ETextureDimension::Tex2DArray || targetDimension == ETextureDimension::Tex2D;
+    }
+    if (baseDimension == ETextureDimension::TexCube) {
+        return targetDimension == ETextureDimension::Tex2D || targetDimension == ETextureDimension::TexCube;
+    }
+    if (baseDimension == ETextureDimension::TexCubeArray) {
+        return targetDimension == ETextureDimension::Tex2D || targetDimension == ETextureDimension::TexCube || targetDimension == ETextureDimension::TexCubeArray;
+    }
+    if (baseDimension == ETextureDimension::Tex3D) {
+        return targetDimension == ETextureDimension::Tex3D;
+    }
+    return false;
+}
+
+bool RHITextureSubRes::operator==(const RHITextureSubRes& rhs) const {
+    return ViewFlags == rhs.ViewFlags && Dimension == rhs.Dimension &&
+        MipIndex == rhs.MipIndex && MipSize == rhs.MipSize && ArrayIndex == rhs.ArrayIndex && ArraySize == rhs.ArraySize;
+}
+
+RHITextureSubRes RHITextureSubRes::Tex2D(uint16 arrayIndex, ETextureViewFlags viewFlags) {
+    return { arrayIndex, 1, 0, 1, ETextureDimension::Tex2D, viewFlags };
 }
 
 uint32 RHIRenderPassInfo::GetNumColorTargets() const {
@@ -117,27 +196,21 @@ RHIShaderParam RHIShaderParam::StorageBuffer(RHIBuffer* buffer, uint32 offset, u
     return parameter;
 }
 
-RHIShaderParam RHIShaderParam::Texture(RHITexture* texture, ETextureSRVType srvType, RHITextureSubDesc textureSub) {
+RHIShaderParam RHIShaderParam::Texture(RHITexture* texture, RHITextureSubRes textureSub) {
     RHIShaderParam parameter{};
     parameter.Type = EBindingType::Texture;
     parameter.Data.Texture = texture;
-    parameter.Data.TextureSub = textureSub;
-    parameter.Data.SRVType = srvType;
+    parameter.Data.SubRes = textureSub;
     return parameter;
+}
+
+RHIShaderParam RHIShaderParam::Texture(RHITexture* texture) {
+    return Texture(texture, texture->GetDesc().GetDefaultSubRes());
 }
 
 RHIShaderParam RHIShaderParam::Sampler(RHISampler* sampler) {
     RHIShaderParam parameter{};
     parameter.Type = EBindingType::Sampler;
     parameter.Data.Sampler = sampler;
-    return parameter;
-}
-
-RHIShaderParam RHIShaderParam::TextureSampler(RHITexture* texture, RHISampler* sampler, RHITextureSubDesc textureSub) {
-    RHIShaderParam parameter{};
-    parameter.Type = EBindingType::TextureSampler;
-    parameter.Data.Texture = texture;
-    parameter.Data.Sampler = sampler;
-    parameter.Data.TextureSub = textureSub;
     return parameter;
 }

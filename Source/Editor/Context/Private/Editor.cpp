@@ -5,7 +5,7 @@
 #include "EditorUI/Public/EditorUIMgr.h"
 #include "Functions/Public/AssetManager.h"
 #include "Functions/Public/EditorLevelMgr.h"
-#include "RHI/Public/ImGuiRHI.h"
+#include "RHI/Public/RHIImGui.h"
 
 namespace Editor {
 	class EditorSceneRenderer: public Render::ISceneRenderer {
@@ -28,7 +28,7 @@ namespace Editor {
 			// render ImGui
 			imGuiNode->WriteColorTarget(backBufferNode, 0);
 			imGuiNode->SetRenderArea(renderArea);
-			imGuiNode->SetTask([this](RHICommandBuffer* cmd) { ImGuiRHI::Instance()->RenderDrawData(cmd); });
+			imGuiNode->SetTask([this](RHICommandBuffer* cmd) { RHIImGui::Instance()->RenderDrawData(cmd); });
 		}
 	};
 	XXEditor::XXEditor(): XXEngine() {
@@ -38,7 +38,7 @@ namespace Editor {
 		EditorConfig::Initialize();
 		EditorLevelMgr::Initialize();
 		EditorUIMgr::Initialize();
-		ImGuiRHI::Initialize(Editor::EditorConfig::InitializeImGuiConfig);
+		RHIImGui::Initialize(Editor::EditorConfig::InitializeImGuiConfig);
 		m_UIController.Reset(new UIController);
 	}
 

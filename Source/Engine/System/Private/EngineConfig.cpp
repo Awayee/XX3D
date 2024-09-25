@@ -17,26 +17,16 @@ namespace Engine {
 		if ("Vulkan" == rhiTypeStr) {
 			return ERHIType::Vulkan;
 		}
-		if ("DX11" == rhiTypeStr) {
-			return ERHIType::DX11;
+		if ("D3D11" == rhiTypeStr) {
+			return ERHIType::D3D11;
 		}
-		if ("DX12" == rhiTypeStr) {
-			return ERHIType::DX12;
+		if ("D3D12" == rhiTypeStr) {
+			return ERHIType::D3D12;
 		}
 		if ("GL" == rhiTypeStr) {
 			return ERHIType::OpenGL;
 		}
 		return ERHIType::Invalid;
-	}
-
-	inline ERenderPath ParseRenderPath(const std::string& renderPathStr) {
-		if ("Deferred" == renderPathStr) {
-			return ERenderPath::RENDER_DEFERRED;
-		}
-		if ("Forward" == renderPathStr) {
-			return ERenderPath::RENDER_FORWARD;
-		}
-		return ERenderPath::RENDER_NONE;
 	}
 
 	inline EGPUType ParseGPUType(const std::string& gpuType) {
@@ -87,7 +77,6 @@ namespace Engine {
 		auto& data = s_Instance.m_Data;
 		data.DefaultFontPath = configMap["DefaultFont"];
 		data.RHIType = ParseRHIType(configMap["RHIType"]);
-		data.RenderPath = ParseRenderPath(configMap["RenderPath"]);
 		data.GPUType = ParseGPUType(configMap["PreferredGPU"]);
 		data.WindowSize.w = static_cast<uint32>(std::atoi(configMap["WindowWidth"].c_str()));
 		data.WindowSize.h = static_cast<uint32>(std::atoi(configMap["WindowHeight"].c_str()));

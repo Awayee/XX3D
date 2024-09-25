@@ -25,7 +25,8 @@ public:
 struct RHIBufferDesc {
 	EBufferFlags Flags;
 	uint32 ByteSize;
-	uint32 Stride;
+	uint32 Stride {0}; // for vertex buffer
+	ERHIFormat IndexFormat{ ERHIFormat::R32_UINT }; // for index buffer
 };
 
 class RHIBuffer: public RHIResource {
@@ -50,6 +51,18 @@ private:
 	RHIUniformBufferDesc m_Desc;
 };
 
+// texture sub resource
+struct RHITextureSubRes {
+	uint16 ArrayIndex{ 0 };
+	uint16 ArraySize{ 1 };
+	uint8 MipIndex{ 0 };
+	uint8 MipSize{ 1 };
+	ETextureDimension Dimension{ ETextureDimension::Tex2D };
+	ETextureViewFlags ViewFlags{ ETextureViewFlags::Color };
+	bool operator ==(const RHITextureSubRes& rhs) const;
+	static RHITextureSubRes Tex2D(uint16 arrayIndex, ETextureViewFlags viewFlags);
+};
+
 // texture
 struct RHITextureDesc {
 	ETextureDimension Dimension: 8;
@@ -58,34 +71,34 @@ struct RHITextureDesc {
 	uint32 Width;
 	uint32 Height;
 	uint32 Depth; //Only for Texture3D
-	uint8 ArraySize;
+	uint16 ArraySize;
 	uint8 MipSize;
 	uint8 Samples;
-	uint8 _Padding{ 0 };
+	union {
+		FColor4 Color;
+		struct {
+			float Depth;
+			uint8 Stencil;
+		}DepthStencil;
+	} ClearValue;
+	uint32 GetPixelByteSize() const;
+	RHITextureSubRes GetDefaultSubRes() const;
+	RHITextureSubRes GetSubRes2D(uint16 arrayIndex, ETextureViewFlags viewFlags) const;
+	RHITextureSubRes GetSubRes2DArray(ETextureViewFlags viewFlags) const;
+	uint32 GetMipLevelWidth(uint8 mipLevel) const;
+	uint32 GetMipLevelHeight(uint8 mipLevel) const;
+	void LimitSubRes(RHITextureSubRes& subRes) const; // correct the sub resource to limit its range.
+	bool IsAllSubRes(RHITextureSubRes subRes) const; // check sub resource is all resource
 	static RHITextureDesc Texture2D();
 	static RHITextureDesc TextureCube();
 	static RHITextureDesc Texture2DArray(uint8 arraySize);
 };
 
-struct RHITextureSubDesc {
-	uint8 MipIndex{ 0 };
-	uint8 MipCount{ 1 };
-	uint8 ArrayIndex{ 0 };
-	uint8 ArrayCount{ 1 };
-	bool operator ==(const RHITextureSubDesc& rhs) const {
-		return MipIndex == rhs.MipIndex && MipCount == rhs.MipCount && ArrayIndex == rhs.ArrayIndex && ArrayCount == rhs.ArrayCount;
-	}
-};
-
-struct RHITextureOffset {
-	uint8 MipLevel{ 0 };
-	uint8 ArrayLayer{ 0 };
-	IOffset3D Offset{ 0,0,0 };
-};
-
 struct RHITextureCopyRegion {
-	RHITextureOffset SrcSub;
-	RHITextureOffset DstSub;
+	RHITextureSubRes SrcSubRes;// MipSize of SubRes is useless
+	RHITextureSubRes DstSubRes;
+	UOffset3D SrcOffset;
+	UOffset3D DstOffset;
 	USize3D Extent;
 };
 
@@ -95,9 +108,9 @@ protected:
 public:
 	RHITexture(const RHITextureDesc& desc) : m_Desc(desc) {}
 	XX_NODISCARD const RHITextureDesc& GetDesc() const { return m_Desc; }
-	virtual void UpdateData(uint32 byteSize, const void* data, RHITextureOffset offset) = 0;
-	uint32 GetPixelByteSize();
-	RHITextureSubDesc GetDefaultSubRes() const;
+	virtual void UpdateData(const void* data, uint32 byteSize, RHITextureSubRes subRes, IOffset3D offset) = 0;
+	void UpdateData(uint32 byteSize, const void* data);
+	static bool IsDimensionCompatible(ETextureDimension baseDimension, ETextureDimension targetDimension);
 };
 
 class RHIViewport {
@@ -105,8 +118,8 @@ public:
 	virtual ~RHIViewport() = default;
 	virtual void SetSize(USize2D size) = 0;
 	virtual USize2D GetSize() = 0;
-	virtual RHITexture* AcquireBackBuffer() = 0;
-	virtual RHITexture* GetCurrentBackBuffer() = 0;
+	virtual bool PrepareBackBuffer() = 0;
+	virtual RHITexture* GetBackBuffer() = 0;
 	virtual ERHIFormat GetBackBufferFormat() = 0;
 	virtual void Present() = 0;
 };
@@ -135,24 +148,24 @@ public:
 class RHIFence: public RHIResource {
 public:
 	virtual ~RHIFence() = default;
-	virtual void Wait() = 0;
-	virtual void Reset() = 0;
+	virtual void Wait() = 0; // wait until signaled
+	virtual void Reset() = 0; // reset the fence to unsignaled state
 };
 
 class RHIShader : public RHIResource {
 public:
-	RHIShader(EShaderStageFlagBit type) : m_Type(type) {}
+	RHIShader(EShaderStageFlags type) : m_Type(type) {}
 	virtual ~RHIShader() {}
-	XX_NODISCARD EShaderStageFlagBit GetStage() const { return m_Type; }
+	XX_NODISCARD EShaderStageFlags GetStage() const { return m_Type; }
 protected:
-	EShaderStageFlagBit m_Type;
+	EShaderStageFlags m_Type;
 };
 
 // render pass
 struct RHIRenderPassInfo {
 	struct ColorTargetInfo {
 		RHITexture* Target{ nullptr };
-		uint8 ArrayIndex{ 0 };
+		uint16 ArrayIndex{ 0 };
 		uint8 MipIndex{ 0 };
 		ERTLoadOption LoadOp{ ERTLoadOption::Clear };
 		ERTStoreOption StoreOp{ ERTStoreOption::EStore };
@@ -160,20 +173,30 @@ struct RHIRenderPassInfo {
 	};
 	struct DepthStencilTargetInfo {
 		RHITexture* Target{ nullptr };
-		uint8 ArrayIndex{ 0 };
+		uint16 ArrayIndex{ 0 };
 		uint8 MipIndex{ 0 };
 		ERTLoadOption DepthLoadOp{ ERTLoadOption::Clear };
 		ERTStoreOption DepthStoreOp{ ERTStoreOption::EStore };
 		ERTLoadOption StencilLoadOp{ ERTLoadOption::NoAction };
 		ERTStoreOption StencilStoreOp{ ERTStoreOption::ENoAction };
 		float DepthClear{ 1.0f };
-		uint32 StencilClear{ 0u };
+		uint8 StencilClear{ 0u };
 	};
 	TStaticArray<ColorTargetInfo, RHI_COLOR_TARGET_MAX> ColorTargets;
 	DepthStencilTargetInfo DepthStencilTarget;
 	Rect RenderArea;
 	uint32 GetNumColorTargets() const;
 };
+
+// Semantic defines
+#define POSITION "POSITION"
+#define COLOR "COLOR"
+#define NORMAL "NORMAL"
+#define TEXCOORD "TEXCOORD"
+#define TANGENT "TANGENT"
+#define BINORMAL "BINORMAL"
+#define BLENDINDICES "BLENDINDICES"
+#define BLENDWEIGHT "BLENDWEIGHT"
 
 struct RHIVertexInputInfo {
 	struct BindingDesc {
@@ -182,6 +205,8 @@ struct RHIVertexInputInfo {
 		bool PerInstance;// per instance or per vertex
 	};
 	struct AttributeDesc {
+		const char* SemanticName;
+		uint32 SemanticIndex;
 		uint32 Location;
 		uint32 Binding;
 		ERHIFormat Format;
@@ -199,11 +224,13 @@ struct RHIBlendState {
 	EBlendOption AlphaBlendOp{ EBlendOption::Add };
 	EBlendFactor AlphaSrc{ EBlendFactor::One };
 	EBlendFactor AlphaDst{ EBlendFactor::Zero };
-	EColorWriteMaskFlags ColorWriteMask {COLOR_WRITE_MASK_ALL};
+	EColorComponentFlags ColorWriteMask {EColorComponentFlags::All};
 };
 
 struct RHIBlendDesc {
 	TArray<RHIBlendState> BlendStates;
+	bool LogicOpEnable;
+	ELogicOp LogicOp;
 	float BlendConst[4];
 };
 
@@ -213,6 +240,7 @@ struct RHIRasterizerState {
 	bool FrontClockwise{ false };
 	float DepthBiasConstant = 0.0f;
 	float DepthBiasSlope = 0.0f;
+	float DepthBiasClamp = 0.0f;
 };
 
 struct RHIDepthStencilState {
@@ -221,12 +249,13 @@ struct RHIDepthStencilState {
 		EStencilOp PassOp;
 		EStencilOp DepthFailOp;
 		ECompareType CompareType;
-		uint8 ReadMask;
-		uint8 WriteMask;
 	};
+	bool DepthTest;
 	bool DepthWrite;
 	ECompareType DepthCompare;
 	bool StencilTest;
+	uint8 StencilReadMask;
+	uint8 StencilWriteMask;
 	StencilOpDesc FrontStencil;
 	StencilOpDesc BackStencil;
 };
@@ -237,6 +266,7 @@ struct RHIShaderBinding {
 	EShaderStageFlags StageFlags;
 	uint16 Count = 1;
 };
+
 typedef TArray<RHIShaderBinding> RHIShaderParamSetLayout;
 
 // pso
@@ -282,21 +312,22 @@ struct RHIShaderParam {
 			RHIBuffer* Buffer;
 			uint32 Offset;
 			uint32 Size;
-			uint64 _Padding;
 		};
 		struct {
 			RHITexture* Texture;
-			RHISampler* Sampler;
-			ETextureSRVType SRVType;// optional
-			RHITextureSubDesc TextureSub;// valid if SRVType is not Default.
+			RHITextureSubRes SubRes;// valid if SRVType is not Default.
 		};
-	} Data {nullptr, 0u, 0u, 0ull};
+		struct {
+			RHISampler* Sampler;
+			uint64 Padding;
+		};
+	} Data {nullptr, 0u, 0u};
 	uint32 ArrayIndex = 0;
 	EBindingType Type{ EBindingType::MaxNum };
 	static RHIShaderParam UniformBuffer(RHIBuffer* buffer, uint32 offset, uint32 size);
 	static RHIShaderParam UniformBuffer(RHIBuffer* buffer) { return UniformBuffer(buffer, 0, buffer->GetDesc().ByteSize); }
 	static RHIShaderParam StorageBuffer(RHIBuffer* buffer, uint32 offset, uint32 size);
-	static RHIShaderParam Texture(RHITexture* texture, ETextureSRVType srvType = ETextureSRVType::Default, RHITextureSubDesc textureSub = {});
+	static RHIShaderParam Texture(RHITexture* texture, RHITextureSubRes textureSub);
+	static RHIShaderParam Texture(RHITexture* texture);
 	static RHIShaderParam Sampler(RHISampler* sampler);
-	static RHIShaderParam TextureSampler(RHITexture* texture, RHISampler* sampler, RHITextureSubDesc textureSub = {});
 };

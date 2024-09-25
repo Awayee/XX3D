@@ -46,7 +46,7 @@ struct LightUBO {
 [[vk::binding(4, 0)]] Texture2D<float4> inAlbedo;
 [[vk::binding(5, 0)]] Texture2D<float> inDepth;
 [[vk::binding(6, 0)]] SamplerState inPointSampler;
-[[vk::binding(6, 0)]] SamplerState inLinearSampler;
+[[vk::binding(7, 0)]] SamplerState inLinearSampler;
 
 struct PSOutput {
 	half4 OutColor:SV_TARGET;

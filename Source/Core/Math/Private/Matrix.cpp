@@ -279,10 +279,10 @@ namespace Math {
     MATH_GENERIC Matrix4x4<T>::Matrix4x4(const Vector4<T>& row0, const Vector4<T>& row1, const Vector4<T>& row2, const Vector4<T>& row3)
     {
 //#ifdef MATRIX_COL_MAJOR
-//        m_mat[0][0] = row0.x; m_mat[1][0] = row0.y; m_mat[2][0] = row0.z; m_mat[3][0] = row0.w;
-//        m_mat[0][1] = row1.x; m_mat[1][1] = row1.y; m_mat[2][1] = row1.z; m_mat[3][1] = row1.w;
-//        m_mat[0][2] = row2.x; m_mat[1][2] = row2.y; m_mat[2][2] = row2.z; m_mat[3][2] = row2.w;
-//        m_mat[0][3] = row3.x; m_mat[1][3] = row3.y; m_mat[2][3] = row3.z; m_mat[3][3] = row3.w;
+//        m_mat[0][0] = row0.X; m_mat[1][0] = row0.Y; m_mat[2][0] = row0.Z; m_mat[3][0] = row0.W;
+//        m_mat[0][1] = row1.X; m_mat[1][1] = row1.Y; m_mat[2][1] = row1.Z; m_mat[3][1] = row1.W;
+//        m_mat[0][2] = row2.X; m_mat[1][2] = row2.Y; m_mat[2][2] = row2.Z; m_mat[3][2] = row2.W;
+//        m_mat[0][3] = row3.X; m_mat[1][3] = row3.Y; m_mat[2][3] = row3.Z; m_mat[3][3] = row3.W;
 //#else
         Mat[0][0] = row0.X; Mat[0][1] = row0.Y; Mat[0][2] = row0.Z; Mat[0][3] = row0.W;
         Mat[1][0] = row1.X; Mat[1][1] = row1.Y; Mat[1][2] = row1.Z; Mat[1][3] = row1.W;
@@ -805,9 +805,9 @@ namespace Math {
         };
 #else
         return{
-             r.x,   r.y,   r.z,  -r.Dot(eye),
-             u.x,   u.y,   u.z,  -u.Dot(eye),
-            -f.x,  -f.y,  -f.z,   f.Dot(eye),
+             r.X,   r.Y,   r.Z,  -r.Dot(eye),
+             u.X,   u.Y,   u.Z,  -u.Dot(eye),
+            -f.X,  -f.Y,  -f.Z,   f.Dot(eye),
                0,     0,     0,   1
         };
 #endif

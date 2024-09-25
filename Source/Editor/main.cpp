@@ -1,12 +1,12 @@
 #include "Core/Public/Log.h"
 #include "Context/Public/Editor.h"
 #include "Engine/Public/Engine.h"
-#include "SPVCompiler/SPVCompiler.h"
+#include "HLSLCompiler/HLSLCompiler.h"
 
 int main() {
 	//clear all compiled shader cache
 	{
-		SPVCompiler::ClearCompiledCache();
+		HLSLCompiler::ClearShaderCompileCache();
 	}
 	//Run Editor
 	{

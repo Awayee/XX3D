@@ -18,8 +18,7 @@ inline bool BindingIsBuffer(EBindingType type) {
 inline bool BindingIsImage(EBindingType type) {
 	return type == EBindingType::Texture ||
 		type == EBindingType::StorageTexture ||
-		type == EBindingType::Sampler ||
-		type == EBindingType::TextureSampler;
+		type == EBindingType::Sampler;
 }
 
 
@@ -119,7 +118,7 @@ void VulkanDescriptorSetMgr::CreatePool(VkDescriptorPool* poolPtr) {
 	VkDescriptorPoolCreateInfo info{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, nullptr };
 	info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 	constexpr uint8 bindingCount = static_cast<uint8>(EBindingType::MaxNum);
-	static const uint32 s_CountPerType[bindingCount] = { 32, 64, 128, 64, 128, 64 };
+	static const uint32 s_CountPerType[bindingCount] = { 32, 128, 64, 128, 64 };
 	VkDescriptorPoolSize sizes[bindingCount];
 	uint32 allCount = 0;
 	for (uint8 i = 0; i < static_cast<uint8>(EBindingType::MaxNum); ++i) {
@@ -188,7 +187,7 @@ void VulkanDescriptorSetParamCache::SetParam(uint32 bindIndex, const RHIShaderPa
 	switch(param.Type) {
 	case EBindingType::UniformBuffer:
 	case EBindingType::StorageBuffer: {
-		VulkanRHIBuffer* buffer = (VulkanRHIBuffer*)param.Data.Buffer;
+		VulkanBufferImpl* buffer = (VulkanBufferImpl*)param.Data.Buffer;
 		auto& bufferInfo = const_cast<VkDescriptorBufferInfo*>(write.pBufferInfo)[param.ArrayIndex];
 		bufferInfo.buffer = buffer->GetBuffer();
 		bufferInfo.offset = param.Data.Offset;
@@ -198,20 +197,13 @@ void VulkanDescriptorSetParamCache::SetParam(uint32 bindIndex, const RHIShaderPa
 	case EBindingType::StorageTexture:{
 		VulkanRHITexture* texture = (VulkanRHITexture*)(param.Data.Texture);
 		auto& imageInfo = const_cast<VkDescriptorImageInfo*>(write.pImageInfo)[param.ArrayIndex];
-		imageInfo.imageView = texture->GetView(param.Data.SRVType, param.Data.TextureSub); // TODO more view types
+		imageInfo.imageView = texture->GetView(param.Data.SubRes); // TODO more view types
 		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	}break;
 	case EBindingType::Sampler: {
 		auto& imageInfo = const_cast<VkDescriptorImageInfo*>(write.pImageInfo)[param.ArrayIndex];
 		imageInfo.sampler = ((VulkanRHISampler*)param.Data.Sampler)->GetSampler();
 	}break;
-	case EBindingType::TextureSampler: {
-		VulkanRHITexture* texture = (VulkanRHITexture*)(param.Data.Texture);
-		auto& imageInfo = const_cast<VkDescriptorImageInfo*>(write.pImageInfo)[param.ArrayIndex];
-		imageInfo.imageView = texture->GetView(param.Data.SRVType, param.Data.TextureSub); // TODO more view types
-		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.sampler = ((VulkanRHISampler*)param.Data.Sampler)->GetSampler();
-	}
 	default:break;
 	}
 }
@@ -345,8 +337,8 @@ VulkanRHIGraphicsPipelineState::VulkanRHIGraphicsPipelineState(const RHIGraphics
 		// color blend
 		auto& blendDesc = m_Desc.BlendDesc;
 		VkPipelineColorBlendStateCreateInfo colorBlendInfo{ VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr, 0 };
-		colorBlendInfo.logicOpEnable = false;
-		colorBlendInfo.logicOp = VK_LOGIC_OP_COPY;
+		colorBlendInfo.logicOpEnable = blendDesc.LogicOpEnable;
+		colorBlendInfo.logicOp = ToVkLogicOp(blendDesc.LogicOp);
 		uint32 blendStateCount = blendDesc.BlendStates.Size();
 		TFixedArray<VkPipelineColorBlendAttachmentState> states(blendStateCount);
 		for (uint32 i = 0; i < blendStateCount; ++i) {

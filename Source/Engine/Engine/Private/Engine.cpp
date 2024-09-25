@@ -2,7 +2,7 @@
 #include "System/Public/EngineConfig.h"
 #include "Window/Public/EngineWIndow.h"
 #include "RHI/Public/RHI.h"
-#include "RHI/Public/ImGuiRHI.h"
+#include "RHI/Public/RHIImGui.h"
 #include "Render/Public/DefaultResource.h"
 #include "Render/Public/Renderer.h"
 #include "Render/Public/GlobalShader.h"
@@ -37,7 +37,7 @@ namespace Engine {
 		Object::TextureResourceMgr::Release();
 		Render::GlobalShaderMap::Release();
 		Render::DefaultResources::Release();
-		ImGuiRHI::Release();
+		RHIImGui::Release();
 		RHI::Release();
 		EngineWindow::Release();
 		s_RunningEngine = nullptr;
@@ -45,9 +45,9 @@ namespace Engine {
 
 	void XXEngine::Update() {
 		RHI::Instance()->BeginFrame();// RHI Update must run at the beginning.
-		EngineWindow::Instance()->Update();
 		Object::RenderScene::Tick();
 		Render::Renderer::Instance()->Run();
+		EngineWindow::Instance()->Update();
 		CTimer::Instance()->Tick();
 		FrameCounter::Update();// Frame counter ticks at last.
 	}

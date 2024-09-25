@@ -17,12 +17,14 @@ namespace Render {
 	}
 
 	RGBufferNode* RenderGraph::CreateBufferNode(RHIBuffer* buffer, XString&& name) {
+		buffer->SetName(name.c_str());
 		RGBufferNode* node = (RGBufferNode*)m_Nodes.EmplaceBack(new RGBufferNode(m_Nodes.Size(), buffer)).Get();
 		node->SetName(MoveTemp(name));
 		return node;
 	}
 
 	RGTextureNode* RenderGraph::CreateTextureNode(RHITexture* texture, XString&& name) {
+		texture->SetName(name.c_str());
 		RGTextureNode* node = (RGTextureNode*)m_Nodes.EmplaceBack(new RGTextureNode(m_Nodes.Size(), texture)).Get();
 		node->SetName(MoveTemp(name));
 		return node;

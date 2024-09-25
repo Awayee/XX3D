@@ -21,8 +21,9 @@ namespace Engine {
 		if (ERHIType::Vulkan == rhiType) {
 			s_Instance.Reset(new WindowSystemGLFW(windowInfo));
 		}
-		else if (ERHIType::DX12 == rhiType) {
-			s_Instance.Reset(new WindowSystemWin32(windowInfo));
+		else if (ERHIType::D3D12 == rhiType) {
+			s_Instance.Reset(new WindowSystemWin32());
+			((WindowSystemWin32*)s_Instance.Get())->Initialize(windowInfo);
 		}
 		else {
 			ASSERT(0, "can not resolve rhi type");

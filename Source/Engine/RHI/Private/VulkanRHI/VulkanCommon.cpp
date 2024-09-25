@@ -27,6 +27,9 @@ void LoadInstanceFunctions(VkInstance instance) {
 }
 
 void LoadDeviceFunctions(VkDevice device) {
-#define LOAD_DEVICE_PROC_ADDR(type, name) name = reinterpret_cast<type>(vkGetDeviceProcAddr(device, #name));
+#define LOAD_DEVICE_PROC_ADDR(type, name) \
+	name = reinterpret_cast<type>(vkGetDeviceProcAddr(device, #name));\
+	if(!(name)) {LOG_WARNING("Failed to load vulkan device funcion: "#name);}
+
 	ENUM_VULKAN_DEVICE_FUNCTIONS(LOAD_DEVICE_PROC_ADDR);
 }

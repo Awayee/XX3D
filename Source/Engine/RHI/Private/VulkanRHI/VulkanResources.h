@@ -4,63 +4,54 @@
 #include "Core/Public/String.h"
 
 class VulkanRHI;
-
 class VulkanDevice;
 
-class VulkanRHIResource: public RHIResource {
-protected:
-	VkDevice m_DeviceHandle{VK_NULL_HANDLE};
-};
-
-class VulkanRHIBuffer: public RHIBuffer{
+class VulkanBuffer: public RHIBuffer {
 public:
-	VulkanRHIBuffer(const RHIBufferDesc& desc, VulkanDevice* device, BufferAllocation&& alloc);
-	~VulkanRHIBuffer()override;
+	VulkanBuffer(const RHIBufferDesc& desc, VulkanDevice* device);
+	~VulkanBuffer() override;
 	void SetName(const char* name) override;
 	void UpdateData(const void* data, uint32 byteSize, uint32 offset) override;
 	VkBuffer GetBuffer() const { return m_Allocation.GetBuffer(); }
-private:
-	friend VulkanRHI;
+protected:
 	VulkanDevice* m_Device;
 	BufferAllocation m_Allocation;
 };
 
-class VulkanRHITexture: public RHITexture {
+class VulkanBufferImpl: public VulkanBuffer{
 public:
-	VulkanRHITexture(const RHITextureDesc& desc, VulkanDevice* device, VkImage image, ImageAllocation&& allocation);
-	~VulkanRHITexture() override;
-	VkImage GetImage() const { return m_Image; }
-	virtual VkImageView GetView(ETextureSRVType type, RHITextureSubDesc sub);
+	using VulkanBuffer::VulkanBuffer;
+	void UpdateData(const void* data, uint32 byteSize, uint32 offset) override;
+};
+
+class VulkanRHITexture : public RHITexture {
+public:
+	VulkanRHITexture(const RHITextureDesc& desc) : RHITexture(desc) {}
+	virtual VkImageView GetView(RHITextureSubRes subRes) = 0;
+	virtual VkImage GetImage() = 0;
 	VkImageView GetDefaultView();
-	VkImageView Get2DView(uint8 mipIndex, uint32 arrayIndex);
-	VkImageView GetCubeView(uint8 mipIndex, uint32 arrayIndex);// only for cube map
+};
+
+class VulkanTextureImpl: public VulkanRHITexture {
+public:
+	VulkanTextureImpl(const RHITextureDesc& desc, VulkanDevice* device, VkImage image, ImageAllocation&& allocation);
+	~VulkanTextureImpl() override;
+	VkImage GetImage() override { return m_Image; }
+	VkImageView GetView(RHITextureSubRes subRes) override;
 	void SetName(const char* name) override;
-	void UpdateData(uint32 byteSize, const void* data, RHITextureOffset offset) override;
+	void UpdateData(const void* data, uint32 byteSize, RHITextureSubRes subRes, IOffset3D offset) override;
 protected:
 	VulkanDevice* m_Device;
 	VkImage m_Image;
 	ImageAllocation m_Allocation;
-	TArray<VkImageView> m_AllViews;
-	// view indices for search
-	uint32 m_DefaultViewIndex;
-	TArray<uint32> m_2DViewIndices;
-	TArray<uint32> m_CubeViewIndices;
+	struct SubResView {
+		RHITextureSubRes SubRes;
+		VkImageView View;
+	};
+	// views are sorted by array layer
+	TArray<TArray<SubResView>> m_Views;
 	// m_Image will be destroy in this object if m_IsImageOwner is true
-	bool m_IsImageOwner;
-	uint32 CreateView(VkImageViewType type, VkImageAspectFlags aspectFlags, uint8 mipIndex, uint8 mipCount, uint32 arrayIndex, uint32 arrayCount);
-};
-
-// Depth stencil textures use special views.
-class VulkanDepthStencilTexture: public VulkanRHITexture {
-public:
-	VulkanDepthStencilTexture(const RHITextureDesc& desc, VulkanDevice* device, VkImage image, ImageAllocation&& allocation);
-	VkImageView GetView(ETextureSRVType type, RHITextureSubDesc sub) override;
-	VkImageView GetDepthView();
-	VkImageView GetStencilView();
-	VkImageView GetDepthStencilView();
-private:
-	uint32 m_DepthViewIndex;
-	uint32 m_StencilViewIndex;
+	VkImageView CreateView(RHITextureSubRes subRes);
 };
 
 class VulkanRHISampler: public RHISampler{
@@ -90,7 +81,7 @@ private:
 
 class VulkanRHIShader: public RHIShader {
 public:
-	VulkanRHIShader(EShaderStageFlagBit type, const char* code, size_t codeSize, const XString& entryFunc, VulkanDevice* device);
+	VulkanRHIShader(EShaderStageFlags type, const char* code, uint32 codeSize, const XString& entryFunc, VulkanDevice* device);
 	~VulkanRHIShader() override;
 	void SetName(const char* name) override;
 	VkPipelineShaderStageCreateInfo GetShaderStageInfo() const;

@@ -6,12 +6,6 @@
 #include "VulkanCommand.h"
 #include "VulkanPipeline.h"
 #include "VulkanViewport.h"
-#include "VulkanUploader.h"
-
-#define RETURN_RHI_PTR(cls, hd)\
-cls##Vk* cls##Ptr = new cls##Vk;\
-cls##Ptr->handle = hd; \
-return reinterpret_cast<cls*>(cls##Ptr)
 
 static constexpr uint32 MIN_API_VERSION{ VK_VERSION_1_2 };
 
@@ -26,7 +20,7 @@ VulkanRHI::VulkanRHI(const RHIInitDesc& desc) {
 	// Create logic device
 	m_Device.Reset(new VulkanDevice(m_Context.Get(), physicalDevice));
 	// Create viewport
-	m_Viewport.Reset(new VulkanViewport(m_Context.Get(), m_Device.Get(), desc.WindowHandle, desc.WindowSize));
+	m_Viewport.Reset(new VulkanViewport(m_Context.Get(), m_Device.Get(), desc.Window, desc.WindowSize));
 
 	LOG_INFO("RHI: Vulkan initialized successfully!");
 }
@@ -69,12 +63,7 @@ VulkanDevice* VulkanRHI::GetDevice() {
 }
 
 RHIBufferPtr VulkanRHI::CreateBuffer(const RHIBufferDesc& desc) {
-	VkMemoryPropertyFlags memoryProperty = ToBufferMemoryProperty(desc.Flags);
-	BufferAllocation alloc;
-	if(m_Device->GetMemoryMgr()->AllocateBufferMemory(alloc, desc.ByteSize, ToBufferUsage(desc.Flags), memoryProperty)) {
-		return RHIBufferPtr(new VulkanRHIBuffer(desc, m_Device.Get(), MoveTemp(alloc)));
-	}
-	return nullptr;
+	return RHIBufferPtr(new VulkanBufferImpl(desc, m_Device.Get()));
 }
 
 RHITexturePtr VulkanRHI::CreateTexture(const RHITextureDesc& desc) {
@@ -84,7 +73,7 @@ RHITexturePtr VulkanRHI::CreateTexture(const RHITextureDesc& desc) {
 	imageInfo.format = ToVkFormat(desc.Format);
 	imageInfo.extent = { desc.Width, desc.Height, desc.Depth};
 	imageInfo.mipLevels = desc.MipSize;
-	imageInfo.arrayLayers = ConvertImageArraySize(desc);
+	imageInfo.arrayLayers = desc.ArraySize * GetImagePerLayerSize(desc.Dimension);
 	imageInfo.samples = ToVkMultiSampleCount(desc.Samples);
 	imageInfo.usage = ToImageUsage(desc.Flags);
 	VkImage imageHandle;
@@ -98,12 +87,7 @@ RHITexturePtr VulkanRHI::CreateTexture(const RHITextureDesc& desc) {
 		vkDestroyImage(m_Device->GetDevice(), imageHandle, nullptr);
 		return nullptr;
 	}
-	if(desc.Flags & (TEXTURE_FLAG_DEPTH_TARGET | TEXTURE_FLAG_STENCIL)) {
-		return RHITexturePtr(new VulkanDepthStencilTexture(desc, GetDevice(), imageHandle, MoveTemp(alloc)));
-	}
-	else {
-		return RHITexturePtr(new VulkanRHITexture(desc, GetDevice(), imageHandle, MoveTemp(alloc)));
-	}
+	return RHITexturePtr(new VulkanTextureImpl(desc, GetDevice(), imageHandle, MoveTemp(alloc)));
 }
 
 RHISamplerPtr VulkanRHI::CreateSampler(const RHISamplerDesc& desc) {
@@ -141,7 +125,7 @@ RHIFencePtr VulkanRHI::CreateFence(bool sig) {
 	return nullptr;
 }
 
-RHIShaderPtr VulkanRHI::CreateShader(EShaderStageFlagBit type, const char* codeData, size_t codeSize, const XString& entryFunc) {
+RHIShaderPtr VulkanRHI::CreateShader(EShaderStageFlags type, const char* codeData, uint32 codeSize, const XString& entryFunc) {
 	return RHIShaderPtr(new VulkanRHIShader(type, codeData, codeSize, entryFunc, GetDevice()));
 }
 
@@ -153,17 +137,13 @@ RHIComputePipelineStatePtr VulkanRHI::CreateComputePipelineState(const RHIComput
 	return RHIComputePipelineStatePtr(new VulkanRHIComputePipelineState(desc, GetDevice()));
 }
 
-RHICommandBufferPtr VulkanRHI::CreateCommandBuffer() {
-	return m_Device->GetCommandContext()->AllocateCommandBuffer();
+RHICommandBufferPtr VulkanRHI::CreateCommandBuffer(EQueueType queue) {
+	return m_Device->GetCommandContext()->AllocateCommandBuffer(queue);
 }
 
-void VulkanRHI::SubmitCommandBuffer(RHICommandBuffer* cmd, RHIFence* fence, bool bPresent) {
-	SubmitCommandBuffers({ cmd }, fence, bPresent);
-}
-
-void VulkanRHI::SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence, bool bPresent) {
+void VulkanRHI::SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, EQueueType queue, RHIFence* fence, bool bPresent) {
 	TArrayView<VulkanCommandBuffer*> vulkanCmds((VulkanCommandBuffer**)(cmds.Data()), cmds.Size());
 	VkFence fenceHandle = fence ? ((VulkanRHIFence*)fence)->GetFence() : VK_NULL_HANDLE;
 	VkSemaphore smp = bPresent ? m_Viewport->GetCurrentSemaphore() : VK_NULL_HANDLE;
-	m_Device->GetCommandContext()->SubmitCommandBuffers(vulkanCmds, smp, fenceHandle);
+	m_Device->GetCommandContext()->SubmitCommandBuffers(vulkanCmds, queue, smp, fenceHandle);
 }

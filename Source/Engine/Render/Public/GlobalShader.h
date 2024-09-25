@@ -7,7 +7,7 @@
 namespace Render {
 	class GlobalShader {
 	public:
-		GlobalShader(const XString& shaderFile, const XString& entry, EShaderStageFlagBit type);
+		GlobalShader(const XString& shaderFile, const XString& entry, EShaderStageFlags type);
 		virtual ~GlobalShader();
 		RHIShader* GetRHI();
 	private:
@@ -41,7 +41,7 @@ namespace Render {
 			return shader;
 		}
 	private:
-		TMap<uint32, TUniquePtr<GlobalShader>> m_ShaderMap;
+		TMap<uint64, TUniquePtr<GlobalShader>> m_ShaderMap;
 		GlobalShaderMap();
 		~GlobalShaderMap();
 	};

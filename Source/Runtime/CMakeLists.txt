@@ -17,7 +17,15 @@ target_include_directories(${TARGET_NAME} PRIVATE ${SOURCE_PATH}/Runtime)
 #imgui
 target_link_libraries(${TARGET_NAME} PRIVATE "imgui")
 
-add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+# copy dlls
+set(COPY_DLLS
+    ${THIRD_PARTY}/DirectXShaderCompiler/bin/x64/dxcompiler.dll
+    ${THIRD_PARTY}/DirectXShaderCompiler/bin/x64/dxil.dll
     ${THIRD_PARTY}/zlib/lib/zlib.dll
-    $<TARGET_FILE_DIR:${TARGET_NAME}>)
+)
+foreach(COPY_DLL ${COPY_DLLS})
+    add_custom_command(TARGET ${TARGET_NAME}
+        POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${COPY_DLL}
+        $<TARGET_FILE_DIR:${TARGET_NAME}>)
+endforeach()

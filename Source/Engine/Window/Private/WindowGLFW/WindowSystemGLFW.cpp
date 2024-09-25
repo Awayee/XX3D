@@ -3,9 +3,9 @@
 
 namespace Engine {
 
-	std::unordered_map<int, EKey> WindowSystemGLFW::s_GLFWKeyCodeMap;
-	std::unordered_map<int, EBtn> WindowSystemGLFW::s_GLFWButtonCodeMap;
-	std::unordered_map<int, EInput> WindowSystemGLFW::s_GLFWInputMap;
+	TUnorderedMap<int, EKey> WindowSystemGLFW::s_GLFWKeyCodeMap;
+	TUnorderedMap<int, EBtn> WindowSystemGLFW::s_GLFWButtonCodeMap;
+	TUnorderedMap<int, EInput> WindowSystemGLFW::s_GLFWInputMap;
 
 	WindowSystemGLFW::WindowSystemGLFW(const WindowInitInfo& initInfo) {
 		glfwInit();
@@ -26,59 +26,56 @@ namespace Engine {
 		glfwTerminate();
 	}
 
-	void WindowSystemGLFW::Update()
-	{
+	void WindowSystemGLFW::Update(){
 		glfwPollEvents();
 		if(glfwWindowShouldClose(m_Window)) {
 			Engine::XXEngine::ShutDown();
 		}
 	}
-	bool WindowSystemGLFW::ShouldClose()
-	{
-		return glfwWindowShouldClose(m_Window);
-	}
-	void WindowSystemGLFW::Close()
-	{
+
+	void WindowSystemGLFW::Close(){
 		glfwSetWindowShouldClose(m_Window, 1);
 	}
-	void WindowSystemGLFW::SetTitle(const char* title)
-	{
+
+	void WindowSystemGLFW::SetTitle(const char* title){
 		glfwSetWindowTitle(m_Window, title);
 	}
 
-	const USize2D& WindowSystemGLFW::GetWindowSize() {
-		return m_Size;
-	}
-
-	void WindowSystemGLFW::SetFocusMode(bool focusMode)
-	{
+	void WindowSystemGLFW::SetFocusMode(bool focusMode){
 		m_FocusMode = focusMode;
 		glfwSetInputMode(m_Window, GLFW_CURSOR, m_FocusMode ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
 	}
 
-	bool WindowSystemGLFW::GetFocusMode()
-	{
-		return m_FocusMode;
-	}
-
-	void* WindowSystemGLFW::GetWindowHandle()
-	{
-		return (void*)m_Window;
-	}
-
-	void WindowSystemGLFW::GetWindowContentScale(float* x, float* y)
-	{
-		glfwGetWindowContentScale(m_Window, x, y);
-	}
-
-	void WindowSystemGLFW::SetWindowIcon(int count, const WindowIcon* icons)
-	{
+	void WindowSystemGLFW::SetWindowIcon(int count, const WindowIcon* icons) {
 		const GLFWimage* images = reinterpret_cast<const GLFWimage*>(icons);
 		glfwSetWindowIcon(m_Window, count, images);
 	}
 
-	void WindowSystemGLFW::InitKeyButtonCodeMap()
-	{
+	bool WindowSystemGLFW::GetFocusMode(){
+		return m_FocusMode;
+	}
+
+	void* WindowSystemGLFW::GetWindowHandle(){
+		return (void*)m_Window;
+	}
+
+	USize2D WindowSystemGLFW::GetWindowSize() {
+		return m_Size;
+	}
+
+	FSize2D WindowSystemGLFW::GetWindowContentScale() {
+		FSize2D scale;
+		glfwGetWindowContentScale(m_Window, &scale.w, &scale.h);
+		return scale;
+	}
+
+	FOffset2D WindowSystemGLFW::GetCursorPos() {
+		double x, y;
+		glfwGetCursorPos(m_Window, &x, &y);
+		return { (float)x, (float)y };
+	}
+
+	void WindowSystemGLFW::InitKeyButtonCodeMap(){
 		s_GLFWKeyCodeMap[GLFW_KEY_SPACE] = EKey::SPACE;
 		s_GLFWKeyCodeMap[GLFW_KEY_APOSTROPHE] = EKey::APOSTROPHE; /* ' */
 		s_GLFWKeyCodeMap[GLFW_KEY_COMMA] = EKey::COMMA; /* ; */
@@ -214,8 +211,7 @@ namespace Engine {
 		s_GLFWInputMap[GLFW_REPEAT] = EInput::REPEAT;
 	}
 
-	void WindowSystemGLFW::InitEvents()
-	{
+	void WindowSystemGLFW::InitEvents(){
 		glfwSetKeyCallback(m_Window, OnKey);
 		glfwSetMouseButtonCallback(m_Window, OnMouseButton);
 		glfwSetCursorPosCallback(m_Window, OnCursorPos);
@@ -226,27 +222,27 @@ namespace Engine {
 	}
 
 	void WindowSystemGLFW::RegisterOnKeyFunc(OnKeyFunc&& func){
-		m_OnKeyFunc.push_back(func);
+		m_OnKeyFunc.PushBack(MoveTemp(func));
 	}
 
 	void WindowSystemGLFW::RegisterOnMouseButtonFunc(OnMouseButtonFunc&& func){
-		m_OnMouseButtonFunc.push_back(func);
+		m_OnMouseButtonFunc.PushBack(MoveTemp(func));
 	}
 
 	void WindowSystemGLFW::RegisterOnCursorPosFunc(OnCursorPosFunc&& func){
-		m_OnCursorPosFunc.push_back(func);
+		m_OnCursorPosFunc.PushBack(MoveTemp(func));
 	}
 
 	void WindowSystemGLFW::RegisterOnCursorEnterFunc(OnCursorEnterFunc&& func){
-		m_OnCursorEnterFunc.push_back(func);
+		m_OnCursorEnterFunc.PushBack(MoveTemp(func));
 	}
 
 	void WindowSystemGLFW::RegisterOnScrollFunc(OnScrollFunc&& func){
-		m_OnScrollFunc.push_back(func);
+		m_OnScrollFunc.PushBack(MoveTemp(func));
 	}
 
 	void WindowSystemGLFW::RegisterOnWindowSizeFunc(OnWindowSizeFunc&& func){
-		m_OnWindowSizeFunc.push_back(func);
+		m_OnWindowSizeFunc.PushBack(MoveTemp(func));
 	}
 
 

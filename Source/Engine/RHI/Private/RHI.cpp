@@ -1,5 +1,6 @@
 #include "RHI/Public/RHI.h"
 #include "VulkanRHI/VulkanRHI.h"
+#include "D3D12RHI/D3D12RHI.h"
 #include "System/Public/EngineConfig.h"
 #include "Core/Public/Log.h"
 #include "Core/Public/Concurrency.h"
@@ -59,7 +60,7 @@ void RHI::Initialize() {
 		if (s_RenderDocAPI) {
 			s_RenderDocAPI->SetCaptureFilePathTemplate("RenderDocCapture/Capture");
 			s_RenderDocAPI->MaskOverlayBits(0, 0);
-			LOG_DEBUG("RenderDoc loaded!");
+			LOG_INFO("RenderDoc loaded!");
 		}
 	}
 
@@ -72,15 +73,17 @@ void RHI::Initialize() {
 #else
 	desc.EnableDebug = false;
 #endif
-	desc.WindowHandle = Engine::EngineWindow::Instance()->GetWindowHandle();
+	desc.Window = Engine::EngineWindow::Instance()->GetWindowHandle();
 	desc.WindowSize = Engine::EngineWindow::Instance()->GetWindowSize();
 
 	switch(rhiType) {
 	case Engine::ERHIType::Vulkan:
 		s_Instance.Reset(new VulkanRHI(desc));
 		break;
-	case Engine::ERHIType::DX12:
-	case Engine::ERHIType::DX11:
+	case Engine::ERHIType::D3D12:
+		s_Instance.Reset(new D3D12RHI(desc));
+		break;
+	case Engine::ERHIType::D3D11:
 	case Engine::ERHIType::OpenGL:
 	case Engine::ERHIType::Invalid:
 		ASSERT(0, "Failed to initialize RHI!");

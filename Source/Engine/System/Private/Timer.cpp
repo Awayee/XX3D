@@ -1,4 +1,5 @@
 #include "System/Public/Timer.h"
+#include "Core/Public/Log.h"
 
 namespace Engine {
 
@@ -31,5 +32,14 @@ namespace Engine {
 
 	void CTimer::Pause() {
 		m_Paused = true;
+	}
+
+	DurationScope::DurationScope(const char* name): m_Name(name) {
+		m_TimePoint = NowTimePoint();
+	}
+
+	DurationScope::~DurationScope() {
+		const float durationMs = GetDurationMill<float>(m_TimePoint, NowTimePoint());
+		LOG_DEBUG("[DurationScope] %s %f", m_Name, durationMs);
 	}
 }

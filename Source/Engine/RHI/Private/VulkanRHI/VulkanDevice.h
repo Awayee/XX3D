@@ -26,8 +26,7 @@ public:
 	VkDevice GetDevice() const { return m_Device; }
 	VkPhysicalDevice GetPhysicalDevice() const { return m_PhysicalDevice; }
 	const VkPhysicalDeviceProperties& GetProperties() const  { return m_DeviceProperties; }
-	const VulkanQueue& GetGraphicsQueue() const { return m_GraphicsQueue; }
-	const VulkanQueue& GetComputeQueue() const { return m_ComputeQueue; }
+	const VulkanQueue& GetQueue(EQueueType queue) const { return m_Queues[EnumCast(queue)]; }
 	const VulkanFormats& GetFormats() const { return m_Formats; }
 
 	VulkanMemoryMgr* GetMemoryMgr() { return m_MemoryMgr.Get(); }
@@ -39,9 +38,7 @@ public:
 private:
 	VkPhysicalDevice m_PhysicalDevice{ VK_NULL_HANDLE };
 	VkDevice m_Device{ VK_NULL_HANDLE };
-	VulkanQueue m_GraphicsQueue;
-	VulkanQueue m_ComputeQueue;
-	VulkanQueue m_TransferQueue;
+	TStaticArray<VulkanQueue, EnumCast(EQueueType::Count)> m_Queues;
 	VkPhysicalDeviceProperties m_DeviceProperties{};
 	VulkanFormats m_Formats{};
 	TUniquePtr<VulkanMemoryMgr> m_MemoryMgr;

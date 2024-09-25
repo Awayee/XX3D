@@ -1,5 +1,6 @@
 #include "VulkanViewport.h"
 #include "VulkanCommand.h"
+#include "VulkanConverter.h"
 #include "Math/Public/Math.h"
 #include "System/Public/FrameCounter.h"
 #include <GLFW/glfw3.h>
@@ -48,9 +49,9 @@ inline VkExtent2D GetSwapchainExtent(const VkSurfaceCapabilitiesKHR& capabilitie
 	};
 }
 
-VulkanBackBuffer::VulkanBackBuffer(const RHITextureDesc& desc, VulkanDevice* device, VkImage image) :
-	VulkanRHITexture(desc, device, image, {}){
-	m_IsImageOwner = false;
+void VulkanBackBuffer::ResetImage(VkImage image, VkImageView view) {
+	m_Image = image;
+	m_View = view;
 }
 
 VulkanViewport::VulkanViewport(const VulkanContext* context, VulkanDevice* device, WindowHandle window, USize2D size) :
@@ -90,7 +91,7 @@ USize2D VulkanViewport::GetSize() {
 	return m_Size;
 }
 
-RHITexture* VulkanViewport::AcquireBackBuffer() {
+bool VulkanViewport::PrepareBackBuffer() {
 	// check size changed before acquire image
 	if (m_SizeDirty) {
 		DestroySwapchain();
@@ -99,17 +100,18 @@ RHITexture* VulkanViewport::AcquireBackBuffer() {
 	}
 
 	if(!m_Swapchain) {
-		return nullptr;
+		return false;
 	}
 
 	if (VK_SUCCESS == vkAcquireNextImageKHR(m_Device->GetDevice(), m_Swapchain, VK_WAIT_MAX, GetCurrentSemaphore(), VK_NULL_HANDLE, &m_BackBufferIdx)) {
-		return m_BackBuffers[m_BackBufferIdx].Get();
+		VulkanImage& vulkanImage = m_SwapchainImages[m_BackBufferIdx];
+		m_BackBuffer->ResetImage(vulkanImage.Image, vulkanImage.View);
 	}
-	return nullptr;
+	return true;
 }
 
-RHITexture* VulkanViewport::GetCurrentBackBuffer() {
-	return m_BackBuffers[m_BackBufferIdx].Get();
+RHITexture* VulkanViewport::GetBackBuffer() {
+	return m_BackBuffer.Get();
 }
 
 ERHIFormat VulkanViewport::GetBackBufferFormat() {
@@ -137,7 +139,7 @@ USize2D VulkanViewport::GetSize() const {
 }
 
 uint32 VulkanViewport::GetImageCount() const {
-	return m_BackBuffers.Size();
+	return m_SwapchainImages.Size();
 }
 
 void VulkanViewport::CreateSwapchain() {
@@ -187,7 +189,7 @@ void VulkanViewport::CreateSwapchain() {
 	swapchainInfo.imageColorSpace = surfaceFormat.colorSpace;
 	swapchainInfo.imageExtent = swapchainExtent;
 	swapchainInfo.imageArrayLayers = 1;
-	swapchainInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	swapchainInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	swapchainInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	swapchainInfo.queueFamilyIndexCount = 0;
 	swapchainInfo.pQueueFamilyIndices = nullptr;
@@ -204,22 +206,34 @@ void VulkanViewport::CreateSwapchain() {
 	TFixedArray<VkImage> swapchainImages(swapchainImageCount);
 	vkGetSwapchainImagesKHR(m_Device->GetDevice(), m_Swapchain, &swapchainImageCount, swapchainImages.Data());
 	LOG_DEBUG("Image count of swapchain is %u.", swapchainImageCount);
-
-	// Create back buffers and semaphores.
+	// Create back buffers
 	m_BackBufferFormat = SurfaceFormatToRHIFormat(surfaceFormat.format);
 	RHITextureDesc backBufferDesc = RHITextureDesc::Texture2D();
 	backBufferDesc.Format = m_BackBufferFormat;
-	backBufferDesc.Flags = TEXTURE_FLAG_COLOR_TARGET | TEXTURE_FLAG_PRESENT | TEXTURE_FLAG_SRV;
+	backBufferDesc.Flags = ETextureFlags::ColorTarget | ETextureFlags::Present;
 	backBufferDesc.Width = swapchainExtent.width;
 	backBufferDesc.Height = swapchainExtent.height;
-	m_BackBuffers.Resize(swapchainImageCount);
+	m_BackBuffer.Reset(new VulkanBackBuffer(backBufferDesc));
+	// Create swapchain images and views
+	m_SwapchainImages.Resize(swapchainImageCount);
 	for(uint32 i=0; i<swapchainImageCount; ++i) {
-		m_BackBuffers[i].Reset(new VulkanBackBuffer(backBufferDesc, m_Device, swapchainImages[i]));
+		m_SwapchainImages[i].Image = swapchainImages[i];
+		VkImageViewCreateInfo viewInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0 };
+		viewInfo.image = swapchainImages[i];
+		viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		viewInfo.format = surfaceFormat.format;
+		ToImageSubResourceRange(backBufferDesc.GetDefaultSubRes(), viewInfo.subresourceRange);
+		vkCreateImageView(m_Device->GetDevice(), &viewInfo, nullptr, &m_SwapchainImages[i].View);
 	}
 }
 
 void VulkanViewport::DestroySwapchain() {
-	m_BackBuffers.Reset();
+	for (auto& vulkanImage : m_SwapchainImages) {
+		vkDestroyImageView(m_Device->GetDevice(), vulkanImage.View, nullptr);
+	}
+	m_SwapchainImages.Reset();
 	vkDestroySwapchainKHR(m_Device->GetDevice(), m_Swapchain, nullptr);
 	m_Swapchain = VK_NULL_HANDLE;
+	m_BackBuffer.Reset();
+	
 }

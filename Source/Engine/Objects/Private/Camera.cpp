@@ -156,7 +156,7 @@ namespace Object {
 
 	RenderCamera::RenderCamera() {
 		// get window size for aspect
-		m_Uniform = RHI::Instance()->CreateBuffer({ EBufferFlagBit::BUFFER_FLAG_UNIFORM, sizeof(CameraUBO), 0 });
+		m_Uniform = RHI::Instance()->CreateBuffer({ EBufferFlags::Uniform, sizeof(CameraUBO), 0 });
 		m_ViewMatrix = Math::FMatrix4x4::IDENTITY;
 		USize2D size = Engine::EngineWindow::Instance()->GetWindowSize();
 		SetAspect((float)size.w / (float)size.h);

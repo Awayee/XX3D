@@ -1,7 +1,13 @@
 #pragma once
 #include "Defines.h"
+#include <memory>
 
-template<class T>
+template<typename T>
+struct TDefaultDeleter {
+	void operator()(T* ptr) { delete ptr; }
+};
+
+template<class T, class Deleter = TDefaultDeleter<T>>
 class TUniquePtr {
 public:
 	NON_COPYABLE(TUniquePtr);
@@ -81,6 +87,10 @@ public:
 		return m_Ptr;
 	}
 
+	T** Address() {
+		return &m_Ptr;
+	}
+
 	template<class ...Args>
 	static TUniquePtr<T> New(Args&& ...args) {
 		return TUniquePtr<T>(new T(args...));
@@ -112,7 +122,7 @@ private:
 
 	inline void Free() {
 		if(m_Ptr) {
-			delete m_Ptr;
+			Deleter{}(m_Ptr);
 			m_Ptr = nullptr;
 		}
 	}

@@ -4,14 +4,24 @@
 #include "VulkanViewport.h"
 #include "VulkanCommand.h"
 #include "VulkanConverter.h"
-#include "Window/Public/EngineWIndow.h"
+#include "Window/Public/EngineWindow.h"
 #include <backends/imgui_impl_vulkan.h>
 #include <backends/imgui_impl_glfw.h>
+
+PFN_vkVoidFunction GetVkDeviceFunction(const char* name, void* userData) {
+	VulkanRHI* r = (VulkanRHI*)VulkanRHI::Instance();
+	auto func = vkGetDeviceProcAddr(r->GetDevice()->GetDevice(), name);
+	if(!func) {
+		func = vkGetInstanceProcAddr(r->GetContext()->GetInstance(), name);
+	}
+	ASSERT(func, "");
+	return func;
+}
 
 VulkanImGui::VulkanImGui(void(*configInitializer)()) {
 	IMGUI_CHECKVERSION();
 	m_Context = ImGui::CreateContext();
-
+	ImGui_ImplVulkan_LoadFunctions(GetVkDeviceFunction);
 	VulkanRHI* vkRHI = reinterpret_cast<VulkanRHI*>(RHI::Instance());
 	WindowHandle windowHandle = Engine::EngineWindow::Instance()->GetWindowHandle();
 	const VulkanContext* context = vkRHI->GetContext();
@@ -21,8 +31,9 @@ VulkanImGui::VulkanImGui(void(*configInitializer)()) {
 	initInfo.Instance = context->GetInstance();
 	initInfo.PhysicalDevice = device->GetPhysicalDevice();
 	initInfo.Device = device->GetDevice();
-	initInfo.QueueFamily = device->GetGraphicsQueue().FamilyIndex;
-	initInfo.Queue = device->GetGraphicsQueue().Handle;
+	const VulkanQueue& queue = device->GetQueue(EQueueType::Graphics);
+	initInfo.QueueFamily =queue.FamilyIndex;
+	initInfo.Queue = queue.Handle;
 	initInfo.DescriptorPool = device->GetDescriptorMgr()->GetReservePool();
 	VulkanViewport* vkViewport = (VulkanViewport*)(vkRHI->GetViewport());
 	initInfo.MinImageCount = vkViewport->GetImageCount();
@@ -38,7 +49,6 @@ VulkanImGui::VulkanImGui(void(*configInitializer)()) {
 		configInitializer();
 	}
 	ImGui_ImplVulkan_CreateFontsTexture();
-	m_IsInitialized = false;
 }
 
 VulkanImGui::~VulkanImGui() {
@@ -74,12 +84,4 @@ ImTextureID VulkanImGui::RegisterImGuiTexture(RHITexture* texture, RHISampler* s
 
 void VulkanImGui::RemoveImGuiTexture(ImTextureID textureID) {
 	ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet)textureID);
-}
-
-void VulkanImGui::ImGuiCreateFontsTexture(RHICommandBuffer* cmd) {
-	//ImGui_ImplVulkan_CreateFontsTexture(static_cast<VulkanCommandBuffer*>(cmd)->GetHandle());
-}
-
-void VulkanImGui::ImGuiDestroyFontUploadObjects() {
-	//ImGui_ImplVulkan_DestroyFontUploadObjects();
 }

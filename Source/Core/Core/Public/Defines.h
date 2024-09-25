@@ -42,7 +42,7 @@ typedef unsigned long long	uint64;
 
 #define SINGLETON_INSTANCE(cls)\
 public:\
-	static void Release(){ if(s_Instance) delete s_Instance; }\
+	static void Release(){ if(s_Instance) delete s_Instance; s_Instance=nullptr; }\
 	template <class ...Args> static void Initialize(Args...args) { Release(); s_Instance = new cls(args...); }\
 	static cls* Instance() {return s_Instance; }\
 private:\

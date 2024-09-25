@@ -11,17 +11,16 @@
 
 
 #define VK_SET_OBJECT_NAME(type, handle, name) do{\
-VkDebugUtilsObjectNameInfoEXT info{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, nullptr, type, reinterpret_cast<uint64>(handle), name};\
-vkSetDebugUtilsObjectNameEXT(m_Device->GetDevice(), &info);\
-}while(0)
+	if(vkSetDebugUtilsObjectNameEXT){\
+		VkDebugUtilsObjectNameInfoEXT info{ VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, nullptr, type, reinterpret_cast<uint64>(handle), name }; \
+		vkSetDebugUtilsObjectNameEXT(m_Device->GetDevice(), &info); \
+	}}while(0)
 
 const uint32 VK_API_VER = VK_API_VERSION_1_2;
 
 constexpr uint32 VK_INVALID_INDEX = UINT32_MAX;
 
 constexpr uint32 VK_WAIT_MAX = UINT32_MAX;
-
-typedef void* WindowHandle;
 
 // List of all Vulkan entry points
 #define ENUM_VULKAN_LOADER_FUNCTIONS(macroName) \

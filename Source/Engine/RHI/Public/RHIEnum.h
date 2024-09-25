@@ -1,9 +1,12 @@
 #pragma once
 #include "Core/Public/Defines.h"
+#include "Core/Public/EnumClass.h"
 
 enum : uint32 {
     RHI_FRAME_IN_FLIGHT_MAX = 1,// TODO solve the errors when RHI_FRAME_IN_FLIGHT_MAX greater than 1
     RHI_COLOR_TARGET_MAX = 8,
+    RHI_TEXTURE_ARRAY_MAX = 1024,
+    RHI_TEXTURE_MIP_MAX = 64,
 };           
 
 enum class ERHIFormat: uint8 {
@@ -54,17 +57,17 @@ enum class ERHIFormat: uint8 {
     FORMAT_MAX_ENUM
 };
 
-enum EBufferFlagBit {
-    BUFFER_FLAG_COPY_SRC = 1u,
-    BUFFER_FLAG_COPY_DST = 1u << 1,
-    BUFFER_FLAG_UNIFORM = 1u << 2,
-    BUFFER_FLAG_INDEX = 1u << 3,
-    BUFFER_FLAG_VERTEX = 1u << 4,
-    BUFFER_FLAG_STORAGE = 1u << 5,
-    BUFFER_FLAG_INDIRECT = 1u << 6,
+enum class EBufferFlags {
+    CopySrc = 1u,
+    CopyDst = 1u << 1,
+    Uniform = 1u << 2,
+    Index = 1u << 3,
+    Vertex = 1u << 4,
+    Storage = 1u << 5,
+    IndirectDraw = 1u << 6,
+    Readback = 1u << 7
 };
-
-typedef uint32 EBufferFlags;
+ENUM_CLASS_FLAGS(EBufferFlags);
 
 enum class ETextureDimension : uint8 {
     Tex2D=0,
@@ -75,27 +78,25 @@ enum class ETextureDimension : uint8 {
     MaxNum,
 };
 
-enum ETextureFlagBit {
-    TEXTURE_FLAG_COLOR_TARGET = 1u,
-    TEXTURE_FLAG_DEPTH_TARGET = 1u << 1,
-    TEXTURE_FLAG_STENCIL = 1u << 2,
-    TEXTURE_FLAG_SRV = 1u << 3,
-    TEXTURE_FLAG_UAV = 1u << 4,
-    TEXTURE_FLAG_PRESENT = 1u << 5,
-    TEXTURE_FLAG_CPY_SRC = 1u << 6,
-    TEXTURE_FLAG_CPY_DST = 1u << 7,
+enum class ETextureViewFlags : uint8 {
+    Color = 1,
+    Depth = 1 << 1,
+    Stencil = 1 << 2,
+    MetaData = 1 << 3,
+    DepthStencil = Depth|Stencil,
 };
-typedef uint32 ETextureFlags;
+ENUM_CLASS_FLAGS(ETextureViewFlags);
 
-enum class ETextureSRVType : uint8 {
-    Default = 0,
-    Texture2D,
-    Texture2DArray,
-    CubeMap,
-    Depth,
-    Stencil,
-    MaxNum
+enum class ETextureFlags {
+    ColorTarget = 1u,
+    DepthStencilTarget = 1u << 1,
+    SRV = 1u << 2,
+    UAV = 1u << 3,
+    Present = 1u << 4,
+    CopySrc = 1u << 5,
+    CopyDst = 1u << 6,
 };
+ENUM_CLASS_FLAGS(ETextureFlags);
 
 enum class ESamplerFilter : uint8 {
     Point=0,
@@ -134,17 +135,16 @@ enum class ERTStoreOption: uint8 {
 };
 
 // shader
-enum EShaderStageFlagBit: uint8 {
-    SHADER_STAGE_VERTEX_BIT = 1,
-    SHADER_STAGE_GEOMETRY_BIT = 2,
-    SHADER_STAGE_PIXEL_BIT = 4,
-    SHADER_STAGE_COMPUTE_BIT = 8,
+enum class EShaderStageFlags: uint8 {
+    Vertex = 1,
+    Geometry = 2,
+    Pixel = 4,
+    Compute = 8,
 };
-typedef uint8 EShaderStageFlags;
+ENUM_CLASS_FLAGS(EShaderStageFlags);
 
 enum class EBindingType : uint8 {
     Sampler,
-    TextureSampler,
     Texture,
     StorageTexture,
     UniformBuffer,
@@ -178,17 +178,16 @@ enum class EBlendFactor:uint8 {
     InverseConstAlpha,
 };
 
-enum EColorWriteMaskFlagBit {
-    COLOR_WRITE_MASK_R = 1,
-    COLOR_WRITE_MASK_G = 2,
-    COLOR_WRITE_MASK_B = 4,
-    COLOR_WRITE_MASK_A = 8,
-    COLOR_WRITE_MASK_ALL = COLOR_WRITE_MASK_R | COLOR_WRITE_MASK_G | COLOR_WRITE_MASK_B | COLOR_WRITE_MASK_A,
+enum class EColorComponentFlags {
+    R = 1,
+    G = 2,
+    B = 4,
+    A = 8,
+    All = R | G | B | A,
 };
-typedef uint32 EColorWriteMaskFlags;
+ENUM_CLASS_FLAGS(EColorComponentFlags);
 
-enum class ERasterizerFill : uint8
-{
+enum class ERasterizerFill : uint8{
     Point,
     Wireframe,
     Solid,
@@ -231,4 +230,30 @@ enum class EResourceState : uint8 {
     TransferSrc,
     TransferDst,
     Present
+};
+
+enum class EQueueType : uint8 {
+    Graphics = 0,
+    Compute,
+    Transfer,
+    Count
+};
+
+enum class ELogicOp {
+    Clear = 0,
+    And = 1,
+    AndReverse = 2,
+    Copy = 3,
+    AndInverted = 4,
+    NoOp = 5,
+    XOr = 6,
+    Or = 7,
+    NOr = 8,
+    Equivalent = 9,
+    Invert = 10,
+    OrReverse = 11,
+    CopyInverted = 12,
+    OrInverted = 13,
+    NAnd = 14,
+    Set = 15,
 };

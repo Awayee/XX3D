@@ -5,8 +5,8 @@
 
 namespace {
 
-	IMPLEMENT_GLOBAL_SHADER(DirectionalShadowVS, "DirectionalShadow.hlsl", "MainVS", SHADER_STAGE_VERTEX_BIT);
-	IMPLEMENT_GLOBAL_SHADER(DirectionalShadowPS, "DirectionalShadow.hlsl", "MainPS", SHADER_STAGE_PIXEL_BIT);
+	IMPLEMENT_GLOBAL_SHADER(DirectionalShadowVS, "DirectionalShadow.hlsl", "MainVS", EShaderStageFlags::Vertex);
+	IMPLEMENT_GLOBAL_SHADER(DirectionalShadowPS, "DirectionalShadow.hlsl", "MainPS", EShaderStageFlags::Pixel);
 
 }
 
@@ -45,9 +45,9 @@ namespace Object {
 	DirectionalLight::DirectionalLight() {
 		// create Uniforms
 		for(auto& uniform: m_ShadowUniforms) {
-			uniform = RHI::Instance()->CreateBuffer({ EBufferFlagBit::BUFFER_FLAG_UNIFORM, sizeof(Math::FMatrix4x4), 0 });
+			uniform = RHI::Instance()->CreateBuffer({ EBufferFlags::Uniform, sizeof(Math::FMatrix4x4), 0 });
 		}
-		m_Uniform = RHI::Instance()->CreateBuffer({ EBufferFlagBit::BUFFER_FLAG_UNIFORM, sizeof(LightUBO), 0 });
+		m_Uniform = RHI::Instance()->CreateBuffer({ EBufferFlags::Uniform, sizeof(LightUBO), 0 });
 		// load shadow map size
 		SetShadowMapSize(Engine::ConfigManager::GetData().DefaultShadowMapSize);
 	}
@@ -128,6 +128,8 @@ namespace Object {
 			Math::FVector3 extent = aabb.Extent();
 			// expand Z, to ensure objects locate far from camera, to avoid clip by projection
 			extent.Z *= (1.4f - (float)i * 0.1f);
+			// expand X, to ensure objects out of the bound can cast shadow
+			extent.X *= 1.4f - (float)i * 0.05f;
 			Object::CameraProjection dstProj;
 			dstProj.SetOrtho(-extent.Z, extent.Z, extent.Y, extent.X / extent.Y);
 			// set camera
@@ -175,7 +177,8 @@ namespace Object {
 		RHITextureDesc desc = RHITextureDesc::Texture2DArray(CASCADE_NUM);
 		desc.Width = desc.Height = m_ShadowMapSize;
 		desc.Format = depthFormat;
-		desc.Flags = TEXTURE_FLAG_DEPTH_TARGET | TEXTURE_FLAG_STENCIL | TEXTURE_FLAG_SRV;
+		desc.Flags = ETextureFlags::DepthStencilTarget | ETextureFlags::SRV;
+		desc.ClearValue.DepthStencil = { 1.0f, 0u };
 		m_ShadowMapTexture = RHI::Instance()->CreateTexture(desc);
 	}
 
@@ -188,16 +191,16 @@ namespace Object {
 		// layout
 		auto& layout = desc.Layout;
 		layout.Resize(2);
-		layout[0] = { {EBindingType::UniformBuffer, SHADER_STAGE_VERTEX_BIT} };// camera
-		layout[1] = { {EBindingType::UniformBuffer, SHADER_STAGE_VERTEX_BIT} };// mesh
+		layout[0] = { {EBindingType::UniformBuffer, EShaderStageFlags::Vertex} };// camera
+		layout[1] = { {EBindingType::UniformBuffer, EShaderStageFlags::Vertex} };// mesh
 		// vertex input
 		auto& vi = desc.VertexInput;
 		vi.Bindings = { {0, sizeof(Asset::AssetVertex), false} };
-		vi.Attributes = {	{0, 0, ERHIFormat::R32G32B32_SFLOAT, 0} };
+		vi.Attributes = {	{POSITION, 0, 0, 0, ERHIFormat::R32G32B32_SFLOAT, 0} };
 
 		desc.BlendDesc.BlendStates = { {false}, {false} };
 		desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Null, false, m_ShadowBiasConstant, m_ShadowBiasConstant };
-		desc.DepthStencilState = { true, ECompareType::Less, false };
+		desc.DepthStencilState = { true, true, ECompareType::Less, false };
 		desc.PrimitiveTopology = EPrimitiveTopology::TriangleList;
 		desc.DepthStencilFormat = RHI::Instance()->GetDepthFormat();
 		desc.NumSamples = 1;

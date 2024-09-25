@@ -4,11 +4,13 @@
 #include "Core/Public/String.h"
 #include "Core/Public/TUniquePtr.h"
 
+
+typedef void* WindowHandle;
 struct RHIInitDesc {
 	XString AppName;
 	bool EnableDebug;
 	bool IntegratedGPU;
-	void* WindowHandle;
+	WindowHandle Window;
 	USize2D WindowSize;
 };
 
@@ -35,17 +37,17 @@ public:
 	virtual RHITexturePtr CreateTexture(const RHITextureDesc& desc) = 0;
 	virtual RHISamplerPtr CreateSampler(const RHISamplerDesc& desc) = 0;
 	virtual RHIFencePtr CreateFence(bool isSignaled = true) = 0;
-	virtual RHIShaderPtr CreateShader(EShaderStageFlagBit type, const char* codeData, size_t codeSize, const XString& entryFunc) = 0;
+	virtual RHIShaderPtr CreateShader(EShaderStageFlags type, const char* codeData, uint32 codeSize, const XString& entryFunc) = 0;
 	virtual RHIGraphicsPipelineStatePtr CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) = 0;
 	virtual RHIComputePipelineStatePtr CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) = 0;
-	virtual RHICommandBufferPtr CreateCommandBuffer() = 0;
-	// Submit command buffer(s), if bPresent is true, the command buffers will execute after viewport acquired back buffer.
-	virtual void SubmitCommandBuffer(RHICommandBuffer* cmd, RHIFence* fence, bool bPresent) = 0;
-	virtual void SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, RHIFence* fence, bool bPresent) = 0;
+	virtual RHICommandBufferPtr CreateCommandBuffer(EQueueType queue) = 0;
+	// Submit command buffer(s), multi command buffers in one call will execute in parallel.
+	// if bPresent is true, the command buffers will execute after viewport acquired back buffer.
+	virtual void SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, EQueueType queue, RHIFence* fence, bool bPresent) = 0;
 
 	void CaptureFrame();
 protected:
-	friend TUniquePtr<RHI>;
+	friend TDefaultDeleter<RHI>;
 	static TUniquePtr<RHI> s_Instance;
 	RHI() = default;
 	NON_COPYABLE(RHI);

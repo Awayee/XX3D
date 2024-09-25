@@ -7,8 +7,8 @@
 #include "Render/Public/DefaultResource.h"
 
 namespace {
-	IMPLEMENT_GLOBAL_SHADER(SkyBoxVS, "SkyBox.hlsl", "MainVS", SHADER_STAGE_VERTEX_BIT);
-	IMPLEMENT_GLOBAL_SHADER(SkyBoxPS, "SkyBox.hlsl", "MainPS", SHADER_STAGE_PIXEL_BIT);
+	IMPLEMENT_GLOBAL_SHADER(SkyBoxVS, "SkyBox.hlsl", "MainVS", EShaderStageFlags::Vertex);
+	IMPLEMENT_GLOBAL_SHADER(SkyBoxPS, "SkyBox.hlsl", "MainPS", EShaderStageFlags::Pixel);
 }
 
 namespace Object {
@@ -42,16 +42,16 @@ namespace Object {
 		desc.Width = asset.Width;
 		desc.Height = asset.Height;
 		desc.Format = Object::TextureResource::ConvertTextureFormat(asset.Type);
-		desc.Flags = TEXTURE_FLAG_SRV | TEXTURE_FLAG_CPY_DST;
+		desc.Flags = (ETextureFlags::SRV | ETextureFlags::CopyDst);
 		m_CubeMap = RHI::Instance()->CreateTexture(desc);
-		m_CubeMap->UpdateData(asset.Pixels.Size(), asset.Pixels.Data(), {});
+		m_CubeMap->UpdateData(asset.Pixels.Size(), asset.Pixels.Data());
 	}
 
 	void SkyBox::CreateDrawCall(Render::DrawCallQueue& dcQueue) {
 		dcQueue.PushDrawCall([this](RHICommandBuffer* cmd) {
 			cmd->BindGraphicsPipeline(m_PSO);
-			cmd->BindIndexBuffer(m_IndexBuffer, 0);
 			cmd->BindVertexBuffer(m_VertexBuffer, 0, 0);
+			cmd->BindIndexBuffer(m_IndexBuffer, 0);
 			cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(m_Camera->GetBuffer()));
 			RHITexture* cubeTex = m_CubeMap.Get();
 			if(!cubeTex) {
@@ -73,9 +73,9 @@ namespace Object {
 		for(auto& p: meshAsset.Primitives) {
 			m_VertexCount = p.Vertices.Size();
 			m_IndexCount = p.Indices.Size();
-			m_VertexBuffer = RHI::Instance()->CreateBuffer({ BUFFER_FLAG_VERTEX | BUFFER_FLAG_COPY_DST, p.Vertices.ByteSize(), 0 });
+			m_VertexBuffer = RHI::Instance()->CreateBuffer({ EBufferFlags::Vertex | EBufferFlags::CopyDst, p.Vertices.ByteSize(), sizeof(Asset::AssetVertex) });
 			m_VertexBuffer->UpdateData(p.Vertices.Data(), p.Vertices.ByteSize(), 0);
-			m_IndexBuffer = RHI::Instance()->CreateBuffer({ BUFFER_FLAG_INDEX | BUFFER_FLAG_COPY_DST, p.Indices.ByteSize(), 0 });
+			m_IndexBuffer = RHI::Instance()->CreateBuffer({EBufferFlags::Index | EBufferFlags::CopyDst, p.Indices.ByteSize(), sizeof(Asset::IndexType)});
 			m_IndexBuffer->UpdateData(p.Indices.Data(), p.Indices.ByteSize(), 0);
 			break;
 		}
@@ -91,20 +91,20 @@ namespace Object {
 		auto& layout = desc.Layout;
 		layout.Resize(1);
 		layout[0] = {
-			{EBindingType::UniformBuffer, SHADER_STAGE_VERTEX_BIT}, // camera
-			{EBindingType::Texture, SHADER_STAGE_PIXEL_BIT},// cube map
-			{EBindingType::Sampler, SHADER_STAGE_PIXEL_BIT}
+			{EBindingType::UniformBuffer, EShaderStageFlags::Vertex}, // camera
+			{EBindingType::Texture, EShaderStageFlags::Pixel},// cube map
+			{EBindingType::Sampler, EShaderStageFlags::Pixel}
 		};
 		// vertex input
 		auto& vi = desc.VertexInput;
 		vi.Bindings = { {0, sizeof(Asset::AssetVertex), false} };
 		vi.Attributes = {
-			{0, 0, ERHIFormat::R32G32B32_SFLOAT, 0},// position
+			{POSITION, 0, 0, 0, ERHIFormat::R32G32B32_SFLOAT, 0},// position
 		};
 
 		desc.BlendDesc.BlendStates = { {false} };
 		desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Null }; // do not cull
-		desc.DepthStencilState = { true, ECompareType::LessEqual, false };
+		desc.DepthStencilState = { true, true, ECompareType::LessEqual, false };
 		desc.PrimitiveTopology = EPrimitiveTopology::TriangleList;
 		desc.ColorFormats.PushBack(colorFormat);
 		desc.ColorFormats[0] = colorFormat;

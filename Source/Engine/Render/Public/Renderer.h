@@ -12,18 +12,26 @@ namespace Render {
 	};
 
 	class CmdPool: public ICmdAllocator {
+	private:
+		struct CmdArray {
+			TArray<RHICommandBufferPtr> Cmds;
+			TArray<bool> Lifespans;// for gc
+			uint32 AllocIndex{ 0 };
+			EQueueType QueueType{ EQueueType::Graphics };
+			RHICommandBuffer* Get();
+			void Reset();
+			void GC();
+		};
 	public:
 		NON_COPYABLE(CmdPool);
 		NON_MOVEABLE(CmdPool);
 		CmdPool();
 		~CmdPool() override = default;
-		RHICommandBuffer* GetCmd() override;
+		RHICommandBuffer* GetCmd(EQueueType queue) override;
 		void Reset();
 		void GC();
 	private:
-		TArray<RHICommandBufferPtr> m_Cmds;
-		TArray<bool> m_CmdsLifespan;// for gc
-		uint32 m_AllocatedIndex;
+		TStaticArray<CmdArray, EnumCast(EQueueType::Count)> m_CmdArrays;
 	};
 
 	// run rendering process

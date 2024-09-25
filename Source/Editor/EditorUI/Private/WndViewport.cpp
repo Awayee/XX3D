@@ -3,12 +3,11 @@
 #include "Functions/Public/EditorLevelMgr.h"
 #include "Objects/Public/RenderScene.h"
 #include "Objects/Public/Camera.h"
-#include "Objects/Public/DirectionalLight.h"
 #include "Render/Public/DefaultResource.h"
 #include "System/Public/Timer.h"
+#include "Window/Public/EngineWindow.h"
 
 namespace Editor {
-
 
 	void MoveCamera(Object::RenderCamera* camera, float x, float y, float z, bool local) {
 		Math::FVector3 eye = camera->GetView().Eye;
@@ -58,7 +57,7 @@ namespace Editor {
 
 	WndViewport::~WndViewport() {
 		if(m_RenderTargetID) {
-			ImGuiRHI::Instance()->RemoveImGuiTexture(m_RenderTargetID);
+			RHIImGui::Instance()->RemoveImGuiTexture(m_RenderTargetID);
 		}
 	}
 
@@ -81,7 +80,7 @@ namespace Editor {
 		
 		//rotate
 		if (m_MouseDown) {
-			auto pos = ImGui::GetMousePos();
+			auto pos = Engine::EngineWindow::Instance()->GetCursorPos();
 			float x = pos.x, y = pos.y;
 			if (m_LastX == 0.0f && m_LastY == 0.0f) {
 				m_LastX = x;
@@ -90,9 +89,11 @@ namespace Editor {
 			else {
 				float dX = x - m_LastX;
 				float dY = y - m_LastY;
-				RotateCamera(camera, dY, dX, 0.0f, true);
-				m_LastX = x;
-				m_LastY = y;
+				if(!Math::IsNearlyZero(dX) || !Math::IsNearlyZero(dY)) {
+					RotateCamera(camera, dY, dX, 0.0f, true);
+					m_LastX = x;
+					m_LastY = y;
+				}
 			}
 		}
 
@@ -150,17 +151,17 @@ namespace Editor {
 		// check need recreate render target
 		if(!m_RenderTarget || m_RenderTarget->GetDesc().Width != m_ViewportSize.w || m_RenderTarget->GetDesc().Height != m_ViewportSize.h) {
 			if (m_RenderTargetID) {
-				ImGuiRHI::Instance()->RemoveImGuiTexture(m_RenderTargetID);
+				RHIImGui::Instance()->RemoveImGuiTexture(m_RenderTargetID);
 				m_RenderTargetID = nullptr;
 			}
 			RHITextureDesc desc = RHITextureDesc::Texture2D();
 			desc.Width = m_ViewportSize.w;
 			desc.Height = m_ViewportSize.h;
 			desc.Format = RHI::Instance()->GetViewport()->GetBackBufferFormat();
-			desc.Flags = ETextureFlagBit::TEXTURE_FLAG_SRV | ETextureFlagBit::TEXTURE_FLAG_COLOR_TARGET;
+			desc.Flags = ETextureFlags::SRV | ETextureFlags::ColorTarget;
 			m_RenderTarget = RHI::Instance()->CreateTexture(desc);
 			RHISampler* sampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp);
-			m_RenderTargetID = ImGuiRHI::Instance()->RegisterImGuiTexture(m_RenderTarget, sampler);
+			m_RenderTargetID = RHIImGui::Instance()->RegisterImGuiTexture(m_RenderTarget, sampler);
 		}
 		
 		Editor::EditorUIMgr::Instance()->SetSceneTexture(m_RenderTarget);

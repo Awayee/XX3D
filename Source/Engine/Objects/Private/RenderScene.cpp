@@ -7,14 +7,14 @@
 #include "Render/public/DefaultResource.h"
 #include "Render/Public/GlobalShader.h"
 namespace {
-    IMPLEMENT_GLOBAL_SHADER(GBufferVS, "GBuffer.hlsl", "MainVS", SHADER_STAGE_VERTEX_BIT);
-    IMPLEMENT_GLOBAL_SHADER(GBufferPS, "GBuffer.hlsl", "MainPS", SHADER_STAGE_PIXEL_BIT);
+    IMPLEMENT_GLOBAL_SHADER(GBufferVS, "GBuffer.hlsl", "MainVS", EShaderStageFlags::Vertex);
+    IMPLEMENT_GLOBAL_SHADER(GBufferPS, "GBuffer.hlsl", "MainPS", EShaderStageFlags::Pixel);
 
-    IMPLEMENT_GLOBAL_SHADER(DeferredLightingVS, "DeferredLightingPBR.hlsl", "MainVS", SHADER_STAGE_VERTEX_BIT);
-    IMPLEMENT_GLOBAL_SHADER(DeferredLightingPS, "DeferredLightingPBR.hlsl", "MainPS", SHADER_STAGE_PIXEL_BIT);
+    IMPLEMENT_GLOBAL_SHADER(DeferredLightingVS, "DeferredLightingPBR.hlsl", "MainVS", EShaderStageFlags::Vertex);
+    IMPLEMENT_GLOBAL_SHADER(DeferredLightingPS, "DeferredLightingPBR.hlsl", "MainPS", EShaderStageFlags::Pixel);
 
-    IMPLEMENT_GLOBAL_SHADER(SkyBoxVS, "SkyBox.hlsl", "MainVS", SHADER_STAGE_VERTEX_BIT);
-    IMPLEMENT_GLOBAL_SHADER(SkyBoxPS, "SkyBox.hlsl", "MainPS", SHADER_STAGE_PIXEL_BIT);
+    IMPLEMENT_GLOBAL_SHADER(SkyBoxVS, "SkyBox.hlsl", "MainVS", EShaderStageFlags::Vertex);
+    IMPLEMENT_GLOBAL_SHADER(SkyBoxPS, "SkyBox.hlsl", "MainPS", EShaderStageFlags::Pixel);
 }
 
 namespace Object {
@@ -35,10 +35,10 @@ namespace Object {
         for(auto& func: s_RegisterSystems) {
             func(this);
         }
-        // create camera and lights
-        CreateResources();
         // create PSOs
         CreatePSOs();
+        // create camera and lights
+        CreateResources();
     }
 
     RenderScene::~RenderScene() {
@@ -84,16 +84,17 @@ namespace Object {
 
         // copy depth texture
         Render::RGTransferNode* depthCpyNode = rg.CreateTransferNode("CopyDepthToSRV");
-        depthCpyNode->CopyTexture(depthNode, depthSRVNode, {});
+        depthCpyNode->CopyTexture(depthNode, depthSRVNode);
 
         // directional shadow
         RHITexture* directionalShadowMap = m_DirectionalLight->GetShadowMap();
         Render::RGTextureNode* shadowMapNode = rg.CreateTextureNode(directionalShadowMap, "DirectionalShadowMap");
-        const Rect shadowArea = { 0, 0, directionalShadowMap->GetDesc().Width, directionalShadowMap->GetDesc().Height };
+        const auto& dsmDesc = directionalShadowMap->GetDesc();
+        const Rect shadowArea = { 0, 0, dsmDesc.Width, dsmDesc.Height };
         for (uint32 i = 0; i < m_DirectionalLight->GetCascadeNum(); ++i) {
             Render::RGRenderNode* csmNode = rg.CreateRenderNode(StringFormat("CSM%u", i));
             csmNode->SetRenderArea(shadowArea);
-            csmNode->WriteDepthTarget(shadowMapNode, { 0, 1, (uint8)i, 1 });
+            csmNode->WriteDepthTarget(shadowMapNode, dsmDesc.GetSubRes2D((uint16)i, ETextureViewFlags::DepthStencil));
             csmNode->SetTask([this, i](RHICommandBuffer* cmd) {
                 m_DirectionalLight->GetDrawCallQueue(i).Execute(cmd);
             });
@@ -140,10 +141,13 @@ namespace Object {
             cmd->BindGraphicsPipeline(m_DeferredLightingPSO);
             cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(m_Camera->GetBuffer()));
             cmd->SetShaderParam(0, 1, RHIShaderParam::UniformBuffer(m_DirectionalLight->GetUniform()));
-            cmd->SetShaderParam(0, 2, RHIShaderParam::Texture(m_DirectionalLight->GetShadowMap(), ETextureSRVType::Depth));
+            RHITexture* directionalShadowMap = m_DirectionalLight->GetShadowMap();
+            const RHITextureSubRes directionalShadowMapSubRes = directionalShadowMap->GetDesc().GetSubRes2DArray(ETextureViewFlags::Depth);
+            cmd->SetShaderParam(0, 2, RHIShaderParam::Texture(directionalShadowMap, directionalShadowMapSubRes));
             cmd->SetShaderParam(0, 3, RHIShaderParam::Texture(m_GBufferNormal));
             cmd->SetShaderParam(0, 4, RHIShaderParam::Texture(m_GBufferAlbedo));
-            cmd->SetShaderParam(0, 5, RHIShaderParam::Texture(m_DepthSRV, ETextureSRVType::Depth, {}));
+            const RHITextureSubRes depthSrvSubRes = m_Depth->GetDesc().GetSubRes2D(0, ETextureViewFlags::Depth);
+            cmd->SetShaderParam(0, 5, RHIShaderParam::Texture(m_DepthSRV, depthSrvSubRes));
             cmd->SetShaderParam(0, 6, RHIShaderParam::Sampler(Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Point, ESamplerAddressMode::Clamp)));
             cmd->SetShaderParam(0, 7, RHIShaderParam::Sampler(Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp)));
         	cmd->Draw(6, 1, 0, 0);
@@ -164,7 +168,7 @@ namespace Object {
     void RenderScene::CreateTextureResources() {
         RHI* r = RHI::Instance();
         RHITextureDesc desc = RHITextureDesc::Texture2D();
-        desc.Flags = TEXTURE_FLAG_COLOR_TARGET | TEXTURE_FLAG_SRV;
+        desc.Flags = ETextureFlags::ColorTarget | ETextureFlags::SRV;
         desc.Width = m_TargetSize.w;
         desc.Height = m_TargetSize.h;
         desc.Format = s_NormalFormat;
@@ -174,9 +178,11 @@ namespace Object {
         m_GBufferAlbedo = r->CreateTexture(desc);
 
         desc.Format = r->GetDepthFormat();
-        desc.Flags = TEXTURE_FLAG_DEPTH_TARGET | TEXTURE_FLAG_STENCIL | TEXTURE_FLAG_CPY_SRC;
+        desc.Flags = ETextureFlags::DepthStencilTarget | ETextureFlags::CopySrc;
+        desc.ClearValue.DepthStencil = { 1.0f, 0u };
         m_Depth = r->CreateTexture(desc);
-        desc.Flags = TEXTURE_FLAG_DEPTH_TARGET | TEXTURE_FLAG_STENCIL | TEXTURE_FLAG_SRV | TEXTURE_FLAG_CPY_DST;
+        desc.Flags = ETextureFlags::DepthStencilTarget | ETextureFlags::SRV | ETextureFlags::CopyDst;
+        desc.ClearValue.DepthStencil = { 1.0f, 0u };
         m_DepthSRV = r->CreateTexture(desc);
     }
 
@@ -195,28 +201,28 @@ namespace Object {
             auto& layout = desc.Layout;
             layout.Resize(3);
             layout[0] = {
-                {EBindingType::UniformBuffer, SHADER_STAGE_VERTEX_BIT | SHADER_STAGE_PIXEL_BIT},
+                {EBindingType::UniformBuffer, EShaderStageFlags::Vertex | EShaderStageFlags::Pixel},
             };
             layout[1] = {
-                {EBindingType::UniformBuffer, SHADER_STAGE_VERTEX_BIT}
+                {EBindingType::UniformBuffer, EShaderStageFlags::Vertex}
             };
             layout[2] = {
-                {EBindingType::Texture, SHADER_STAGE_PIXEL_BIT},
-                {EBindingType::Sampler, SHADER_STAGE_PIXEL_BIT},
+                {EBindingType::Texture, EShaderStageFlags::Pixel},
+                {EBindingType::Sampler, EShaderStageFlags::Pixel},
             };
             // vertex input
             auto& vi = desc.VertexInput;
             vi.Bindings = { {0, sizeof(Asset::AssetVertex), false} };
             vi.Attributes = {
-                {0, 0, ERHIFormat::R32G32B32_SFLOAT, 0},// position
-                {1, 0, ERHIFormat::R32G32B32_SFLOAT, offsetof(Asset::AssetVertex, Normal)},//normal
-                {2, 0, ERHIFormat::R32G32B32_SFLOAT, offsetof(Asset::AssetVertex, Tangent)},//tangent
-                {3, 0, ERHIFormat::R32G32_SFLOAT, offsetof(Asset::AssetVertex, UV)},// uv
+                {POSITION, 0, 0, 0, ERHIFormat::R32G32B32_SFLOAT, 0},// position
+                {NORMAL, 0, 1, 0, ERHIFormat::R32G32B32_SFLOAT, offsetof(Asset::AssetVertex, Normal)},//normal
+                {TANGENT, 0, 2, 0, ERHIFormat::R32G32B32_SFLOAT, offsetof(Asset::AssetVertex, Tangent)},//tangent
+                {TEXCOORD, 0, 3, 0, ERHIFormat::R32G32_SFLOAT, offsetof(Asset::AssetVertex, UV)},// uv
             };
 
             desc.BlendDesc.BlendStates = { {false}, {false} };
             desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Back };
-            desc.DepthStencilState = { true, ECompareType::Less, false };
+            desc.DepthStencilState = { true, true, ECompareType::Less, false };
             desc.PrimitiveTopology = EPrimitiveTopology::TriangleList;
             desc.ColorFormats.Resize(colorFormats.Size());
             for (uint32 i = 0; i < colorFormats.Size(); ++i) {
@@ -234,19 +240,19 @@ namespace Object {
             auto& layout = desc.Layout;
             layout.Resize(1);
             layout[0] = {
-                {EBindingType::UniformBuffer, SHADER_STAGE_PIXEL_BIT},// camera
-                {EBindingType::UniformBuffer, SHADER_STAGE_PIXEL_BIT},// light uniform
-                {EBindingType::Texture, SHADER_STAGE_PIXEL_BIT}, // shadow map
-                {EBindingType::Texture, SHADER_STAGE_PIXEL_BIT},// normal tex
-                {EBindingType::Texture, SHADER_STAGE_PIXEL_BIT},// albedo tex
-                {EBindingType::Texture, SHADER_STAGE_PIXEL_BIT},// depth tex
-                {EBindingType::Sampler, SHADER_STAGE_PIXEL_BIT},// point sampler
-                {EBindingType::Sampler, SHADER_STAGE_PIXEL_BIT},// linear sampler
+                {EBindingType::UniformBuffer, EShaderStageFlags::Pixel},// camera
+                {EBindingType::UniformBuffer, EShaderStageFlags::Pixel},// light uniform
+                {EBindingType::Texture, EShaderStageFlags::Pixel}, // shadow map
+                {EBindingType::Texture, EShaderStageFlags::Pixel},// normal tex
+                {EBindingType::Texture, EShaderStageFlags::Pixel},// albedo tex
+                {EBindingType::Texture, EShaderStageFlags::Pixel},// depth tex
+                {EBindingType::Sampler, EShaderStageFlags::Pixel},// point sampler
+                {EBindingType::Sampler, EShaderStageFlags::Pixel},// linear sampler
             };
             desc.VertexInput = {};
             desc.BlendDesc.BlendStates = { {false} };
             desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Back };
-            desc.DepthStencilState = { false, ECompareType::Always, false };
+            desc.DepthStencilState = { false, false, ECompareType::Always, false };
             desc.PrimitiveTopology = EPrimitiveTopology::TriangleList;
             desc.ColorFormats.PushBack(colorFormat);
             desc.DepthStencilFormat = RHI::Instance()->GetDepthFormat();

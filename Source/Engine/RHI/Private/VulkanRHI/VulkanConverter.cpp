@@ -54,42 +54,42 @@ VkFormat ToVkFormat(ERHIFormat f) {
 
  VkBufferUsageFlags ToBufferUsage(EBufferFlags flags) {
 	VkBufferUsageFlags usage {0};
-	if (flags & EBufferFlagBit::BUFFER_FLAG_COPY_SRC) {
+	if (EnumHasAnyFlags(flags, EBufferFlags::CopySrc)) {
 		usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 	}
-	if (flags & EBufferFlagBit::BUFFER_FLAG_COPY_DST) {
+	if (EnumHasAnyFlags(flags, EBufferFlags::CopyDst)) {
 		usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 	}
-	if (flags & EBufferFlagBit::BUFFER_FLAG_UNIFORM) {
+	if (EnumHasAnyFlags(flags, EBufferFlags::Uniform)) {
 		usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 	}
-	if (flags & EBufferFlagBit::BUFFER_FLAG_INDEX) {
+	if (EnumHasAnyFlags(flags, EBufferFlags::Index)) {
 		usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 	}
-	if (flags & EBufferFlagBit::BUFFER_FLAG_VERTEX) {
+	if (EnumHasAnyFlags(flags, EBufferFlags::Vertex)) {
 		usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 	}
-	if (flags & EBufferFlagBit::BUFFER_FLAG_STORAGE) {
+	if (EnumHasAnyFlags(flags, EBufferFlags::Storage)) {
 		usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 	}
-	if (flags & EBufferFlagBit::BUFFER_FLAG_INDIRECT) {
+	if (EnumHasAnyFlags(flags, EBufferFlags::IndirectDraw)) {
 		usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
 	}
 	return usage;
 }
 
  VkMemoryPropertyFlags ToBufferMemoryProperty(EBufferFlags flags) {
-	if (flags & (EBufferFlagBit::BUFFER_FLAG_COPY_SRC | EBufferFlagBit::BUFFER_FLAG_UNIFORM | EBufferFlagBit::BUFFER_FLAG_STORAGE)) {
+	if (EnumHasAnyFlags(flags, EBufferFlags::CopySrc | EBufferFlags::Uniform | EBufferFlags::Storage)) {
 		return VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 	}
-	if (flags & (EBufferFlagBit::BUFFER_FLAG_INDEX | EBufferFlagBit::BUFFER_FLAG_VERTEX)) {
+	if (EnumHasAnyFlags(flags, EBufferFlags::Index | EBufferFlags::Vertex)) {
 		return VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 	}
 	return 0;
 }
 
  VkMemoryPropertyFlags ToImageMemoryProperty(ETextureFlags flags) {
-	//if (flags & (ETextureFlagBit::TEXTURE_USAGE_CPY_SRC)) {
+	//if (flags & (ETextureFlags::TEXTURE_USAGE_CPY_SRC)) {
 	//	return VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 	//}
 	return VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
@@ -130,48 +130,48 @@ VkImageViewType ToImageViewType(ETextureDimension dimension) {
 
  VkImageUsageFlags ToImageUsage(ETextureFlags flags) {
 	VkImageUsageFlags vkFlags = 0;
-	if (flags & (ETextureFlagBit::TEXTURE_FLAG_DEPTH_TARGET | ETextureFlagBit::TEXTURE_FLAG_STENCIL)) {
+	if (EnumHasAnyFlags(flags, ETextureFlags::DepthStencilTarget)) {
 		vkFlags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 	}
-	if (flags & ETextureFlagBit::TEXTURE_FLAG_COLOR_TARGET) {
+	if (EnumHasAnyFlags(flags, ETextureFlags::ColorTarget)) {
 		vkFlags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	}
-	if (flags & ETextureFlagBit::TEXTURE_FLAG_SRV) {
+	if (EnumHasAnyFlags(flags, ETextureFlags::SRV)) {
 		vkFlags |= VK_IMAGE_USAGE_SAMPLED_BIT;
 	}
-	if (flags & ETextureFlagBit::TEXTURE_FLAG_CPY_DST) {
+	if (EnumHasAnyFlags(flags, ETextureFlags::CopyDst)) {
 		vkFlags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	}
-	if (flags & ETextureFlagBit::TEXTURE_FLAG_CPY_SRC) {
+	if (EnumHasAnyFlags(flags, ETextureFlags::CopySrc)) {
 		vkFlags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 	}
-	if (flags & ETextureFlagBit::TEXTURE_FLAG_UAV) {
+	if (EnumHasAnyFlags(flags, ETextureFlags::UAV)) {
 		vkFlags |= VK_IMAGE_USAGE_STORAGE_BIT;
 	}
-	if (flags & ETextureFlagBit::TEXTURE_FLAG_PRESENT) {
+	if (EnumHasAnyFlags(flags, ETextureFlags::Present)) {
 	}
 	return vkFlags;
 }
 
- VkImageAspectFlags ToImageAspectFlags(ETextureFlags flags) {
+VkImageAspectFlags ToImageAspectFlags(ETextureViewFlags flags) {
 	VkImageAspectFlags vkFlags = 0;
-	if (flags & (ETextureFlagBit::TEXTURE_FLAG_SRV | ETextureFlagBit::TEXTURE_FLAG_COLOR_TARGET | ETextureFlagBit::TEXTURE_FLAG_PRESENT)) {
+	if (EnumHasAnyFlags(flags, ETextureViewFlags::Color)) {
 		vkFlags |= VK_IMAGE_ASPECT_COLOR_BIT;
 	}
-	if (flags & ETextureFlagBit::TEXTURE_FLAG_DEPTH_TARGET) {
+	if (EnumHasAnyFlags(flags, ETextureViewFlags::Depth)) {
 		vkFlags |= VK_IMAGE_ASPECT_DEPTH_BIT;
 		vkFlags &= (~VK_IMAGE_ASPECT_COLOR_BIT);
 	}
-	if (flags & ETextureFlagBit::TEXTURE_FLAG_STENCIL) {
+	if (EnumHasAnyFlags(flags, ETextureViewFlags::Stencil)) {
 		vkFlags |= VK_IMAGE_ASPECT_STENCIL_BIT;
 	}
-	if (flags & ETextureFlagBit::TEXTURE_FLAG_UAV) {
+	if (EnumHasAnyFlags(flags, ETextureViewFlags::MetaData)) {
 		vkFlags |= VK_IMAGE_ASPECT_METADATA_BIT;
 	}
 	return vkFlags;
 }
 
- VkFilter ToFilter(ESamplerFilter filter) {
+VkFilter ToFilter(ESamplerFilter filter) {
 	if (filter == ESamplerFilter::Bilinear || filter == ESamplerFilter::Trilinear || filter == ESamplerFilter::AnisotropicLinear) {
 		return VK_FILTER_LINEAR;
 	}
@@ -188,28 +188,28 @@ VkImageViewType ToImageViewType(ETextureDimension dimension) {
 	}
 }
 
- VkShaderStageFlagBits ToVkShaderStageFlagBit(EShaderStageFlagBit type) {
+ VkShaderStageFlagBits ToVkShaderStageFlagBit(EShaderStageFlags type) {
 	switch (type) {
-	case EShaderStageFlagBit::SHADER_STAGE_COMPUTE_BIT: return VK_SHADER_STAGE_COMPUTE_BIT;
-	case EShaderStageFlagBit::SHADER_STAGE_VERTEX_BIT: return VK_SHADER_STAGE_VERTEX_BIT;
-	case EShaderStageFlagBit::SHADER_STAGE_GEOMETRY_BIT: return VK_SHADER_STAGE_GEOMETRY_BIT;
-	case EShaderStageFlagBit::SHADER_STAGE_PIXEL_BIT: return VK_SHADER_STAGE_FRAGMENT_BIT;
+	case EShaderStageFlags::Compute: return VK_SHADER_STAGE_COMPUTE_BIT;
+	case EShaderStageFlags::Vertex: return VK_SHADER_STAGE_VERTEX_BIT;
+	case EShaderStageFlags::Geometry: return VK_SHADER_STAGE_GEOMETRY_BIT;
+	case EShaderStageFlags::Pixel: return VK_SHADER_STAGE_FRAGMENT_BIT;
 	}
 	return VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
 }
 
 VkShaderStageFlags ToVkShaderStageFlags(EShaderStageFlags flags) {
 	VkShaderStageFlags vkFlags = 0;
-	if(flags & EShaderStageFlagBit::SHADER_STAGE_COMPUTE_BIT) {
+	if(EnumHasAnyFlags(flags, EShaderStageFlags::Compute)) {
 		vkFlags |= VK_SHADER_STAGE_COMPUTE_BIT;
 	}
-	if(flags & EShaderStageFlagBit::SHADER_STAGE_VERTEX_BIT ) {
+	if(EnumHasAnyFlags(flags, EShaderStageFlags::Vertex)) {
 		vkFlags |= VK_SHADER_STAGE_VERTEX_BIT;
 	}
-	if(flags & EShaderStageFlagBit::SHADER_STAGE_GEOMETRY_BIT) {
+	if(EnumHasAnyFlags(flags, EShaderStageFlags::Geometry)) {
 		vkFlags |= VK_SHADER_STAGE_GEOMETRY_BIT;
 	}
-	if(flags & EShaderStageFlagBit::SHADER_STAGE_PIXEL_BIT) {
+	if(EnumHasAnyFlags(flags, EShaderStageFlags::Pixel)) {
 		vkFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
 	}
 	return vkFlags;
@@ -219,7 +219,6 @@ VkDescriptorType ToVkDescriptorType(EBindingType type) {
 	switch (type) {
 	case EBindingType::Texture: return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 	case EBindingType::Sampler: return VK_DESCRIPTOR_TYPE_SAMPLER;
-	case EBindingType::TextureSampler: return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	case EBindingType::StorageTexture: return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 	case EBindingType::UniformBuffer: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	case EBindingType::StorageBuffer: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -304,8 +303,6 @@ VkDescriptorType ToVkDescriptorType(EBindingType type) {
 	state.passOp = ToVkStencilOp(desc.PassOp);
 	state.depthFailOp = ToVkStencilOp(desc.DepthFailOp);
 	state.compareOp = ToVkCompareOp(desc.CompareType);
-	state.compareMask = desc.ReadMask;
-	state.writeMask = desc.WriteMask;
 	state.reference = 0;
 	return state;
 }
@@ -322,6 +319,7 @@ VkPipelineRasterizationStateCreateInfo ToRasterizationStateCreateInfo(const RHIR
 	if (info.depthBiasEnable) {
 		info.depthBiasConstantFactor = desc.DepthBiasConstant;
 		info.depthBiasSlopeFactor = desc.DepthBiasSlope;
+		info.depthBiasClamp = desc.DepthBiasClamp;
 	}
 	info.lineWidth = 1.0f;
 	return info;
@@ -329,14 +327,18 @@ VkPipelineRasterizationStateCreateInfo ToRasterizationStateCreateInfo(const RHIR
 
 VkPipelineDepthStencilStateCreateInfo ToDepthStencilStateCreateInfo(const RHIDepthStencilState& desc) {
 	VkPipelineDepthStencilStateCreateInfo info{ VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO, nullptr, 0 };
-	info.depthTestEnable = ECompareType::Always != desc.DepthCompare;
+	info.depthTestEnable = desc.DepthTest;
 	info.depthWriteEnable = desc.DepthWrite;
 	info.depthCompareOp = ToVkCompareOp(desc.DepthCompare);
 	info.depthBoundsTestEnable = false;
 	info.stencilTestEnable = desc.StencilTest;
 	if (info.stencilTestEnable) {
 		info.front = ToVkStencilOpState(desc.FrontStencil);
+		info.front.compareMask = desc.StencilReadMask;
+		info.front.writeMask = desc.StencilReadMask;
 		info.back = ToVkStencilOpState(desc.BackStencil);
+		info.back.compareMask = desc.StencilReadMask;
+		info.back.writeMask = desc.StencilReadMask;
 	}
 	return info;
 }
@@ -352,7 +354,24 @@ VkPipelineDepthStencilStateCreateInfo ToDepthStencilStateCreateInfo(const RHIDep
 	return VK_BLEND_OP_MAX_ENUM;
 }
 
- VkBlendFactor ToBlendFactor(EBlendFactor factor) {
+VkColorComponentFlags ToVkColorComponentFlags(EColorComponentFlags flags) {
+	VkColorComponentFlags dstFlags = 0;
+	if (EnumHasAnyFlags(flags, EColorComponentFlags::R)) {
+		dstFlags |= VK_COLOR_COMPONENT_R_BIT;
+	}
+	if (EnumHasAnyFlags(flags, EColorComponentFlags::G)) {
+		dstFlags |= VK_COLOR_COMPONENT_G_BIT;
+	}
+	if (EnumHasAnyFlags(flags, EColorComponentFlags::B)) {
+		dstFlags |= VK_COLOR_COMPONENT_B_BIT;
+	}
+	if (EnumHasAnyFlags(flags, EColorComponentFlags::A)) {
+		dstFlags |= VK_COLOR_COMPONENT_A_BIT;
+	}
+	return dstFlags;
+}
+
+VkBlendFactor ToBlendFactor(EBlendFactor factor) {
 	switch(factor) {
 	case EBlendFactor::Zero: return VK_BLEND_FACTOR_ZERO;
 	case EBlendFactor::One: return VK_BLEND_FACTOR_ONE;
@@ -381,7 +400,7 @@ VkPipelineDepthStencilStateCreateInfo ToDepthStencilStateCreateInfo(const RHIDep
 	state.srcAlphaBlendFactor = ToBlendFactor(blendState.AlphaSrc);
 	state.dstAlphaBlendFactor = ToBlendFactor(blendState.AlphaDst);
 	state.alphaBlendOp = ToVkBlendOp(blendState.AlphaBlendOp);
-	state.colorWriteMask = blendState.ColorWriteMask;
+	state.colorWriteMask = ToVkColorComponentFlags(blendState.ColorWriteMask);
 	return state;
 }
 
@@ -424,18 +443,61 @@ VkPipelineDepthStencilStateCreateInfo ToDepthStencilStateCreateInfo(const RHIDep
 	return VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
-uint32 ConvertImageArraySize(const RHITextureDesc& desc) {
-	switch (desc.Dimension) {
+VkIndexType ToIndexType(ERHIFormat format) {
+	switch (format) {
+	case ERHIFormat::R16_UINT: return VK_INDEX_TYPE_UINT16;
+	case ERHIFormat::R32_UINT: return VK_INDEX_TYPE_UINT32;
+	case ERHIFormat::R8_UINT:  return VK_INDEX_TYPE_UINT8_KHR;
+	default: return VK_INDEX_TYPE_NONE_KHR;
+	}
+}
+
+VkLogicOp ToVkLogicOp(ELogicOp op) {
+	switch(op) {
+	case ELogicOp::Clear: return VK_LOGIC_OP_CLEAR;
+	case ELogicOp::And: return VK_LOGIC_OP_AND;
+	case ELogicOp::AndReverse: return VK_LOGIC_OP_AND_REVERSE;
+	case ELogicOp::Copy: return VK_LOGIC_OP_COPY;
+	case ELogicOp::AndInverted : return VK_LOGIC_OP_AND_INVERTED;
+	case ELogicOp::NoOp : return VK_LOGIC_OP_NO_OP;
+	case ELogicOp::XOr: return VK_LOGIC_OP_XOR;
+	case ELogicOp::Or: return VK_LOGIC_OP_OR;
+	case ELogicOp::NOr: return VK_LOGIC_OP_NOR;
+	case ELogicOp::Equivalent: return VK_LOGIC_OP_EQUIVALENT;
+	case ELogicOp::Invert: return VK_LOGIC_OP_INVERT;
+	case ELogicOp::OrReverse: return VK_LOGIC_OP_OR_REVERSE;
+	case ELogicOp::CopyInverted: return VK_LOGIC_OP_COPY_INVERTED;
+	case ELogicOp::OrInverted: return VK_LOGIC_OP_OR_INVERTED;
+	case ELogicOp::NAnd: return VK_LOGIC_OP_NAND;
+	case ELogicOp::Set: return VK_LOGIC_OP_SET;
+	default: return VK_LOGIC_OP_MAX_ENUM;
+	}
+}
+
+uint32 GetImagePerLayerSize(ETextureDimension dimension) {
+	switch (dimension) {
 	case ETextureDimension::Tex2D:
 	case ETextureDimension::Tex3D:
-		return 1;
-	case ETextureDimension::Tex2DArray:
-		return desc.ArraySize;
+	case ETextureDimension::Tex2DArray: return 1;
 	case ETextureDimension::TexCube:
-		return 6;
-	case ETextureDimension::TexCubeArray:
-		return 6 * desc.ArraySize;
-	default:
-		return 0;
+	case ETextureDimension::TexCubeArray: return 6;
+	default: return 1;
 	}
+}
+
+void ToImageSubResourceLayers(RHITextureSubRes subRes, VkImageSubresourceLayers& out) {
+	out.aspectMask = ToImageAspectFlags(subRes.ViewFlags);
+	out.mipLevel = subRes.MipIndex;
+	const uint32 perLayerSize = GetImagePerLayerSize(subRes.Dimension);
+	out.baseArrayLayer = subRes.ArrayIndex * perLayerSize;
+	out.layerCount = subRes.ArraySize * perLayerSize;
+}
+
+void ToImageSubResourceRange(RHITextureSubRes subRes, VkImageSubresourceRange& out) {
+	out.aspectMask = ToImageAspectFlags(subRes.ViewFlags);
+	out.baseMipLevel = subRes.MipIndex;
+	out.levelCount = subRes.MipSize;
+	const uint32 perLayerSize = GetImagePerLayerSize(subRes.Dimension);
+	out.baseArrayLayer = subRes.ArrayIndex * perLayerSize;
+	out.layerCount = subRes.ArraySize * perLayerSize;
 }

@@ -16,7 +16,7 @@ namespace Render {
 		RGNode::Connect(node, this);
 	}
 
-	void RGRenderNode::ReadColorTarget(RGTextureNode* node, uint32 i, RHITextureSubDesc subRes) {
+	void RGRenderNode::ReadColorTarget(RGTextureNode* node, uint32 i, RHITextureSubRes subRes) {
 		ASSERT(i < RHI_COLOR_TARGET_MAX, "Color target index out of range!");
 		const uint8 subResIdx = node->RegisterSubRes(subRes);
 		m_ColorTargets[i] = { node, subRes, subResIdx, ERTLoadOption::Load };
@@ -24,24 +24,40 @@ namespace Render {
 		RGNode::Connect(node, this);
 	}
 
-	void RGRenderNode::ReadDepthTarget(RGTextureNode* node, RHITextureSubDesc subRes) {
-		const uint8 subResIdx = node->RegisterSubRes(subRes);
-		m_DepthTarget = { node, subRes, subResIdx, ERTLoadOption::Load };
-		node->SetTargetState(EResourceState::DepthStencil);
-		RGNode::Connect(node, this);
+	void RGRenderNode::ReadColorTarget(RGTextureNode* node, uint32 i) {
+		ReadColorTarget(node, i, node->GetDesc().GetDefaultSubRes());
 	}
 
-	void RGRenderNode::WriteColorTarget(RGTextureNode* node, uint32 i, RHITextureSubDesc subRes) {
+	void RGRenderNode::WriteColorTarget(RGTextureNode* node, uint32 i, RHITextureSubRes subRes) {
 		ASSERT(i < RHI_COLOR_TARGET_MAX, "Color target index out of range!");
 		const uint8 subResIdx = node->RegisterSubRes(subRes);
 		m_ColorTargets[i] = {node, subRes, subResIdx, ERTLoadOption::Clear};
 		RGNode::Connect(this, node);
 	}
 
-	void RGRenderNode::WriteDepthTarget(RGTextureNode* node, RHITextureSubDesc subRes) {
+	void RGRenderNode::WriteColorTarget(RGTextureNode* node, uint32 i) {
+		WriteColorTarget(node, i, node->GetDesc().GetDefaultSubRes());
+	}
+
+	void RGRenderNode::ReadDepthTarget(RGTextureNode* node, RHITextureSubRes subRes) {
+		const uint8 subResIdx = node->RegisterSubRes(subRes);
+		m_DepthTarget = { node, subRes, subResIdx, ERTLoadOption::Load };
+		node->SetTargetState(EResourceState::DepthStencil);
+		RGNode::Connect(node, this);
+	}
+
+	void RGRenderNode::ReadDepthTarget(RGTextureNode* node) {
+		ReadDepthTarget(node, node->GetDesc().GetDefaultSubRes());
+	}
+
+	void RGRenderNode::WriteDepthTarget(RGTextureNode* node, RHITextureSubRes subRes) {
 		const uint8 subResIdx = node->RegisterSubRes(subRes);
 		m_DepthTarget = { node, subRes, subResIdx, ERTLoadOption::Clear };
 		RGNode::Connect(this, node);
+	}
+
+	void RGRenderNode::WriteDepthTarget(RGTextureNode* node) {
+		WriteDepthTarget(node, node->GetDesc().GetDefaultSubRes());
 	}
 
 	void RGRenderNode::SetRenderArea(const Rect& rect) {
@@ -49,8 +65,7 @@ namespace Render {
 	}
 
 	void RGRenderNode::Run(ICmdAllocator* cmdAlloc) {
-		RHICommandBuffer* cmd = cmdAlloc->GetCmd();
-		cmd->Reset();
+		RHICommandBuffer* cmd = cmdAlloc->GetCmd(EQueueType::Graphics);
 		if (!m_Name.empty()) {
 			cmd->BeginDebugLabel(m_Name.c_str(), nullptr);
 		}
@@ -116,7 +131,7 @@ namespace Render {
 		if (!m_Name.empty()) {
 			cmd->EndDebugLabel();
 		}
-		RHI::Instance()->SubmitCommandBuffer(cmd, m_Fence, bPresent);
+		RHI::Instance()->SubmitCommandBuffers(cmd, EQueueType::Graphics, m_Fence, bPresent);
 	}
 
 	void RGComputeNode::ReadSRV(RGTextureNode* node) {
@@ -132,8 +147,7 @@ namespace Render {
 	}
 
 	void RGComputeNode::Run(ICmdAllocator* cmdAlloc) {
-		RHICommandBuffer* cmd = cmdAlloc->GetCmd();
-		cmd->Reset();
+		RHICommandBuffer* cmd = cmdAlloc->GetCmd(EQueueType::Compute);
 		if (!m_Name.empty()) {
 			cmd->BeginDebugLabel(m_Name.c_str(), nullptr);
 		}
@@ -161,10 +175,10 @@ namespace Render {
 		if (!m_Name.empty()) {
 			cmd->EndDebugLabel();
 		}
-		RHI::Instance()->SubmitCommandBuffer(cmd, m_Fence, false);
+		RHI::Instance()->SubmitCommandBuffers(cmd, EQueueType::Compute, m_Fence, false);
 	}
 
-	void RGTransferNode::CopyTexture(RGTextureNode* src, RGTextureNode* dst, RHITextureSubDesc subRes) {
+	void RGTransferNode::CopyTexture(RGTextureNode* src, RGTextureNode* dst, RHITextureSubRes subRes) {
 		auto& cpyPair = m_Cpy.EmplaceBack();
 		cpyPair.Src = src;
 		cpyPair.Dst = dst;
@@ -178,9 +192,12 @@ namespace Render {
 		RGNode::Connect(this, dst);
 	}
 
+	void RGTransferNode::CopyTexture(RGTextureNode* src, RGTextureNode* dst) {
+		CopyTexture(src, dst, src->GetDesc().GetDefaultSubRes());
+	}
+
 	void RGTransferNode::Run(ICmdAllocator* cmdAlloc) {
-		RHICommandBuffer* cmd = cmdAlloc->GetCmd();
-		cmd->Reset();
+		RHICommandBuffer* cmd = cmdAlloc->GetCmd(EQueueType::Graphics); // TODO Transfer queue is preferred
 		if(!m_Name.empty()) {
 			cmd->BeginDebugLabel(m_Name.c_str(), nullptr);
 		}
@@ -189,8 +206,8 @@ namespace Render {
 			cpyPair.Src->TransitionToState(cmd, EResourceState::TransferSrc, cpyPair.SrcSubResIndex);
 			cpyPair.Dst->TransitionToState(cmd, EResourceState::TransferDst, cpyPair.DstSubResIndex);
 			RHITextureCopyRegion region{};
-			region.SrcSub = { cpyPair.SubRes.MipIndex, cpyPair.SubRes.ArrayIndex, {0,0,0} };
-			region.DstSub = region.SrcSub;
+			region.DstSubRes = region.SrcSubRes = cpyPair.SubRes;
+			region.SrcOffset = region.DstOffset = { 0, 0, 0 };
 			region.Extent = { cpyPair.CpySize.w, cpyPair.CpySize.h, 1 };
 			cmd->CopyTextureToTexture(cpyPair.Src->GetRHI(), cpyPair.Dst->GetRHI(), region);
 			cpyPair.Src->TransitionToTargetState(cmd, cpyPair.SrcSubResIndex);
@@ -199,7 +216,7 @@ namespace Render {
 		if (!m_Name.empty()) {
 			cmd->EndDebugLabel();
 		}
-		RHI::Instance()->SubmitCommandBuffer(cmd, m_Fence, false);
+		RHI::Instance()->SubmitCommandBuffers(cmd, EQueueType::Graphics, m_Fence, false);
 	}
 
 	void RGPresentNode::SetPrevNode(RGTextureNode* node) {
@@ -228,7 +245,7 @@ namespace Render {
 		return m_RHI;
 	}
 
-	uint8 RGTextureNode::RegisterSubRes(RHITextureSubDesc subRes) {
+	uint8 RGTextureNode::RegisterSubRes(RHITextureSubRes subRes) {
 		for(uint32 i=0; i< m_SubResStates.Size(); ++i) {
 			if(m_SubResStates[i].SubRes == subRes) {
 				return (uint8)i;
@@ -248,7 +265,7 @@ namespace Render {
 
 	void RGTextureNode::TransitionToState(RHICommandBuffer* cmd, EResourceState dstState) {
 		if(dstState != EResourceState::Unknown && m_TargetState != dstState) {
-			cmd->TransitionTextureState(m_RHI, m_CurrentState, dstState, m_RHI->GetDefaultSubRes());
+			cmd->TransitionTextureState(m_RHI, m_CurrentState, dstState, m_Desc.GetDefaultSubRes());
 			m_CurrentState = dstState;
 		}
 	}
