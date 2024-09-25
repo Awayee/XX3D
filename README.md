@@ -4,7 +4,7 @@ A 3D game engine with editor and runtime mode, for high quality graphics, powerf
 Suported core features:
 - Math lib
 - Asset management
-- RHI (vulkan only)
+- RHI (vulkan and D3D12)
 - Shader compiler
 - Render graph(or "frame graph")
 
@@ -15,7 +15,6 @@ Supported function features:
 - Sky box
 
 Future:
-- Integrate with D3D12 in RHI
 - Task graph
 - Memory management
 - Support script
