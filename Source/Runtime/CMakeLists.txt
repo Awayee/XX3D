@@ -22,6 +22,7 @@ set(COPY_DLLS
     ${THIRD_PARTY}/DirectXShaderCompiler/bin/x64/dxcompiler.dll
     ${THIRD_PARTY}/DirectXShaderCompiler/bin/x64/dxil.dll
     ${THIRD_PARTY}/zlib/lib/zlib.dll
+    ${THIRD_PARTY}/WinPixEventRuntime/bin/x64/WinPixEventRuntime.dll
 )
 foreach(COPY_DLL ${COPY_DLLS})
     add_custom_command(TARGET ${TARGET_NAME}

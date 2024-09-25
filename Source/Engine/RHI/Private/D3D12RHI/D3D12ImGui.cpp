@@ -53,17 +53,18 @@ void D3D12ImGui::FrameEnd() {
 void D3D12ImGui::RenderDrawData(RHICommandBuffer* cmd) {
 	ImGui::Render();
 	ID3D12GraphicsCommandList* d3d12Cmd = ((D3D12CommandList*)cmd)->GetD3D12Ptr();
-
-	// collect heaps
-	TSet<uint32> heapIndicesSet;
-	for(auto&[texID, handle]: m_ImTextureDescriptorMap) {
-		heapIndicesSet.insert(handle.HeapIndex);
+	if(!m_ImTextureDescriptorMap.empty()) {
+		// collect heaps
+		TSet<uint32> heapIndicesSet;
+		for (auto& [texID, handle] : m_ImTextureDescriptorMap) {
+			heapIndicesSet.insert(handle.HeapIndex);
+		}
+		TArray<ID3D12DescriptorHeap*> heaps;
+		for (const uint32 heapIndex : heapIndicesSet) {
+			heaps.PushBack(m_DescriptorAllocator->GetHeap(heapIndex));
+		}
+		d3d12Cmd->SetDescriptorHeaps(heaps.Size(), heaps.Data());
 	}
-	TArray<ID3D12DescriptorHeap*> heaps;
-	for(const uint32 heapIndex: heapIndicesSet) {
-		heaps.PushBack(m_DescriptorAllocator->GetHeap(heapIndex));
-	}
-	d3d12Cmd->SetDescriptorHeaps(heaps.Size(), heaps.Data());
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), d3d12Cmd);
 }
 
