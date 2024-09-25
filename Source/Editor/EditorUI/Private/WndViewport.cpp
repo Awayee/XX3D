@@ -65,21 +65,19 @@ namespace Editor {
 		if(!ImGui::IsWindowFocused()) {
 			return;
 		}
-		ImGuiMouseButton btn = ImGuiMouseButton_Right;
-		if (ImGui::IsMouseClicked(btn)) {
-			auto pos = ImGui::GetMousePos();
-			m_LastX = pos.x;
-			m_LastY = pos.y;
-			m_MouseDown = true;
-		}
-		if (ImGui::IsMouseReleased(btn)) {
-			m_MouseDown = false;
-			m_LastX = 0.0f;
-			m_LastY = 0.0f;
-		}
+
+		Engine::EngineWindow* window = Engine::EngineWindow::Instance();
 		
 		//rotate
-		if (m_MouseDown) {
+		if(window->IsMouseDown(Engine::EBtn::Right)) {
+			// firstly pressed, record mouse position
+			if(!m_MouseDown) {
+				const FOffset2D pos = window->GetCursorPos();
+				m_LastX = pos.x;
+				m_LastY = pos.y;
+				m_MouseDown = true;
+			}
+			// rotate camera
 			auto pos = Engine::EngineWindow::Instance()->GetCursorPos();
 			float x = pos.x, y = pos.y;
 			if (m_LastX == 0.0f && m_LastY == 0.0f) {
@@ -96,12 +94,18 @@ namespace Editor {
 				}
 			}
 		}
+		else if(m_MouseDown){
+			// mouse released
+			m_LastX = 0.0f;
+			m_LastY = 0.0f;
+			m_MouseDown = false;
+		}
 
 		//move
 		{
-			int x = ImGui::IsKeyDown(ImGuiKey_D) - ImGui::IsKeyDown(ImGuiKey_A);
-			int z = ImGui::IsKeyDown(ImGuiKey_W) - ImGui::IsKeyDown(ImGuiKey_S);
-			int y = ImGui::IsKeyDown(ImGuiKey_E) - ImGui::IsKeyDown(ImGuiKey_Q);
+			int x = (int)window->IsKeyDown(Engine::EKey::D) - (int)window->IsKeyDown(Engine::EKey::A);
+			int z = (int)window->IsKeyDown(Engine::EKey::W) - (int)window->IsKeyDown(Engine::EKey::S);
+			int y = (int)window->IsKeyDown(Engine::EKey::E) - (int)window->IsKeyDown(Engine::EKey::Q);
 			if (x || y || z) {
 				MoveCamera(camera, (float)x * 0.004f, (float)y * 0.004f, (float)z * 0.004f, true);
 			}

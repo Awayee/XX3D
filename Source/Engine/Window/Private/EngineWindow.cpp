@@ -37,4 +37,32 @@ namespace Engine {
 	EngineWindow* EngineWindow::Instance() {
 		return s_Instance.Get();
 	}
+
+	void EngineWindow::RegisterOnKeyFunc(OnKeyFunc&& func) {
+		m_OnKeyFunc.PushBack(MoveTemp(func));
+	}
+
+	void EngineWindow::RegisterOnMouseButtonFunc(OnMouseButtonFunc&& func) {
+		m_OnMouseButtonFunc.PushBack(MoveTemp(func));
+	}
+
+	void EngineWindow::RegisterOnCursorPosFunc(OnCursorPosFunc&& func) {
+		m_OnCursorPosFunc.PushBack(MoveTemp(func));
+	}
+
+	void EngineWindow::RegisterOnScrollFunc(OnScrollFunc&& func) {
+		m_OnScrollFunc.PushBack(MoveTemp(func));
+	}
+
+	void EngineWindow::RegisterOnWindowSizeFunc(OnWindowSizeFunc&& func) {
+		m_OnWindowSizeFunc.PushBack(MoveTemp(func));
+	}
+
+	void EngineWindow::RegisterOnWindowFocusFunc(OnWindowFocus&& func) {
+		m_OnWindowFocusFunc.PushBack(MoveTemp(func));
+	}
+
+	void EngineWindow::RegisterOnDropFunc(OnDropFunc&& func) {
+		m_OnDropFunc.PushBack(MoveTemp(func));
+	}
 }

@@ -268,6 +268,164 @@ private:
 	T m_Data[L];
 };
 
+template<uint32 L>
+class TStaticArray<bool, L> {
+	static constexpr uint32 BYTE = 8;
+	static constexpr uint32 BYTE_SIZE = (L + BYTE - 1) / BYTE;
+	static constexpr uint8 BYTE_BIT_MAX = 1 << 7;
+public:
+	struct BitReference {
+		uint8* BytePtr;
+		const uint8 Mask;
+		operator bool() const {
+			return !!((*BytePtr) & Mask);
+		}
+		BitReference& operator=(bool val) {
+			*BytePtr = val ? ((*BytePtr) | Mask) : ((*BytePtr) & (~Mask));
+			return *this;
+		}
+		BitReference& operator=(const BitReference& rhs) {
+			if(this == &rhs) {
+				return *this;
+			}
+			return operator=((bool)rhs);
+		}
+		bool operator==(const BitReference& rhs) const {
+			return (bool)*this == (bool)rhs;
+		}
+	};
+	struct BitIterator {
+		uint8* BytePtr;
+		uint8  Mask;
+		BitReference operator*() {
+			return BitReference{ BytePtr, Mask };
+		}
+		void operator++() {
+			if(Mask == BYTE_BIT_MAX) {
+				++BytePtr;
+				Mask = 1;
+			}
+			else {
+				Mask <<= 1;
+			}
+		}
+		bool operator==(const BitIterator& rhs) const {
+			return Mask == rhs.Mask && BytePtr == rhs.BytePtr;
+		}
+	};
+	struct ConstBitIterator {
+		const uint8* BytePtr;
+		uint8 Mask;
+		bool operator*() const {
+			return !!((*BytePtr) & Mask);
+		}
+		void operator++() {
+			if (Mask == BYTE_BIT_MAX) {
+				++BytePtr;
+				Mask = 1;
+			}
+			else {
+				Mask <<= 1;
+			}
+		}
+		bool operator==(const ConstBitIterator& rhs) const {
+			return Mask == rhs.Mask && BytePtr == rhs.BytePtr;
+		}
+	};
+
+	NON_MOVEABLE(TStaticArray);
+	~TStaticArray() = default;
+	TStaticArray() = default;
+	TStaticArray(const TStaticArray& rhs) {
+		memcpy(m_Data, rhs.m_Data, ByteSize());
+	}
+
+	TStaticArray(bool fillValue) {
+		Reset(fillValue);
+	}
+
+	TStaticArray& operator =(const TStaticArray& rhs) {
+		if (this != &rhs) {
+			memcpy(m_Data, rhs.m_Data, ByteSize());
+		}
+		return *this;
+	}
+
+	constexpr uint32 Size() const {
+		return L;
+	}
+
+	constexpr uint32 ByteSize() const {
+		return BYTE_SIZE;
+	}
+
+	void Reset(bool fillValue) {
+		uint8 val = (uint8)fillValue;
+		for(uint32 i=0; i<BYTE_SIZE; ++i) {
+			m_Data[i] = val;
+		}
+	}
+
+	BitReference operator[](uint32 i) {
+		CHECK(i < Size());
+		const uint32 byteIndex = i / BYTE;
+		const uint32 byteOffset = i % BYTE;
+		return BitReference{ &m_Data[byteIndex], 1u << byteOffset };
+	}
+
+	bool operator[](uint32 i) const {
+		const uint32 byteIndex = i / BYTE;
+		const uint32 byteOffset = i % BYTE;
+		return m_Data[byteIndex] & (1 << byteOffset);
+	}
+
+	bool operator == (const TStaticArray& rhs) const {
+		if (m_Data == rhs.m_Data) {
+			return true;
+		}
+		return 0 == memcmp(m_Data, rhs.m_Data, L);
+	}
+
+	// for-each loop
+	ConstBitIterator begin()const {
+		return ConstBitIterator{m_Data, 1};
+	}
+	ConstBitIterator end()const {
+		return ConstBitIterator{ &m_Data[BYTE_SIZE - 1], BYTE_BIT_MAX };
+	}
+	BitIterator begin() {
+		return BitIterator{ m_Data, 1 };
+	}
+	BitIterator end() {
+		return BitIterator{ &m_Data[BYTE_SIZE - 1], BYTE_BIT_MAX };
+	}
+
+private:
+	uint8 m_Data[BYTE_SIZE];
+
+	void Set(uint32 i, bool val) {
+		CHECK(i < Size());
+		const uint32 byteIndex = i / BYTE;
+		const uint32 byteOffset = i % BYTE;
+		uint8 byteMask = 1 << byteOffset;
+		if(val) {
+			m_Data[byteIndex] |= byteMask;
+		}
+		else {
+			m_Data[byteIndex] &= (~byteMask);
+		}
+	}
+
+	bool Get(uint32 i) {
+		CHECK(i < Size());
+		const uint32 byteIndex = i / BYTE;
+		const uint32 byteOffset = i % BYTE;
+		uint8 byteMask = 1 << byteOffset;
+		return m_Data[byteIndex] & byteMask;
+	}
+};
+
+template<uint32 L> using TStaticBitArray = TStaticArray<bool, L>;
 
 // A dynamic array derived from std::vector.
 template <class T>

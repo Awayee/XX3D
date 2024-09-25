@@ -1,18 +1,20 @@
 #include "WindowSystemWin32.h"
 #include "Core/Public/Log.h"
+#include "Core/Public/String.h"
 #include "Engine/Public/Engine.h"
 #include <windowsx.h>
 #include <wingdi.h>
 #include <imgui_internal.h>
 
+// There is no distinct VK_xxx for keypad enter, instead it is VK_RETURN + KF_EXTENDED, we assign it an arbitrary value to make code more readable (VK_ codes go up to 255)
+#define IM_VK_KEYPAD_ENTER (VK_RETURN + 256)
+constexpr uint16 KEY_STATE_PRESSING = 1 << 15;
+constexpr uint16 KEY_STATE_PRESSED = 1;
+constexpr uint64 WN_KEY_STATE_REPEAT = 1 << 30;
+
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 namespace Engine {
-
-	TUnorderedMap<int, EKey> WindowSystemWin32::s_GLFWKeyCodeMap;
-	TUnorderedMap<int, EBtn> WindowSystemWin32::s_GLFWButtonCodeMap;
-	TUnorderedMap<int, EInput> WindowSystemWin32::s_GLFWInputMap;
-
 	WindowSystemWin32::WindowSystemWin32() {
 		m_HAppInst = GetModuleHandle(nullptr);
 	}
@@ -48,6 +50,7 @@ namespace Engine {
 		}
 		ShowWindow(m_HWnd, SW_SHOW);
 		UpdateWindow(m_HWnd);
+		InitKeyButtonCodeMap();
 	}
 
 	void WindowSystemWin32::Update(){
@@ -66,17 +69,14 @@ namespace Engine {
 	}
 
 	void WindowSystemWin32::SetTitle(const char* title){
-	}
-
-	void WindowSystemWin32::SetFocusMode(bool focusMode){
-		m_FocusMode = focusMode;
+		SetWindowText(m_HWnd, title);
 	}
 
 	void WindowSystemWin32::SetWindowIcon(int count, const WindowIcon* icons) {
 	}
 
 	bool WindowSystemWin32::GetFocusMode(){
-		return m_FocusMode;
+		return ::GetForegroundWindow() == m_HWnd;
 	}
 
 	void* WindowSystemWin32::GetWindowHandle(){
@@ -100,33 +100,20 @@ namespace Engine {
 		return { (float)cursorPos.x, (float)cursorPos.y };
 	}
 
-	void WindowSystemWin32::RegisterOnKeyFunc(OnKeyFunc&& func) {
-		m_OnKeyFunc.PushBack(MoveTemp(func));
+	bool WindowSystemWin32::IsKeyDown(EKey key) {
+		return GetFocusMode() && GetAsyncKeyState(m_KeyMap.GetNum(key)) & KEY_STATE_PRESSING;
 	}
 
-	void WindowSystemWin32::RegisterOnMouseButtonFunc(OnMouseButtonFunc&& func){
-		m_OnMouseButtonFunc.PushBack(MoveTemp(func));
-	}
-
-	void WindowSystemWin32::RegisterOnCursorPosFunc(OnCursorPosFunc&& func){
-		m_OnCursorPosFunc.PushBack(MoveTemp(func));
-	}
-
-	void WindowSystemWin32::RegisterOnCursorEnterFunc(OnCursorEnterFunc&& func){
-		m_OnCursorEnterFunc.PushBack(MoveTemp(func));
-	}
-
-	void WindowSystemWin32::RegisterOnScrollFunc(OnScrollFunc&& func){
-		m_OnScrollFunc.PushBack(MoveTemp(func));
-	}
-
-	void WindowSystemWin32::RegisterOnWindowSizeFunc(OnWindowSizeFunc&& func){
-		m_OnWindowSizeFunc.PushBack(MoveTemp(func));
+	bool WindowSystemWin32::IsMouseDown(EBtn btn) {
+		return GetFocusMode() && GetAsyncKeyState(m_MouseButtonMap.GetNum(btn)) & KEY_STATE_PRESSING;
 	}
 
 	LRESULT WindowSystemWin32::MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam);
 		switch (msg){
+		case WM_CREATE:
+			DragAcceptFiles(hwnd, TRUE);
+			return 0;
 			// WM_ACTIVATE is sent when the window is activated or deactivated.  
 			// We pause the game when the window is deactivated and unpause it 
 			// when it becomes active.  
@@ -219,17 +206,59 @@ namespace Engine {
 			return 0;
 
 		case WM_LBUTTONDOWN:
-		case WM_MBUTTONDOWN:
-		case WM_RBUTTONDOWN:
-			OnMouseDown(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+			LOG_DEBUG("PARAMS %lld, %lld", wParam, lParam);
+			OnMouseButtonDown(EBtn::Left);
 			return 0;
 		case WM_LBUTTONUP:
-		case WM_MBUTTONUP:
+			OnMouseButtonUp(EBtn::Left);
+			return 0;
+		case WM_RBUTTONDOWN:
+			OnMouseButtonDown(EBtn::Right);
+			return 0;
 		case WM_RBUTTONUP:
-			OnMouseUp(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+			OnMouseButtonUp(EBtn::Right);
+			return 0;
+		case WM_MBUTTONDOWN:
+			OnMouseButtonDown(EBtn::Middle);
+			return 0;
+		case WM_MBUTTONUP:
+			OnMouseButtonUp(EBtn::Middle);
 			return 0;
 		case WM_MOUSEMOVE:
-			OnMouseMove(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+			OnMouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+			return 0;
+		case WM_KEYDOWN:
+			if (lParam & WN_KEY_STATE_REPEAT) {
+				OnKeyRepeat((int)wParam);
+			}
+			else {
+				OnKeyDown((int)wParam);
+			}
+			return 0;
+		case WM_KEYUP:
+			OnKeyUp((int)wParam);
+			return 0;
+		case WM_SETFOCUS:
+			OnFocus(false);
+			return 0;
+		case WM_KILLFOCUS:
+			OnFocus(true);
+			return 0;
+		case WM_MOUSEWHEEL:
+			OnScroll(GET_WHEEL_DELTA_WPARAM(wParam));
+			return 0;
+		case WM_DROPFILES:
+			HDROP hDrop = (HDROP)wParam;
+			UINT fileCount = DragQueryFile(hDrop, 0xFFFFFFFF, NULL, 0);
+			TArray<const char*> paths(fileCount);
+			TArray<XString> pathStr(fileCount);
+			for (UINT i = 0; i < fileCount; ++i) {
+				pathStr[i].resize(MAX_PATH);
+				DragQueryFile(hDrop, i, pathStr[i].data(), MAX_PATH);
+				paths[i] = pathStr[i].c_str();
+			}
+			OnDrag((int)fileCount, paths.Data());
+			DragFinish(hDrop);
 			return 0;
 		}
 
@@ -240,122 +269,123 @@ namespace Engine {
 		return static_cast<WindowSystemWin32*>(Instance())->MainWndProc(hwnd, msg, wParam, lParam);
 	}
 
-	// There is no distinct VK_xxx for keypad enter, instead it is VK_RETURN + KF_EXTENDED, we assign it an arbitrary value to make code more readable (VK_ codes go up to 255)
-#define IM_VK_KEYPAD_ENTER      (VK_RETURN + 256)
 	void WindowSystemWin32::InitKeyButtonCodeMap(){
-		s_GLFWKeyCodeMap[VK_SPACE] = EKey::SPACE;
-		s_GLFWKeyCodeMap[VK_OEM_7] = EKey::APOSTROPHE; /* ' */
-		s_GLFWKeyCodeMap[VK_OEM_COMMA] = EKey::COMMA; /* ; */
-		s_GLFWKeyCodeMap[VK_OEM_MINUS] = EKey::MINUS; /* - */
-		s_GLFWKeyCodeMap[VK_OEM_PERIOD] = EKey::PERIOD; /* . */
-		s_GLFWKeyCodeMap[VK_OEM_2] = EKey::SLASH; /* / */
-		s_GLFWKeyCodeMap[VK_OEM_1] = EKey::SEMICOLON; /* ; */
-		s_GLFWKeyCodeMap[VK_OEM_PLUS] = EKey::EQUAL; /* = */
-		s_GLFWKeyCodeMap['0'] = EKey::A0;
-		s_GLFWKeyCodeMap['1'] = EKey::A1;
-		s_GLFWKeyCodeMap['2'] = EKey::A2;
-		s_GLFWKeyCodeMap['3'] = EKey::A3;
-		s_GLFWKeyCodeMap['4'] = EKey::A4;
-		s_GLFWKeyCodeMap['5'] = EKey::A5;
-		s_GLFWKeyCodeMap['6'] = EKey::A6;
-		s_GLFWKeyCodeMap['7'] = EKey::A7;
-		s_GLFWKeyCodeMap['8'] = EKey::A8;
-		s_GLFWKeyCodeMap['9'] = EKey::A9;
-		s_GLFWKeyCodeMap['A'] = EKey::A;
-		s_GLFWKeyCodeMap['B'] = EKey::B;
-		s_GLFWKeyCodeMap['C'] = EKey::C;
-		s_GLFWKeyCodeMap['D'] = EKey::D;
-		s_GLFWKeyCodeMap['E'] = EKey::E;
-		s_GLFWKeyCodeMap['F'] = EKey::F;
-		s_GLFWKeyCodeMap['G'] = EKey::G;
-		s_GLFWKeyCodeMap['H'] = EKey::H;
-		s_GLFWKeyCodeMap['I'] = EKey::I;
-		s_GLFWKeyCodeMap['J'] = EKey::J;
-		s_GLFWKeyCodeMap['K'] = EKey::K;
-		s_GLFWKeyCodeMap['L'] = EKey::L;
-		s_GLFWKeyCodeMap['M'] = EKey::M;
-		s_GLFWKeyCodeMap['N'] = EKey::N;
-		s_GLFWKeyCodeMap['O'] = EKey::O;
-		s_GLFWKeyCodeMap['P'] = EKey::P;
-		s_GLFWKeyCodeMap['Q'] = EKey::Q;
-		s_GLFWKeyCodeMap['R'] = EKey::R;
-		s_GLFWKeyCodeMap['S'] = EKey::S;
-		s_GLFWKeyCodeMap['T'] = EKey::T;
-		s_GLFWKeyCodeMap['U'] = EKey::U;
-		s_GLFWKeyCodeMap['V'] = EKey::V;
-		s_GLFWKeyCodeMap['W'] = EKey::W;
-		s_GLFWKeyCodeMap['X'] = EKey::X;
-		s_GLFWKeyCodeMap['Y'] = EKey::Y;
-		s_GLFWKeyCodeMap['Z'] = EKey::Z;
-		s_GLFWKeyCodeMap[VK_OEM_4] = EKey::LEFT_BRACKET; /* [ */
-		s_GLFWKeyCodeMap[VK_OEM_5] = EKey::BACKSLASH; /* \ */
-		s_GLFWKeyCodeMap[VK_OEM_6] = EKey::RIGHT_BRACKET; /* ] */
-		s_GLFWKeyCodeMap[VK_OEM_3] = EKey::GRAVE_ACCENT; /* ` */
-		//s_GLFWKeyCodeMap[GLFW_KEY_WORLD_1] = EKeyCode::WORLD_1; /* non-US #1 */
-		//s_GLFWKeyCodeMap[GLFW_KEY_WORLD_2] = EKeyCode::WORLD_2; /* non-US #2 */
-		s_GLFWKeyCodeMap[VK_ESCAPE] = EKey::ESCAPE;
-		s_GLFWKeyCodeMap[VK_RETURN] = EKey::ENTER;
-		s_GLFWKeyCodeMap[VK_TAB] = EKey::TAB;
-		s_GLFWKeyCodeMap[VK_BACK] = EKey::BACKSPACE;
-		s_GLFWKeyCodeMap[VK_INSERT] = EKey::INSERT;
-		s_GLFWKeyCodeMap[VK_DELETE] = EKey::DEL;
-		s_GLFWKeyCodeMap[VK_RIGHT] = EKey::RIGHT;
-		s_GLFWKeyCodeMap[VK_LEFT] = EKey::LEFT;
-		s_GLFWKeyCodeMap[VK_DOWN] = EKey::DOWN;
-		s_GLFWKeyCodeMap[VK_UP] = EKey::UP;
-		s_GLFWKeyCodeMap[VK_PRIOR] = EKey::PAGE_UP;
-		s_GLFWKeyCodeMap[VK_NEXT] = EKey::PAGE_DOWN;
-		s_GLFWKeyCodeMap[VK_HOME] = EKey::HOME;
-		s_GLFWKeyCodeMap[VK_END] = EKey::END;
-		s_GLFWKeyCodeMap[VK_CAPITAL] = EKey::CAPS_LOCK;
-		s_GLFWKeyCodeMap[VK_SCROLL] = EKey::SCROLL_LOCK;
-		s_GLFWKeyCodeMap[VK_NUMLOCK] = EKey::NUM_LOCK;
-		s_GLFWKeyCodeMap[VK_SNAPSHOT] = EKey::PRINT_SCREEN;
-		s_GLFWKeyCodeMap[VK_PAUSE] = EKey::PAUSE;
-		s_GLFWKeyCodeMap[VK_F1] = EKey::F1;
-		s_GLFWKeyCodeMap[VK_F2] = EKey::F2;
-		s_GLFWKeyCodeMap[VK_F3] = EKey::F3;
-		s_GLFWKeyCodeMap[VK_F4] = EKey::F4;
-		s_GLFWKeyCodeMap[VK_F5] = EKey::F5;
-		s_GLFWKeyCodeMap[VK_F6] = EKey::F6;
-		s_GLFWKeyCodeMap[VK_F7] = EKey::F7;
-		s_GLFWKeyCodeMap[VK_F8] = EKey::F8;
-		s_GLFWKeyCodeMap[VK_F9] = EKey::F9;
-		s_GLFWKeyCodeMap[VK_F10] = EKey::F10;
-		s_GLFWKeyCodeMap[VK_F11] = EKey::F11;
-		s_GLFWKeyCodeMap[VK_F12] = EKey::F12;
-		s_GLFWKeyCodeMap[VK_NUMPAD0] = EKey::KP_0;
-		s_GLFWKeyCodeMap[VK_NUMPAD1] = EKey::KP_1;
-		s_GLFWKeyCodeMap[VK_NUMPAD2] = EKey::KP_2;
-		s_GLFWKeyCodeMap[VK_NUMPAD3] = EKey::KP_3;
-		s_GLFWKeyCodeMap[VK_NUMPAD4] = EKey::KP_4;
-		s_GLFWKeyCodeMap[VK_NUMPAD5] = EKey::KP_5;
-		s_GLFWKeyCodeMap[VK_NUMPAD6] = EKey::KP_6;
-		s_GLFWKeyCodeMap[VK_NUMPAD7] = EKey::KP_7;
-		s_GLFWKeyCodeMap[VK_NUMPAD8] = EKey::KP_8;
-		s_GLFWKeyCodeMap[VK_NUMPAD9] = EKey::KP_9;
-		s_GLFWKeyCodeMap[VK_DECIMAL] = EKey::KP_DECIMAL;
-		s_GLFWKeyCodeMap[VK_DIVIDE] = EKey::KP_DIVIDE;
-		s_GLFWKeyCodeMap[VK_MULTIPLY] = EKey::KP_MULTIPLY;
-		s_GLFWKeyCodeMap[VK_SUBTRACT] = EKey::KP_SUBTRACT;
-		s_GLFWKeyCodeMap[VK_ADD] = EKey::KP_ADD;
-		s_GLFWKeyCodeMap[IM_VK_KEYPAD_ENTER] = EKey::KP_ENTER;
-		//s_GLFWKeyCodeMap[IM_VK_KEYPAD_ENTER] = EKeyCode::KP_EQUAL;
-		s_GLFWKeyCodeMap[VK_LSHIFT] = EKey::LEFT_SHIFT;
-		s_GLFWKeyCodeMap[VK_LCONTROL] = EKey::LEFT_CONTROL;
-		s_GLFWKeyCodeMap[VK_LMENU] = EKey::LEFT_ALT;
-		s_GLFWKeyCodeMap[VK_LWIN] = EKey::LEFT_SUPER;
-		s_GLFWKeyCodeMap[VK_RSHIFT] = EKey::RIGHT_SHIFT;
-		s_GLFWKeyCodeMap[VK_RCONTROL] = EKey::RIGHT_CONTROL;
-		s_GLFWKeyCodeMap[VK_RMENU] = EKey::RIGHT_ALT;
-		s_GLFWKeyCodeMap[VK_RWIN] = EKey::RIGHT_SUPER;
-		s_GLFWKeyCodeMap[VK_MENU] = EKey::MENU;
+#define PARSE_KEY_CODE(win32Key, key) m_KeyMap.AddPair(win32Key, key)
+		PARSE_KEY_CODE(VK_SPACE, EKey::Space);
+		PARSE_KEY_CODE(VK_OEM_7, EKey::Apostrophe); /* ' */
+		PARSE_KEY_CODE(VK_OEM_COMMA, EKey::Comma); /* ; */
+		PARSE_KEY_CODE(VK_OEM_MINUS, EKey::Minus); /* - */
+		PARSE_KEY_CODE(VK_OEM_PERIOD, EKey::Period); /* . */
+		PARSE_KEY_CODE(VK_OEM_2, EKey::Slash); /* / */
+		PARSE_KEY_CODE(VK_OEM_1, EKey::Semicolon); /* ; */
+		PARSE_KEY_CODE(VK_OEM_PLUS, EKey::Equal); /* = */
+		PARSE_KEY_CODE('0', EKey::A0);
+		PARSE_KEY_CODE('1', EKey::A1);
+		PARSE_KEY_CODE('2', EKey::A2);
+		PARSE_KEY_CODE('3', EKey::A3);
+		PARSE_KEY_CODE('4', EKey::A4);
+		PARSE_KEY_CODE('5', EKey::A5);
+		PARSE_KEY_CODE('6', EKey::A6);
+		PARSE_KEY_CODE('7', EKey::A7);
+		PARSE_KEY_CODE('8', EKey::A8);
+		PARSE_KEY_CODE('9', EKey::A9);
+		PARSE_KEY_CODE('A', EKey::A);
+		PARSE_KEY_CODE('B', EKey::B);
+		PARSE_KEY_CODE('C', EKey::C);
+		PARSE_KEY_CODE('D', EKey::D);
+		PARSE_KEY_CODE('E', EKey::E);
+		PARSE_KEY_CODE('F', EKey::F);
+		PARSE_KEY_CODE('G', EKey::G);
+		PARSE_KEY_CODE('H', EKey::H);
+		PARSE_KEY_CODE('I', EKey::I);
+		PARSE_KEY_CODE('J', EKey::J);
+		PARSE_KEY_CODE('K', EKey::K);
+		PARSE_KEY_CODE('L', EKey::L);
+		PARSE_KEY_CODE('M', EKey::M);
+		PARSE_KEY_CODE('N', EKey::N);
+		PARSE_KEY_CODE('O', EKey::O);
+		PARSE_KEY_CODE('P', EKey::P);
+		PARSE_KEY_CODE('Q', EKey::Q);
+		PARSE_KEY_CODE('R', EKey::R);
+		PARSE_KEY_CODE('S', EKey::S);
+		PARSE_KEY_CODE('T', EKey::T);
+		PARSE_KEY_CODE('U', EKey::U);
+		PARSE_KEY_CODE('V', EKey::V);
+		PARSE_KEY_CODE('W', EKey::W);
+		PARSE_KEY_CODE('X', EKey::X);
+		PARSE_KEY_CODE('Y', EKey::Y);
+		PARSE_KEY_CODE('Z', EKey::Z);
+		PARSE_KEY_CODE(VK_OEM_4, EKey::LeftBracket); /* [ */
+		PARSE_KEY_CODE(VK_OEM_5, EKey::BackSlash); /* \ */
+		PARSE_KEY_CODE(VK_OEM_6, EKey::RightBracket); /* ] */
+		PARSE_KEY_CODE(VK_OEM_3, EKey::GraveAccent); /* ` */
+		//PARSE_KEY_CODE(VK_WORLD_1, EKeyCode::World1); /* non-US #1 */
+		//PARSE_KEY_CODE(VK_WORLD_2, EKeyCode::World2); /* non-US #2 */
+		PARSE_KEY_CODE(VK_ESCAPE, EKey::Escape);
+		PARSE_KEY_CODE(VK_RETURN, EKey::Enter);
+		PARSE_KEY_CODE(VK_TAB, EKey::Tab);
+		PARSE_KEY_CODE(VK_BACK, EKey::Backspace);
+		PARSE_KEY_CODE(VK_INSERT, EKey::Insert);
+		PARSE_KEY_CODE(VK_DELETE, EKey::Delete);
+		PARSE_KEY_CODE(VK_RIGHT, EKey::Right);
+		PARSE_KEY_CODE(VK_LEFT, EKey::Left);
+		PARSE_KEY_CODE(VK_DOWN, EKey::Down);
+		PARSE_KEY_CODE(VK_UP, EKey::Up);
+		PARSE_KEY_CODE(VK_PRIOR, EKey::PageUp);
+		PARSE_KEY_CODE(VK_NEXT, EKey::PageDown);
+		PARSE_KEY_CODE(VK_HOME, EKey::Home);
+		PARSE_KEY_CODE(VK_END, EKey::End);
+		PARSE_KEY_CODE(VK_CAPITAL, EKey::CapsLock);
+		PARSE_KEY_CODE(VK_SCROLL, EKey::ScrollLock);
+		PARSE_KEY_CODE(VK_NUMLOCK, EKey::NumLock);
+		PARSE_KEY_CODE(VK_SNAPSHOT, EKey::PrtSc);
+		PARSE_KEY_CODE(VK_PAUSE, EKey::Pause);
+		PARSE_KEY_CODE(VK_F1, EKey::F1);
+		PARSE_KEY_CODE(VK_F2, EKey::F2);
+		PARSE_KEY_CODE(VK_F3, EKey::F3);
+		PARSE_KEY_CODE(VK_F4, EKey::F4);
+		PARSE_KEY_CODE(VK_F5, EKey::F5);
+		PARSE_KEY_CODE(VK_F6, EKey::F6);
+		PARSE_KEY_CODE(VK_F7, EKey::F7);
+		PARSE_KEY_CODE(VK_F8, EKey::F8);
+		PARSE_KEY_CODE(VK_F9, EKey::F9);
+		PARSE_KEY_CODE(VK_F10, EKey::F10);
+		PARSE_KEY_CODE(VK_F11, EKey::F11);
+		PARSE_KEY_CODE(VK_F12, EKey::F12);
+		PARSE_KEY_CODE(VK_NUMPAD0, EKey::KP0);
+		PARSE_KEY_CODE(VK_NUMPAD1, EKey::KP1);
+		PARSE_KEY_CODE(VK_NUMPAD2, EKey::KP2);
+		PARSE_KEY_CODE(VK_NUMPAD3, EKey::KP3);
+		PARSE_KEY_CODE(VK_NUMPAD4, EKey::KP4);
+		PARSE_KEY_CODE(VK_NUMPAD5, EKey::KP5);
+		PARSE_KEY_CODE(VK_NUMPAD6, EKey::KP6);
+		PARSE_KEY_CODE(VK_NUMPAD7, EKey::KP7);
+		PARSE_KEY_CODE(VK_NUMPAD8, EKey::KP8);
+		PARSE_KEY_CODE(VK_NUMPAD9, EKey::KP9);
+		PARSE_KEY_CODE(VK_DECIMAL, EKey::KPDecimal);
+		PARSE_KEY_CODE(VK_DIVIDE, EKey::KPDivide);
+		PARSE_KEY_CODE(VK_MULTIPLY, EKey::KPMultiply);
+		PARSE_KEY_CODE(VK_SUBTRACT, EKey::KPSubtract);
+		PARSE_KEY_CODE(VK_ADD, EKey::KPAdd);
+		PARSE_KEY_CODE(IM_VK_KEYPAD_ENTER, EKey::KPEnter);
+		PARSE_KEY_CODE(VK_LSHIFT, EKey::LeftShit);
+		PARSE_KEY_CODE(VK_LCONTROL, EKey::LeftCtrl);
+		PARSE_KEY_CODE(VK_LMENU, EKey::LeftAlt);
+		PARSE_KEY_CODE(VK_LWIN, EKey::LeftSuper);
+		PARSE_KEY_CODE(VK_RSHIFT, EKey::RightShift);
+		PARSE_KEY_CODE(VK_RCONTROL, EKey::RightCtrl);
+		PARSE_KEY_CODE(VK_RMENU, EKey::RightAlt);
+		PARSE_KEY_CODE(VK_RWIN, EKey::RightSuper);
+		PARSE_KEY_CODE(VK_MENU, EKey::Menu);
+#undef PARSE_KEY_CODE
 
-		s_GLFWButtonCodeMap[VK_LBUTTON] = EBtn::LEFT;
-		s_GLFWButtonCodeMap[VK_RBUTTON] = EBtn::RIGHT;
-		s_GLFWButtonCodeMap[VK_MBUTTON] = EBtn::MIDDLE;
-		s_GLFWButtonCodeMap[VK_XBUTTON1] = EBtn::BTN_4;
-		s_GLFWButtonCodeMap[VK_XBUTTON2] = EBtn::BTN_5;
+#define PARSE_BTN_CODE(win32Key, key) m_MouseButtonMap.AddPair(win32Key, key)
+		PARSE_BTN_CODE(VK_LBUTTON, EBtn::Left);
+		PARSE_BTN_CODE(VK_RBUTTON, EBtn::Right);
+		PARSE_BTN_CODE(VK_MBUTTON, EBtn::Middle);
+		PARSE_BTN_CODE(VK_XBUTTON1, EBtn::Btn4);
+		PARSE_BTN_CODE(VK_XBUTTON2, EBtn::Btn5);
+#undef PARSE_BTN_CODE
 	}
 
 	void WindowSystemWin32::OnResize() {
@@ -364,12 +394,61 @@ namespace Engine {
 		}
 	}
 
-	void WindowSystemWin32::OnMouseDown(WPARAM btnState, int x, int y) {
+	void WindowSystemWin32::OnMouseButtonDown(Engine::EBtn btn) {
+		for(auto& func: m_OnMouseButtonFunc) {
+			func(btn, EInput::Press);
+		}
 	}
 
-	void WindowSystemWin32::OnMouseUp(WPARAM btnState, int x, int y) {
+	void WindowSystemWin32::OnMouseButtonUp(Engine::EBtn btn) {
+		for (auto& func : m_OnMouseButtonFunc) {
+			func(btn, EInput::Release);
+		}
 	}
 
-	void WindowSystemWin32::OnMouseMove(WPARAM btnState, int x, int y) {
+	void WindowSystemWin32::OnMouseMove(int x, int y) {
+		for(auto& func: m_OnCursorPosFunc) {
+			func((float)x, (float)y);
+		}
 	}
+
+	void WindowSystemWin32::OnKeyDown(int key) {
+		EKey eKey = m_KeyMap.GetEnum(key);
+		for(auto& func: m_OnKeyFunc) {
+			func(eKey, EInput::Press);
+		}
+	}
+
+	void WindowSystemWin32::OnKeyUp(int key) {
+		EKey eKey = m_KeyMap.GetEnum(key);
+		for (auto& func : m_OnKeyFunc) {
+			func(eKey, EInput::Release);
+		}
+	}
+
+	void WindowSystemWin32::OnKeyRepeat(int key) {
+		EKey eKey = m_KeyMap.GetEnum(key);
+		for(auto& func: m_OnKeyFunc) {
+			func(eKey, EInput::Repeat);
+		}
+	}
+
+	void WindowSystemWin32::OnFocus(bool isFocused) {
+		for(auto& func: m_OnWindowFocusFunc) {
+			func(isFocused);
+		}
+	}
+
+	void WindowSystemWin32::OnScroll(int val) {
+		for(auto& func: m_OnScrollFunc) {
+			func(0, (float)val / WHEEL_DELTA);
+		}
+	}
+
+	void WindowSystemWin32::OnDrag(int num, const char** paths) {
+		for(auto& func: m_OnDropFunc) {
+			func(num, paths);
+		}
+	}
+
 }

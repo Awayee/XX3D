@@ -263,8 +263,8 @@ D3D12PipelineDescriptorCache::D3D12PipelineDescriptorCache(D3D12PipelineDescript
 	for (uint32 i = 0; i < EnumCast(EDynamicDescriptorType::Count); ++i) {
 		m_DescriptorCaches[i].DynamicDescriptor = rhs.m_DescriptorCaches[i].DynamicDescriptor;
 		m_DescriptorCaches[i].StaticDescriptors.Swap(rhs.m_DescriptorCaches[i].StaticDescriptors);
-		m_DirtyDescriptorTables[i] = rhs.m_DirtyDescriptorTables[i];
 	}
+	m_DirtyDescriptorTables = rhs.m_DirtyDescriptorTables;
 	m_Device = rhs.m_Device;
 	m_PipelineData = rhs.m_PipelineData;
 	m_PipelineType = rhs.m_PipelineType;

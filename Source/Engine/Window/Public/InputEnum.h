@@ -2,12 +2,12 @@
 
 namespace Engine {
 	enum class EKey {
-		SPACE,
-		APOSTROPHE, /* ' */
-		COMMA, /* , */
-		MINUS, /* - */
-		PERIOD, /* . */
-		SLASH, /* / */
+		Space,
+		Apostrophe, /* ' */
+		Comma, /* , */
+		Minus, /* - */
+		Period, /* . */
+		Slash, /* / */
 		A0,
 		A1,
 		A2,
@@ -18,8 +18,8 @@ namespace Engine {
 		A7,
 		A8,
 		A9,
-		SEMICOLON, /* ; */
-		EQUAL, /* = */
+		Semicolon, /* ; */
+		Equal, /* = */
 		A,
 		B,
 		C,
@@ -46,31 +46,31 @@ namespace Engine {
 		X,
 		Y,
 		Z,
-		LEFT_BRACKET, /* [ */
-		BACKSLASH, /* \ */
-		RIGHT_BRACKET, /* ] */
-		GRAVE_ACCENT, /* ` */
-		WORLD_1, /* non-US #1 */
-		WORLD_2, /* non-US #2 */
-		ESCAPE,
-		ENTER,
-		TAB,
-		BACKSPACE,
-		INSERT,
-		DEL,
-		RIGHT,
-		LEFT,
-		DOWN,
-		UP,
-		PAGE_UP,
-		PAGE_DOWN,
-		HOME,
-		END,
-		CAPS_LOCK,
-		SCROLL_LOCK,
-		NUM_LOCK,
-		PRINT_SCREEN,
-		PAUSE,
+		LeftBracket, /* [ */
+		BackSlash, /* \ */
+		RightBracket, /* ] */
+		GraveAccent, /* ` */
+		World1, /* non-US #1 */
+		World2, /* non-US #2 */
+		Escape,
+		Enter,
+		Tab,
+		Backspace,
+		Insert,
+		Delete,
+		Right,
+		Left,
+		Down,
+		Up,
+		PageUp,
+		PageDown,
+		Home,
+		End,
+		CapsLock,
+		ScrollLock,
+		NumLock,
+		PrtSc,
+		Pause,
 		F1,
 		F2,
 		F3,
@@ -96,51 +96,52 @@ namespace Engine {
 		F23,
 		F24,
 		F25,
-		KP_0,
-		KP_1,
-		KP_2,
-		KP_3,
-		KP_4,
-		KP_5,
-		KP_6,
-		KP_7,
-		KP_8,
-		KP_9,
-		KP_DECIMAL,
-		KP_DIVIDE,
-		KP_MULTIPLY,
-		KP_SUBTRACT,
-		KP_ADD,
-		KP_ENTER,
-		KP_EQUAL,
-		LEFT_SHIFT,
-		LEFT_CONTROL,
-		LEFT_ALT,
-		LEFT_SUPER,
-		RIGHT_SHIFT,
-		RIGHT_CONTROL,
-		RIGHT_ALT,
-		RIGHT_SUPER,
-		MENU,
-		COUNT
+		KP0,
+		KP1,
+		KP2,
+		KP3,
+		KP4,
+		KP5,
+		KP6,
+		KP7,
+		KP8,
+		KP9,
+		KPDecimal,
+		KPDivide,
+		KPMultiply,
+		KPSubtract,
+		KPAdd,
+		KPEnter,
+		KPEqual,
+		LeftShit,
+		LeftCtrl,
+		LeftAlt,
+		LeftSuper,
+		RightShift,
+		RightCtrl,
+		RightAlt,
+		RightSuper,
+		Menu,
+		Count
 	};
 
 	enum class EBtn {
-		LEFT,
-		RIGHT,
-		MIDDLE,
-		BTN_4,
-		BTN_5,
-		BTN_6,
-		BTN_7,
-		BTN_8,
+		Left=0,
+		Right,
+		Middle,
+		Btn4,
+		Btn5,
+		Btn6,
+		Btn7,
+		Btn8,
 
-		LAST   = BTN_8
+		Count,
 	};
 
 	enum class EInput {
-		PRESS,
-		RELEASE,
-		REPEAT
+		Press=0,
+		Release,
+		Repeat,
+		Count
 	};
 }
