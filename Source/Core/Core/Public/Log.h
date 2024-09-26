@@ -11,7 +11,7 @@
 #define ASSERT(x, s)\
 	do{\
 		if(!(x)){\
-			printf(s);\
+			LOG_ERROR(s);\
 			std::abort();\
 		}\
 	} while (false)

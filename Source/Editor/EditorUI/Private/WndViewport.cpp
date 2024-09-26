@@ -1,6 +1,7 @@
 #include "WndViewport.h"
 #include "EditorUI/Public/EditorUIMgr.h"
 #include "Functions/Public/EditorLevelMgr.h"
+#include "Functions/Public/EditorConfig.h"
 #include "Objects/Public/RenderScene.h"
 #include "Objects/Public/Camera.h"
 #include "Render/Public/DefaultResource.h"
@@ -38,9 +39,9 @@ namespace Editor {
 			right.NormalizeSelf();
 			Math::FVector3 up = Math::FVector3::Cross(forward, right);
 			Math::FQuaternion rotateQuat =
-				Math::FQuaternion::AngleAxis(z * 0.004f, forward) *
-				Math::FQuaternion::AngleAxis(y * 0.004f, up) *
-				Math::FQuaternion::AngleAxis(x * 0.004f, right);
+				Math::FQuaternion::AngleAxis(z, forward) *
+				Math::FQuaternion::AngleAxis(y, up) *
+				Math::FQuaternion::AngleAxis(x, right);
 			forward = rotateQuat.RotateVector3(forward);
 			at = eye + forward;
 		}
@@ -88,7 +89,8 @@ namespace Editor {
 				float dX = x - m_LastX;
 				float dY = y - m_LastY;
 				if(!Math::IsNearlyZero(dX) || !Math::IsNearlyZero(dY)) {
-					RotateCamera(camera, dY, dX, 0.0f, true);
+					const float scale = EditorConfig::GetCameraRotateSpeed() * Math::Deg2Rad;
+					RotateCamera(camera, dY * scale, dX * scale, 0.0f, true);
 					m_LastX = x;
 					m_LastY = y;
 				}
@@ -107,7 +109,9 @@ namespace Editor {
 			int z = (int)window->IsKeyDown(Engine::EKey::W) - (int)window->IsKeyDown(Engine::EKey::S);
 			int y = (int)window->IsKeyDown(Engine::EKey::E) - (int)window->IsKeyDown(Engine::EKey::Q);
 			if (x || y || z) {
-				MoveCamera(camera, (float)x * 0.004f, (float)y * 0.004f, (float)z * 0.004f, true);
+				const float dt = Engine::CTimer::Instance()->GetDeltaTime();
+				const float scale = EditorConfig::GetCameraMoveSpeed() * (dt / 41.67f);
+				MoveCamera(camera, (float)x * scale, (float)y * scale, (float)z * scale, true);
 			}
 		}
 	}

@@ -120,12 +120,12 @@ VkPhysicalDevice VulkanContext::PickPhysicalDevice() {
 		vkGetPhysicalDeviceProperties(info.PhysicalDevice, &info.Properties);
 	}
 
-	Engine::EGPUType gpuType = Engine::ConfigManager::GetData().GPUType;
-	deviceInfos.Sort([gpuType](const PhysicalDeviceInfo& l, const PhysicalDeviceInfo& r)->bool {
+	bool useIntegratedGPU = Engine::ConfigManager::GetData().UseIntegratedGPU;
+	deviceInfos.Sort([useIntegratedGPU](const PhysicalDeviceInfo& l, const PhysicalDeviceInfo& r)->bool {
 		if(l.Properties.deviceType == r.Properties.deviceType) {
 			return l.Order < r.Order;
 		}
-		if(gpuType == Engine::EGPUType::GPU_UNKNOWN || gpuType == Engine::EGPUType::GPU_DISCRETE) {
+		if(!useIntegratedGPU) {
 			return l.Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
 				   r.Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU;
 		}

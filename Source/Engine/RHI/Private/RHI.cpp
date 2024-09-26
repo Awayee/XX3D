@@ -46,6 +46,8 @@ namespace {
 
 static RENDERDOC_API_1_6_0* s_RenderDocAPI{ nullptr };
 
+RHIConfig RHIConfig::s_Instance{};
+
 TUniquePtr<RHI> RHI::s_Instance{ nullptr };
 
 RHI* RHI::Instance() {
@@ -54,6 +56,7 @@ RHI* RHI::Instance() {
 void RHI::Initialize() {
 	ASSERT(!s_Instance, "");
 
+	// Load RHI Config.
 	// Load RenderDoc firstly
 	if (Engine::ConfigManager::GetData().EnableRenderDoc) {
 		s_RenderDocAPI = LoadRenderDocAPI();
@@ -63,30 +66,19 @@ void RHI::Initialize() {
 			LOG_INFO("RenderDoc loaded!");
 		}
 	}
-
-	Engine::ERHIType rhiType = Engine::ConfigManager::GetData().RHIType;
-
-	RHIInitDesc desc;
-	desc.AppName = PROJECT_NAME;
-#ifdef _DEBUG
-	desc.EnableDebug = true;
-#else
-	desc.EnableDebug = false;
-#endif
-	desc.Window = Engine::EngineWindow::Instance()->GetWindowHandle();
-	desc.WindowSize = Engine::EngineWindow::Instance()->GetWindowSize();
-
+	const Engine::ERHIType rhiType = Engine::ConfigManager::GetData().RHIType;
+	// Create RHI instance.
+	const WindowHandle wnd = Engine::EngineWindow::Instance()->GetWindowHandle();
+	const USize2D extent = Engine::EngineWindow::Instance()->GetWindowSize();
 	switch(rhiType) {
 	case Engine::ERHIType::Vulkan:
-		s_Instance.Reset(new VulkanRHI(desc));
+		s_Instance.Reset(new VulkanRHI(wnd, extent));
 		break;
 	case Engine::ERHIType::D3D12:
-		s_Instance.Reset(new D3D12RHI(desc));
+		s_Instance.Reset(new D3D12RHI(wnd, extent));
 		break;
-	case Engine::ERHIType::D3D11:
-	case Engine::ERHIType::OpenGL:
-	case Engine::ERHIType::Invalid:
-		ASSERT(0, "Failed to initialize RHI!");
+	default:
+		LOG_ERROR("Failed to initialize RHI!");
 	}
 }
 

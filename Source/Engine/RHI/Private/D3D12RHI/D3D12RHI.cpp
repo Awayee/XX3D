@@ -10,21 +10,15 @@
 inline IDXGIAdapter* ChooseAdapter(IDXGIFactory4* factory) {
 	uint32 i = 0;
 	IDXGIAdapter* adapter = nullptr;
-	const auto targetGpuType = Engine::ConfigManager::GetData().GPUType;
+	const bool useIntegratedGPU = Engine::ConfigManager::GetData().UseIntegratedGPU;
 	while(factory->EnumAdapters(i, &adapter) != DXGI_ERROR_NOT_FOUND) {
 		DXGI_ADAPTER_DESC desc;
 		adapter->GetDesc(&desc);
-		Engine::EGPUType gpuType = Engine::EGPUType::GPU_UNKNOWN;
 		// Assume that discrete GPU has 1GB video memory at least.
 		constexpr size_t DISCRETE_GPU_VIDEO_MEMORY = 1 << 30;
-		if(desc.DedicatedVideoMemory < DISCRETE_GPU_VIDEO_MEMORY) {
-			gpuType = Engine::EGPUType::GPU_INTEGRATED;
-		}
-		else {
-			gpuType = Engine::EGPUType::GPU_DISCRETE;
-		}
-		if(gpuType == targetGpuType) {
-			auto adapterName = WString2String(desc.Description);
+		const bool isIntegratedGPU = desc.DedicatedVideoMemory < DISCRETE_GPU_VIDEO_MEMORY;
+		if(isIntegratedGPU == useIntegratedGPU) {
+			const XString adapterName = WString2String(desc.Description);
 			LOG_DEBUG("Adapter found! %s", adapterName.c_str());
 			return adapter;
 		}
@@ -54,9 +48,31 @@ void CALLBACK DebugOutputCallback(
 }
 #endif
 
-D3D12RHI::D3D12RHI(const RHIInitDesc& desc) {
-	CHECK(CreateDeviceContext());
-	m_Viewport.Reset(new D3D12Viewport(m_DXGIFactory, m_Device, desc.Window, desc.WindowSize));
+D3D12RHI::D3D12RHI(void* wnd, USize2D extent) {
+	// Enable the D3D12 debug layer.
+	if(RHIConfig::GetEnableDebug()){
+		TDXPtr<ID3D12Debug> debug;
+		DX_CHECK(D3D12GetDebugInterface(IID_PPV_ARGS(debug.Address())));
+		debug->EnableDebugLayer();
+	}
+	DX_CHECK(CreateDXGIFactory1(IID_PPV_ARGS(m_DXGIFactory.Address())));
+
+	// Choose adapter
+	IDXGIAdapter* adapter = ChooseAdapter(m_DXGIFactory);
+	if (!adapter) {
+		LOG_ERROR("Could not find an adapter!");
+	}
+	m_Device.Reset(new D3D12Device(adapter));
+	// Initialize debug callback
+	if(RHIConfig::GetEnableDebug()){
+		TDXPtr<ID3D12InfoQueue1> infoQueue;
+		DX_CHECK(m_Device->GetDevice()->QueryInterface(IID_PPV_ARGS(infoQueue.Address())));
+		DWORD callbackCookie;
+		infoQueue->RegisterMessageCallback(DebugOutputCallback, D3D12_MESSAGE_CALLBACK_FLAG_NONE, nullptr, &callbackCookie);
+
+	}
+
+	m_Viewport.Reset(new D3D12Viewport(m_DXGIFactory, m_Device, wnd, extent));
 }
 
 D3D12RHI::~D3D12RHI() {
@@ -122,34 +138,4 @@ void D3D12RHI::SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, EQueueTy
 
 D3D12Device* D3D12RHI::GetDevice() {
 	return m_Device;
-}
-
-bool D3D12RHI::CreateDeviceContext() {
-#ifdef _DEBUG
-	// Enable the D3D12 debug layer.
-	{
-		TDXPtr<ID3D12Debug> debug;
-		DX_CHECK(D3D12GetDebugInterface(IID_PPV_ARGS(debug.Address())));
-		debug->EnableDebugLayer();
-	}
-#endif
-	DX_CHECK(CreateDXGIFactory1(IID_PPV_ARGS(m_DXGIFactory.Address())));
-
-	// Choose adapter
-	IDXGIAdapter* adapter = ChooseAdapter(m_DXGIFactory);
-	if(!adapter) {
-		LOG_ERROR("Could not find an adapter!");
-		return false;
-	}
-	m_Device.Reset(new D3D12Device(adapter));
-#ifdef _DEBUG
-	{
-		TDXPtr<ID3D12InfoQueue1> infoQueue;
-		DX_CHECK(m_Device->GetDevice()->QueryInterface(IID_PPV_ARGS(infoQueue.Address())));
-		DWORD callbackCookie;
-		infoQueue->RegisterMessageCallback(DebugOutputCallback, D3D12_MESSAGE_CALLBACK_FLAG_NONE, nullptr, &callbackCookie);
-
-	}
-#endif
-	return true;
 }

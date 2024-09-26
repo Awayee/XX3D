@@ -10,17 +10,17 @@
 namespace Engine {
 
     struct WindowInitInfo {
-        uint32 width;
-        uint32 height;
-        const char* title;
-        bool resizeable;
+        uint32 Width;
+        uint32 Height;
+        const char* Title;
+        bool Resizeable;
 
     };
 
     struct WindowIcon {
-        int width;
-        int height;
-        unsigned char* pixels;
+        int Width;
+        int Height;
+        unsigned char* Pixels;
     };
 
 	class EngineWindow {

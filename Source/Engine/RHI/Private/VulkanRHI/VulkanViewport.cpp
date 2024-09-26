@@ -28,12 +28,10 @@ inline ERHIFormat SurfaceFormatToRHIFormat(VkFormat f) {
 }
 
 inline VkPresentModeKHR ChoosePresentMode(const VkPresentModeKHR* data, uint32 count) {
-	VkPresentModeKHR s_PreferredMode[] { VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR };
-	for(const VkPresentModeKHR presentMode : s_PreferredMode) {
-		for(uint32 i=0; i<count; ++i) {
-			if(data[i] == presentMode) {
-				return presentMode;
-			}
+	const VkPresentModeKHR preferred = RHIConfig::GetEnableVSync() ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR;
+	for (uint32 i = 0; i < count; ++i) {
+		if (data[i] == preferred) {
+			return preferred;
 		}
 	}
 	return VK_PRESENT_MODE_FIFO_KHR;

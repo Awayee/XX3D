@@ -6,12 +6,12 @@ namespace Engine {
 	WindowSystemGLFW::WindowSystemGLFW(const WindowInitInfo& initInfo) {
 		glfwInit();
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-		glfwWindowHint(GLFW_RESIZABLE, initInfo.resizeable);
-		m_Window = glfwCreateWindow(initInfo.width, initInfo.height, initInfo.title, nullptr, nullptr);
+		glfwWindowHint(GLFW_RESIZABLE, initInfo.Resizeable);
+		m_Window = glfwCreateWindow(initInfo.Width, initInfo.Height, initInfo.Title, nullptr, nullptr);
 		glfwSetWindowUserPointer(m_Window, (void*)this);
 		InitKeyButtonCodeMap();
-		m_Size.w = static_cast<uint32>(initInfo.width);
-		m_Size.h = static_cast<uint32>(initInfo.height);
+		m_Size.w = static_cast<uint32>(initInfo.Width);
+		m_Size.h = static_cast<uint32>(initInfo.Height);
 		InitEvents();
 	}
 

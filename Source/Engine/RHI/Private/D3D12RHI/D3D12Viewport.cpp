@@ -2,6 +2,14 @@
 #include "D3D12command.h"
 #include "D3d12Device.h"
 
+inline uint32 GetSwapchainFlags() {
+	uint32 flags = 0;
+	if(!RHIConfig::GetEnableVSync()) {
+		flags |= (DXGI_SWAP_CHAIN_FLAG)(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH | DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING);
+	}
+	return flags;
+}
+
 D3D12BackBuffer::D3D12BackBuffer(const RHITextureDesc& desc) : D3D12Texture(desc), m_Resource(nullptr), m_Descriptor(InvalidCPUDescriptor()) {
 	m_ResState.SetState(D3D12_RESOURCE_STATE_PRESENT);
 }
@@ -61,7 +69,8 @@ ERHIFormat D3D12Viewport::GetBackBufferFormat() {
 }
 
 void D3D12Viewport::Present() {
-	m_Swapchain->Present(0, 0);
+	const LONG presentFlags = RHIConfig::GetEnableVSync() ? 0 : DXGI_PRESENT_ALLOW_TEARING;
+	m_Swapchain->Present(0, presentFlags);
 	m_Queue->SignalFence(m_PresentFence);
 	m_CurrentBackBuffer = (m_CurrentBackBuffer + 1) % BACK_BUFFER_COUNT;
 }
@@ -77,14 +86,14 @@ void D3D12Viewport::CreateSwapchain() {
 	sd.BufferDesc.Format = ToD3D12Format(m_SwapchainFormat);
 	sd.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 	sd.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-	sd.SampleDesc.Count = m_EnableMsaa ? m_MsaaSampleCount : 1;
-	sd.SampleDesc.Quality = m_EnableMsaa ? (m_MsaaQuality - 1) : 0;
+	sd.SampleDesc.Count = RHIConfig::GetEnableMSAA() ? m_MsaaSampleCount : 1;
+	sd.SampleDesc.Quality = RHIConfig::GetEnableMSAA() ? (m_MsaaQuality - 1) : 0;
 	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	sd.BufferCount = BACK_BUFFER_COUNT;
 	sd.OutputWindow = (HWND)m_Window;
 	sd.Windowed = true;
 	sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+	sd.Flags = GetSwapchainFlags();
 	// Note: Swap chain uses queue to perform flush.
 	DX_CHECK(m_DXGIFactory->CreateSwapChain(m_Queue->GetCommandQueue(), &sd, m_Swapchain.Address()));
 
@@ -123,7 +132,7 @@ void D3D12Viewport::OnResize() {
 		BACK_BUFFER_COUNT,
 		m_SwapchainExtent.w, m_SwapchainExtent.h,
 		ToD3D12Format(m_SwapchainFormat),
-		DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
+		GetSwapchainFlags());
 	m_CurrentBackBuffer = 0;
 	StaticDescriptorAllocator* allocator = m_Device->GetDescriptorMgr()->GetStaticAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	for (UINT i = 0; i < BACK_BUFFER_COUNT; i++){

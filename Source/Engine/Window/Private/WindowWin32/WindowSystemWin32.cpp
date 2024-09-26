@@ -33,20 +33,29 @@ namespace Engine {
 		wc.hCursor = LoadCursor(0, IDC_ARROW);
 		wc.hbrBackground = (HBRUSH)GetStockObject(NULL_BRUSH);
 		wc.lpszMenuName = 0;
-		wc.lpszClassName = initInfo.title;
+		wc.lpszClassName = initInfo.Title;
 		if (!RegisterClass(&wc)) {
 			MessageBox(nullptr, "RegisterClass Failed.", nullptr, 0);
-			ASSERT(0, "");
+			CHECK(0);
 		}
-		RECT R = { 0, 0, initInfo.width, initInfo.height };
-		AdjustWindowRect(&R, WS_OVERLAPPEDWINDOW, false);
+		LONG dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+		if(initInfo.Resizeable) {
+			dwStyle |= WS_THICKFRAME | WS_MAXIMIZEBOX;
+		}
+		RECT R = { 0, 0, (LONG)initInfo.Width, (LONG)initInfo.Height };
+		AdjustWindowRect(&R, dwStyle, false);
 		int width = R.right - R.left;
 		int height = R.bottom - R.top;
-		m_HWnd = CreateWindow(initInfo.title, initInfo.title,
-			WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, width, height, 0, 0, m_HAppInst, 0);
+		m_HWnd = CreateWindow(initInfo.Title, initInfo.Title,
+			dwStyle, CW_USEDEFAULT, CW_USEDEFAULT, width, height, 0, 0, m_HAppInst, 0);
 		if (!m_HWnd) {
 			MessageBox(0, "CreateWindow Failed.", 0, 0);
-			ASSERT(0, "");
+			CHECK(0);
+		}
+		// handle dpi scale
+		BOOL result = SetProcessDPIAware();
+		if (!result) {
+			CHECK(0);
 		}
 		ShowWindow(m_HWnd, SW_SHOW);
 		UpdateWindow(m_HWnd);
@@ -206,7 +215,6 @@ namespace Engine {
 			return 0;
 
 		case WM_LBUTTONDOWN:
-			LOG_DEBUG("PARAMS %lld, %lld", wParam, lParam);
 			OnMouseButtonDown(EBtn::Left);
 			return 0;
 		case WM_LBUTTONUP:

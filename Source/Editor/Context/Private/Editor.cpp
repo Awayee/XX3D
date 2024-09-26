@@ -31,14 +31,23 @@ namespace Editor {
 			imGuiNode->SetTask([this](RHICommandBuffer* cmd) { RHIImGui::Instance()->RenderDrawData(cmd); });
 		}
 	};
+
+	void XXEditor::PreInitialize() {
+		RHIConfig::SetEnableVSync(true);
+#ifdef _DEBUG
+		RHIConfig::SetEnableDebug(true);
+#else
+		RHIConfig::SetEnableDebug(false);
+#endif
+	}
+
 	XXEditor::XXEditor(): XXEngine() {
 		Render::Renderer::Instance()->SetSceneRenderer<EditorSceneRenderer>();
 		EngineAssetMgr::Initialize();
 		ProjectAssetMgr::Initialize();
-		EditorConfig::Initialize();
 		EditorLevelMgr::Initialize();
 		EditorUIMgr::Initialize();
-		RHIImGui::Initialize(Editor::EditorConfig::InitializeImGuiConfig);
+		RHIImGui::Initialize(Editor::UIController::InitializeImGuiConfig);
 		m_UIController.Reset(new UIController);
 	}
 

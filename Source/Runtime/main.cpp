@@ -7,6 +7,7 @@ int main() {
 	// Run Editor
 	{
 		LOG_INFO("Runtime");
+		Runtime::XXRuntime::PreInitialize();
 		Runtime::XXRuntime engine{};
 		engine.Run();
 	}

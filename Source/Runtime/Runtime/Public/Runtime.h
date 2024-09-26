@@ -4,6 +4,7 @@
 namespace Runtime {
 	class XXRuntime: public Engine::XXEngine{
 	public:
+		static void PreInitialize();
 		XXRuntime();
 		~XXRuntime() override;
 	private:

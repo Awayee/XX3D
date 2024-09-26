@@ -7,7 +7,7 @@ enum : uint32 {
     RHI_COLOR_TARGET_MAX = 8,
     RHI_TEXTURE_ARRAY_MAX = 1024,
     RHI_TEXTURE_MIP_MAX = 64,
-};           
+};
 
 enum class ERHIFormat: uint8 {
     Undefined=0,

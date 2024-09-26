@@ -13,36 +13,18 @@
 #define ENGINE_CONFIG_FILE "EngineConfig.ini"
 
 namespace Engine {
-	inline ERHIType ParseRHIType(const std::string& rhiTypeStr) {
-		if ("Vulkan" == rhiTypeStr) {
-			return ERHIType::Vulkan;
-		}
-		if ("D3D11" == rhiTypeStr) {
-			return ERHIType::D3D11;
-		}
-		if ("D3D12" == rhiTypeStr) {
+	inline ERHIType ConvertRHIType(const XString& typeName) {
+		if(typeName == "D3D12") {
 			return ERHIType::D3D12;
 		}
-		if ("GL" == rhiTypeStr) {
-			return ERHIType::OpenGL;
+		else if(typeName == "Vulkan") {
+			return ERHIType::Vulkan;
 		}
-		return ERHIType::Invalid;
+		return ERHIType::Unknown;
 	}
-
-	inline EGPUType ParseGPUType(const std::string& gpuType) {
-		if ("Integrated" == gpuType) {
-			return EGPUType::GPU_INTEGRATED;
-		}
-		if ("Discrete" == gpuType) {
-			return EGPUType::GPU_DISCRETE;
-		}
-		return EGPUType::GPU_UNKNOWN;
-	}
-
-
 	// lod .ini file
 
-	bool LoadIniFile(const char* file, TMap<XString, XString>& configMap) {
+	inline bool LoadIniFile(const char* file, TMap<XString, XString>& configMap) {
 		File::RFile configFile(file);
 		if (!configFile.is_open()) {
 			LOG_INFO("Failed to load file: %s", file);
@@ -76,11 +58,11 @@ namespace Engine {
 		}
 		auto& data = s_Instance.m_Data;
 		data.DefaultFontPath = configMap["DefaultFont"];
-		data.RHIType = ParseRHIType(configMap["RHIType"]);
-		data.GPUType = ParseGPUType(configMap["PreferredGPU"]);
-		data.WindowSize.w = static_cast<uint32>(std::atoi(configMap["WindowWidth"].c_str()));
-		data.WindowSize.h = static_cast<uint32>(std::atoi(configMap["WindowHeight"].c_str()));
-		data.DefaultShadowMapSize = static_cast<uint32>(std::atoi(configMap["DefaultShadowMapSize"].c_str()));
+		data.RHIType = ConvertRHIType(configMap["RHIType"]);
+		data.UseIntegratedGPU = (bool)(std::atoi(configMap["UseIntegratedGPU"].c_str()));
+		data.WindowSize.w = (uint32)(std::atoi(configMap["WindowWidth"].c_str()));
+		data.WindowSize.h = (uint32)(std::atoi(configMap["WindowHeight"].c_str()));
+		data.DefaultShadowMapSize = (uint32)(std::atoi(configMap["DefaultShadowMapSize"].c_str()));
 		data.MSAASampleCount = static_cast<uint8>(std::atoi(configMap["MSAA"].c_str()));
 		data.EnableRenderDoc = (bool)(std::atoi(configMap["EnableRenderDoc"].c_str()));
 		data.StartLevel = configMap["StartLevel"];

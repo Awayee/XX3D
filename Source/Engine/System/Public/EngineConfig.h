@@ -3,29 +3,20 @@
 #include "Core/Public/BaseStructs.h"
 #include "RHI/Public/RHI.h"
 namespace Engine {
-
-	enum class EGPUType {
-		GPU_INTEGRATED,
-		GPU_DISCRETE,
-		GPU_UNKNOWN
-	};
-	enum class ERHIType {
-		Vulkan,
+	enum class ERHIType: uint8 {
 		D3D12,
-		D3D11,
-		OpenGL,
-		Invalid
+		Vulkan,
+		Unknown
 	};
-
 	struct ConfigData {
 		XString       DefaultFontPath;
-		EGPUType      GPUType;
 		ERHIType      RHIType;
 		uint32        MSAASampleCount{ 0 };
 		USize2D       WindowSize;
 		uint32        DefaultShadowMapSize;
 		XString       StartLevel;
-		bool          EnableRenderDoc;
+		bool          EnableRenderDoc : 1;
+		bool          UseIntegratedGPU : 1;
 	};
 
 	class ConfigManager {

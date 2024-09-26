@@ -4,16 +4,6 @@
 #include "Core/Public/String.h"
 #include "Core/Public/TUniquePtr.h"
 
-
-typedef void* WindowHandle;
-struct RHIInitDesc {
-	XString AppName;
-	bool EnableDebug;
-	bool IntegratedGPU;
-	WindowHandle Window;
-	USize2D WindowSize;
-};
-
 // type defines
 typedef TUniquePtr<RHICommandBuffer>             RHICommandBufferPtr;
 typedef TUniquePtr<RHIBuffer>                    RHIBufferPtr;
@@ -23,7 +13,23 @@ typedef TUniquePtr<RHIFence>                     RHIFencePtr;
 typedef TUniquePtr<RHIShader>                    RHIShaderPtr;
 typedef TUniquePtr<RHIGraphicsPipelineState>     RHIGraphicsPipelineStatePtr;
 typedef TUniquePtr<RHIComputePipelineState>      RHIComputePipelineStatePtr;
+typedef void* WindowHandle;
 
+class RHIConfig {
+private:
+	static RHIConfig s_Instance;
+#define DEFINE_CONFIG_PROPERTY(Type, Name, DefaultVal)\
+	private:\
+	Type m_##Name {DefaultVal};\
+	public:\
+	static Type Get##Name(){return s_Instance.m_##Name;}\
+	static void Set##Name(Type val){s_Instance.m_##Name=val;}
+
+	// define properties
+	DEFINE_CONFIG_PROPERTY(bool, EnableDebug, false);
+	DEFINE_CONFIG_PROPERTY(bool, EnableVSync, false);
+	DEFINE_CONFIG_PROPERTY(bool, EnableMSAA, false);
+};
 
 class RHI{
 public:

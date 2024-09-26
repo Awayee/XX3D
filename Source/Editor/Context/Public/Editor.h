@@ -6,6 +6,7 @@ namespace Editor {
 	class UIController;
 	class XXEditor: public Engine::XXEngine {
 	public:
+		static void PreInitialize();
 		XXEditor();
 		~XXEditor() override;
 		TUniquePtr<UIController> m_UIController;

@@ -29,5 +29,3 @@ public:
 	virtual void BeginDebugLabel(const char* msg, const float* color) = 0;
 	virtual void EndDebugLabel() = 0;
 };
-//typedef void(*CommandBufferFunc)(RCommandBuffer*);
-typedef  std::function<void(RHICommandBuffer*)> CommandBufferFunc;

@@ -14,10 +14,10 @@ namespace Engine {
 		const auto& configData = ConfigManager::GetData();
 		ERHIType rhiType = configData.RHIType;
 		WindowInitInfo windowInfo;
-		windowInfo.width = configData.WindowSize.w;
-		windowInfo.height = configData.WindowSize.h;
-		windowInfo.title = PROJECT_NAME;
-		windowInfo.resizeable = true;
+		windowInfo.Width = configData.WindowSize.w;
+		windowInfo.Height = configData.WindowSize.h;
+		windowInfo.Title = PROJECT_NAME;
+		windowInfo.Resizeable = true;
 		if (ERHIType::Vulkan == rhiType) {
 			s_Instance.Reset(new WindowSystemGLFW(windowInfo));
 		}

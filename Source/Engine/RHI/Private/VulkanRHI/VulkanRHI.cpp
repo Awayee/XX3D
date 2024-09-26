@@ -9,10 +9,10 @@
 
 static constexpr uint32 MIN_API_VERSION{ VK_VERSION_1_2 };
 
-VulkanRHI::VulkanRHI(const RHIInitDesc& desc) {
+VulkanRHI::VulkanRHI(WindowHandle wnd, USize2D extent) {
 
 	// initialize context
-	m_Context.Reset(new VulkanContext(desc.EnableDebug, MIN_API_VERSION));
+	m_Context.Reset(new VulkanContext(RHIConfig::GetEnableDebug(), MIN_API_VERSION));
 	// Pick GPU
 	TArray<const char*> extensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 	VkPhysicalDevice physicalDevice = m_Context->PickPhysicalDevice();
@@ -20,7 +20,7 @@ VulkanRHI::VulkanRHI(const RHIInitDesc& desc) {
 	// Create logic device
 	m_Device.Reset(new VulkanDevice(m_Context.Get(), physicalDevice));
 	// Create viewport
-	m_Viewport.Reset(new VulkanViewport(m_Context.Get(), m_Device.Get(), desc.Window, desc.WindowSize));
+	m_Viewport.Reset(new VulkanViewport(m_Context.Get(), m_Device.Get(), wnd, extent));
 
 	LOG_INFO("RHI: Vulkan initialized successfully!");
 }

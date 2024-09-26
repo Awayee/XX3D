@@ -11,6 +11,7 @@ int main() {
 	//Run Editor
 	{
 		LOG_INFO("Editor Mode");
+		Editor::XXEditor::PreInitialize();
 		Editor::XXEditor editor;
 		editor.Run();
 	}

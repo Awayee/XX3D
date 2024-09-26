@@ -18,6 +18,15 @@ namespace Runtime {
 		}
 	};
 
+	void XXRuntime::PreInitialize() {
+		RHIConfig::SetEnableVSync(false);
+#ifdef _DEBUG
+		RHIConfig::SetEnableDebug(true);
+#else
+		RHIConfig::SetEnableDebug(false);
+#endif
+	}
+
 	XXRuntime::XXRuntime(): XXEngine() {
 		Render::Renderer::Instance()->SetSceneRenderer<RuntimeSceneRenderer>();
 		RHIImGui::Initialize(nullptr);

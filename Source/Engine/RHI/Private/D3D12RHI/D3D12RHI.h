@@ -7,7 +7,7 @@ class D3D12Viewport;
 
 class D3D12RHI final: RHI {
 public:
-	explicit D3D12RHI(const RHIInitDesc& desc);
+	explicit D3D12RHI(void* wnd, USize2D extent);
 	~D3D12RHI() override;
 	void BeginFrame() override;
 	ERHIFormat GetDepthFormat() override;
@@ -27,8 +27,4 @@ private:
 	TUniquePtr<D3D12Device> m_Device;
 	TUniquePtr<D3D12Viewport> m_Viewport;
 	ERHIFormat m_DepthFormat{ERHIFormat::D24_UNORM_S8_UINT };
-
-	bool CreateDeviceContext();
 };
-
-#define DX_DEVICE  D3D12RHI::InstanceD3D12()->Device()
