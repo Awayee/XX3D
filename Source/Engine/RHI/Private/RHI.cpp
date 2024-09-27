@@ -46,9 +46,12 @@ namespace {
 
 static RENDERDOC_API_1_6_0* s_RenderDocAPI{ nullptr };
 
-RHIConfig RHIConfig::s_Instance{};
-
 TUniquePtr<RHI> RHI::s_Instance{ nullptr };
+RHIInitConfigBuilder RHI::s_InitConfigBuilder{ nullptr };
+
+void RHI::SetInitConfigBuilder(RHIInitConfigBuilder f) {
+	s_InitConfigBuilder = f;
+}
 
 RHI* RHI::Instance() {
 	return s_Instance.Get();
@@ -70,12 +73,13 @@ void RHI::Initialize() {
 	// Create RHI instance.
 	const WindowHandle wnd = Engine::EngineWindow::Instance()->GetWindowHandle();
 	const USize2D extent = Engine::EngineWindow::Instance()->GetWindowSize();
+	const RHIInitConfig cfg = s_InitConfigBuilder ? s_InitConfigBuilder() : RHIInitConfig{};
 	switch(rhiType) {
 	case Engine::ERHIType::Vulkan:
-		s_Instance.Reset(new VulkanRHI(wnd, extent));
+		s_Instance.Reset(new VulkanRHI(wnd, extent, cfg));
 		break;
 	case Engine::ERHIType::D3D12:
-		s_Instance.Reset(new D3D12RHI(wnd, extent));
+		s_Instance.Reset(new D3D12RHI(wnd, extent, cfg));
 		break;
 	default:
 		LOG_ERROR("Failed to initialize RHI!");

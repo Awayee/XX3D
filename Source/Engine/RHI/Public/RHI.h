@@ -4,6 +4,12 @@
 #include "Core/Public/String.h"
 #include "Core/Public/TUniquePtr.h"
 
+#ifdef _DEBUG
+#define ENABLE_RHI_DEBUG true
+#else
+#define ENABLE_RHI_DEBUG false
+#endif
+
 // type defines
 typedef TUniquePtr<RHICommandBuffer>             RHICommandBufferPtr;
 typedef TUniquePtr<RHIBuffer>                    RHIBufferPtr;
@@ -15,24 +21,17 @@ typedef TUniquePtr<RHIGraphicsPipelineState>     RHIGraphicsPipelineStatePtr;
 typedef TUniquePtr<RHIComputePipelineState>      RHIComputePipelineStatePtr;
 typedef void* WindowHandle;
 
-class RHIConfig {
-private:
-	static RHIConfig s_Instance;
-#define DEFINE_CONFIG_PROPERTY(Type, Name, DefaultVal)\
-	private:\
-	Type m_##Name {DefaultVal};\
-	public:\
-	static Type Get##Name(){return s_Instance.m_##Name;}\
-	static void Set##Name(Type val){s_Instance.m_##Name=val;}
-
-	// define properties
-	DEFINE_CONFIG_PROPERTY(bool, EnableDebug, false);
-	DEFINE_CONFIG_PROPERTY(bool, EnableVSync, false);
-	DEFINE_CONFIG_PROPERTY(bool, EnableMSAA, false);
+struct RHIInitConfig {
+	bool EnableDebug : 1;
+	bool EnableVSync : 1;
+	bool EnableMSAA  : 1;
+	RHIInitConfig() : EnableDebug(ENABLE_RHI_DEBUG), EnableVSync(false), EnableMSAA(false) {}
 };
+typedef RHIInitConfig(*RHIInitConfigBuilder)();
 
 class RHI{
 public:
+	static void SetInitConfigBuilder(RHIInitConfigBuilder f);
 	static RHI* Instance();
 	static void Initialize();
 	static void Release();
@@ -55,8 +54,9 @@ public:
 protected:
 	friend TDefaultDeleter<RHI>;
 	static TUniquePtr<RHI> s_Instance;
+	static RHIInitConfigBuilder s_InitConfigBuilder;
 	RHI() = default;
 	NON_COPYABLE(RHI);
 	NON_MOVEABLE(RHI);
-	virtual ~RHI() {}
+	virtual ~RHI() = default;
 };

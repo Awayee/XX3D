@@ -33,12 +33,11 @@ namespace Editor {
 	};
 
 	void XXEditor::PreInitialize() {
-		RHIConfig::SetEnableVSync(true);
-#ifdef _DEBUG
-		RHIConfig::SetEnableDebug(true);
-#else
-		RHIConfig::SetEnableDebug(false);
-#endif
+		RHI::SetInitConfigBuilder([]()->RHIInitConfig {
+			RHIInitConfig cfg{};
+			cfg.EnableVSync = true;
+			return cfg;
+		});
 	}
 
 	XXEditor::XXEditor(): XXEngine() {

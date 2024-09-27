@@ -7,7 +7,7 @@ class D3D12Viewport;
 
 class D3D12RHI final: RHI {
 public:
-	explicit D3D12RHI(void* wnd, USize2D extent);
+	explicit D3D12RHI(WindowHandle wnd, USize2D extent, const RHIInitConfig& cfg);
 	~D3D12RHI() override;
 	void BeginFrame() override;
 	ERHIFormat GetDepthFormat() override;

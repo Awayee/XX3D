@@ -15,5 +15,7 @@ namespace Editor {
 		static EditorConfig s_Instance;
 		EDITOR_CONFIG_PROPERTY(float, CameraMoveSpeed, 0.1f);
 		EDITOR_CONFIG_PROPERTY(float, CameraRotateSpeed, 0.1f);
+		EDITOR_CONFIG_PROPERTY(bool, DisplayFPS, true);
+		EDITOR_CONFIG_PROPERTY(bool, EnableVSync, false);
 	};
 }

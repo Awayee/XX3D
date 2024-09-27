@@ -17,7 +17,7 @@ private:
 
 class VulkanViewport: public RHIViewport {
 public:
-	explicit VulkanViewport(const VulkanContext* context, VulkanDevice* device, WindowHandle window, USize2D size);
+	explicit VulkanViewport(const VulkanContext* context, VulkanDevice* device, WindowHandle window, USize2D size, const RHIInitConfig& cfg);
 	~VulkanViewport() override;
 	void SetSize(USize2D size) override;
 	USize2D GetSize() override;
@@ -43,6 +43,7 @@ private:
 	};
 	TArray<VulkanImage> m_SwapchainImages;
 	TStaticArray<VkSemaphore, RHI_FRAME_IN_FLIGHT_MAX> m_Semaphores;
+	bool m_EnableVSync{ false };
 	bool m_SizeDirty{ false };
 	uint32 m_BackBufferIdx{ 0 };
 	const VulkanQueue* m_PresentQueue{ nullptr };

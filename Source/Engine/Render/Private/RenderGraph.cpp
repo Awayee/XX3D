@@ -30,6 +30,12 @@ namespace Render {
 		return node;
 	}
 
+	RGTextureNode* RenderGraph::CopyTextureNode(RGTextureNode* textureNode, XString&& name) {
+		RGTextureNode* node = (RGTextureNode*)m_Nodes.EmplaceBack(new RGTextureNode(m_Nodes.Size(), textureNode)).Get();
+		node->SetName(MoveTemp(name));
+		return node;
+	}
+
 	RGPresentNode* RenderGraph::CreatePresentNode() {
 		if(RG_INVALID_NODE == m_PresentNodeID) {
 			m_PresentNodeID = m_Nodes.Size();

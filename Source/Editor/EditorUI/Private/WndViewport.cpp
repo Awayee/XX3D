@@ -148,11 +148,13 @@ namespace Editor {
 		ImGui::SetCursorPos(ImVec2(0, 0));
 		ImGui::Image(m_RenderTargetID, size);
 		// show fps
-		ImGui::SetCursorPos(ImVec2(32, 32));
-		const uint32 fps = (uint32)Engine::CTimer::Instance()->GetFPS();
-		const bool isFpsLow = fps < 60u;
-		const ImVec4 color{isFpsLow?1.0f:0.0f, isFpsLow?0.0f:1.0f, 0.0f, 1.0f};
-		ImGui::TextColored(color, "FPS=%u", fps);
+		if(EditorConfig::GetDisplayFPS()) {
+			ImGui::SetCursorPos(ImVec2(32, 32));
+			const uint32 fps = (uint32)Engine::CTimer::Instance()->GetFPS();
+			const bool isFpsLow = fps < 60u;
+			const ImVec4 color{ isFpsLow ? 1.0f : 0.0f, isFpsLow ? 0.0f : 1.0f, 0.0f, 1.0f };
+			ImGui::TextColored(color, "FPS=%u", fps);
+		}
 	}
 
 	void WndViewport::SetupRenderTarget() {

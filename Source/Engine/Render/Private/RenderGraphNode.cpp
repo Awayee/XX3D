@@ -16,52 +16,51 @@ namespace Render {
 		RGNode::Connect(node, this);
 	}
 
-	void RGRenderNode::ReadColorTarget(RGTextureNode* node, uint32 i, RHITextureSubRes subRes) {
+	void RGRenderNode::ReadColorTarget(RGTextureNode* node, uint32 i, RHITextureSubRes subRes, bool bClear) {
 		ASSERT(i < RHI_COLOR_TARGET_MAX, "Color target index out of range!");
 		const uint8 subResIdx = node->RegisterSubRes(subRes);
-		m_ColorTargets[i] = { node, subRes, subResIdx, ERTLoadOption::Load };
+		m_ColorTargets[i] = { node, subRes, subResIdx, bClear};
 		node->SetTargetState(EResourceState::ColorTarget);
 		RGNode::Connect(node, this);
 	}
 
-	void RGRenderNode::ReadColorTarget(RGTextureNode* node, uint32 i) {
-		ReadColorTarget(node, i, node->GetDesc().GetDefaultSubRes());
+	void RGRenderNode::ReadColorTarget(RGTextureNode* node, uint32 i, bool bClear) {
+		ReadColorTarget(node, i, node->GetDesc().GetDefaultSubRes(), bClear);
 	}
 
-	void RGRenderNode::WriteColorTarget(RGTextureNode* node, uint32 i, RHITextureSubRes subRes) {
+	void RGRenderNode::WriteColorTarget(RGTextureNode* node, uint32 i, RHITextureSubRes subRes, bool bClear) {
 		ASSERT(i < RHI_COLOR_TARGET_MAX, "Color target index out of range!");
 		const uint8 subResIdx = node->RegisterSubRes(subRes);
-		m_ColorTargets[i] = {node, subRes, subResIdx, ERTLoadOption::Clear};
+		m_ColorTargets[i] = {node, subRes, subResIdx, bClear};
+
+		const auto& backBufferDesc = node->GetDesc();
+		m_RenderArea = { 0,0, backBufferDesc.Width, backBufferDesc.Height };
 		RGNode::Connect(this, node);
 	}
 
-	void RGRenderNode::WriteColorTarget(RGTextureNode* node, uint32 i) {
-		WriteColorTarget(node, i, node->GetDesc().GetDefaultSubRes());
+	void RGRenderNode::WriteColorTarget(RGTextureNode* node, uint32 i, bool bClear) {
+		WriteColorTarget(node, i, node->GetDesc().GetDefaultSubRes(), bClear);
 	}
 
-	void RGRenderNode::ReadDepthTarget(RGTextureNode* node, RHITextureSubRes subRes) {
+	void RGRenderNode::ReadDepthTarget(RGTextureNode* node, RHITextureSubRes subRes, bool bClear) {
 		const uint8 subResIdx = node->RegisterSubRes(subRes);
-		m_DepthTarget = { node, subRes, subResIdx, ERTLoadOption::Load };
+		m_DepthTarget = { node, subRes, subResIdx, bClear };
 		node->SetTargetState(EResourceState::DepthStencil);
 		RGNode::Connect(node, this);
 	}
 
-	void RGRenderNode::ReadDepthTarget(RGTextureNode* node) {
-		ReadDepthTarget(node, node->GetDesc().GetDefaultSubRes());
+	void RGRenderNode::ReadDepthTarget(RGTextureNode* node, bool bClear) {
+		ReadDepthTarget(node, node->GetDesc().GetDefaultSubRes(), bClear);
 	}
 
-	void RGRenderNode::WriteDepthTarget(RGTextureNode* node, RHITextureSubRes subRes) {
+	void RGRenderNode::WriteDepthTarget(RGTextureNode* node, RHITextureSubRes subRes, bool bClear) {
 		const uint8 subResIdx = node->RegisterSubRes(subRes);
-		m_DepthTarget = { node, subRes, subResIdx, ERTLoadOption::Clear };
+		m_DepthTarget = { node, subRes, subResIdx, bClear };
 		RGNode::Connect(this, node);
 	}
 
-	void RGRenderNode::WriteDepthTarget(RGTextureNode* node) {
-		WriteDepthTarget(node, node->GetDesc().GetDefaultSubRes());
-	}
-
-	void RGRenderNode::SetRenderArea(const Rect& rect) {
-		m_RenderArea = rect;
+	void RGRenderNode::WriteDepthTarget(RGTextureNode* node, bool bClear) {
+		WriteDepthTarget(node, node->GetDesc().GetDefaultSubRes(), bClear);
 	}
 
 	void RGRenderNode::Run(ICmdAllocator* cmdAlloc) {
@@ -95,14 +94,14 @@ namespace Render {
 				colorTarget.Target = target.Node->GetRHI();
 				colorTarget.MipIndex = target.SubRes.MipIndex;
 				colorTarget.ArrayIndex = target.SubRes.ArrayIndex;
-				colorTarget.LoadOp = target.LoadOp;
+				colorTarget.LoadOp = target.IsClear ? ERTLoadOption::Clear : ERTLoadOption::Load;
 			}
 			if (m_DepthTarget.Node) {
 				auto& depthStencilTarget = renderPassInfo.DepthStencilTarget;
 				depthStencilTarget.Target = m_DepthTarget.Node->GetRHI();
 				depthStencilTarget.MipIndex = m_DepthTarget.SubRes.MipIndex;
 				depthStencilTarget.ArrayIndex = m_DepthTarget.SubRes.ArrayIndex;
-				depthStencilTarget.DepthLoadOp = m_DepthTarget.LoadOp;
+				depthStencilTarget.DepthLoadOp = m_DepthTarget.IsClear ? ERTLoadOption::Clear : ERTLoadOption::Load;
 				depthStencilTarget.DepthClear = 1.0f;
 			}
 			renderPassInfo.RenderArea = m_RenderArea;

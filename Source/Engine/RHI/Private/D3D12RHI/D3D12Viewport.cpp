@@ -2,14 +2,6 @@
 #include "D3D12command.h"
 #include "D3d12Device.h"
 
-inline uint32 GetSwapchainFlags() {
-	uint32 flags = 0;
-	if(!RHIConfig::GetEnableVSync()) {
-		flags |= (DXGI_SWAP_CHAIN_FLAG)(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH | DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING);
-	}
-	return flags;
-}
-
 D3D12BackBuffer::D3D12BackBuffer(const RHITextureDesc& desc) : D3D12Texture(desc), m_Resource(nullptr), m_Descriptor(InvalidCPUDescriptor()) {
 	m_ResState.SetState(D3D12_RESOURCE_STATE_PRESENT);
 }
@@ -24,8 +16,8 @@ void D3D12BackBuffer::ResetResource(ID3D12Resource* resource, D3D12_CPU_DESCRIPT
 	m_Descriptor = descriptor;
 }
 
-D3D12Viewport::D3D12Viewport(IDXGIFactory4* factory, D3D12Device* device, WindowHandle window, USize2D windowSize) :
-	m_DXGIFactory(factory), m_Device(device), m_Window(window), m_SwapchainExtent(windowSize) {
+D3D12Viewport::D3D12Viewport(IDXGIFactory4* factory, D3D12Device* device, WindowHandle window, USize2D windowSize, const RHIInitConfig& cfg) :
+	m_DXGIFactory(factory), m_Device(device), m_Window(window), m_SwapchainExtent(windowSize), m_EnableVSync(cfg.EnableVSync), m_EnableMsaa(cfg.EnableMSAA) {
 	// create fence for present complete
 	m_PresentFence.Reset(new D3D12Fence(m_Device->GetDevice()));
 	m_PresentFence->SetName("PresentComplete");
@@ -69,7 +61,7 @@ ERHIFormat D3D12Viewport::GetBackBufferFormat() {
 }
 
 void D3D12Viewport::Present() {
-	const LONG presentFlags = RHIConfig::GetEnableVSync() ? 0 : DXGI_PRESENT_ALLOW_TEARING;
+	const LONG presentFlags = m_EnableVSync ? 0 : DXGI_PRESENT_ALLOW_TEARING;
 	m_Swapchain->Present(0, presentFlags);
 	m_Queue->SignalFence(m_PresentFence);
 	m_CurrentBackBuffer = (m_CurrentBackBuffer + 1) % BACK_BUFFER_COUNT;
@@ -86,8 +78,8 @@ void D3D12Viewport::CreateSwapchain() {
 	sd.BufferDesc.Format = ToD3D12Format(m_SwapchainFormat);
 	sd.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 	sd.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-	sd.SampleDesc.Count = RHIConfig::GetEnableMSAA() ? m_MsaaSampleCount : 1;
-	sd.SampleDesc.Quality = RHIConfig::GetEnableMSAA() ? (m_MsaaQuality - 1) : 0;
+	sd.SampleDesc.Count = m_EnableMsaa ? m_MsaaSampleCount : 1;
+	sd.SampleDesc.Quality = m_EnableMsaa ? (m_MsaaQuality - 1) : 0;
 	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	sd.BufferCount = BACK_BUFFER_COUNT;
 	sd.OutputWindow = (HWND)m_Window;
@@ -150,4 +142,12 @@ void D3D12Viewport::UpdateBackBuffer() {
 	StaticDescriptorAllocator* allocator = m_Device->GetDescriptorMgr()->GetStaticAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = allocator->GetCPUHandle(m_BackBufferDescriptors[m_CurrentBackBuffer]);
 	m_BackBuffer->ResetResource(resource, cpuHandle);
+}
+
+uint32 D3D12Viewport::GetSwapchainFlags() {
+	uint32 flags = 0;
+	if (!m_EnableVSync) {
+		flags |= (DXGI_SWAP_CHAIN_FLAG)(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH | DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING);
+	}
+	return flags;
 }

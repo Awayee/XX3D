@@ -10,7 +10,7 @@ class VulkanViewport;
 
 class VulkanRHI final: public RHI {
 public:
-	explicit VulkanRHI(WindowHandle wnd, USize2D extent);
+	explicit VulkanRHI(WindowHandle wnd, USize2D extent, const RHIInitConfig& cfg);
 	~VulkanRHI()override;
 	void BeginFrame() override;
 	const VulkanContext* GetContext();

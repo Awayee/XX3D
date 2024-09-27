@@ -27,8 +27,8 @@ inline ERHIFormat SurfaceFormatToRHIFormat(VkFormat f) {
 	return ERHIFormat::Undefined;
 }
 
-inline VkPresentModeKHR ChoosePresentMode(const VkPresentModeKHR* data, uint32 count) {
-	const VkPresentModeKHR preferred = RHIConfig::GetEnableVSync() ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR;
+inline VkPresentModeKHR ChoosePresentMode(const VkPresentModeKHR* data, uint32 count, bool enableVSync) {
+	const VkPresentModeKHR preferred = enableVSync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR;
 	for (uint32 i = 0; i < count; ++i) {
 		if (data[i] == preferred) {
 			return preferred;
@@ -52,12 +52,13 @@ void VulkanBackBuffer::ResetImage(VkImage image, VkImageView view) {
 	m_View = view;
 }
 
-VulkanViewport::VulkanViewport(const VulkanContext* context, VulkanDevice* device, WindowHandle window, USize2D size) :
+VulkanViewport::VulkanViewport(const VulkanContext* context, VulkanDevice* device, WindowHandle window, USize2D size, const RHIInitConfig& cfg) :
 	m_Context(context),
 	m_Device(device),
 	m_Window(window),
 	m_Size(size),
-	m_Surface(VK_NULL_HANDLE){
+	m_Surface(VK_NULL_HANDLE),
+	m_EnableVSync(cfg.EnableVSync){
 	// Create vulkan surface
 	VK_ASSERT(glfwCreateWindowSurface(m_Context->GetInstance(), static_cast<GLFWwindow*>(m_Window), nullptr, &m_Surface), "vk create window surface");
 	// Get present queue
@@ -177,7 +178,7 @@ void VulkanViewport::CreateSwapchain() {
 	if (presentModeCount != 0) {
 		TFixedArray<VkPresentModeKHR> presentModes(presentModeCount);
 		vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, m_Surface, &presentModeCount, presentModes.Data());
-		presentMode = ChoosePresentMode(presentModes.Data(), presentModeCount);
+		presentMode = ChoosePresentMode(presentModes.Data(), presentModeCount, m_EnableVSync);
 	}
 
 	VkSwapchainCreateInfoKHR swapchainInfo{ VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, nullptr, 0 };

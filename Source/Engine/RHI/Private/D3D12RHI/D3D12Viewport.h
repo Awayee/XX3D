@@ -21,7 +21,7 @@ private:
 
 class D3D12Viewport : public RHIViewport{
 public:
-	D3D12Viewport(IDXGIFactory4* factory, D3D12Device* device, WindowHandle window, USize2D windowSize);
+	D3D12Viewport(IDXGIFactory4* factory, D3D12Device* device, WindowHandle window, USize2D windowSize, const RHIInitConfig& cfg);
 	~D3D12Viewport() override;
 	void SetSize(USize2D size) override;
 	USize2D GetSize() override;
@@ -36,7 +36,7 @@ private:
 	D3D12Queue* m_Queue;
 	WindowHandle m_Window;
 	USize2D m_SwapchainExtent;
-
+	bool      m_EnableVSync{ false };
 	bool      m_EnableMsaa{ false };
 	uint32    m_MsaaSampleCount{ 4 };
 	uint32    m_MsaaQuality{ 0 };
@@ -52,4 +52,5 @@ private:
 	void CreateSwapchain();
 	void OnResize();
 	void UpdateBackBuffer();
+	uint32 GetSwapchainFlags();
 };

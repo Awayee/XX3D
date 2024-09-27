@@ -27,7 +27,6 @@ D3D12ImGui::D3D12ImGui(void (* configInitializer)()) {
 	if (configInitializer) {
 		configInitializer();
 	}
-
 }
 
 D3D12ImGui::~D3D12ImGui() {
@@ -56,6 +55,7 @@ void D3D12ImGui::RenderDrawData(RHICommandBuffer* cmd) {
 	if(!m_ImTextureDescriptorMap.empty()) {
 		// collect heaps
 		TSet<uint32> heapIndicesSet;
+		heapIndicesSet.insert(m_FontDescriptor.HeapIndex);
 		for (auto& [texID, handle] : m_ImTextureDescriptorMap) {
 			heapIndicesSet.insert(handle.HeapIndex);
 		}
@@ -64,6 +64,10 @@ void D3D12ImGui::RenderDrawData(RHICommandBuffer* cmd) {
 			heaps.PushBack(m_DescriptorAllocator->GetHeap(heapIndex));
 		}
 		d3d12Cmd->SetDescriptorHeaps(heaps.Size(), heaps.Data());
+	}
+	else {
+		ID3D12DescriptorHeap* heap = m_DescriptorAllocator->GetHeap(m_FontDescriptor.HeapIndex);
+		d3d12Cmd->SetDescriptorHeaps(1, &heap);
 	}
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), d3d12Cmd);
 }

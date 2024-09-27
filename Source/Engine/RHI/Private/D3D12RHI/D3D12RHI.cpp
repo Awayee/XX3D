@@ -28,7 +28,6 @@ inline IDXGIAdapter* ChooseAdapter(IDXGIFactory4* factory) {
 	return nullptr;
 }
 
-#ifdef _DEBUG
 void CALLBACK DebugOutputCallback(
 	D3D12_MESSAGE_CATEGORY Category,
 	D3D12_MESSAGE_SEVERITY Severity,
@@ -46,14 +45,14 @@ void CALLBACK DebugOutputCallback(
 		LOG_ERROR("[D3D12 Corruption] %s", pDescription);
 	}
 }
-#endif
 
-D3D12RHI::D3D12RHI(void* wnd, USize2D extent) {
+D3D12RHI::D3D12RHI(WindowHandle wnd, USize2D extent, const RHIInitConfig& cfg) {
 	// Enable the D3D12 debug layer.
-	if(RHIConfig::GetEnableDebug()){
+	if(cfg.EnableDebug){
 		TDXPtr<ID3D12Debug> debug;
 		DX_CHECK(D3D12GetDebugInterface(IID_PPV_ARGS(debug.Address())));
 		debug->EnableDebugLayer();
+		LOG_INFO("D3D12 EnableDebugLayer");
 	}
 	DX_CHECK(CreateDXGIFactory1(IID_PPV_ARGS(m_DXGIFactory.Address())));
 
@@ -64,15 +63,14 @@ D3D12RHI::D3D12RHI(void* wnd, USize2D extent) {
 	}
 	m_Device.Reset(new D3D12Device(adapter));
 	// Initialize debug callback
-	if(RHIConfig::GetEnableDebug()){
+	if(cfg.EnableDebug){
 		TDXPtr<ID3D12InfoQueue1> infoQueue;
 		DX_CHECK(m_Device->GetDevice()->QueryInterface(IID_PPV_ARGS(infoQueue.Address())));
 		DWORD callbackCookie;
 		infoQueue->RegisterMessageCallback(DebugOutputCallback, D3D12_MESSAGE_CALLBACK_FLAG_NONE, nullptr, &callbackCookie);
-
 	}
 
-	m_Viewport.Reset(new D3D12Viewport(m_DXGIFactory, m_Device, wnd, extent));
+	m_Viewport.Reset(new D3D12Viewport(m_DXGIFactory, m_Device, wnd, extent, cfg));
 }
 
 D3D12RHI::~D3D12RHI() {

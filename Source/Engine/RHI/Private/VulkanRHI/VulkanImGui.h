@@ -12,5 +12,4 @@ public:
 	void RemoveImGuiTexture(ImTextureID textureID) override;
 public:
 	ImGuiContext* m_Context{ nullptr };
-	bool m_FrameBegin{ false };
 };

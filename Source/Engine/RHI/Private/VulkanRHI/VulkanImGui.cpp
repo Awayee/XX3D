@@ -63,7 +63,6 @@ void VulkanImGui::FrameBegin() {
 	ImGui_ImplGlfw_NewFrame();
 	ImGui_ImplVulkan_NewFrame();
 	ImGui::NewFrame();
-	m_FrameBegin = true;
 }
 
 void VulkanImGui::FrameEnd() {
@@ -71,7 +70,6 @@ void VulkanImGui::FrameEnd() {
 }
 
 void VulkanImGui::RenderDrawData(RHICommandBuffer* cmd) {
-	ASSERT(m_FrameBegin, "");
 	ImGui::Render();
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), static_cast<VulkanCommandBuffer*>(cmd)->GetHandle());
 }

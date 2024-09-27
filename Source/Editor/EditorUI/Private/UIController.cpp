@@ -116,6 +116,7 @@ namespace Editor {
 		EditorUIMgr::Instance()->AddWindow("Config", []() {
 			ImGui::SliderFloat("Camera Move Speed", EditorConfig::SetCameraMoveSpeed(), 0.001f, 1.0f);
 			ImGui::SliderFloat("Camera Rotate Speed", EditorConfig::SetCameraRotateSpeed(), 0.001f, 1.0f);
+			ImGui::Checkbox("Display FPS", EditorConfig::SetDisplayFPS());
 		});
 	}
 

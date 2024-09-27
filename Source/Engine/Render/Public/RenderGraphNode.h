@@ -58,15 +58,16 @@ namespace Render {
 		RGRenderNode(uint32 nodeID): RGPassNode(nodeID) {}
 		~RGRenderNode() override = default;
 		void ReadSRV(RGTextureNode* node);
-		void ReadColorTarget(RGTextureNode* node, uint32 i, RHITextureSubRes subRes); // keep content written by previous pass (without clear)
-		void ReadColorTarget(RGTextureNode* node, uint32 i); // default subres
-		void WriteColorTarget(RGTextureNode* node, uint32 i, RHITextureSubRes subRes); // write new targets
-		void WriteColorTarget(RGTextureNode* node, uint32 i);
-		void ReadDepthTarget(RGTextureNode* node, RHITextureSubRes subRes);
-		void ReadDepthTarget(RGTextureNode* node);
-		void WriteDepthTarget(RGTextureNode* node, RHITextureSubRes subRes);
-		void WriteDepthTarget(RGTextureNode* node);
-		void SetRenderArea(const Rect& rect);
+		void ReadColorTarget(RGTextureNode* node, uint32 i, RHITextureSubRes subRes, bool bClear=false); // keep content written by previous pass (without clear)
+		void ReadColorTarget(RGTextureNode* node, uint32 i, bool bClear=false); // default subres
+		void WriteColorTarget(RGTextureNode* node, uint32 i, RHITextureSubRes subRes, bool bClear=true); // write new targets
+		void WriteColorTarget(RGTextureNode* node, uint32 i, bool bClear=true);
+		void ReadDepthTarget(RGTextureNode* node, RHITextureSubRes subRes, bool bClear=false);
+		void ReadDepthTarget(RGTextureNode* node, bool bClear=false);
+		void WriteDepthTarget(RGTextureNode* node, RHITextureSubRes subRes, bool bClear=true);
+		void WriteDepthTarget(RGTextureNode* node, bool bClear=true);
+		void SetRenderArea(const Rect& rect) { m_RenderArea = rect; }
+		const Rect& GetRenderArea() const { return m_RenderArea; }
 		void SetTask(RenderTask&& f) { m_Task = MoveTemp(f); }
 	private:
 		TArray<RGTextureNode*> m_SRVs;
@@ -74,7 +75,7 @@ namespace Render {
 			RGTextureNode* Node{ nullptr };
 			RHITextureSubRes SubRes{};
 			uint8 SubResIndex{ 0 };
-			ERTLoadOption LoadOp{ ERTLoadOption::NoAction };
+			bool IsClear{ false };
 		};
 		TargetInfo m_DepthTarget;
 		TStaticArray<TargetInfo, RHI_COLOR_TARGET_MAX> m_ColorTargets;
@@ -156,6 +157,7 @@ namespace Render {
 	public:
 		RGTextureNode(RGNodeID nodeID, const RHITextureDesc& desc) : RGResourceNode(nodeID), m_Desc(desc), m_RHI(nullptr) {}
 		explicit RGTextureNode(uint32 nodeID, RHITexture* texture) : RGResourceNode(nodeID), m_Desc(texture->GetDesc()), m_RHI(texture) {}
+		explicit RGTextureNode(uint32 nodeID, const RGTextureNode* rhs) : RGResourceNode(nodeID), m_Desc(rhs->m_Desc), m_RHI(rhs->m_RHI) {}
 		const RHITextureDesc& GetDesc() const { return m_Desc; }
 		RHITexture* GetRHI();
 		void SetTargetState(EResourceState targetState) { m_TargetState = targetState; }

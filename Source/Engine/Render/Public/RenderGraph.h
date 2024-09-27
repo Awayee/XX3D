@@ -16,6 +16,7 @@ namespace Render {
 		RGTransferNode* CreateTransferNode(XString&& name);
 		RGBufferNode* CreateBufferNode(RHIBuffer* buffer, XString&& name);
 		RGTextureNode* CreateTextureNode(RHITexture* texture, XString&& name);
+		RGTextureNode* CopyTextureNode(RGTextureNode* textureNode, XString&& name);
 		RGPresentNode* CreatePresentNode();
 
 		// Insert a fence signed after node finished.
