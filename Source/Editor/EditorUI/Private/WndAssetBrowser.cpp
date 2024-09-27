@@ -1,7 +1,6 @@
 #include "WndAssetBrowser.h"
 #include "EditorUI/Public/EditorUIMgr.h"
 #include "Functions/Public/AssetImporter.h"
-#include <windows.h>
 
 namespace {
 	static constexpr uint32 INPUT_CHAR_SIZE = 128;

@@ -3,10 +3,12 @@
 #include "Objects/Public/DirectionalLight.h"
 #include "Math/Public/Math.h"
 #include "Objects/Public/Camera.h"
+#include "EditorUI/Public/EditorUIMgr.h"
 
 namespace Editor {
 
 	WndLevelSetting::WndLevelSetting(): EditorWndBase("LevelSetting") {
+		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
 	}
 
 	WndLevelSetting::~WndLevelSetting() {

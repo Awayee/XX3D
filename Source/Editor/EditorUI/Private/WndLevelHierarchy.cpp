@@ -1,8 +1,6 @@
 #include "WndLevelHierarchy.h"
 #include "Functions/Public/EditorLevelMgr.h"
 #include "EditorUI/Public/EditorUIMgr.h"
-#include "Functions/Public/EditorLevelMgr.h"
-#include "Asset/Public/AssetLoader.h"
 #include "Core/Public/String.h"
 
 namespace Editor {
