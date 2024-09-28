@@ -86,8 +86,7 @@ namespace {
 	}
 
 	void GenerateMipMap(VkCommandBuffer cmd, VkImage image, uint32 levelCount, uint32 width, uint32 height, VkImageAspectFlags aspect, uint32 baseLayer, uint32 layerCount) {
-		for (uint32 i = 1; i < levelCount; i++)
-		{
+		for (uint32 i = 1; i < levelCount; i++){
 			VkImageBlit imageBlit{};
 			imageBlit.srcSubresource.aspectMask = aspect;
 			imageBlit.srcSubresource.baseArrayLayer = baseLayer;

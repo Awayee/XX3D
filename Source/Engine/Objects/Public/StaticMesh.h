@@ -43,7 +43,6 @@ namespace Object {
 	struct StaticMeshComponent {
 		void BuildFromAsset(const Asset::MeshAsset& meshAsset);
 		TArray<PrimitiveRenderData> Primitives;
-		RHIBufferPtr UniformBuffer;
 		REGISTER_ECS_COMPONENT(StaticMeshComponent);
 	};
 

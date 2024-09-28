@@ -38,6 +38,7 @@ public:
 	virtual ERHIFormat GetDepthFormat() = 0;
 	virtual RHIViewport* GetViewport() = 0;
 	virtual void BeginFrame() = 0;
+	virtual void BeginRendering() = 0;
 	virtual RHIBufferPtr CreateBuffer(const RHIBufferDesc& desc) = 0;
 	virtual RHITexturePtr CreateTexture(const RHITextureDesc& desc) = 0;
 	virtual RHISamplerPtr CreateSampler(const RHISamplerDesc& desc) = 0;
@@ -50,6 +51,7 @@ public:
 	// if bPresent is true, the command buffers will execute after viewport acquired back buffer.
 	virtual void SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, EQueueType queue, RHIFence* fence, bool bPresent) = 0;
 
+	virtual RHIDynamicBuffer AllocateDynamicBuffer(EBufferFlags bufferFlags, uint32 bufferSize, const void* bufferData, uint32 stride) = 0;
 	void CaptureFrame();
 protected:
 	friend TDefaultDeleter<RHI>;

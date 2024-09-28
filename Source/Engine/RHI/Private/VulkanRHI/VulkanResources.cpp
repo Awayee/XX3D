@@ -7,11 +7,11 @@
 #include "Math/Public/Math.h"
 
 VulkanBuffer::VulkanBuffer(const RHIBufferDesc& desc, VulkanDevice* device) : RHIBuffer(desc), m_Device(device) {
-	CHECK(m_Device->GetMemoryMgr()->AllocateBufferMemory(m_Allocation, desc.ByteSize, ToBufferUsage(desc.Flags), ToBufferMemoryProperty(desc.Flags)));
+	CHECK(m_Device->GetMemoryAllocator()->AllocateBufferMemory(m_Allocation, desc.ByteSize, ToBufferUsage(desc.Flags), ToBufferMemoryProperty(desc.Flags)));
 }
 
 VulkanBuffer::~VulkanBuffer() {
-	m_Device->GetMemoryMgr()->FreeBufferMemory(m_Allocation);
+	m_Device->GetMemoryAllocator()->FreeBufferMemory(m_Allocation);
 }
 
 void VulkanBuffer::SetName(const char* name) {
@@ -42,12 +42,21 @@ VkImageView VulkanRHITexture::GetDefaultView() {
 	return GetView(GetDesc().GetDefaultSubRes());
 }
 
-VulkanTextureImpl::VulkanTextureImpl(const RHITextureDesc& desc, VulkanDevice* device, VkImage image, ImageAllocation&& alloc):
-	VulkanRHITexture(desc),
-	m_Device(device),
-	m_Image(image),
-	m_Allocation(MoveTemp(alloc)){
-	// reserve view size
+VulkanTextureImpl::VulkanTextureImpl(const RHITextureDesc& desc, VulkanDevice* device): VulkanRHITexture(desc), m_Device(device), m_Image(nullptr) {
+	VkImageCreateInfo imageInfo{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr};
+	imageInfo.flags = ToImageCreateFlags(desc.Dimension);
+	imageInfo.imageType = ToImageType(desc.Dimension);
+	imageInfo.format = ToVkFormat(desc.Format);
+	imageInfo.extent = { desc.Width, desc.Height, desc.Depth};
+	imageInfo.mipLevels = desc.MipSize;
+	imageInfo.arrayLayers = desc.ArraySize * GetImagePerLayerSize(desc.Dimension);
+	imageInfo.samples = ToVkMultiSampleCount(desc.Samples);
+	imageInfo.usage = ToImageUsage(desc.Flags);
+	VK_CHECK(vkCreateImage(m_Device->GetDevice(), &imageInfo, nullptr, &m_Image));
+	// memory
+	VkMemoryPropertyFlags memoryProperty = ToImageMemoryProperty(desc.Flags);
+	CHECK(m_Device->GetMemoryAllocator()->AllocateImageMemory(m_Allocation, m_Image, memoryProperty));
+	// Reserve view size
 	m_Views.Resize(GetDesc().ArraySize);
 }
 
@@ -58,7 +67,7 @@ VulkanTextureImpl::~VulkanTextureImpl() {
 		}
 	}
 	vkDestroyImage(m_Device->GetDevice(), m_Image, nullptr);
-	m_Device->GetMemoryMgr()->FreeImageMemory(m_Allocation);
+	m_Device->GetMemoryAllocator()->FreeImageMemory(m_Allocation);
 }
 
 VkImageView VulkanTextureImpl::GetView(RHITextureSubRes subRes) {

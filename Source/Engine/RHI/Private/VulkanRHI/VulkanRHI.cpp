@@ -34,7 +34,11 @@ void VulkanRHI::BeginFrame() {
 	m_Device->GetCommandContext()->BeginFrame();
 	m_Device->GetUploader()->BeginFrame();
 	m_Device->GetDescriptorMgr()->BeginFrame();
-	m_Device->GetMemoryMgr()->Update();
+}
+
+void VulkanRHI::BeginRendering() {
+	m_Device->GetDynamicBufferAllocator()->UnmapAllocations();
+	m_Device->GetDynamicBufferAllocator()->GC();
 }
 
 ERHIFormat VulkanRHI::GetDepthFormat() {
@@ -67,27 +71,7 @@ RHIBufferPtr VulkanRHI::CreateBuffer(const RHIBufferDesc& desc) {
 }
 
 RHITexturePtr VulkanRHI::CreateTexture(const RHITextureDesc& desc) {
-	VkImageCreateInfo imageInfo{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr};
-	imageInfo.flags = ToImageCreateFlags(desc.Dimension);
-	imageInfo.imageType = ToImageType(desc.Dimension);
-	imageInfo.format = ToVkFormat(desc.Format);
-	imageInfo.extent = { desc.Width, desc.Height, desc.Depth};
-	imageInfo.mipLevels = desc.MipSize;
-	imageInfo.arrayLayers = desc.ArraySize * GetImagePerLayerSize(desc.Dimension);
-	imageInfo.samples = ToVkMultiSampleCount(desc.Samples);
-	imageInfo.usage = ToImageUsage(desc.Flags);
-	VkImage imageHandle;
-	if(VK_SUCCESS != vkCreateImage(m_Device->GetDevice(), &imageInfo, nullptr, &imageHandle)) {
-		return nullptr;
-	}	
-	// memory
-	ImageAllocation alloc;
-	VkMemoryPropertyFlags memoryProperty = ToImageMemoryProperty(desc.Flags);
-	if(!m_Device->GetMemoryMgr()->AllocateImageMemory(alloc, imageHandle, memoryProperty)) {
-		vkDestroyImage(m_Device->GetDevice(), imageHandle, nullptr);
-		return nullptr;
-	}
-	return RHITexturePtr(new VulkanTextureImpl(desc, GetDevice(), imageHandle, MoveTemp(alloc)));
+	return RHITexturePtr(new VulkanTextureImpl(desc, GetDevice()));
 }
 
 RHISamplerPtr VulkanRHI::CreateSampler(const RHISamplerDesc& desc) {
@@ -146,4 +130,9 @@ void VulkanRHI::SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, EQueueT
 	VkFence fenceHandle = fence ? ((VulkanRHIFence*)fence)->GetFence() : VK_NULL_HANDLE;
 	VkSemaphore smp = bPresent ? m_Viewport->GetCurrentSemaphore() : VK_NULL_HANDLE;
 	m_Device->GetCommandContext()->SubmitCommandBuffers(vulkanCmds, queue, smp, fenceHandle);
+}
+
+RHIDynamicBuffer VulkanRHI::AllocateDynamicBuffer(EBufferFlags bufferFlags, uint32 bufferSize, const void* bufferData, uint32 stride) {
+	auto a = m_Device->GetDynamicBufferAllocator()->Allocate(ToBufferUsage(bufferFlags), bufferSize, bufferData);
+	return RHIDynamicBuffer{ a.BufferIndex, a.Offset, a.Size, stride};
 }

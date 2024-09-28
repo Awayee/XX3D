@@ -1,6 +1,5 @@
 #pragma once
 #include "RHIResources.h"
-#include "Core/Public/Func.h"
 
 // command buffer
 class RHICommandBuffer {

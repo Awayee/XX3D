@@ -7,6 +7,7 @@ enum : uint32 {
     RHI_COLOR_TARGET_MAX = 8,
     RHI_TEXTURE_ARRAY_MAX = 1024,
     RHI_TEXTURE_MIP_MAX = 64,
+    RHI_DYNAMIC_BUFFER_PAGE = 16 << 10,
 };
 
 enum class ERHIFormat: uint8 {

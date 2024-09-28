@@ -44,7 +44,7 @@ class StaticDescriptorAllocator {
 public:
 	NON_COPYABLE(StaticDescriptorAllocator);
 	NON_MOVEABLE(StaticDescriptorAllocator);
-	StaticDescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, D3D12_DESCRIPTOR_HEAP_FLAGS flags, uint32 pageSize);
+	StaticDescriptorAllocator(ID3D12Device* device, EStaticDescriptorType type, D3D12_DESCRIPTOR_HEAP_FLAGS flags, uint32 pageSize);
 	~StaticDescriptorAllocator() = default;
 	StaticDescriptorHandle AllocateDescriptorSlot();
 	ID3D12DescriptorHeap* GetHeap(uint32 heapIndex);
@@ -79,7 +79,7 @@ class DynamicDescriptorAllocator {
 public:
 	NON_COPYABLE(DynamicDescriptorAllocator);
 	NON_MOVEABLE(DynamicDescriptorAllocator);
-	DynamicDescriptorAllocator(ID3D12Device* device, EDynamicDescriptorType type, uint32 pageSize);
+	DynamicDescriptorAllocator(ID3D12Device* device, EDynamicDescriptorType type, D3D12_DESCRIPTOR_HEAP_FLAGS flags, uint32 pageSize);
 	~DynamicDescriptorAllocator() = default;
 	DynamicDescriptorHandle AllocateSlot(uint32 descriptorCount);
 	ID3D12DescriptorHeap* GetHeap(uint32 heapIndex);
@@ -90,6 +90,7 @@ public:
 private:
 	ID3D12Device* m_Device;
 	const EDynamicDescriptorType m_Type;
+	const D3D12_DESCRIPTOR_HEAP_FLAGS m_Flags;
 	const uint32 m_PageSize;
 	const uint32 m_IncrementSize;
 	struct DescriptorHeapStorage {

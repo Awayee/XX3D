@@ -156,7 +156,6 @@ namespace Object {
 
 	RenderCamera::RenderCamera() {
 		// get window size for aspect
-		m_Uniform = RHI::Instance()->CreateBuffer({ EBufferFlags::Uniform, sizeof(CameraUBO), 0 });
 		m_ViewMatrix = Math::FMatrix4x4::IDENTITY;
 		USize2D size = Engine::EngineWindow::Instance()->GetWindowSize();
 		SetAspect((float)size.w / (float)size.h);
@@ -188,11 +187,11 @@ namespace Object {
 		cameraUBO.VP = GetViewProjectMatrix();
 		cameraUBO.InvVP = GetInvViewProjectMatrix();
 		cameraUBO.CamPos = GetView().Eye;
-		m_Uniform->UpdateData(&cameraUBO, sizeof(CameraUBO), 0);
+		m_Uniform = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(CameraUBO), &cameraUBO, 0);
 	}
 
-	RHIBuffer* RenderCamera::GetBuffer() {
-		return m_Uniform.Get();
+	const RHIDynamicBuffer& RenderCamera::GertUniformBuffer() {
+		return m_Uniform;
 	}
 
 	RenderCamera::~RenderCamera(){}

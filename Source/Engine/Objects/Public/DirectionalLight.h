@@ -33,7 +33,7 @@ namespace Object {
 		void UpdateShadowMapDrawCalls();
 		static uint32 GetCascadeNum() { return CASCADE_NUM; }
 		// for scene rendering
-		RHIBuffer* GetUniform() { return m_Uniform.Get(); }
+		const RHIDynamicBuffer& GetUniform() { return m_Uniform; }
 	private:
 		// for scene render
 		static constexpr uint32 CASCADE_NUM = 4;
@@ -41,7 +41,7 @@ namespace Object {
 		Math::FVector3 m_LightDir;
 		Math::FVector3 m_LightEuler;
 		Math::FVector3 m_LightColor{0.7f,0.8f,0.8f};
-		RHIBufferPtr m_Uniform;
+		RHIDynamicBuffer m_Uniform;
 
 		// for shadow
 		bool m_EnableShadow{ true };
@@ -57,7 +57,7 @@ namespace Object {
 		TStaticArray<Render::DrawCallQueue, CASCADE_NUM> m_DrawCallQueues;
 		TStaticArray<float, CASCADE_NUM> m_FarDistances;
 		TStaticArray<Math::FMatrix4x4, CASCADE_NUM> m_VPMats;
-		TStaticArray<RHIBufferPtr, CASCADE_NUM> m_ShadowUniforms;// for shadow map
+		TStaticArray<RHIDynamicBuffer, CASCADE_NUM> m_ShadowUniforms;// for shadow map
 		bool m_ShadowMapTextureDirty{ true };
 		bool m_ShadowMapPSODirty{ true };
 

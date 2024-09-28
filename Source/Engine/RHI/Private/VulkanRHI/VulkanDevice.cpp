@@ -39,10 +39,11 @@ VulkanDevice::VulkanDevice(const VulkanContext* context, VkPhysicalDevice physic
 	InitializeDeviceInfo();
 	// Create logical device
 	CreateDevice(context);
-	// Create memory manager
-	m_MemoryMgr.Reset(new VulkanMemoryMgr(context, this));
 	// Create descriptor manager
 	m_DescriptorMgr.Reset(new VulkanDescriptorSetMgr(this));
+	// Create memory manager
+	m_MemoryAllocator.Reset(new VulkanMemoryAllocator(context, this));
+	m_DynamicBufferAllocator.Reset(new VulkanDynamicBufferAllocator(m_MemoryAllocator, this, RHI_DYNAMIC_BUFFER_PAGE));
 	// Create command manager
 	m_CommandContext.Reset(new VulkanCommandContext(this));
 	// Create uploader
@@ -53,7 +54,8 @@ VulkanDevice::~VulkanDevice() {
 	m_Uploader.Reset();
 	m_CommandContext.Reset();
 	m_DescriptorMgr.Reset();
-	m_MemoryMgr.Reset();
+	m_DynamicBufferAllocator.Reset();
+	m_MemoryAllocator.Reset();
 	vkDestroyDevice(m_Device, nullptr);
 }
 

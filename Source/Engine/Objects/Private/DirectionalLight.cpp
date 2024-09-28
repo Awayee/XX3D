@@ -43,11 +43,6 @@ namespace Object {
 	}
 
 	DirectionalLight::DirectionalLight() {
-		// create Uniforms
-		for(auto& uniform: m_ShadowUniforms) {
-			uniform = RHI::Instance()->CreateBuffer({ EBufferFlags::Uniform, sizeof(Math::FMatrix4x4), 0 });
-		}
-		m_Uniform = RHI::Instance()->CreateBuffer({ EBufferFlags::Uniform, sizeof(LightUBO), 0 });
 		// load shadow map size
 		SetShadowMapSize(Engine::ConfigManager::GetData().DefaultShadowMapSize);
 	}
@@ -145,10 +140,10 @@ namespace Object {
 		for (uint32 i = 0; i < CASCADE_NUM; ++i) {
 			ubo.FarDistances[i] = m_FarDistances[i];
 			ubo.VPMats[i] = m_VPMats[i];
-			m_ShadowUniforms[i]->UpdateData(&ubo.VPMats[i], sizeof(Math::FMatrix4x4), 0);
+			m_ShadowUniforms[i] = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(Math::FMatrix4x4), &ubo.VPMats[i], 0);
 		}
 		ubo.ShadowDebug.X = m_EnableShadowDebug ? 1.0f : 0.0f;
-		m_Uniform->UpdateData(&ubo, sizeof(ubo), 0);
+		m_Uniform = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(ubo), &ubo, 0);
 	}
 
 	void DirectionalLight::UpdateShadowMapDrawCalls() {

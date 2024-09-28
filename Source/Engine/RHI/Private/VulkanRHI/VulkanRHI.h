@@ -13,6 +13,7 @@ public:
 	explicit VulkanRHI(WindowHandle wnd, USize2D extent, const RHIInitConfig& cfg);
 	~VulkanRHI()override;
 	void BeginFrame() override;
+	void BeginRendering() override;
 	const VulkanContext* GetContext();
 	VulkanDevice* GetDevice();
 	ERHIFormat GetDepthFormat() override;
@@ -26,6 +27,7 @@ public:
 	RHIComputePipelineStatePtr CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) override;
 	RHICommandBufferPtr CreateCommandBuffer(EQueueType queue) override;
 	void SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, EQueueType queue, RHIFence* fence, bool bPresent) override;
+	RHIDynamicBuffer AllocateDynamicBuffer(EBufferFlags bufferFlags, uint32 bufferSize, const void* bufferData, uint32 stride) override;
 private:
 	TUniquePtr<VulkanContext> m_Context;
 	TUniquePtr<VulkanDevice> m_Device;

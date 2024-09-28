@@ -85,6 +85,10 @@ void D3D12RHI::BeginFrame() {
 	m_Device->GetDescriptorMgr()->BeginFrame();
 }
 
+void D3D12RHI::BeginRendering() {
+	m_Device->GetDynamicMemoryAllocator()->UnmapAllocations();
+}
+
 ERHIFormat D3D12RHI::GetDepthFormat() {
 	return m_DepthFormat;
 }
@@ -132,6 +136,11 @@ void D3D12RHI::SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, EQueueTy
 	if(fence) {
 		queuePtr->SignalFence((D3D12Fence*)fence);
 	}
+}
+
+RHIDynamicBuffer D3D12RHI::AllocateDynamicBuffer(EBufferFlags bufferFlags, uint32 bufferSize, const void* bufferData, uint32 stride) {
+	auto a = m_Device->GetDynamicMemoryAllocator()->Allocate(bufferFlags, bufferSize, bufferData);
+	return { a.BufferIndex, a.Offset, a.Size, stride };
 }
 
 D3D12Device* D3D12RHI::GetDevice() {

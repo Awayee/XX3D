@@ -6,7 +6,7 @@
 
 class VulkanDevice;
 struct VulkanPipelineLayout;
-
+class VulkanDynamicBufferAllocator;
 // descriptor set manager
 class VulkanDescriptorSetMgr{
 public:
@@ -34,7 +34,7 @@ public:
 	NON_COPYABLE(VulkanDescriptorSetParamCache);
 	VulkanDescriptorSetParamCache(const RHIShaderParamSetLayout& layout);
 	VulkanDescriptorSetParamCache(VulkanDescriptorSetParamCache&&)noexcept = default;
-	void SetParam(uint32 bindIndex, const RHIShaderParam& param);
+	void SetParam(const VulkanDynamicBufferAllocator* allocator, uint32 bindIndex, const RHIShaderParam& param);
 	TArray<VkWriteDescriptorSet>& GetWrites() { return m_Writes; }
 private:
 	const RHIShaderParamSetLayout& m_LayoutRef;

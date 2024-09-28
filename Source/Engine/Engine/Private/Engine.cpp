@@ -63,6 +63,7 @@ namespace Engine {
 	void XXEngine::Update() {
 		RHI::Instance()->BeginFrame();// RHI Update must run at the beginning.
 		Object::RenderScene::Tick();
+		RHI::Instance()->BeginRendering();
 		Render::Renderer::Instance()->Run();
 		EngineWindow::Instance()->Update();
 		CTimer::Instance()->Tick();

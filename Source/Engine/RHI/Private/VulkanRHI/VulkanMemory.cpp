@@ -2,6 +2,9 @@
 #include "VulkanDevice.h"
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
+#include "System/Public/FrameCounter.h"
+
+constexpr uint32 DYNAMIC_PAGE_SIZE = 16 << 10;
 
 inline VmaMemoryUsage ConvertVmaMemoryUsage(EMemoryType type) {
 	switch (type) {
@@ -17,13 +20,11 @@ inline VmaMemoryUsage ConvertVmaMemoryUsage(EMemoryType type) {
 	return VMA_MEMORY_USAGE_UNKNOWN;
 }
 
-BufferAllocation::BufferAllocation(): m_Allocator(nullptr), m_Allocation(nullptr), m_Buffer(nullptr), m_MappedPointer(nullptr){
+inline uint32 Aligned(uint32 size, uint32 alignment) {
+	return (size + (alignment - 1)) & ~(alignment - 1);
 }
 
-BufferAllocation::~BufferAllocation() {
-}
-
-BufferAllocation::BufferAllocation(BufferAllocation&& rhs) noexcept: m_Allocator(rhs.m_Allocator), m_Allocation(rhs.m_Allocation), m_Buffer(rhs.m_Buffer), m_MappedPointer(rhs.m_MappedPointer) {
+BufferAllocation::BufferAllocation(BufferAllocation&& rhs) noexcept: m_Allocator(rhs.m_Allocator), m_Allocation(rhs.m_Allocation), m_Buffer(rhs.m_Buffer) {
 	rhs.InnerFree();
 }
 
@@ -31,34 +32,24 @@ BufferAllocation& BufferAllocation::operator=(BufferAllocation&& rhs) noexcept {
 	m_Allocation = rhs.m_Allocation;
 	m_Allocator = rhs.m_Allocator;
 	m_Buffer = rhs.m_Buffer;
-	m_MappedPointer = rhs.m_MappedPointer;
 	rhs.InnerFree();
 	return *this;
 }
 
 void* BufferAllocation::Map() {
-	CHECK(!m_MappedPointer);
-	vmaMapMemory(m_Allocator, m_Allocation, &m_MappedPointer);
-	return m_MappedPointer;
+	void* mappedData;
+	vmaMapMemory(m_Allocator, m_Allocation, &mappedData);
+	return mappedData;
 }
 
 void BufferAllocation::Unmap() {
-	CHECK(m_MappedPointer);
 	vmaUnmapMemory(m_Allocator, m_Allocation);
-	m_MappedPointer = nullptr;
 }
 
 void BufferAllocation::InnerFree() {
 	m_Allocation = nullptr;
 	m_Allocator = nullptr;
 	m_Buffer = nullptr;
-	m_MappedPointer = nullptr;
-}
-
-ImageAllocation::ImageAllocation() {
-}
-
-ImageAllocation::~ImageAllocation() {
 }
 
 ImageAllocation::ImageAllocation(ImageAllocation&& rhs) noexcept: m_Allocator(rhs.m_Allocator), m_Allocation(rhs.m_Allocation) {
@@ -77,7 +68,24 @@ void ImageAllocation::InnerFree() {
 	m_Allocation = nullptr;
 }
 
-bool VulkanMemoryMgr::AllocateBufferMemory(BufferAllocation& allocation, uint32 size, VkBufferUsageFlags bufferUsage, VkMemoryPropertyFlags memoryPropertyFlags) {
+VulkanMemoryAllocator::VulkanMemoryAllocator(const VulkanContext* context, const VulkanDevice* device) {
+	VmaVulkanFunctions vulkanFunctions = {};
+	vulkanFunctions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
+	vulkanFunctions.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
+	VmaAllocatorCreateInfo allocatorCreateInfo = {};
+	allocatorCreateInfo.vulkanApiVersion = context->GetAPIVersion();
+	allocatorCreateInfo.instance = context->GetInstance();
+	allocatorCreateInfo.physicalDevice = device->GetPhysicalDevice();
+	allocatorCreateInfo.device = device->GetDevice();
+	allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
+	vmaCreateAllocator(&allocatorCreateInfo, &m_Allocator);
+}
+
+VulkanMemoryAllocator::~VulkanMemoryAllocator() {
+	vmaDestroyAllocator(m_Allocator);
+}
+
+bool VulkanMemoryAllocator::AllocateBufferMemory(BufferAllocation& allocation, uint32 size, VkBufferUsageFlags bufferUsage, VkMemoryPropertyFlags memoryPropertyFlags) {
 	VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, nullptr, 0 };
 	bufferInfo.usage = bufferUsage;
 	bufferInfo.size = size;
@@ -91,21 +99,21 @@ bool VulkanMemoryMgr::AllocateBufferMemory(BufferAllocation& allocation, uint32 
 	allocationInfo.pool = nullptr;
 	allocationInfo.priority = 1.0f;
 	const VkResult result = vmaCreateBuffer(m_Allocator, &bufferInfo, &allocationInfo, &allocation.m_Buffer, &allocation.m_Allocation, nullptr);
-	if(VK_SUCCESS == result) {
+	if (VK_SUCCESS == result) {
 		allocation.m_Allocator = m_Allocator;
 		return true;
 	}
 	return false;
 }
 
-void VulkanMemoryMgr::FreeBufferMemory(BufferAllocation& allocation) {
-	if(allocation.m_Allocator) {
+void VulkanMemoryAllocator::FreeBufferMemory(BufferAllocation& allocation) {
+	if (allocation.m_Allocator) {
 		vmaDestroyBuffer(allocation.m_Allocator, allocation.m_Buffer, allocation.m_Allocation);
 		allocation.InnerFree();
 	}
 }
 
-bool VulkanMemoryMgr::AllocateImageMemory(ImageAllocation& allocation, VkImage image, VkMemoryPropertyFlags memoryPropertyFlags) {
+bool VulkanMemoryAllocator::AllocateImageMemory(ImageAllocation& allocation, VkImage image, VkMemoryPropertyFlags memoryPropertyFlags) {
 	VmaAllocationCreateInfo info;
 	info.flags = 0;
 	info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
@@ -123,31 +131,72 @@ bool VulkanMemoryMgr::AllocateImageMemory(ImageAllocation& allocation, VkImage i
 	return false;
 }
 
-void VulkanMemoryMgr::FreeImageMemory(ImageAllocation& allocation) {
+void VulkanMemoryAllocator::FreeImageMemory(ImageAllocation& allocation) {
 	if (allocation.m_Allocator) {
 		vmaFreeMemory(allocation.m_Allocator, allocation.m_Allocation);
 		allocation.InnerFree();
 	}
 }
 
-void VulkanMemoryMgr::Update() {
+VulkanDynamicBufferAllocator::VulkanDynamicBufferAllocator(VulkanMemoryAllocator* allocator, const VulkanDevice* device, uint32 pageSize) :
+	m_Allocator(allocator),
+	m_UniformAlignment((uint32)device->GetProperties().limits.minUniformBufferOffsetAlignment),
+	m_PageSize(pageSize) {}
+
+VulkanDynamicBufferAllocator::~VulkanDynamicBufferAllocator() {
+	for(BufferChunk& chunk: m_BufferChunks) {
+		m_Allocator->FreeBufferMemory(chunk.Allocation);
+	}
 }
 
-VulkanMemoryMgr::VulkanMemoryMgr(const VulkanContext* context, const VulkanDevice* device): m_Device(device) {
-
-	VmaVulkanFunctions vulkanFunctions = {};
-	vulkanFunctions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
-	vulkanFunctions.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
-
-	VmaAllocatorCreateInfo allocatorCreateInfo = {};
-	allocatorCreateInfo.vulkanApiVersion = context->GetAPIVersion();
-	allocatorCreateInfo.instance = context->GetInstance();
-	allocatorCreateInfo.physicalDevice = m_Device->GetPhysicalDevice();
-	allocatorCreateInfo.device = m_Device->GetDevice();
-	allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
-	vmaCreateAllocator(&allocatorCreateInfo, &m_Allocator);
+VulkanDynamicBufferAllocator::Allocation VulkanDynamicBufferAllocator::Allocate(VkBufferUsageFlags usage, uint32 size, const void* data) {
+	size = Aligned(size, m_UniformAlignment);
+	ASSERT(size <= m_PageSize, "Dynamic allocation size is greater than page size!");
+	if(VK_INVALID_INDEX == m_AllocatedIndex || (m_PageSize - m_BufferChunks[m_AllocatedIndex].AllocatedSize) < size) {
+		m_AllocatedIndex = AllocateChunk();
+	}
+	BufferChunk& chunk = m_BufferChunks[m_AllocatedIndex];
+	const uint32 offset = chunk.AllocatedSize;
+	chunk.AllocatedSize += size;
+	if(!chunk.MappedData) {
+		chunk.MappedData = chunk.Allocation.Map();
+	}
+	uint8* mappedPointer = (uint8*)chunk.MappedData + offset;
+	memcpy(mappedPointer, data, size);
+	return { m_AllocatedIndex, offset, size };
 }
 
-VulkanMemoryMgr::~VulkanMemoryMgr() {
-	vmaDestroyAllocator(m_Allocator);
+VkBuffer VulkanDynamicBufferAllocator::GetBufferHandle(uint32 bufferIndex) const {
+	return m_BufferChunks[bufferIndex].Allocation.GetBuffer();
+}
+
+void VulkanDynamicBufferAllocator::UnmapAllocations() {
+	if(VK_INVALID_INDEX != m_AllocatedIndex) {
+		// unmap buffers and reset allocations
+		for(uint32 i=0; i<=m_AllocatedIndex; ++i) {
+			m_BufferChunks[i].Allocation.Unmap();
+			m_BufferChunks[i].AllocatedSize = 0;
+			m_BufferChunks[i].MappedData = nullptr;
+		}
+		m_AllocatedIndex = 0;
+	}
+}
+
+void VulkanDynamicBufferAllocator::GC() {
+	if(m_BufferChunks.Size()) {
+		for(uint32 i=m_BufferChunks.Size()-1; i>m_AllocatedIndex; --i) {
+			m_Allocator->FreeBufferMemory(m_BufferChunks[i].Allocation);
+			m_BufferChunks.PopBack();
+		}
+	}
+}
+
+uint32 VulkanDynamicBufferAllocator::AllocateChunk() {
+	uint32 chunkIndex = m_BufferChunks.Size();
+	auto& chunk = m_BufferChunks.EmplaceBack();
+	chunk.AllocatedSize = 0;
+	m_Allocator->AllocateBufferMemory(chunk.Allocation, m_PageSize,
+		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	return chunkIndex;
 }

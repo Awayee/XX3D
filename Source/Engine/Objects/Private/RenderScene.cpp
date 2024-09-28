@@ -133,13 +133,13 @@ namespace Object {
     void RenderScene::UpdateSceneDrawCall() {
         m_DrawCallContext.PushDrawCall(Render::EDrawCallQueueType::BasePass, [this](RHICommandBuffer* cmd) {
             cmd->BindGraphicsPipeline(m_GBufferPSO);
-            cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(m_Camera->GetBuffer()));
+            cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(m_Camera->GertUniformBuffer()));
         });
 
         // deferred lighting
         m_DrawCallContext.PushDrawCall(Render::EDrawCallQueueType::DeferredLighting, [this](RHICommandBuffer* cmd) {
             cmd->BindGraphicsPipeline(m_DeferredLightingPSO);
-            cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(m_Camera->GetBuffer()));
+            cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(m_Camera->GertUniformBuffer()));
             cmd->SetShaderParam(0, 1, RHIShaderParam::UniformBuffer(m_DirectionalLight->GetUniform()));
             RHITexture* directionalShadowMap = m_DirectionalLight->GetShadowMap();
             const RHITextureSubRes directionalShadowMapSubRes = directionalShadowMap->GetDesc().GetSubRes2DArray(ETextureViewFlags::Depth);

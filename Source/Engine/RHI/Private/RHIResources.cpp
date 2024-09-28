@@ -196,6 +196,22 @@ RHIShaderParam RHIShaderParam::StorageBuffer(RHIBuffer* buffer, uint32 offset, u
     return parameter;
 }
 
+RHIShaderParam RHIShaderParam::UniformBuffer(const RHIDynamicBuffer& dynamicBuffer) {
+    RHIShaderParam parameter{};
+    parameter.Type = EBindingType::UniformBuffer;
+    parameter.IsDynamicBuffer = true;
+    parameter.Data.DynamicBuffer = dynamicBuffer;
+    return parameter;
+}
+
+RHIShaderParam RHIShaderParam::StorageBuffer(const RHIDynamicBuffer& dynamicBuffer) {
+    RHIShaderParam parameter{};
+    parameter.Type = EBindingType::StorageBuffer;
+    parameter.IsDynamicBuffer = true;
+    parameter.Data.DynamicBuffer = dynamicBuffer;
+    return parameter;
+}
+
 RHIShaderParam RHIShaderParam::Texture(RHITexture* texture, RHITextureSubRes textureSub) {
     RHIShaderParam parameter{};
     parameter.Type = EBindingType::Texture;

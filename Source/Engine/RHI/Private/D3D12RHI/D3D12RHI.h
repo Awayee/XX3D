@@ -10,6 +10,7 @@ public:
 	explicit D3D12RHI(WindowHandle wnd, USize2D extent, const RHIInitConfig& cfg);
 	~D3D12RHI() override;
 	void BeginFrame() override;
+	void BeginRendering() override;
 	ERHIFormat GetDepthFormat() override;
 	RHIViewport* GetViewport() override;
 	RHIBufferPtr CreateBuffer(const RHIBufferDesc& desc) override;
@@ -21,6 +22,8 @@ public:
 	RHIComputePipelineStatePtr CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) override;
 	RHICommandBufferPtr CreateCommandBuffer(EQueueType queue) override;
 	void SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, EQueueType queue, RHIFence* fence, bool bPresent) override;
+	RHIDynamicBuffer AllocateDynamicBuffer(EBufferFlags bufferFlags, uint32 bufferSize, const void* bufferData, uint32 stride) override;
+
 	D3D12Device* GetDevice();
 private:
 	TDXPtr<IDXGIFactory4> m_DXGIFactory;

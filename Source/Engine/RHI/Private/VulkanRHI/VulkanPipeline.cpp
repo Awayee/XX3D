@@ -4,6 +4,7 @@
 #include "Core/Public/Log.h"
 #include "VulkanResources.h"
 #include "VulkanDevice.h"
+#include "VulkanMemory.h"
 
 inline uint64 GetLayoutHash(const RHIShaderParamSetLayout& bindingLayout) {
 	const uint64* dataU64 = reinterpret_cast<const uint64*>(bindingLayout.Data());
@@ -181,17 +182,25 @@ VulkanDescriptorSetParamCache::VulkanDescriptorSetParamCache(const RHIShaderPara
 	}
 }
 
-void VulkanDescriptorSetParamCache::SetParam(uint32 bindIndex, const RHIShaderParam& param) {
+void VulkanDescriptorSetParamCache::SetParam(const VulkanDynamicBufferAllocator* allocator, uint32 bindIndex, const RHIShaderParam& param) {
 	CHECK(m_LayoutRef[bindIndex].Type == param.Type);
 	auto& write = m_Writes[bindIndex];
 	switch(param.Type) {
 	case EBindingType::UniformBuffer:
 	case EBindingType::StorageBuffer: {
-		VulkanBufferImpl* buffer = (VulkanBufferImpl*)param.Data.Buffer;
 		auto& bufferInfo = const_cast<VkDescriptorBufferInfo*>(write.pBufferInfo)[param.ArrayIndex];
-		bufferInfo.buffer = buffer->GetBuffer();
-		bufferInfo.offset = param.Data.Offset;
-		bufferInfo.range = param.Data.Size;
+		if(param.IsDynamicBuffer) {
+			const RHIDynamicBuffer& dBuffer = param.Data.DynamicBuffer;
+			bufferInfo.buffer = allocator->GetBufferHandle(param.Data.DynamicBuffer.BufferIndex);
+			bufferInfo.offset = dBuffer.Offset;
+			bufferInfo.range  = dBuffer.Size;
+		}
+		else {
+			VulkanBufferImpl* buffer = (VulkanBufferImpl*)param.Data.Buffer;
+			bufferInfo.buffer = buffer->GetBuffer();
+			bufferInfo.offset = param.Data.Offset;
+			bufferInfo.range = param.Data.Size;
+		}
 	}break;
 	case EBindingType::Texture:
 	case EBindingType::StorageTexture:{
@@ -239,7 +248,7 @@ VulkanPipelineDescriptorSetCache::~VulkanPipelineDescriptorSetCache() {
 
 void VulkanPipelineDescriptorSetCache::SetParam(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& param) {
 	CHECK(setIndex < m_ParamCaches.Size());
-	m_ParamCaches[setIndex].SetParam(bindIndex, param);
+	m_ParamCaches[setIndex].SetParam(m_Device->GetDynamicBufferAllocator(), bindIndex, param);
 	m_DirtySets[setIndex] = true;
 }
 

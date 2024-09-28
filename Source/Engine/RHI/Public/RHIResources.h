@@ -38,17 +38,11 @@ public:
 	XX_NODISCARD const RHIBufferDesc& GetDesc() const { return m_Desc; }
 };
 
-struct RHIUniformBufferDesc {
-	uint32 ByteSize;
-};
-
-class RHIUniformBuffer: public RHIResource {
-public:
-	RHIUniformBuffer(const RHIUniformBufferDesc& desc) : m_Desc(desc) {}
-	const RHIUniformBufferDesc& GetDesc() const { return m_Desc; }
-	virtual void UpdateData(const void* data, uint32 byteSize, uint32 offset) = 0;
-private:
-	RHIUniformBufferDesc m_Desc;
+struct RHIDynamicBuffer {
+	uint32 BufferIndex;
+	uint32 Offset;
+	uint32 Size;
+	uint32 Stride;
 };
 
 // texture sub resource
@@ -321,12 +315,16 @@ struct RHIShaderParam {
 			RHISampler* Sampler;
 			uint64 Padding;
 		};
+		RHIDynamicBuffer DynamicBuffer;
 	} Data {nullptr, 0u, 0u};
 	uint32 ArrayIndex = 0;
 	EBindingType Type{ EBindingType::MaxNum };
+	bool IsDynamicBuffer{ false };
 	static RHIShaderParam UniformBuffer(RHIBuffer* buffer, uint32 offset, uint32 size);
 	static RHIShaderParam UniformBuffer(RHIBuffer* buffer) { return UniformBuffer(buffer, 0, buffer->GetDesc().ByteSize); }
 	static RHIShaderParam StorageBuffer(RHIBuffer* buffer, uint32 offset, uint32 size);
+	static RHIShaderParam UniformBuffer(const RHIDynamicBuffer& dynamicBuffer);
+	static RHIShaderParam StorageBuffer(const RHIDynamicBuffer& dynamicBuffer);
 	static RHIShaderParam Texture(RHITexture* texture, RHITextureSubRes textureSub);
 	static RHIShaderParam Texture(RHITexture* texture);
 	static RHIShaderParam Sampler(RHISampler* sampler);

@@ -46,13 +46,14 @@ namespace Object {
 			// aabb
 			primitive.AABB = srcPrimitive.AABB;
 		}
-		UniformBuffer = r->CreateBuffer({ EBufferFlags::Uniform, sizeof(TransformComponent::TransformInfo), 0});
+		//UniformBuffer = r->CreateBuffer({ EBufferFlags::Uniform, sizeof(TransformComponent::TransformInfo), 0});
 	}
 
 	void MeshRenderSystem::Update(ECSScene* ecsScene, TransformComponent* transform, StaticMeshComponent* staticMesh) {
 		// update uniform
-		RHIBuffer* uniformBuffer = staticMesh->UniformBuffer.Get();
-		uniformBuffer->UpdateData((void*)(&transform->GetTransformInfo()), sizeof(TransformComponent::TransformInfo), 0);
+		//RHIBuffer* uniformBuffer = staticMesh->UniformBuffer.Get();
+		//uniformBuffer->UpdateData((void*)(&transform->GetTransformInfo()), sizeof(TransformComponent::TransformInfo), 0);
+		RHIDynamicBuffer uniformBuffer = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(TransformComponent::TransformInfo), &transform->GetTransformInfo(), 0);
 		// create draw call
 		Object::RenderScene* scene = (Object::RenderScene*)ecsScene;
 		Object::RenderCamera* mainCamera = scene->GetMainCamera();

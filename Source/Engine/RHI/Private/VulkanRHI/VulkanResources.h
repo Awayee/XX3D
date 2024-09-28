@@ -34,7 +34,7 @@ public:
 
 class VulkanTextureImpl: public VulkanRHITexture {
 public:
-	VulkanTextureImpl(const RHITextureDesc& desc, VulkanDevice* device, VkImage image, ImageAllocation&& allocation);
+	VulkanTextureImpl(const RHITextureDesc& desc, VulkanDevice* device);
 	~VulkanTextureImpl() override;
 	VkImage GetImage() override { return m_Image; }
 	VkImageView GetView(RHITextureSubRes subRes) override;

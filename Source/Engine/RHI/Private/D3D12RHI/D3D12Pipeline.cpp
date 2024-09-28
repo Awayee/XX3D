@@ -5,7 +5,6 @@
 #include "D3D12Device.h"
 #include "Core/Public/Container.h"
 
-
 enum class EShaderVisibility : uint32 {
 	SVVertex = 0,
 	SVGeometry,
@@ -66,6 +65,65 @@ inline bool CreateRootSignatureUtil(ID3D12Device* device, TConstArrayView<D3D12_
 	}
 	return true;
 }
+
+inline void CreateDynamicBufferView(D3D12Device* device, const RHIDynamicBuffer& dBuffer, EBindingType type, D3D12_CPU_DESCRIPTOR_HANDLE descriptorHandle) {
+	ID3D12Resource* resource = device->GetDynamicMemoryAllocator()->GetResource(dBuffer.BufferIndex);
+	switch (type) {
+	case EBindingType::UniformBuffer: {
+		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
+		cbvDesc.BufferLocation = resource->GetGPUVirtualAddress() + dBuffer.Offset;
+		cbvDesc.SizeInBytes = dBuffer.Size;
+		device->GetDevice()->CreateConstantBufferView(&cbvDesc, descriptorHandle);
+	} break;
+	case EBindingType::StorageBuffer: {
+		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc;
+		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+		// if stride == 0, as raw buffer, otherwise as structured buffer
+		if (dBuffer.Stride == 0) {
+			uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+			uavDesc.Buffer.FirstElement = dBuffer.Offset / sizeof(uint32);
+			uavDesc.Buffer.NumElements = dBuffer.Size / sizeof(uint32);
+			uavDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+		}
+		else {
+			uavDesc.Buffer.StructureByteStride = dBuffer.Stride;
+			uavDesc.Buffer.FirstElement = dBuffer.Offset / dBuffer.Stride;
+			uavDesc.Buffer.NumElements = dBuffer.Size / dBuffer.Stride;
+			uavDesc.Format = DXGI_FORMAT_UNKNOWN;
+		}
+		device->GetDevice()->CreateUnorderedAccessView(resource, nullptr, &uavDesc, descriptorHandle);
+	}break;
+	default: break;
+	}
+}
+
+inline D3D12_CPU_DESCRIPTOR_HANDLE GetParameterStaticDescriptor(const RHIShaderParam& param) {
+	D3D12_CPU_DESCRIPTOR_HANDLE srcHandle = InvalidCPUDescriptor();
+	switch (param.Type) {
+	case EBindingType::UniformBuffer: {
+		D3D12BufferImpl* buffer = (D3D12BufferImpl*)param.Data.Buffer;
+		srcHandle = buffer->GetCBV();
+	}break;
+	case EBindingType::StorageBuffer: {
+		D3D12BufferImpl* buffer = (D3D12BufferImpl*)param.Data.Buffer;
+		srcHandle = buffer->GetUAV();
+	}break;
+	case EBindingType::Texture: {
+		D3D12Texture* texture = (D3D12Texture*)param.Data.Texture;
+		srcHandle = texture->GetDescriptor(ETexDescriptorType::SRV, param.Data.SubRes);
+	}break;
+	case EBindingType::StorageTexture: {
+		D3D12Texture* texture = (D3D12Texture*)param.Data.Texture;
+		srcHandle = texture->GetDescriptor(ETexDescriptorType::UAV, param.Data.SubRes);
+	}break;
+	case EBindingType::Sampler: {
+		D3D12Sampler* sampler = (D3D12Sampler*)param.Data.Sampler;
+		srcHandle = sampler->GetCPUHandle();
+	}break;
+	}
+	return srcHandle;
+}
+
 bool D3D12PipelineLayout::InitLayout(const TArray<RHIShaderParamSetLayout>& layouts, ID3D12Device* device) {
 	m_DescriptorCounts.Reset(0);
 	m_MapLayoutToHeap.Reset();
@@ -262,7 +320,7 @@ D3D12PipelineDescriptorCache::D3D12PipelineDescriptorCache(D3D12Device* device, 
 D3D12PipelineDescriptorCache::D3D12PipelineDescriptorCache(D3D12PipelineDescriptorCache&& rhs) noexcept {
 	for (uint32 i = 0; i < EnumCast(EDynamicDescriptorType::Count); ++i) {
 		m_DescriptorCaches[i].DynamicDescriptor = rhs.m_DescriptorCaches[i].DynamicDescriptor;
-		m_DescriptorCaches[i].StaticDescriptors.Swap(rhs.m_DescriptorCaches[i].StaticDescriptors);
+		m_DescriptorCaches[i].Params.Swap(rhs.m_DescriptorCaches[i].Params);
 	}
 	m_DirtyDescriptorTables = rhs.m_DirtyDescriptorTables;
 	m_Device = rhs.m_Device;
@@ -271,38 +329,12 @@ D3D12PipelineDescriptorCache::D3D12PipelineDescriptorCache(D3D12PipelineDescript
 }
 
 void D3D12PipelineDescriptorCache::SetShaderParam(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& param) {
-	// copy descriptors
+	// cache parameter
 	D3D12PipelineLayout::DescriptorSlot slot = GetLayout()->GetDescriptorSlot(setIndex, bindIndex);
 	DescriptorCache& cache = m_DescriptorCaches[EnumCast(slot.HeapType)];
-	CHECK(slot.SlotIndex < cache.StaticDescriptors.Size());
-	D3D12_CPU_DESCRIPTOR_HANDLE srcHandle{ InvalidCPUDescriptor() };
-	switch (param.Type) {
-	case EBindingType::UniformBuffer: {
-		D3D12BufferImpl* buffer = (D3D12BufferImpl*)param.Data.Buffer;
-		srcHandle = buffer->GetCBV();
-
-	}break;
-	case EBindingType::StorageBuffer: {
-		D3D12BufferImpl* buffer = (D3D12BufferImpl*)param.Data.Buffer;
-		srcHandle = buffer->GetUAV();
-	}break;
-	case EBindingType::Texture: {
-		D3D12Texture* texture = (D3D12Texture*)param.Data.Texture;
-		srcHandle = texture->GetDescriptor(ETexDescriptorType::SRV, param.Data.SubRes);
-	}break;
-	case EBindingType::StorageTexture: {
-		D3D12Texture* texture = (D3D12Texture*)param.Data.Texture;
-		srcHandle = texture->GetDescriptor(ETexDescriptorType::UAV, param.Data.SubRes);
-	}break;
-	case EBindingType::Sampler: {
-		D3D12Sampler* sampler = (D3D12Sampler*)param.Data.Sampler;
-		srcHandle = sampler->GetCPUHandle();
-	}break;
-	}
-	if (srcHandle.ptr) {
-		m_DirtyDescriptorTables[EnumCast(slot.HeapType)] = true;
-		cache.StaticDescriptors[slot.SlotIndex] = srcHandle;
-	}
+	CHECK(slot.SlotIndex < cache.Params.Size());
+	cache.Params[slot.SlotIndex] = param;
+	m_DirtyDescriptorTables[EnumCast(slot.HeapType)] = true;
 }
 
 D3D12GraphicsPipelineState* D3D12PipelineDescriptorCache::GetGraphicsPipelineState() {
@@ -316,20 +348,32 @@ D3D12ComputePipelineState* D3D12PipelineDescriptorCache::GetComputePipelineState
 void D3D12PipelineDescriptorCache::PreDraw(ID3D12GraphicsCommandList* cmd) {
 	// set descriptor heap
 	TArray<ID3D12DescriptorHeap*> heaps;
-	for(uint32 i=0; i<EnumCast(EDynamicDescriptorType::Count); ++i) {
-		DynamicDescriptorAllocator* allocator = m_Device->GetDescriptorMgr()->GetDynamicAllocator((EDynamicDescriptorType)i);
-		DescriptorCache& cache = m_DescriptorCaches[i];
-		if(m_DirtyDescriptorTables[i]) {
-			// copy descriptors
-			uint32 descriptorCount = cache.StaticDescriptors.Size();
-			const DynamicDescriptorHandle dynamicDescriptor = allocator->AllocateSlot(descriptorCount);
-			const D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = allocator->GetCPUHandle(dynamicDescriptor);
-			TArray<uint32> sizes(descriptorCount, 1);
-			m_Device->GetDevice()->CopyDescriptors(1, &cpuHandle, &descriptorCount,
-				descriptorCount, cache.StaticDescriptors.Data(), sizes.Data(),
-				ToStaticDescriptorType((EDynamicDescriptorType)i));
-			m_DirtyDescriptorTables[i] = false;
-			cache.DynamicDescriptor = dynamicDescriptor;
+	for(uint32 type=0; type<EnumCast(EDynamicDescriptorType::Count); ++type) {
+		DynamicDescriptorAllocator* allocator = m_Device->GetDescriptorMgr()->GetDynamicAllocator((EDynamicDescriptorType)type);
+		DescriptorCache& cache = m_DescriptorCaches[type];
+		if(m_DirtyDescriptorTables[type]) {
+			const uint32 descriptorCount = cache.Params.Size();
+			cache.DynamicDescriptor = allocator->AllocateSlot(descriptorCount);
+			const D3D12_CPU_DESCRIPTOR_HANDLE dynamicHandleStart = allocator->GetCPUHandle(cache.DynamicDescriptor);
+			TArray<D3D12_CPU_DESCRIPTOR_HANDLE> copySrc; copySrc.Reserve(descriptorCount);
+			TArray<D3D12_CPU_DESCRIPTOR_HANDLE> copyDst; copyDst.Reserve(descriptorCount);
+			for (uint32 slot = 0; slot < descriptorCount; ++slot) {
+				const RHIShaderParam& param = cache.Params[slot];
+				D3D12_CPU_DESCRIPTOR_HANDLE dstHandle = dynamicHandleStart;
+				dstHandle.ptr += (uint64)(slot * allocator->GetIncrementSize());
+				// dynamic buffer, create cbv or uav at dynamic descriptor.
+				if (param.IsDynamicBuffer) {
+					CreateDynamicBufferView(m_Device, param.Data.DynamicBuffer, param.Type, dstHandle);
+				}
+				// other resource, copy descriptor to dynamic descriptor
+				else if (D3D12_CPU_DESCRIPTOR_HANDLE srcHandle = GetParameterStaticDescriptor(param); srcHandle.ptr) {
+					copySrc.PushBack(srcHandle);
+					copyDst.EmplaceBack(dynamicHandleStart).ptr += (uint64)(slot * allocator->GetIncrementSize());
+				}
+			}
+			m_Device->GetDevice()->CopyDescriptors(copyDst.Size(), copyDst.Data(), nullptr,
+				copySrc.Size(), copySrc.Data(), nullptr, ToStaticDescriptorType((EDynamicDescriptorType)type));
+			m_DirtyDescriptorTables[type] = false;
 		}
 		if(cache.DynamicDescriptor.IsValid()) {
 			heaps.PushBack(allocator->GetHeap(cache.DynamicDescriptor.HeapIndex));
@@ -362,9 +406,9 @@ void D3D12PipelineDescriptorCache::ReserveDescriptors() {
 	for(uint32 i=0; i<EnumCast(EDynamicDescriptorType::Count); ++i) {
 		DescriptorCache& cache = m_DescriptorCaches[i];
 		cache.DynamicDescriptor = DynamicDescriptorHandle::InvalidHandle();
-		cache.StaticDescriptors.Reset();
+		cache.Params.Reset();
 		if(uint32 descriptorCount = GetLayout()->GetDescriptorCount((EDynamicDescriptorType)i)) {
-			cache.StaticDescriptors.Resize(descriptorCount, InvalidCPUDescriptor());
+			cache.Params.Resize(descriptorCount, {});
 		}
 		m_DirtyDescriptorTables[i] = false;
 	}

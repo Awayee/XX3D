@@ -71,7 +71,7 @@ private:
 		Compute
 	};
 	struct DescriptorCache {
-		TArray<D3D12_CPU_DESCRIPTOR_HANDLE> StaticDescriptors;
+		TArray<RHIShaderParam> Params;
 		DynamicDescriptorHandle DynamicDescriptor;
 	};
 	TStaticArray<DescriptorCache, EnumCast(EDynamicDescriptorType::Count)> m_DescriptorCaches;

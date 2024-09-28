@@ -147,9 +147,6 @@ void StaticDescriptorAllocator::AllocateHeap() {
 	heapDesc.NumDescriptors = m_PageSize;
 	heapDesc.Type = m_Type;
 	heapDesc.Flags = m_Flags;
-	//if (D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV == m_Type || D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER == m_Type) {
-	//	heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	//}
 	uint32 newIndex = m_Heaps.Size();
 	auto& heapData = m_Heaps.EmplaceBack();
 	DX_CHECK(m_Device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(heapData.Heap.Address())));
@@ -159,9 +156,10 @@ void StaticDescriptorAllocator::AllocateHeap() {
 	m_CurrentHeapIndex = m_FreeHeaps.Allocate(1);
 }
 
-DynamicDescriptorAllocator::DynamicDescriptorAllocator(ID3D12Device* device, EDynamicDescriptorType type, uint32 pageSize) :
+DynamicDescriptorAllocator::DynamicDescriptorAllocator(ID3D12Device* device, EDynamicDescriptorType type, D3D12_DESCRIPTOR_HEAP_FLAGS flags, uint32 pageSize) :
 	m_Device(device),
 	m_Type(type),
+	m_Flags(flags),
 	m_PageSize(pageSize),
 	m_IncrementSize(device->GetDescriptorHandleIncrementSize(ToStaticDescriptorType(m_Type))),
 	m_LastAvailableHeap(DX_INVALID_INDEX) {}
@@ -232,7 +230,7 @@ uint32 DynamicDescriptorAllocator::AllocateHeap() {
 	D3D12_DESCRIPTOR_HEAP_DESC heapDesc{};
 	heapDesc.NumDescriptors = m_PageSize;
 	heapDesc.Type = ToStaticDescriptorType(m_Type);
-	heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	heapDesc.Flags = m_Flags;
 	m_Device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(newHeap.HeapPtr.Address()));
 	// Update last available heap index
 	for (; m_LastAvailableHeap < m_Heaps.Size() - 1; ++m_LastAvailableHeap) {
@@ -249,7 +247,7 @@ D3D12DescriptorMgr::D3D12DescriptorMgr(ID3D12Device* device){
 		m_StaticAllocators[i].Reset(new StaticDescriptorAllocator(device, (D3D12_DESCRIPTOR_HEAP_TYPE)i, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, UNIFORM_PAGE_SAGE));
 	}
 	for(int i=0; i<EnumCast(EDynamicDescriptorType::Count); ++i) {
-		m_DynamicAllocators[i].Reset(new DynamicDescriptorAllocator(device, (EDynamicDescriptorType)i, UNIFORM_PAGE_SAGE * 4));
+		m_DynamicAllocators[i].Reset(new DynamicDescriptorAllocator(device, (EDynamicDescriptorType)i, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, UNIFORM_PAGE_SAGE * 4));
 	}
 }
 

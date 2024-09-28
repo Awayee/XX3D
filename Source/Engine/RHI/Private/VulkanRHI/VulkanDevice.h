@@ -4,10 +4,11 @@
 #include "VulkanCommon.h"
 #include "VulkanContext.h"
 
-class VulkanMemoryMgr;
 class VulkanDescriptorSetMgr;
 class VulkanUploader;
 class VulkanCommandContext;
+class VulkanMemoryAllocator;
+class VulkanDynamicBufferAllocator;
 
 struct VulkanQueue {
 	VkQueue Handle{ VK_NULL_HANDLE };
@@ -28,8 +29,8 @@ public:
 	const VkPhysicalDeviceProperties& GetProperties() const  { return m_DeviceProperties; }
 	const VulkanQueue& GetQueue(EQueueType queue) const { return m_Queues[EnumCast(queue)]; }
 	const VulkanFormats& GetFormats() const { return m_Formats; }
-
-	VulkanMemoryMgr* GetMemoryMgr() { return m_MemoryMgr.Get(); }
+	VulkanMemoryAllocator* GetMemoryAllocator() { return m_MemoryAllocator.Get(); }
+	VulkanDynamicBufferAllocator* GetDynamicBufferAllocator() { return m_DynamicBufferAllocator.Get(); }
 	VulkanDescriptorSetMgr* GetDescriptorMgr() { return m_DescriptorMgr.Get(); }
 	VulkanCommandContext* GetCommandContext() { return m_CommandContext.Get(); }
 	VulkanUploader* GetUploader() { return m_Uploader.Get(); }
@@ -41,7 +42,8 @@ private:
 	TStaticArray<VulkanQueue, EnumCast(EQueueType::Count)> m_Queues;
 	VkPhysicalDeviceProperties m_DeviceProperties{};
 	VulkanFormats m_Formats{};
-	TUniquePtr<VulkanMemoryMgr> m_MemoryMgr;
+	TUniquePtr<VulkanMemoryAllocator> m_MemoryAllocator;
+	TUniquePtr<VulkanDynamicBufferAllocator> m_DynamicBufferAllocator;
 	TUniquePtr<VulkanDescriptorSetMgr> m_DescriptorMgr;
 	TUniquePtr<VulkanCommandContext> m_CommandContext;
 	TUniquePtr<VulkanUploader> m_Uploader;

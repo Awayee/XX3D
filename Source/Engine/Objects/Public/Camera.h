@@ -73,7 +73,7 @@ namespace Object {
 		const Math::FMatrix4x4& GetViewProjectMatrix() { return m_ViewProjectMatrix; }
 		const Math::FMatrix4x4& GetInvViewProjectMatrix() { return m_InvViewProjectMatrix; }
 		void UpdateBuffer();
-		RHIBuffer* GetBuffer();
+		const RHIDynamicBuffer& GertUniformBuffer();
 		~RenderCamera();
 	private:
 		Camera m_Camera;
@@ -81,7 +81,7 @@ namespace Object {
 		Math::FMatrix4x4 m_ProjectMatrix;
 		Math::FMatrix4x4 m_ViewProjectMatrix;
 		Math::FMatrix4x4 m_InvViewProjectMatrix;
-		RHIBufferPtr m_Uniform;
+		RHIDynamicBuffer m_Uniform;
 		void UpdateProjectMatrix();
 	};
 }
