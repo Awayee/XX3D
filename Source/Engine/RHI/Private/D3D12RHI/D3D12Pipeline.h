@@ -57,10 +57,11 @@ private:
 class D3D12PipelineDescriptorCache {
 public:
 	NON_COPYABLE(D3D12PipelineDescriptorCache);
-	D3D12PipelineDescriptorCache(D3D12Device* device, D3D12GraphicsPipelineState* pipeline);
-	D3D12PipelineDescriptorCache(D3D12Device* device, D3D12ComputePipelineState* pipeline);
-	D3D12PipelineDescriptorCache(D3D12PipelineDescriptorCache&& rhs) noexcept;
+	D3D12PipelineDescriptorCache(D3D12Device* device) :m_Device(device), m_PipelineData(nullptr), m_PipelineType(EPipelineType::None) {}
 	~D3D12PipelineDescriptorCache() = default;
+	void BindGraphicsPipelineState(D3D12GraphicsPipelineState* pipeline);
+	void BindComputePipelineState(D3D12ComputePipelineState* pipeline);
+	void Reset();
 	void SetShaderParam(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& param);
 	D3D12GraphicsPipelineState* GetGraphicsPipelineState();
 	D3D12ComputePipelineState* GetComputePipelineState();
@@ -68,14 +69,15 @@ public:
 private:
 	enum class EPipelineType {
 		Graphics,
-		Compute
+		Compute,
+		None
 	};
 	struct DescriptorCache {
 		TArray<RHIShaderParam> Params;
 		DynamicDescriptorHandle DynamicDescriptor;
 	};
-	TStaticArray<DescriptorCache, EnumCast(EDynamicDescriptorType::Count)> m_DescriptorCaches;
-	TStaticArray<bool, EnumCast(EDynamicDescriptorType::Count)> m_DirtyDescriptorTables;
+	TStaticArray<DescriptorCache, EnumCast(EDynamicDescriptorType::Count)> m_DescriptorCaches{};
+	TStaticArray<bool, EnumCast(EDynamicDescriptorType::Count)> m_DirtyDescriptorTables{};
 	D3D12Device* m_Device;
 	union {
 		D3D12GraphicsPipelineState* m_GraphicsPipelineState;
@@ -84,5 +86,5 @@ private:
 	};
 	EPipelineType m_PipelineType;
 	const D3D12PipelineLayout* GetLayout();
-	void ReserveDescriptors();
+	void ResetDescriptorCaches();
 };

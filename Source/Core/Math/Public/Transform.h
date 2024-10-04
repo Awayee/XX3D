@@ -16,8 +16,18 @@ namespace Math {
 			return transform;
 		}
 
+		void BuildMatrix(Math::Matrix4x4<T>& mat) {
+			mat.MakeTransform(Position, Scale, Rotation);
+		}
+
+		void BuildInverseMatrix(Math::Matrix4x4<T>& mat) {
+			mat.MakeInverseTransform(Position, Scale, Rotation);
+		}
+
 		Math::Matrix4x4<T> ToMatrix() {
-			return Matrix4x4<T>::MakeTransform(Position, Scale, Rotation);
+			Math::Matrix4x4<T> matrix;
+			matrix.MakeTransform(Position, Scale, Rotation);
+			return matrix;
 		}
 
 		Transform Inverse() {
@@ -28,5 +38,15 @@ namespace Math {
 			Vector3<T> invTranslation = -t2;
 			return Transform{ invTranslation, invScale, invRotation };
 		}
+
+		void Accumulate(const Transform& rhs) {
+			Rotation = rhs.Rotation * Rotation;
+			Scale *= rhs.Scale;
+			Position += rhs.Position;
+		}
 	};
+
+	template <typename T> const Transform<T> Transform<T>::IDENTITY{};
+
+	typedef Transform<float> FTransform;
 }

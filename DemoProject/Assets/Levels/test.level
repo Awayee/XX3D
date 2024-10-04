@@ -1,14 +1,14 @@
 {
     "Camera": {
         "Eye": [
-            -1.0875427722930908,
-            1.0493978261947632,
-            3.2660913467407227
+            -0.16279590129852295,
+            0.9741652011871338,
+            2.7683897018432617
         ],
         "At": [
-            -0.8069149255752563,
-            0.9880248308181763,
-            2.308238983154297
+            -0.11164583265781403,
+            0.9191824793815613,
+            1.7712132930755615
         ],
         "Up": [
             0.0,
@@ -33,83 +33,150 @@
             1.0
         ]
     },
-    "Meshes": [
+    "Actors": [
         {
-            "Name": "Keqing",
-            "File": "keqing/keqing.mesh",
-            "Position": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "Scale": [
-                1.0,
-                1.0,
-                1.0
-            ],
-            "Rotation": [
-                0.0,
-                0.0,
-                0.0
+            "Name": "Ground",
+            "Components": [
+                {
+                    "Name": "TransformComponent",
+                    "Position": [
+                        0.0,
+                        -0.5,
+                        0.0
+                    ],
+                    "Scale": [
+                        100.0,
+                        1.0,
+                        100.0
+                    ],
+                    "Rotation": [
+                        0.0,
+                        -0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "Name": "MeshComponent",
+                    "MeshFile": "Meshes/Cube.mesh"
+                }
             ]
         },
         {
-            "Name": "Keqing01",
-            "File": "keqing/keqing.mesh",
-            "Position": [
-                1.0,
-                0.0,
-                -1.0
-            ],
-            "Scale": [
-                1.0,
-                1.0,
-                1.0
-            ],
-            "Rotation": [
-                0.0,
-                0.0,
-                0.0
+            "Name": "SkyBox",
+            "Components": [
+                {
+                    "Name": "SkyBoxComponent",
+                    "CubeMapFile": "Levels/skybox.texture"
+                }
             ]
         },
         {
-            "Name": "Keqing02",
-            "File": "keqing/keqing.mesh",
-            "Position": [
-                -1.0,
-                0.0,
-                1.0
-            ],
-            "Scale": [
-                1.0,
-                1.0,
-                1.0
-            ],
-            "Rotation": [
-                0.0,
-                0.0,
-                0.0
+            "Name": "Keqing0",
+            "Components": [
+                {
+                    "Name": "TransformComponent",
+                    "Position": [
+                        1.0,
+                        0.0,
+                        0.0
+                    ],
+                    "Scale": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "Rotation": [
+                        0.0,
+                        -0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "Name": "MeshComponent",
+                    "MeshFile": "keqing/keqing.mesh"
+                }
             ]
         },
         {
-            "Name": "Cube",
-            "File": "Meshes/Cube.mesh",
-            "Position": [
-                0.0,
-                -0.5,
-                0.0
-            ],
-            "Scale": [
-                100.0,
-                1.0,
-                100.0
-            ],
-            "Rotation": [
-                0.0,
-                -0.0,
-                0.0
+            "Name": "keqing1",
+            "Components": [
+                {
+                    "Name": "TransformComponent",
+                    "Position": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "Scale": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "Rotation": [
+                        0.0,
+                        -0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "Name": "MeshComponent",
+                    "MeshFile": "keqing/keqing.mesh"
+                }
+            ]
+        },
+        {
+            "Name": "Keqing2",
+            "Components": [
+                {
+                    "Name": "TransformComponent",
+                    "Position": [
+                        -1.0,
+                        0.0,
+                        0.0
+                    ],
+                    "Scale": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "Rotation": [
+                        0.0,
+                        -0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "Name": "MeshComponent",
+                    "MeshFile": "keqing/keqing.mesh"
+                }
+            ]
+        },
+        {
+            "Name": "Sphere",
+            "Components": [
+                {
+                    "Name": "TransformComponent",
+                    "Position": [
+                        -2.299999952316284,
+                        0.5,
+                        0.0
+                    ],
+                    "Scale": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "Rotation": [
+                        0.0,
+                        -0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "Name": "MeshComponent",
+                    "MeshFile": "Meshes/Sphere.mesh"
+                }
             ]
         }
-    ],
-    "SkyBox": "Levels/skybox.texture"
+    ]
 }

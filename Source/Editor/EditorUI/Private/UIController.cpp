@@ -105,7 +105,6 @@ namespace Editor {
 		io.Fonts->AddFontFromFileTTF(fontPath.string().c_str(), contentScale * 16, nullptr, nullptr);
 		ASSERT(io.Fonts->Build(), "Failed to build fonts");
 		io.IniFilename = nullptr; // Do not save settings
-
 		// Load imgui.ini
 		ImGui::LoadIniSettingsFromDisk(EditorConfig::GetImGuiConfigSavePath().c_str());
 

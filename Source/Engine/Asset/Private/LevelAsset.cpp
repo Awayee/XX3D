@@ -3,9 +3,9 @@
 
 namespace Asset {
 
-	bool LevelAsset::Load(File::RFile& in) {
+	bool LevelAsset::Load(File::PathStr filePath) {
 		Json::Document doc;
-		if (!Json::ReadFile(in, doc)) {
+		if(!Json::ReadFile(filePath, doc, false)) {
 			return false;
 		}
 		if (doc.HasMember("Camera")) {
@@ -24,6 +24,9 @@ namespace Asset {
 			Json::LoadFloatArray(directionalLightParam["Rotation"], DirectionalLightData.Rotation.Data(), 3);
 			Json::LoadFloatArray(directionalLightParam["Color"], DirectionalLightData.Color.Data(), 3);
 		}
+		if (doc.HasMember("SkyBox")) {
+			SkyBox = doc["SkyBox"].GetString();
+		}
 		if (doc.HasMember("Meshes")) {
 			const Json::Value& objects = doc["Meshes"];
 			Meshes.Resize(objects.Size());
@@ -36,15 +39,21 @@ namespace Asset {
 				Json::LoadFloatArray(meshVal["Rotation"], Meshes[i].Rotation.Data(), 3);
 			}
 		}
-		if(doc.HasMember("SkyBox")) {
-			SkyBox = doc["SkyBox"].GetString();
+		if (doc.HasMember("InstancedMesh")) {
+			const Json::Value& objects = doc["InstancedMesh"];
+			InstancedMeshes.Resize(objects.Size());
+			for(uint32 i=0; i<objects.Size(); ++i) {
+				const Json::Value& val = objects[i].GetObject();
+				InstancedMeshes[i].Name = val["Name"].GetString();
+				InstancedMeshes[i].MeshFile = val["MeshFile"].GetString();
+				InstancedMeshes[i].InstanceFile = val["InstanceFile"].GetString();
+			}
 		}
 		return true;
 	}
 
-	bool LevelAsset::Save(File::WFile& out) {
-		Json::Document doc;
-		doc.SetObject();
+	bool LevelAsset::Save(File::PathStr filePath) {
+		Json::Document doc(Json::Type::kObjectType);
 		// camera
 		Json::Value cameraVal(Json::Type::kObjectType);
 		auto& a = doc.GetAllocator();
@@ -62,9 +71,10 @@ namespace Asset {
 		Json::AddFloatArray(dLightVal, "Rotation", DirectionalLightData.Rotation.Data(), 3, a);
 		Json::AddFloatArray(dLightVal, "Color", DirectionalLightData.Color.Data(), 3, a);
 		doc.AddMember("DirectionalLight", dLightVal, a);
+		// sky box
+		Json::AddStringMember(doc, "SkyBox", SkyBox, a);
 		// meshes
-		Json::Value objectsVal(Json::Type::kObjectType);
-		objectsVal.SetArray();
+		Json::Value meshesVal(Json::Type::kArrayType);
 		for (auto& mesh : Meshes) {
 			Json::Value meshVal(Json::Type::kObjectType);
 			Json::AddString(meshVal, "Name", mesh.Name, a);
@@ -72,12 +82,19 @@ namespace Asset {
 			Json::AddFloatArray(meshVal, "Position", mesh.Position.Data(), 3, a);
 			Json::AddFloatArray(meshVal, "Scale", mesh.Scale.Data(), 3, a);
 			Json::AddFloatArray(meshVal, "Rotation", mesh.Rotation.Data(), 3, a);
-			objectsVal.PushBack(meshVal, a);
+			meshesVal.PushBack(meshVal, a);
 		}
-		doc.AddMember("Meshes", objectsVal, a);
-		// sky box
-		Json::AddStringMember(doc, "SkyBox", SkyBox, a);
-		return Json::WriteFile(out, doc);
+		doc.AddMember("Meshes", meshesVal, a);
+		// instanced meshes
+		Json::Value instancedMeshesVal(Json::Type::kArrayType);
+		for(auto& ism: InstancedMeshes) {
+			Json::Value meshVal(Json::Type::kObjectType);
+			Json::AddString(meshVal, "Name", ism.Name, a);
+			Json::AddString(meshVal, "MeshFile", ism.MeshFile, a);
+			Json::AddString(meshVal, "InstanceFile", ism.InstanceFile, a);
+			meshVal.PushBack(meshVal, a);
+		}
+		doc.AddMember("InstancedMeshes", instancedMeshesVal, a);
+		return Json::WriteFile(filePath, doc, true);
 	}
-
 }

@@ -3,10 +3,12 @@
 
 namespace Editor {
 	class WndDetails : public EditorWndBase {
-	private:
-		void Update() override;
-		void WndContent() override;
 	public:
 		WndDetails();
+	private:
+		bool m_IsAddingComponent{ false };
+		uint32 m_EditCompIdx{ INVALID_INDEX };
+		void Update() override;
+		void WndContent() override;
 	};
 }

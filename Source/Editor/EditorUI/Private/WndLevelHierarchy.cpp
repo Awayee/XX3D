@@ -1,11 +1,14 @@
 #include "WndLevelHierarchy.h"
-#include "Functions/Public/EditorLevelMgr.h"
+#include "Functions/Public/EditorLevel.h"
 #include "EditorUI/Public/EditorUIMgr.h"
 #include "Core/Public/String.h"
+#include "Functions/Public/AssetManager.h"
+#include "Objects/Public/StaticMesh.h"
 
 namespace Editor {
 	void SaveLevel() {
-		if (!EditorLevelMgr::Instance()->SaveLevel()) {
+		const XString& levelFile = EditorLevelMgr::Instance()->GetLevelFile();
+		if(levelFile.empty()) {
 			static EditorWndBase* s_FileSelectWnd = nullptr;
 			auto f = []() {
 				static char s_FilePath[128] = { 0 };
@@ -36,6 +39,17 @@ namespace Editor {
 			};
 			s_FileSelectWnd = EditorUIMgr::Instance()->AddWindow("Select a Path", MoveTemp(f), ImGuiWindowFlags_NoDocking);
 		}
+		else {
+			EditorLevelMgr::Instance()->SaveLevel();
+		}
+	}
+
+	WndLevelHierarchy::WndLevelHierarchy() : EditorWndBase("Hierarchy") {
+		EditorUIMgr::Instance()->AddMenu("Level", "Save Level", SaveLevel, nullptr);
+		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
+	}
+
+	WndLevelHierarchy::~WndLevelHierarchy() {
 	}
 
 	void WndLevelHierarchy::Update() {
@@ -47,55 +61,49 @@ namespace Editor {
 		if(!level) {
 			return;
 		}
-		auto startPos = ImGui::GetCursorPos();
-		ImGui::Dummy(ImGui::GetWindowSize());
-		if(ImGui::BeginDragDropTarget()) {
-			ImGui::Button("Add");
-			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("File")) {
-				ASSERT(payload->DataSize == sizeof(FileNode), "");
-				FileNode* fileNode = reinterpret_cast<FileNode*>(payload->Data);
-				if(fileNode->GetExt() == ".mesh") {
-					level->AddMesh(fileNode->GetPathStr(), fileNode->GetAsset<Asset::MeshAsset>());
+		uint32 selectedActorIdx = levelMgr->GetSelected();
+		for (uint32 i = 0; i < level->GetActorSize(); ++i) {
+			Object::LevelActor* actor = level->GetActor(i);
+			ImGui::PushID(static_cast<int>(i));
+			if(m_RenamingIdx == i) {
+				if(ImGui::InputText("##", m_ActorName.Data(), m_ActorName.Size(), ImGuiInputTextFlags_EnterReturnsTrue)) {
+					actor->SetName(m_ActorName.Data());
+					m_RenamingIdx = INVALID_INDEX;
 				}
 			}
-			ImGui::EndDragDropTarget();
+			else if (ImGui::Selectable(actor->GetName().c_str(), selectedActorIdx == i)) {
+				m_RenamingIdx = INVALID_INDEX;
+				selectedActorIdx = i;
+				levelMgr->SetSelected(i);
+			}
+			ImGui::PopID();
+			//right click
+			if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
+				m_EditActorIdx = i;
+			}
 		}
-		else {
-			ImGui::SetCursorPos(startPos);
-			for (uint32 i = 0; i < level->Meshes().Size(); ++i) {
-				auto meshInfo = level->GetMesh(i);
-				ImGui::PushID(static_cast<int>(i));
-				if (ImGui::Selectable(meshInfo->Name.c_str(), m_SelectIdx == i)) {
-					m_SelectIdx = i;
-					levelMgr->SetSelected(m_SelectIdx);
+		if(ImGui::BeginPopupContextWindow("Hierarchy_ContextMenu", ImGuiPopupFlags_MouseButtonRight)) {
+			m_RenamingIdx = INVALID_INDEX;
+			if(m_EditActorIdx != INVALID_INDEX) {
+				Object::LevelActor* actor = level->GetActor(m_EditActorIdx);
+				if (ImGui::MenuItem("Rename")) {
+					m_RenamingIdx = m_EditActorIdx;
+					StrCopy(m_ActorName.Data(), actor->GetName().c_str());
 				}
-				ImGui::PopID();
-				//right click
-				if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(1)) {
-					m_PressedIdx = i;
-				}
-				if(m_PressedIdx == i) {
-					if(ImGui::BeginPopupContextItem("Popup")) {
-						if(ImGui::MenuItem("Delete")) {
-							levelMgr->GetLevel()->DelMesh(i);
-							if(levelMgr->GetSelected() == i) {
-								levelMgr->SetSelected(INVALID_INDEX);
-							}
-							m_PressedIdx = INVALID_INDEX;
-							m_SelectIdx = INVALID_INDEX;
-						}
-						ImGui::EndPopup();
+				if (ImGui::MenuItem("Delete")) {
+					levelMgr->GetLevel()->RemoveActor(actor);
+					if (levelMgr->GetSelected() == m_EditActorIdx) {
+						levelMgr->SetSelected(INVALID_INDEX);
 					}
 				}
 			}
+			else if (ImGui::MenuItem("New")) {
+				levelMgr->GetLevel()->AddActor("NewActor");
+			}
+			ImGui::EndPopup();
 		}
-	}
-
-	WndLevelHierarchy::WndLevelHierarchy(): EditorWndBase("Hierarchy") {
-		EditorUIMgr::Instance()->AddMenu("Level", "Save Level", SaveLevel, nullptr);
-		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
-	}
-
-	WndLevelHierarchy::~WndLevelHierarchy() {
+		else {
+			m_EditActorIdx = INVALID_INDEX;
+		}
 	}
 }

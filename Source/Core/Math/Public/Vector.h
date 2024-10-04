@@ -15,8 +15,8 @@ namespace Math {
         T* Data() { return &X; }
         const T* Data() const { return &X; }
 
-        T operator[](int i) const { return (i == 0 ? X : Y); }
-        T& operator[](int i) { return (i == 0 ? X : Y); }
+        T operator[](unsigned int i) const { return (i == 0 ? X : Y); }
+        T& operator[](unsigned int i) { return (i == 0 ? X : Y); }
         bool operator==(const Vector2<T>& rhs) const {
 	        return (X == rhs.X && Y == rhs.Y);
         }
@@ -176,10 +176,10 @@ namespace Math {
         const T* Data() const {
 	        return &X;
         }
-        T operator[](int i) const {
+        T operator[](unsigned int i) const {
 	        return *(&X + i);
         }
-        T& operator[](int i) {
+        T& operator[](unsigned int i) {
 	        return *(&X + i);
         }
         bool operator==(const Vector3<T>& rhs) const {
@@ -364,10 +364,10 @@ namespace Math {
 	        return &X;
         }
 
-        T operator[](int i) const {
+        T operator[](unsigned int i) const {
 	        return *(&X + i);
         }
-        T& operator[](int i) {
+        T& operator[](unsigned int i) {
 	        return *(&X + i);
         }
         bool operator==(const Vector4<T> & rhs) const {

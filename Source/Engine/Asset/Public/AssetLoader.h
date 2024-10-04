@@ -19,8 +19,8 @@ namespace Asset {
 		static XString s_ProjectAssetPath;
 	public:
 		static File::FPath AssetPath();
-		static bool LoadProjectAsset(AssetBase* asset, File::PathStr file);
-		static bool LoadEngineAsset(AssetBase* asset, File::PathStr file);
-		static bool SaveProjectAsset(AssetBase* asset, File::PathStr file);
+		static bool LoadProjectAsset(AssetBase* asset, File::PathStr filePath);
+		static bool LoadEngineAsset(AssetBase* asset, File::PathStr filePath);
+		static bool SaveProjectAsset(AssetBase* asset, File::PathStr filePath);
 	};
 }

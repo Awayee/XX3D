@@ -1,5 +1,4 @@
 #pragma once
-#include "Core/Public/Defines.h"
 
 namespace Math {
 
@@ -50,7 +49,7 @@ namespace Math {
 	};
 
 	typedef IterRange<int>     IterRangeI;
-	typedef IterRange<uint32>  IterRangeU;
-	typedef IterRange<uint64>  IterRangeUL;
-	typedef IterRange<uint8>   IterRangeC;
+	typedef IterRange<unsigned int>  IterRangeU;
+	typedef IterRange<unsigned long long>  IterRangeUL;
+	typedef IterRange<unsigned char>   IterRangeC;
 }

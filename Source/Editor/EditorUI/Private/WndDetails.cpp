@@ -1,9 +1,51 @@
 #include "WndDetails.h"
 #include "AssetView.h"
 #include "EditorUI/Public/EditorUIMgr.h"
-#include "Functions/Public/EditorLevelMgr.h"
+#include "Functions/Public/EditorLevel.h"
+#include "Objects/Public/SkyBox.h"
+#include "Objects/Public/StaticMesh.h"
+#include "Objects/Public/Level.h"
 
 namespace Editor {
+
+	void TransformGUI(Object::TransformComponent* com) {
+		auto& transform = com->Transform;
+		bool dirty = ImGui::DragFloat3("Position", transform.Position.Data(), 0.1f);
+		dirty |= ImGui::DragFloat3("Scale", transform.Scale.Data(), 0.01f);
+		dirty |= ImGui::DragFloat3("Rotation", transform.Rotation.Data(), 0.01f);
+		if (dirty) {
+			com->TransformUpdated();
+		}
+	}
+	REGISTER_LEVEL_EDIT_OnGUI(Object::TransformComponent, TransformGUI);
+
+	void MeshGUI(Object::MeshComponent* com) {
+		XString file = com->GetMeshFile();
+		if (Editor::DraggableFileItemAssets("File", file, "*.mesh")) {
+			com->SetMeshFile(file);
+		}
+	}
+	REGISTER_LEVEL_EDIT_OnGUI(Object::MeshComponent, MeshGUI);
+
+	void InstancedDataGUI(Object::InstanceDataComponent* com) {
+		XString file = com->GetInstanceFile();
+		if (Editor::DraggableFileItemAssets("File", file, "*.instd")) {
+			com->SetInstanceFile(file);
+		}
+	}
+	REGISTER_LEVEL_EDIT_OnGUI(Object::InstanceDataComponent, InstancedDataGUI);
+
+	void SkyBoxGUI(Object::SkyBoxComponent* com) {
+		XString skyBoxFile = com->GetCubeMapFile();
+		if (Editor::DraggableFileItemAssets("File", skyBoxFile, "*.texture")) {
+			com->SetCubeMapFile(skyBoxFile);
+		}
+	}
+	REGISTER_LEVEL_EDIT_OnGUI(Object::SkyBoxComponent, SkyBoxGUI);
+
+	WndDetails::WndDetails() : EditorWndBase("Details") {
+		EditorUIMgr::Instance()->AddMenu("Window", m_Name.c_str(), {}, &m_Enable);
+	}
 
 	void WndDetails::Update() {
 	}
@@ -18,47 +60,58 @@ namespace Editor {
 		if(idx == UINT32_MAX) {
 			return;
 		}
-		EditorLevelMesh* mesh = level->GetMesh(idx);
-
-		//Transform
-		if(ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
-			if (ImGui::DragFloat3("Position", mesh->Position.Data(), 0.1f)) {
-				level->GetScene()->GetComponent<Object::TransformComponent>(mesh->ObjectEntityID)->SetPosition(mesh->Position);
-			}
-			if (ImGui::DragFloat3("Scale", mesh->Scale.Data(), 0.01f)) {
-				level->GetScene()->GetComponent<Object::TransformComponent>(mesh->ObjectEntityID)->SetScale(mesh->Scale);
-			}
-			if (ImGui::DragFloat3("Rotation", mesh->Rotation.Data(), 0.01f)) {
-				level->GetScene()->GetComponent<Object::TransformComponent>(mesh->ObjectEntityID)->SetRotation(Math::FQuaternion::Euler(mesh->Rotation));
+		Object::LevelActor* actor = level->GetActor(idx);
+		TArrayView<Object::LevelComponent*> components = actor->GetComponents();
+		uint32 mouseOnIdx = INVALID_INDEX;
+		for (uint32 i = 0; i<components.Size(); ++i) {
+			Object::LevelComponent* com = components[i];
+			if(ImGui::CollapsingHeader(Object::LevelComponentFactory::Instance().GetTypeInfo(com)->GetTypeName().c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+				if (ImGui::IsItemHovered()) {
+					mouseOnIdx = i;
+				}
+				LevelComponentEditProxyFactory::Instance().GetProxy(com).OnGUI(com);
 			}
 		}
+		if(ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
+			m_EditCompIdx = mouseOnIdx;
+			m_IsAddingComponent = false;
+		}
 
-		//Material
-		if(ImGui::CollapsingHeader("Materials", ImGuiTreeNodeFlags_DefaultOpen)) {
-			for (auto& primitive : mesh->Asset->Primitives) {
-				//material
-				File::FPath primitivePath = primitive.BinaryFile;
-				ImGui::Text(primitivePath.stem().string().c_str()); ImGui::SameLine();
-				if (ImGui::BeginDragDropTarget()) {
-					ImGui::Button(primitive.MaterialFile.empty() ? "None" : primitive.MaterialFile.c_str());
-					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("File")) {
-						ASSERT(payload->DataSize == sizeof(FileNode), "");
-						const FileNode* fileNode = reinterpret_cast<const FileNode*>(payload->Data);
-						if(fileNode->GetExt() == ".texture") {
-							primitive.MaterialFile = fileNode->GetPathStr();
-							EditorLevelMgr::Instance()->ReloadLevel();
-						}
+		if(ImGui::BeginPopupContextWindow("Details_ContextMenu", ImGuiPopupFlags_MouseButtonRight)) {
+			if(m_EditCompIdx != INVALID_INDEX) {
+				if(ImGui::MenuItem("Remove")) {
+					actor->RemoveComponent(components[m_EditCompIdx]);
+					m_EditCompIdx = INVALID_INDEX;
+				}
+			}
+			else if(ImGui::MenuItem("Add")) {
+				m_IsAddingComponent = true;
+			}
+			ImGui::EndPopup();
+		}
+		else {
+			m_EditCompIdx = INVALID_INDEX;
+		}
+		if (m_IsAddingComponent) {
+			ImGui::OpenPopup("Details_AddComponent");
+			if(ImGui::BeginPopup("Details_AddComponent")) {
+				if ((ImGui::IsMouseClicked(ImGuiMouseButton_Left) || ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+					&& !ImGui::IsWindowHovered()) {
+					m_IsAddingComponent = false;
+				}
+				auto& fac = Object::LevelComponentFactory::Instance();
+				for (uint32 i = 0; i < fac.GetTypeSize(); ++i) {
+					auto* typeInfo = fac.GetTypeInfo(i);
+					if (ImGui::MenuItem(typeInfo->GetTypeName().c_str())) {
+						typeInfo->AddComponent(actor);
+						m_IsAddingComponent = false;
 					}
-					ImGui::EndDragDropTarget();
 				}
-				else {
-					ImGui::Button(primitive.MaterialFile.empty() ? "None" : primitive.MaterialFile.c_str());
-				}
+				ImGui::EndPopup();
+			}
+			else {
+				m_IsAddingComponent = false;
 			}
 		}
-	}
-
-	WndDetails::WndDetails(): EditorWndBase("Details") {
-		EditorUIMgr::Instance()->AddMenu("Window", m_Name.c_str(), {}, &m_Enable);
 	}
 }

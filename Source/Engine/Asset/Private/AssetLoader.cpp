@@ -17,52 +17,34 @@ namespace Asset {
 		return s_ProjectAssetPath;
 	}
 
-	bool AssetLoader::LoadProjectAsset(AssetBase* asset, File::PathStr file) {
-		File::FPath filePath(s_ProjectAssetPath);
-		filePath.append(file);
-		File::RFile in(filePath.string().c_str(), BinaryFile(file) ? (File::EFileMode::Read) : (File::EFileMode::Read | File::EFileMode::Binary));
-		if (!in.is_open()) {
-			LOG_INFO("[AssetLoader::LoadProjectAsset] Failed to read file: %s", filePath.string().c_str());
+	bool AssetLoader::LoadProjectAsset(AssetBase* asset, File::PathStr filePath) {
+		File::FPath fullPath(s_ProjectAssetPath);
+		fullPath.append(filePath);
+		if(!asset->Load(fullPath.string().c_str())) {
+			LOG_WARNING("[AssetLoader::LoadProjectAsset] Failed to load file: %s", filePath);
 			return false;
 		}
-
-		bool ok = asset->Load(in);
-		if (!ok) {
-			LOG_INFO("[AssetLoader::LoadProjectAsset] Failed to load asset: %s", file);
-		}
-		return ok;
+		return true;
 	}
 
-	bool AssetLoader::LoadEngineAsset(AssetBase* asset, File::PathStr file) {
-		File::FPath filePath(s_EngineAssetPath);
-		filePath.append(file);
-		File::RFile in(filePath.string().c_str(), BinaryFile(file) ? (File::EFileMode::Read) : (File::EFileMode::Read | File::EFileMode::Binary));
-		if (!in.is_open()) {
-			LOG_INFO("[AssetLoader::LoadEngineAsset] Failed to read file: %s", filePath.string().c_str());
+	bool AssetLoader::LoadEngineAsset(AssetBase* asset, File::PathStr filePath) {
+		File::FPath fullPath(s_EngineAssetPath);
+		fullPath.append(filePath);
+		if (!asset->Load(fullPath.string().c_str())) {
+			LOG_WARNING("[AssetLoader::LoadEngineAsset] Failed to load file: %s", filePath);
 			return false;
 		}
-
-		bool ok = asset->Load(in);
-		if (!ok) {
-			LOG_INFO("[AssetLoader::LoadEngineAsset] Failed to load asset: %s", file);
-		}
-		return ok;
+		return true;
 	}
 
-	bool AssetLoader::SaveProjectAsset(AssetBase* asset, File::PathStr file) {
-		File::FPath filePath(s_ProjectAssetPath);
-		filePath.append(file);
-		File::WFile out(filePath.string().c_str(), BinaryFile(file) ? (File::EFileMode::Write) : (File::EFileMode::Write | File::EFileMode::Binary));
-		if (!out.is_open()) {
-			LOG_INFO("[AssetLoader::SaveProjectAsset] Failed to write file: %s", filePath.string().c_str());
+	bool AssetLoader::SaveProjectAsset(AssetBase* asset, File::PathStr filePath) {
+		File::FPath fullPath(s_ProjectAssetPath);
+		fullPath.append(filePath);
+		if (!asset->Save(fullPath.string().c_str())) {
+			LOG_WARNING("[AssetLoader::SaveProjectAsset] Failed to save file: %s", filePath);
 			return false;
 		}
-
-		bool ok = asset->Save(out);
-		if (!ok) {
-			LOG_INFO("[AssetLoader::SaveProjectAsset] Failed to save asseet: %s", file);
-		}
-		return ok;
+		return true;
 	}
 
 }

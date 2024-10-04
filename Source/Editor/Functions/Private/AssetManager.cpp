@@ -149,23 +149,28 @@ namespace {
 }
 
 namespace Editor {
-	
-	PathNode::PathNode(const File::FPath& path, NodeID id, NodeID parent):m_ID(id), m_ParentID(parent), m_Path(path) {
-		m_PathStr = m_Path.string();
+
+	void PathNode::ResetPath(File::FPath&& relativePath, NodeID parent) {
+		m_RelativePath = MoveTemp(relativePath);
+		m_ParentID = parent;
+		m_PathStr = m_RelativePath.string();
 		std::replace(m_PathStr.begin(), m_PathStr.end(), '\\', '/');
-		m_Name = m_Path.filename().string();
-		m_Ext = m_Path.has_extension() ?  m_Path.extension().string() : "";
+		m_Name = m_RelativePath.filename().string();
+		m_Ext = m_RelativePath.has_extension() ? m_RelativePath.extension().string() : "";
 	}
 
 	File::FPath PathNode::GetFullPath() const {
 		File::FPath path{ Asset::AssetLoader::AssetPath() };
-		path.append(m_Path.string());
+		path.append(m_RelativePath.string());
 		return path;
 	}
 
 
-	bool FolderNode::Contains(NodeID id) const {
-		return m_ID < id;
+	bool FolderNode::Contains(const FolderNode* folderNode) const {
+		if(m_ID == folderNode->m_ID) {
+			return false;
+		}
+		return File::IsSubPathOf(folderNode->m_RelativePath, m_RelativePath);
 	}
 
 	void FileNode::Save() {
@@ -174,135 +179,209 @@ namespace Editor {
 		}
 	}
 
-	NodeID AssetManager::InsertFolder(const File::FPath& path, NodeID parent) {
-		const NodeID id = static_cast<NodeID>(m_Folders.Size());
-		m_Folders.PushBack({ File::RelativePath(path, m_RootPath), id, parent });
-		FolderNode* parentNode = GetFolder(parent);
-		if(parentNode){
+	AssetManager::AssetManager(const char* rootPath) {
+		m_RootPath = rootPath;
+		BuildTree();
+	}
+
+	FileNode* AssetManager::GetFileNode(NodeID id) {
+		return (INVALID_NODE != id &&  id < m_Files.Size()) ? &m_Files[id] : nullptr;
+	}
+
+	FolderNode* AssetManager::GetFolderNode(NodeID id) {
+		return( INVALID_NODE != id && id < m_Folders.Size()) ? &m_Folders[id] : nullptr;
+	}
+
+	FileNode* AssetManager::GetFileNode(const File::FPath& path) {
+		FolderNode* folder = GetRootNode();
+		for (auto iter : path) {
+			const XString iterString = iter.string();
+			// node is file, find the file to return
+			if (iter.has_extension()) {
+				for (NodeID childID : folder->GetChildFiles()) {
+					FileNode* childFile = GetFileNode(childID);
+					if (childFile->GetName() == iterString) {
+						return childFile;
+					}
+				}
+				break;
+			}
+			// node is folder, find a folder for next iteration
+			bool found = false;
+			for (NodeID childID : folder->GetChildFolders()) {
+				FolderNode* childFolder = GetFolderNode(childID);
+				if (childFolder->GetName() == iterString) {
+					folder = childFolder;
+					found = true;
+				}
+			}
+			if (!found) {
+				break;
+			}
+		}
+		LOG_WARNING("AssetManager::GetFileNode failed: %s", path.string().c_str());
+		return nullptr;
+	}
+
+	FolderNode* AssetManager::GetFolderNode(const File::FPath& path) {
+		FolderNode* folder = GetRootNode();
+		for (auto iter : path) {
+			const XString iterString = iter.string();
+			bool found = false;
+			for (NodeID childID : folder->GetChildFolders()) {
+				FolderNode* childFolder = GetFolderNode(childID);
+				if (childFolder->GetName() == iterString) {
+					folder = childFolder;
+					found = true;
+				}
+			}
+			if (!found) {
+				LOG_WARNING("AssetManager::GetFolderNode failed: %s", path.string().c_str());
+				return nullptr;
+			}
+		}
+		return folder;
+	}
+
+	FolderNode* AssetManager::GetRootNode() {
+		return GetFolderNode(m_Root);
+	}
+
+	NodeID AssetManager::CreateFolder(File::FPath&& relativePath, NodeID parent) {
+		const NodeID id = m_Folders.Size();
+		m_Folders.EmplaceBack(this, id).ResetPath(MoveTemp(relativePath), parent);
+		FolderNode* parentNode = GetFolderNode(parent);
+		if (parentNode) {
 			parentNode->m_Folders.PushBack(id);
+			if(m_OnFolderModified) {
+				m_OnFolderModified(parentNode);
+			}
 		}
 		return id;
 	}
 
-	NodeID AssetManager::InsertFile(const File::FPath& path, NodeID parent) {
-		const NodeID id = static_cast<NodeID>(m_Files.Size());
-		m_Files.PushBack({ File::RelativePath(path, m_RootPath), id, parent});
-		FolderNode* parentNode = GetFolder(parent);
-		if(parentNode){
+	NodeID AssetManager::CreateFile(File::FPath&& relativePath, NodeID parent) {
+		const NodeID id = m_Files.Size();
+		m_Files.EmplaceBack(this, id).ResetPath(MoveTemp(relativePath), parent);
+		FolderNode* parentNode = GetFolderNode(parent);
+		if (parentNode) {
 			parentNode->m_Files.PushBack(id);
+			if (m_OnFolderModified) {
+				m_OnFolderModified(parentNode);
+			}
 		}
 		return id;
 	}
 
-
-	void AssetManager::RemoveFile(NodeID id) {
-		FileNode* node = GetFile(id);
+	void AssetManager::ReloadFolder(NodeID nodeId, bool recursively) {
+		FolderNode* node = GetFolderNode(nodeId);
 		if(!node) {
 			return;
 		}
-		FolderNode* parentFolder = GetFolder(node->m_ParentID);
-		parentFolder->m_Files.SwapRemove(id);
-		parentFolder->m_Files.SwapRemove(id);
-		PathNode* swappedAsset = &m_Files.Back();
+		auto& folders = node->m_Folders;
+		auto& files = node->m_Files;
+		uint32 folderSize = 0, fileSize = 0;
+		File::DirIterator iter(node->GetFullPath());
+		for (const File::DirEntry& entry : iter) {
+			File::FPath relativePath = File::RelativePath(entry.path(), m_RootPath);
+			if (entry.is_directory()) {
+				if (folderSize < folders.Size()) {
+					GetFolderNode(folders[folderSize])->ResetPath(MoveTemp(relativePath), nodeId);
+				}
+				else {
+					folders.PushBack(CreateFolder(MoveTemp(relativePath), nodeId));
+				}
+				if (recursively) {
+					ReloadFolder(folders[folderSize], true);
+				}
+				++folderSize;
+			}
+			else {
+				if (fileSize < files.Size()) {
+					GetFileNode(files[fileSize])->ResetPath(File::RelativePath(entry.path(), m_RootPath), nodeId);
+				}
+				else {
+					files.PushBack(CreateFile(MoveTemp(relativePath), nodeId));
+				}
+				++fileSize;
+			}
+		}
+		// remove rest items
+		for(uint32 i=folders.Size(); i>folderSize; --i) {
+			m_Folders[files.Back()].m_ParentID = INVALID_NODE;
+			RemoveFolder(folders.Back());
+			folders.PopBack();
+		}
+		for(uint32 i=files.Size(); i>fileSize; --i) {
+			m_Files[files.Back()].m_ParentID = INVALID_NODE;
+			RemoveFile(files.Back());
+			files.PopBack();
+		}
+		// trigger event
+		if(m_OnFolderModified) {
+			m_OnFolderModified(node);
+		}
+	}
+
+	NodeID AssetManager::RootID() {
+		return m_Root;
+	}
+
+	void AssetManager::RemoveFile(NodeID id) {
+		FileNode* node = GetFileNode(id);
+		if(!node) {
+			return;
+		}
+		if(FolderNode* parentFolder = GetFolderNode(node->m_ParentID)) {
+			parentFolder->m_Files.SwapRemove(id);
+		}
+		PathNode& swappedAsset = m_Files.Back();
 		m_Files.SwapRemoveAt(id);
 
-		if (swappedAsset->m_ParentID != INVALLID_NODE) {
-			FolderNode* backParent = GetFolder(swappedAsset->m_ParentID);
-			backParent->m_Files.Replace(swappedAsset->m_ID, id);
-			swappedAsset->m_ID = id;
+		if (swappedAsset.m_ParentID != INVALID_NODE) {
+			if(FolderNode* backParent = GetFolderNode(swappedAsset.m_ParentID)) {
+				backParent->m_Files.Replace(swappedAsset.m_ID, id);
+				swappedAsset.m_ID = id;
+			}
 		}
 	}
 
 	void AssetManager::RemoveFolder(NodeID id) {
-		FolderNode* node = GetFolder(id);
+		FolderNode* node = GetFolderNode(id);
 		if(!node) {
 			return;
 		}
-		FolderNode* parentFolder = GetFolder(node->m_ParentID);
-		parentFolder->m_Folders.SwapRemove(id);
+		if(FolderNode* parentFolder = GetFolderNode(node->m_ParentID)) {
+			parentFolder->m_Folders.SwapRemove(id);
+		}
 		PathNode* swappedAsset = &m_Folders.Back();
 		m_Folders.SwapRemoveAt(id);
-
-		if(swappedAsset && swappedAsset->m_ParentID != INVALLID_NODE) {
-			FolderNode* backParent = GetFolder(swappedAsset->m_ParentID);
+		if(swappedAsset && swappedAsset->m_ParentID != INVALID_NODE) {
+			FolderNode* backParent = GetFolderNode(swappedAsset->m_ParentID);
 			backParent->m_Folders.Replace(swappedAsset->m_ID, id);
 			swappedAsset->m_ID = id;
 		}
 	}
 
 	NodeID AssetManager::BuildFolderRecursively(const File::FPath& path, NodeID parent) {
-		using namespace File;
 		//the folder node
-		NodeID folder = InsertFolder(path, parent);
-		FPathIterator iter(path);
-		for(const FPathEntry& child: iter) {
+		NodeID folder = CreateFolder(File::RelativePath(path, m_RootPath), parent);
+		File::DirIterator iter(path);
+		for(const File::DirEntry& child: iter) {
 			if(child.is_directory()) {
 				BuildFolderRecursively(child, folder);
 			}
 			else {
-				InsertFile(child.path(), folder);
+				CreateFile(File::RelativePath(child.path(), m_RootPath), folder);
 			}
 		}
-		if(m_OnFolderRebuild) {
-			m_OnFolderRebuild(GetFolder(folder));
-		}
 		return folder;
-	}
-
-	AssetManager::AssetManager(const char* rootPath) {
-		m_RootPath = rootPath;
-		BuildTree();
 	}
 
 	void AssetManager::BuildTree() {
 		m_Folders.Reset();
 		m_Files.Reset();
-		m_Root = BuildFolderRecursively(m_RootPath, INVALLID_NODE);
+		m_Root = BuildFolderRecursively(m_RootPath, INVALID_NODE);
 		m_Folders[m_Root].m_Name = m_RootPath.parent_path().stem().string();
-	}
-
-	FileNode* AssetManager::GetFile(NodeID id) {
-		return id < m_Files.Size() ? &m_Files[id] : nullptr;
-	}
-
-	FileNode* AssetManager::GetFile(const File::FPath& path) {
-		FolderNode* folder = GetRoot();
-		for(auto iter: path) {
-			if(!folder) {
-				break;
-			}
-			//foreach all files
-			if(iter.has_extension()) {
-				for (NodeID childID : folder->GetChildFiles()) {
-					FileNode* childFile = GetFile(childID);
-					if (childFile->GetPath().filename() == iter) {
-						return childFile;
-					}
-				}
-			}
-			else {
-				for (NodeID childID : folder->GetChildFolders()) {
-					FolderNode* childFolder = GetFolder(childID);
-					auto stem = childFolder->GetPath().stem();
-					if (stem == iter) {
-						folder = childFolder;
-					}
-				}
-			}
-		}
-		LOG_INFO("AssetManager::GetFile failed: %s", path.string().c_str());
-		return nullptr;
-	}
-
-	FolderNode* AssetManager::GetFolder(NodeID id) {
-		return id < m_Folders.Size() ? &m_Folders[id] : nullptr;
-	}
-
-	FolderNode* AssetManager::GetRoot() {
-		return GetFolder(m_Root);
-	}
-
-	NodeID AssetManager::RootID() {
-		return m_Root;
 	}
 }

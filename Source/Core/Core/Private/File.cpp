@@ -4,45 +4,94 @@
 
 namespace File {
 
-	bool LoadFileCode(const char* file, TArray<char>& code) {
-		RFile f(file, EFileMode::AtEnd | EFileMode::Binary);
-		if(!f.is_open()) {
-			return false;
-		}
 
-		uint32 fileSize = (uint32)f.tellg();
-		code.Resize(fileSize);
-		f.seekg(0);
-		f.read(code.Data(), fileSize);
-		f.close();
-		return true;
+	enum EFileMode: int {
+		FM_AT_END = std::ios::ate,
+		FM_BEGIN = std::ios::beg,
+		FM_APPEND = std::ios::app,
+		FM_BINARY = std::ios::binary,
+		FM_IN = std::ios::in,
+		FM_OUT = std::ios::out,
+	};
+
+	ReadFile::ReadFile(const char* file, bool isBinary): ReadFile(file, isBinary? FM_BINARY : 0) {}
+
+	ReadFile::~ReadFile() {
+		if(m_File.is_open()) {
+			m_File.close();
+		}
+	}
+	
+	ReadFile::ReadFile(const char* file, int mode) {
+		m_File.open(file, mode | FM_IN);
+	}
+
+	bool ReadFile::IsOpen() const {
+		return m_File.is_open();
+	}
+
+	void ReadFile::Read(void* data, uint32 byteSize) {
+		if(m_File.is_open()) {
+			m_File.read((char*)data, byteSize);
+		}
+	}
+
+	bool ReadFile::GetLine(XString& lineContent) {
+		return !!std::getline(m_File, lineContent);
+	}
+
+	ReadFileWithSize::ReadFileWithSize(const char* file, bool isBinary): ReadFile(file, isBinary? (FM_AT_END | FM_BINARY) : FM_AT_END) {
+		m_Size = (uint32)m_File.tellg();
+		m_File.seekg(0, FM_BEGIN);
+	}
+
+	WriteFile::WriteFile(const char* file, bool isBinary): WriteFile(file, isBinary ? FM_BINARY : 0) {}
+
+	WriteFile::~WriteFile() {
+		if(m_File.is_open()) {
+			m_File.close();
+		}
+	}
+
+	WriteFile::WriteFile(const char* file, int fileMode) {
+		m_File.open(file, fileMode | FM_OUT);
+	}
+
+	bool WriteFile::IsOpen() const {
+		return m_File.is_open();
+	}
+
+	void WriteFile::Write(const void* data, uint32 byteSize) {
+		if(m_File.is_open()) {
+			m_File.write((const char*)data, byteSize);
+		}
 	}
 
 	void ForeachPath(const char* folder, FForEachPathFunc&& func, bool recursively) {
 		if(recursively) {
-			FPathRecursiveIterator iter{ folder };
-			for (const FPathEntry& path : iter) {
+			DirRecursiveIterator iter{ folder };
+			for (const DirEntry& path : iter) {
 				func(path);
 			}
 		}
 		else {
-			FPathIterator iter{ folder };
-			for (const FPathEntry& path : iter) {
+			DirIterator iter{ folder };
+			for (const DirEntry& path : iter) {
 				func(path);
 			}			
 		}
 	}
 
-	void ForeachPath(const FPathEntry& path, FForEachPathFunc&& func, bool recursively) {
+	void ForeachPath(const DirEntry& path, FForEachPathFunc&& func, bool recursively) {
 		if (recursively) {
-			FPathRecursiveIterator iter{ path };
-			for (const FPathEntry& p : iter) {
+			DirRecursiveIterator iter{ path };
+			for (const DirEntry& p : iter) {
 				func(p);
 			}
 		}
 		else {
-			FPathIterator iter{ path };
-			for (const FPathEntry& p : iter) {
+			DirIterator iter{ path };
+			for (const DirEntry& p : iter) {
 				func(p);
 			}
 		}

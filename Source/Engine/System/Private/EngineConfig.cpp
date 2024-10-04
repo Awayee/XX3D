@@ -25,14 +25,14 @@ namespace Engine {
 	// lod .ini file
 
 	inline bool LoadIniFile(const char* file, TMap<XString, XString>& configMap) {
-		File::RFile configFile(file);
-		if (!configFile.is_open()) {
+		File::ReadFile configFile(file, false);
+		if (!configFile.IsOpen()) {
 			LOG_INFO("Failed to load file: %s", file);
 			return false;
 		}
 		XString fileLine;
 		configMap.clear();
-		while (std::getline(configFile, fileLine)) {
+		while (configFile.GetLine(fileLine)) {
 			if (fileLine.empty() || fileLine[0] == '#') {
 				continue;
 			}

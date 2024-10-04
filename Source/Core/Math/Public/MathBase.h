@@ -1,9 +1,7 @@
 #pragma once
-
 #include <cmath>
 
 namespace Math {
-
 	constexpr  float PI = 3.14159265358979323846264338327950288f;
 	//const float Deg2Rad = PI / 180.0f;
 	constexpr  float Deg2Rad = 0.017453292519943295f;
@@ -67,6 +65,16 @@ namespace Math {
 	inline float UnpackFloatS1(unsigned char x) { return (float)x / 255.0f * 2.0f - 1.0f; }
 	inline unsigned char PackFloat01(float x) { return (unsigned char)(x * 255.0f); }
 	inline float PackFloat01(unsigned char x) { return (float)x / 255.0f; }
+
+	inline unsigned short FloatToHalf(float x) {
+		unsigned int f = *(reinterpret_cast<unsigned int*>(&x));
+		unsigned short h = ((f >> 16) & 0x8000) | (((f & 0x7f800000) - 0x38000000) >> 13) | ((f >> 13) & 0x03ff);
+		return h;
+	}
+	inline float HalfToFloat(unsigned short value) {
+		unsigned int f = ((value & 0x8000) << 16) | (((value & 0x7c00) + 0x1C000) << 13) | ((value & 0x03ff) << 13);
+		return *(reinterpret_cast<float*>(&f));
+	}
 
 	template<typename T> T UpperExp2(T x) {
 		if (!(x & (x - 1))) {

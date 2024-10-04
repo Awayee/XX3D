@@ -1,6 +1,7 @@
 #include "D3D12command.h"
 #include "D3D12Device.h"
 #include "D3D12Resources.h"
+#include "D3D12Pipeline.h"
 #include "System/Public/FrameCounter.h"
 #include "Math/Public/Math.h"
 #include <WinPixEventRuntime/pix3.h>
@@ -30,12 +31,13 @@ void D3D12Uploader::BeginFrame() {
 D3D12CommandList::D3D12CommandList(D3D12Device* device, ID3D12CommandAllocator* alloc, D3D12_COMMAND_LIST_TYPE type) : m_Device(device), m_Allocator(alloc), m_IsRecording(false) {
 	DX_CHECK(device->GetDevice()->CreateCommandList(0, type, m_Allocator, nullptr, IID_PPV_ARGS(m_CommandList.Address())));
 	m_CommandList->Close();
+	m_DescriptorCache.Reset(new D3D12PipelineDescriptorCache(m_Device));
 }
 
 void D3D12CommandList::Reset() {
 	if(!m_IsRecording) {
 		m_CommandList->Reset(m_Allocator, nullptr);
-		m_PipelineCaches.Reset();
+		m_DescriptorCache->Reset();
 		m_ResStates.clear();
 		m_IsRecording = true;
 	}
@@ -92,20 +94,18 @@ void D3D12CommandList::BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) 
 	m_CommandList->SetPipelineState(d3d12Pipeline->GetPipelineState());
 	m_CommandList->SetGraphicsRootSignature(d3d12Pipeline->GetRootSignature());
 	m_CommandList->IASetPrimitiveTopology(d3d12Pipeline->GetPrimitiveTopology());
-	m_PipelineCaches.PushBack(D3D12PipelineDescriptorCache(m_Device, d3d12Pipeline));
+	m_DescriptorCache->BindGraphicsPipelineState(d3d12Pipeline);
 }
 
 void D3D12CommandList::BindComputePipeline(RHIComputePipelineState* pipeline) {
 	auto* d3d12Pipeline = (D3D12ComputePipelineState*)pipeline;
 	m_CommandList->SetPipelineState(d3d12Pipeline->GetPipelineState());
 	m_CommandList->SetComputeRootSignature(d3d12Pipeline->GetRootSignature());
-	m_PipelineCaches.PushBack(D3D12PipelineDescriptorCache(m_Device, d3d12Pipeline));
+	m_DescriptorCache->BindComputePipelineState(d3d12Pipeline);
 }
 
 void D3D12CommandList::SetShaderParam(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& parameter) {
-	if(m_PipelineCaches.Size()) {
-		m_PipelineCaches.Back().SetShaderParam(setIndex, bindIndex, parameter);
-	}
+	m_DescriptorCache->SetShaderParam(setIndex, bindIndex, parameter);
 }
 
 void D3D12CommandList::BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) {
@@ -284,9 +284,7 @@ void D3D12CommandList::CheckClose() {
 }
 
 void D3D12CommandList::PreDraw() {
-	if(m_PipelineCaches.Size()) {
-		m_PipelineCaches.Back().PreDraw(m_CommandList.Get());
-	}
+	m_DescriptorCache->PreDraw(m_CommandList);
 }
 
 void D3D12CommandList::OnSubmit() {

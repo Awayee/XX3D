@@ -18,29 +18,33 @@ namespace Asset {
 		}
 	}
 
-	bool TextureAsset::Load(File::RFile& in) {
-		in.seekg(0);
-		in.read(BYTE_PTR(&Width), sizeof(uint32));
-		in.read(BYTE_PTR(&Height), sizeof(uint32));
-		in.read(BYTE_PTR(&Type), sizeof(uint8));
-		in.read(BYTE_PTR(&CompressMode), sizeof(uint8));
+	bool TextureAsset::Load(File::PathStr filePath) {
+		File::ReadFile f(filePath, true);
+		if(!f.IsOpen()) {
+			LOG_WARNING("[TextureAsset::Load] Failed to load file %s", filePath);
+			return false;
+		}
+		f.Read(&Width, sizeof(uint32));
+		f.Read(&Height, sizeof(uint32));
+		f.Read(&Type, sizeof(uint8));
+		f.Read(&CompressMode, sizeof(uint8));
 		const uint32 byteSize = GetTextureByteSize(Type, Width, Height);
 		Pixels.Resize(byteSize);
 
 		uint32 compressedByteSize;
-		in.read(BYTE_PTR(&compressedByteSize), sizeof(uint32));
+		f.Read(&compressedByteSize, sizeof(uint32));
 		TArray<uint8> compressedData(compressedByteSize);
-		in.read(BYTE_PTR(compressedData.Data()), compressedByteSize);
+		f.Read(compressedData.Data(), compressedByteSize);
 		if (ETextureCompressMode::None == CompressMode) {
 			Pixels.Swap(compressedData);
 		}
 		else if (ETextureCompressMode::LZ4 == CompressMode) {
-			LZ4_decompress_safe(BYTE_PTR(compressedData.Data()), BYTE_PTR(Pixels.Data()), (int)compressedByteSize, (int)byteSize);
+			LZ4_decompress_safe((const int8*)compressedData.Data(), (int8*)Pixels.Data(), (int)compressedByteSize, (int)byteSize);
 		}
-		else if(ETextureCompressMode::Zlib == CompressMode) {
+		else if (ETextureCompressMode::Zlib == CompressMode) {
 			uLongf originalSize;
 			int res = uncompress(Pixels.Data(), &originalSize, (const Bytef*)compressedData.Data(), compressedByteSize);
-			if(res != Z_OK) {
+			if (res != Z_OK) {
 				LOG_WARNING("zlib uncompress failed!");
 				return false;
 			}
@@ -52,34 +56,39 @@ namespace Asset {
 
 		return true;
 	}
-	bool TextureAsset::Save(File::WFile& out) {
 
-		out.write(CBYTE_PTR(&Width), sizeof(uint32));
-		out.write(CBYTE_PTR(&Height), sizeof(uint32));
-		out.write(CBYTE_PTR(&Type), sizeof(uint8));
-		out.write(CBYTE_PTR(&CompressMode), sizeof(ETextureCompressMode));
+	bool TextureAsset::Save(File::PathStr filePath) {
+		File::WriteFile out(filePath, true);
+		if (!out.IsOpen()) {
+			LOG_WARNING("[TextureAsset::Save] Failed to save file %s", filePath);
+			return false;
+		}
+		out.Write(&Width, sizeof(uint32));
+		out.Write(&Height, sizeof(uint32));
+		out.Write(&Type, sizeof(uint8));
+		out.Write(&CompressMode, sizeof(ETextureCompressMode));
 
 		if (ETextureCompressMode::None == CompressMode) {
-			out.write(CBYTE_PTR(Pixels.Data()), Pixels.Size());
+			out.Write(Pixels.Data(), Pixels.Size());
 		}
 		else if (ETextureCompressMode::LZ4 == CompressMode) {
 			uint64 compressBound = LZ4_compressBound((int)Pixels.Size());
 			TArray<char> compressedData(compressBound);
-			uint32 compressedSize = LZ4_compress_default(CBYTE_PTR(Pixels.Data()), compressedData.Data(), (int)Pixels.Size(), (int)compressBound);
+			uint32 compressedSize = LZ4_compress_default((const int8*)Pixels.Data(), compressedData.Data(), (int)Pixels.Size(), (int)compressBound);
 			compressedData.Resize(compressedSize);
-			out.write(CBYTE_PTR(&compressedSize), sizeof(uint32));
-			out.write(compressedData.Data(), compressedSize);
+			out.Write(&compressedSize, sizeof(uint32));
+			out.Write(compressedData.Data(), compressedSize);
 		}
 		else if (ETextureCompressMode::Zlib == CompressMode) {
 			auto dstLen = compressBound(Pixels.Size());
 			TArray<Bytef> compressedData(dstLen);
 			int res = compress(compressedData.Data(), &dstLen, Pixels.Data(), Pixels.Size());
-			if(res != Z_OK) {
+			if (res != Z_OK) {
 				LOG_WARNING("zlib compress failed!");
 				return false;
 			}
-			out.write(CBYTE_PTR(&dstLen), sizeof(uint32));
-			out.write((const char*)compressedData.Data(), dstLen);
+			out.Write(&dstLen, sizeof(uint32));
+			out.Write(compressedData.Data(), dstLen);
 		}
 		else {
 			LOG_INFO("[TextureAssetBaseSave] Unknown compress mode %u", CompressMode);

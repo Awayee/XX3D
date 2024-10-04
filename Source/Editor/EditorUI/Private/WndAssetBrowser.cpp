@@ -6,94 +6,60 @@ namespace {
 	static constexpr uint32 INPUT_CHAR_SIZE = 128;
 	static constexpr uint32 CUBE_MAP_FILE_NUM = 6;
 	static constexpr int32  WINDOW_FLAGS = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoDocking;
-
-
 	static const TStaticArray<const char*, 5> s_ImageDownsizeNames{ "1", "1/2", "1/4", "1/8", "1/16" };
 
-	class AssetImporterBase : public Editor::EditorWndBase {
+	class AssetBuilderBase : public Editor::EditorWndBase {
 	public:
-		AssetImporterBase(const XString& dstDir, XString&& fileFilter, XString&& wndName): EditorWndBase(MoveTemp(wndName), WINDOW_FLAGS), m_DstDir(dstDir), m_FileFilter(MoveTemp(fileFilter)) {
+		AssetBuilderBase(XString&& wndName, Editor::NodeID folderNode): EditorWndBase(MoveTemp(wndName), WINDOW_FLAGS), m_FolderNode(folderNode){
 			AutoDelete();
+			strcpy(m_DstFileName.Data(), "NewAsset");
 		}
 	protected:
-		XString m_DstDir;
-		XString m_FileFilter;
+		Editor::NodeID m_FolderNode;
 		TStaticArray<char, INPUT_CHAR_SIZE> m_DstFileName{};
-
-		bool ReceiveDragItem(XString& file) {
-			ImGui::Text(file.empty() ? "None" : file.c_str());
-			if (ImGui::BeginDragDropTarget()) {
-				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("File")) {
-					const Editor::FileNode* fileNode = reinterpret_cast<const Editor::FileNode*>(payload->Data);
-					if (m_FileFilter.find(fileNode->GetExt()) != XString::npos) {
-						file = fileNode->GetFullPath().string();
-					}
-				}
-				ImGui::EndDragDropTarget();
-				return true;
-			}
-			return false;
-		}
+		const XString& GetPathStr() const { return Editor::ProjectAssetMgr::Instance()->GetFolderNode(m_FolderNode)->GetPathStr(); }
+		File::FPath GetPath() const { return Editor::ProjectAssetMgr::Instance()->GetFolderNode(m_FolderNode)->GetPath(); }
+		void RefreshNode(File::FPath&& path) const { Editor::ProjectAssetMgr::Instance()->CreateFile(MoveTemp(path), m_FolderNode); }
 	};
 
-	class MeshImporter: public AssetImporterBase {
+	class MeshImporter: public AssetBuilderBase {
 	public:
-		MeshImporter(const XString& dstDir): AssetImporterBase(dstDir, "*.glb;*.gltf;*.fbx", "MeshImporter") {}
+		MeshImporter(Editor::NodeID folderNode): AssetBuilderBase("MeshImporter", folderNode) {}
 	private:
 		XString m_SrcFile;
-
 		void WndContent() override {
-			ImGui::Text("Import to %s", m_DstDir.c_str());
-			bool isSrcDirty = false;
-			if(ImGui::Button("SrcFile")) {
-				isSrcDirty = true;
-				m_SrcFile = Editor::OpenFileDialog(m_FileFilter.c_str());
-			}
-			ImGui::SameLine(); 
-			if(ReceiveDragItem(m_SrcFile)) {
-				isSrcDirty = true;
-			}
+			ImGui::Text("Import to %s", GetPathStr().c_str());
 			// update the target filename
-			if (isSrcDirty) {
+			if (Editor::DraggableFileItemGlobal("Src File", m_SrcFile, "*.glb;*.gltf;*.fbx")) {
 				XString nameStr = File::FPath{ m_SrcFile }.stem().string();
 				StrCopy(m_DstFileName.Data(), nameStr.c_str());
 			}
 			ImGui::InputText("Dst File Name", m_DstFileName.Data(), m_DstFileName.ByteSize());
 
 			if (ImGui::Button("Import")) {
-				File::FPath dstFilePath{ m_DstDir };
-				dstFilePath.append(m_DstFileName.Data()).replace_extension(".mesh");
-				if(!ImportMeshAsset(m_SrcFile, dstFilePath.string())) {
-					LOG_WARNING("Failed to import mesh: %s", m_SrcFile.c_str());
+				File::FPath filePath = GetPath(); filePath.append(m_DstFileName.Data()).replace_extension(".mesh");
+				if(ImportMeshAsset(m_SrcFile, filePath.string())) {
+					LOG_INFO("Mesh imported: %s", m_SrcFile.c_str());
+					RefreshNode(MoveTemp(filePath));
 				}
 				else {
-					Delete();
+					LOG_WARNING("Failed to import mesh: %s", m_SrcFile.c_str());
 				}
 			}
 		}
 	};
 
-	class TextureImporter: public AssetImporterBase {
+	class TextureImporter: public AssetBuilderBase {
 	public:
-		TextureImporter(const XString& dstDir): AssetImporterBase(dstDir, "*.jpg;*.png", "TextureImporter"){}
+		TextureImporter(Editor::NodeID folderNode): AssetBuilderBase("TextureImporter", folderNode){}
 	private:
 		XString m_SrcFile;
 		int m_DownsizeIdx{ 0 };
 		int m_CompressMode{(int)Asset::ETextureCompressMode::Zlib};
-
 		void WndContent() override {
-			ImGui::Text("Import to %s", m_DstDir.c_str());
-			bool isSrcDirty = false;
-			if (ImGui::Button("SrcFile")) {
-				isSrcDirty = true;
-				m_SrcFile = Editor::OpenFileDialog(m_FileFilter.c_str());
-			}
-			ImGui::SameLine();
-			if (ReceiveDragItem(m_SrcFile)) {
-				isSrcDirty = true;
-			}
+			ImGui::Text("Import to %s", GetPathStr().c_str());
 			// update the target filename
-			if (isSrcDirty) {
+			if (Editor::DraggableFileItemGlobal("Src File", m_SrcFile, "*.jpg;*.png")) {
 				XString nameStr = File::FPath{ m_SrcFile }.stem().string();
 				StrCopy(m_DstFileName.Data(), nameStr.c_str());
 			}
@@ -104,39 +70,30 @@ namespace {
 			ImGui::Combo("Compress Mode", &m_CompressMode, "None\0Lz4\0zlib");
 
 			if (ImGui::Button("Import")) {
-				File::FPath dstFilePath{ m_DstDir };
-				dstFilePath.append(m_DstFileName.Data()).replace_extension(".texture");
-				if (!ImportTexture2DAsset(m_SrcFile, dstFilePath.string(), 1 << m_DownsizeIdx, (Asset::ETextureCompressMode)m_CompressMode)) {
-					LOG_WARNING("Failed to import texture: %s", m_SrcFile.c_str());
+				File::FPath filePath = GetPath(); filePath.append(m_DstFileName.Data()).replace_extension(".texture");
+				if (ImportTexture2DAsset(m_SrcFile, filePath.string(), 1 << m_DownsizeIdx, (Asset::ETextureCompressMode)m_CompressMode)) {
+					LOG_INFO("Texture imported: %s", m_SrcFile.c_str());
+					RefreshNode(MoveTemp(filePath));
 				}
 				else {
-					Delete();
+					LOG_WARNING("Failed to import texture: %s", m_SrcFile.c_str());
 				}
 			}
 		}
 	};
 
-	class CubeMapImporter: public AssetImporterBase {
+	class CubeMapImporter: public AssetBuilderBase {
 	public:
-		CubeMapImporter(const XString& dstDir): AssetImporterBase(dstDir, "*.jpg;*.png", "CubeMapImporter") {}
+		CubeMapImporter(Editor::NodeID folderNode): AssetBuilderBase("CubeMapImporter", folderNode) {}
 	private:
 		TStaticArray<XString, CUBE_MAP_FILE_NUM> m_SrcFiles;
 		int m_DownsizeIdx{ 0 };
 		int m_CompressMode{ (int)Asset::ETextureCompressMode::Zlib };
 		void WndContent() override {
 			static const char* srcNames[CUBE_MAP_FILE_NUM] = {"right ", "left  ", "top   ", "bottom", "front ", "back  " };
-			ImGui::Text("Import to %s", m_DstDir.c_str());
+			ImGui::Text("Import to %s", GetPathStr().c_str());
 			for (uint32 i = 0; i < CUBE_MAP_FILE_NUM; ++i) {
-				bool isSrcDirty = false;
-				if (ImGui::Button(srcNames[i])) {
-					isSrcDirty = true;
-					m_SrcFiles[i] = Editor::OpenFileDialog("*.png;*.jpg");
-				}
-				ImGui::SameLine();
-				if(ReceiveDragItem(m_SrcFiles[i])) {
-					isSrcDirty = true;
-				}
-				if (i == 0 && isSrcDirty) {
+				if (Editor::DraggableFileItemGlobal(srcNames[i], m_SrcFiles[i], "*.jpg;*.png") && i == 0) {
 					// update the target filename
 					XString nameStr = File::FPath{ m_SrcFiles[i] }.stem().string();
 					StrCopy(m_DstFileName.Data(), nameStr.c_str());
@@ -157,13 +114,72 @@ namespace {
 						return;
 					}
 				}
-				File::FPath dstFilePath{ m_DstDir };
-				dstFilePath.append(m_DstFileName.Data()).replace_extension(".texture");
-				if(!ImportTextureCubeAsset(m_SrcFiles, dstFilePath.string(), 1 << m_DownsizeIdx, (Asset::ETextureCompressMode)m_CompressMode)) {
-					LOG_WARNING("Failed to import cubemap: %s", m_SrcFiles[0].c_str());
+				File::FPath filePath = GetPath(); filePath.append(m_DstFileName.Data()).replace_extension(".texture");
+				if(ImportTextureCubeAsset(m_SrcFiles, filePath.string(), 1 << m_DownsizeIdx, (Asset::ETextureCompressMode)m_CompressMode)) {
+					LOG_INFO("Cubemap imported: %s", m_DstFileName.Data());
+					RefreshNode(MoveTemp(filePath));
 				}
 				else {
-					Delete();
+					LOG_WARNING("Failed to import cubemap: %s", m_DstFileName.Data());
+				}
+			}
+		}
+	};
+
+	class InstanceDataBuilder: public AssetBuilderBase {
+	public:
+		InstanceDataBuilder(Editor::NodeID folderNode) : AssetBuilderBase("Instance Data Builder", folderNode){}
+	private:
+		Math::FVector2 m_BatchStartPos{ 0, 0 };
+		Math::FVector2 m_BatchEndPos{ 128.0f, 128.0f };
+		Math::IVector2 m_BatchDensity{ 128, 128 };
+		float m_BatchUniformHeight{ 0.0f };
+		int m_InstanceSize{ 0 };
+		int m_InstanceEditIndex{ 0 };
+		TArray<Math::FTransform> m_Instances;
+		
+		void WndContent() override {
+			ImGui::Text("Build to %s", GetPathStr().c_str());
+			ImGui::InputText("Dst File Name", m_DstFileName.Data(), m_DstFileName.ByteSize());
+			if(ImGui::TreeNode("Random Instance")) {
+				ImGui::DragFloatRange2("X Range", &m_BatchStartPos.X, &m_BatchEndPos.X, -9999.0f, 9999.0f);
+				ImGui::DragFloatRange2("Y Range", &m_BatchStartPos.Y, &m_BatchEndPos.Y, -9999.0f, 9999.0f);
+				ImGui::DragInt2("Density", m_BatchDensity.Data(), 1, 1, 9999);
+				ImGui::DragFloat("Height", &m_BatchUniformHeight);
+				if(ImGui::Button("Generate")) {
+					m_InstanceSize = m_BatchDensity.X * m_BatchDensity.Y;
+					m_Instances.Resize((uint32)m_InstanceSize, Math::FTransform::IDENTITY);
+					const Math::FVector2 delta{ (m_BatchEndPos.X - m_BatchStartPos.X) / (float)m_BatchDensity.X, (m_BatchEndPos.Y - m_BatchStartPos.Y) / (float)m_BatchDensity.Y };
+					for (int dy = 0; dy < m_BatchDensity.Y; ++dy) {
+						for (int dx = 0; dx < m_BatchDensity.X; ++dx) {
+							const Math::FVector2 pos = m_BatchStartPos + delta * Math::FVector2{ (float)dx, (float)dy };
+							m_Instances[dy * m_BatchDensity.X + dx].Position = {pos.X, m_BatchUniformHeight, pos.Y};
+						}
+					}
+				}
+				ImGui::TreePop();
+			}
+			if(m_InstanceSize) {
+				ImGui::SliderInt("Instance Edit Index", &m_InstanceEditIndex, 0, (int)m_Instances.Size()-1);
+				if (m_InstanceEditIndex < m_InstanceSize) {
+					Math::FTransform& transform = m_Instances[m_InstanceEditIndex];
+					ImGui::DragFloat3("Position", transform.Position.Data(), 0.1f);
+					Math::FVector3 euler = transform.Rotation.ToEuler();
+					if (ImGui::DragFloat3("Rotation", euler.Data(), 0.1f)) {
+						transform.Rotation = Math::FQuaternion::Euler(euler);
+					}
+					ImGui::DragFloat3("Scale", transform.Scale.Data(), 0.1f, 0.001f, 1000.0f);
+				}
+			}
+			if(ImGui::Button("Create")) {
+				File::FPath filePath = GetPath(); filePath.append(m_DstFileName.Data()).replace_extension(".instd");
+				if(Asset::InstancedMeshAsset::SaveInstanceFile(filePath.string().c_str(), m_Instances)) {
+					LOG_INFO("Instance file created: %s", m_DstFileName.Data());
+					RefreshNode(MoveTemp(filePath));
+					Close();
+				}
+				else {
+					LOG_WARNING("Failed to create instance file: %s", m_DstFileName.Data());
 				}
 			}
 		}
@@ -186,10 +202,10 @@ namespace Editor {
 	WndAssetBrowser::WndAssetBrowser() : EditorWndBase("Assets") {
 		EditorUIMgr::Instance()->AddMenu("Window", m_Name.c_str(), {}, &m_Enable);
 		if (s_Instances.IsEmpty()) {
-			Browser()->RegisterFolderRebuildEvent(WndAssetBrowser::OnFolderRebuildAllWindows);
+			Browser()->RegisterFolderModifiedEvent(WndAssetBrowser::OnFolderRebuildAllWindows);
 		}
 		s_Instances.PushBack(this);
-		SetCurrentFolder(Browser()->GetRoot());
+		SetCurrentFolder(Browser()->GetRootNode());
 	}
 
 	WndAssetBrowser::~WndAssetBrowser() {
@@ -224,7 +240,7 @@ namespace Editor {
 	}
 
 	void WndAssetBrowser::OnFolderRebuild(const FolderNode* node) {
-		if(m_CurrentFolder && node->Contains(m_CurrentFolder->GetID())) {
+		if(m_CurrentFolder && (m_CurrentFolder == node || node->Contains(m_CurrentFolder))) {
 			RefreshItems();
 		}
 	}
@@ -235,22 +251,21 @@ namespace Editor {
 		}
 		m_Contents.Reset();
 		for(NodeID id : m_CurrentFolder->GetChildFolders()) {
-			FolderNode* node = Browser()->GetFolder(id);
+			FolderNode* node = Browser()->GetFolderNode(id);
 			if(node) {
 				m_Contents.PushBack(TUniquePtr<FolderAssetView>(new FolderAssetView(node)));
 			}
 		}
 		for(NodeID id : m_CurrentFolder->GetChildFiles()) {
-			FileNode* node = Browser()->GetFile(id);
+			FileNode* node = Browser()->GetFileNode(id);
 			if(node) {
 				m_Contents.PushBack(CreateAssetView(node));
 			}
-
 		}
 	}
 
 	void WndAssetBrowser::DisplayFolderTree(NodeID node) {
-		FolderNode* folderNode = Browser()->GetFolder(node);
+		FolderNode* folderNode = Browser()->GetFolderNode(node);
 		if(!folderNode) {
 			return;
 		}
@@ -280,9 +295,9 @@ namespace Editor {
 	}
 
 	void WndAssetBrowser::DisplayContents() {
-		if (m_CurrentFolder->ParentFolder() != INVALLID_NODE) {
+		if (m_CurrentFolder->ParentFolder() != INVALID_NODE) {
 			if (ImGui::ArrowButton("Back", ImGuiDir_Left)) {
-				m_CurrentFolder = Browser()->GetFolder(m_CurrentFolder->ParentFolder());
+				m_CurrentFolder = Browser()->GetFolderNode(m_CurrentFolder->ParentFolder());
 				RefreshItems();
 				return;
 			}
@@ -299,7 +314,7 @@ namespace Editor {
 				m_SelectedItem = i;
 				if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
 					if (item->IsFolder()) {
-						SetCurrentFolder(Browser()->GetFolder(item->m_ID));
+						SetCurrentFolder(Browser()->GetFolderNode(item->m_ID));
 					}
 					else {
 						item->Open();
@@ -314,24 +329,33 @@ namespace Editor {
 			}
 		}
 
-		int32 flag = ImGuiPopupFlags_MouseButtonRight;
-		if (ImGui::BeginPopupContextWindow("ContextMenu", flag)) {
-			if(ImGui::BeginMenu("Import")) {
-				const XString& dstDir = m_CurrentFolder->GetPathStr();
-				if(ImGui::MenuItem("Mesh")) {
-					Editor::EditorUIMgr::Instance()->AddWindow(TUniquePtr(new MeshImporter(dstDir)));
-				}
-				if (ImGui::MenuItem("Texture")) {
-					Editor::EditorUIMgr::Instance()->AddWindow(TUniquePtr(new TextureImporter(dstDir)));
-				}
-				if(ImGui::MenuItem("CubeMap")) {
-					Editor::EditorUIMgr::Instance()->AddWindow(TUniquePtr(new CubeMapImporter(dstDir)));
+		if (ImGui::BeginPopupContextWindow("ContextMenu", ImGuiPopupFlags_MouseButtonRight)) {
+			const NodeID folderNode = m_CurrentFolder->GetID();
+			Editor::EditorUIMgr* uiMgr = Editor::EditorUIMgr::Instance();
+			if(ImGui::BeginMenu("New")) {
+				if(ImGui::MenuItem("Instance Data")) {
+					uiMgr->AddWindow(TUniquePtr(new InstanceDataBuilder(folderNode)));
 				}
 				ImGui::EndMenu();
 			}
+			if(ImGui::BeginMenu("Import")) {
+				if(ImGui::MenuItem("Mesh")) {
+					uiMgr->AddWindow(TUniquePtr(new MeshImporter(folderNode)));
+				}
+				if (ImGui::MenuItem("Texture")) {
+					uiMgr->AddWindow(TUniquePtr(new TextureImporter(folderNode)));
+				}
+				if(ImGui::MenuItem("CubeMap")) {
+					uiMgr->AddWindow(TUniquePtr(new CubeMapImporter(folderNode)));
+				}
+				ImGui::EndMenu();
+			}
+			if(ImGui::MenuItem("Show in Explore")) {
+				File::FPath fullPath = m_CurrentFolder->GetFullPath();
+				OpenFileExplorer(fullPath.string().c_str());
+			}
 			ImGui::EndPopup();
 		}
-
 		ImGui::EndChild();
 	}
 }

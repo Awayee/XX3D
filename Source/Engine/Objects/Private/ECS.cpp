@@ -2,8 +2,8 @@
 
 namespace Object {
 
-	static ComponentID s_ComponentMax{ 0 };
 	ComponentID RegisterComponent() {
+		static ComponentID s_ComponentMax{ 0 };
 		ASSERT(s_ComponentMax < NUM_COMPONENT_MAX, "Component id out of range!");
 		return s_ComponentMax++;
 	}

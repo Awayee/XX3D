@@ -12,7 +12,12 @@ namespace Editor {
 		virtual ~EditorWndBase() = default;
 		void Delete();
 		void AutoDelete();
+		void Close();
 	protected:
+		enum : uint32 {
+			NAME_SIZE = 64,
+			INVALID_INDEX = UINT32_MAX,
+		};
 		friend EditorUIMgr;
 		XString m_Name;
 		int32 m_Flags;
@@ -35,5 +40,8 @@ namespace Editor {
 	};;
 
 	XString OpenFileDialog(const char* filter);
+	void OpenFileExplorer(const char* path);
+	bool DraggableFileItemAssets(const char* name, XString& file, const char* filter);
+	bool DraggableFileItemGlobal(const char* name, XString& file, const char* filter);
 }
 	

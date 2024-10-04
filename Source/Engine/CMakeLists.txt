@@ -12,6 +12,7 @@ file(GLOB_RECURSE HPP_FILES "*.hpp")
 file(GLOB_RECURSE INL_FILES "*.inl")
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${H_FILES} ${CPP_FILES} ${HPP_FILES} ${INL_FILES})
 add_library(${TARGET_NAME} STATIC ${H_FILES} ${CPP_FILES} ${HPP_FILES} ${INL_FILES})
+target_compile_definitions(${TARGET_NAME} PRIVATE USE_VMA)
 
 target_link_libraries(${TARGET_NAME} PUBLIC "Core")
 target_link_libraries(${TARGET_NAME} PUBLIC "ShaderCompiler")

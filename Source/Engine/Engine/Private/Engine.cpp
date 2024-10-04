@@ -42,7 +42,6 @@ namespace Engine {
 		Render::GlobalShaderMap::Initialize();
 		Render::Renderer::Initialize();
 		Object::TextureResourceMgr::Initialize();
-		Object::MeshRenderSystem::Initialize();
 		Object::RenderScene::Initialize();
 		s_RunningEngine = this;
 	}

@@ -229,19 +229,16 @@ namespace {
 			result->GetResult(code.Address());
 
 			// Sign and validation
-			if(!SignCode((BYTE*)code->GetBufferPointer(), code->GetBufferSize())) {
+			if(!SignCode((BYTE*)code->GetBufferPointer(), (uint32)code->GetBufferSize())) {
 				LOG_ERROR("[HLSLCompiler] Failed to sign code!");
 				return false;
 			}
-
-			File::WFile fout(outputFile.c_str(), File::EFileMode::Binary | File::EFileMode::Write);
-			if (!fout.is_open()) {
-				LOG_ERROR("[HLSLCompiler] Failed to write file: %s", outputFile.c_str());
-				return false;
+			if (File::WriteFile fOut(outputFile.c_str(), true); fOut.IsOpen()) {
+				fOut.Write(code->GetBufferPointer(), (uint32)code->GetBufferSize());
+				return true;
 			}
-			fout.write((char*)code->GetBufferPointer(), code->GetBufferSize());
-			fout.close();
-			return true;
+			LOG_ERROR("[HLSLCompiler] Failed to write file: %s", outputFile.c_str());
+			return false;
 		}
 	private:
 		struct DxilMinimalHeader {

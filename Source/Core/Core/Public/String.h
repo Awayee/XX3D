@@ -68,3 +68,7 @@ inline void StrAppend(char* str0, const char* str1) {
 inline bool StrEmpty(const char* str) {
 	return nullptr == str || '\0' == *str;
 }
+
+inline bool StrContains(const char* str, const char* subStr) {
+	return std::strstr(str, subStr) != nullptr;
+}

@@ -1,5 +1,5 @@
 #include "AssetView.h"
-#include "Functions/Public/EditorLevelMgr.h"
+#include "Functions/Public/EditorLevel.h"
 #include "EditorUI/Public/EditorUIMgr.h"
 #include "EditorUI/Public/EditorWindow.h"
 
@@ -78,9 +78,20 @@ namespace Editor {
 	}
 
 	void LevelAssetView::Open() {
-		EditorLevelMgr::Instance()->LoadLevel(m_Asset, m_Node->GetPath());
+		EditorLevelMgr::Instance()->LoadLevel(m_Node->GetPathStr().c_str());
 	}
 
-	void LevelAssetView::Save() {
+	TUniquePtr<AssetViewBase> CreateAssetView(FileNode* node) {
+		const XString& ext = node->GetPath().extension().string();
+		if (ext == ".mesh") {
+			return TUniquePtr(new MeshAssetView(node));
+		}
+		if (ext == ".texture") {
+			return TUniquePtr(new TextureAssetView(node));
+		}
+		if (ext == ".level") {
+			return TUniquePtr(new LevelAssetView(node));
+		}
+		return TUniquePtr(new FileAssetView(node));
 	}
 }

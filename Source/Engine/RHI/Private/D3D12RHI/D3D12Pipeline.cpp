@@ -297,7 +297,6 @@ D3D12GraphicsPipelineState::D3D12GraphicsPipelineState(const RHIGraphicsPipeline
 
 D3D12ComputePipelineState::D3D12ComputePipelineState(const RHIComputePipelineStateDesc& desc, D3D12Device* device): RHIComputePipelineState(desc) {
 	CHECK(m_Layout.InitLayout(desc.Layout, device->GetDevice()));
-
 	D3D12_COMPUTE_PIPELINE_STATE_DESC d3d12Desc;
 	d3d12Desc.pRootSignature = m_Layout.GetRootSignature();
 	auto bytes = ((D3D12Shader*)desc.Shader)->GetBytes();
@@ -305,36 +304,36 @@ D3D12ComputePipelineState::D3D12ComputePipelineState(const RHIComputePipelineSta
 	device->GetDevice()->CreateComputePipelineState(&d3d12Desc, IID_PPV_ARGS(m_Pipeline.Address()));
 }
 
-D3D12PipelineDescriptorCache::D3D12PipelineDescriptorCache(D3D12Device* device, D3D12GraphicsPipelineState* pso): m_Device(device) {
+void D3D12PipelineDescriptorCache::BindGraphicsPipelineState(D3D12GraphicsPipelineState* pipeline) {
 	m_PipelineType = EPipelineType::Graphics;
-	m_GraphicsPipelineState = pso;
-	ReserveDescriptors();
+	m_GraphicsPipelineState = pipeline;
+	ResetDescriptorCaches();
 }
 
-D3D12PipelineDescriptorCache::D3D12PipelineDescriptorCache(D3D12Device* device, D3D12ComputePipelineState* pipeline) : m_Device(device){
+void D3D12PipelineDescriptorCache::BindComputePipelineState(D3D12ComputePipelineState* pipeline) {
 	m_PipelineType = EPipelineType::Compute;
 	m_ComputePipelineState = pipeline;
-	ReserveDescriptors();
+	ResetDescriptorCaches();
 }
 
-D3D12PipelineDescriptorCache::D3D12PipelineDescriptorCache(D3D12PipelineDescriptorCache&& rhs) noexcept {
-	for (uint32 i = 0; i < EnumCast(EDynamicDescriptorType::Count); ++i) {
-		m_DescriptorCaches[i].DynamicDescriptor = rhs.m_DescriptorCaches[i].DynamicDescriptor;
-		m_DescriptorCaches[i].Params.Swap(rhs.m_DescriptorCaches[i].Params);
-	}
-	m_DirtyDescriptorTables = rhs.m_DirtyDescriptorTables;
-	m_Device = rhs.m_Device;
-	m_PipelineData = rhs.m_PipelineData;
-	m_PipelineType = rhs.m_PipelineType;
+void D3D12PipelineDescriptorCache::Reset() {
+	m_PipelineType = EPipelineType::None;
+	m_PipelineData = nullptr;
+	ResetDescriptorCaches();
 }
 
 void D3D12PipelineDescriptorCache::SetShaderParam(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& param) {
-	// cache parameter
-	D3D12PipelineLayout::DescriptorSlot slot = GetLayout()->GetDescriptorSlot(setIndex, bindIndex);
-	DescriptorCache& cache = m_DescriptorCaches[EnumCast(slot.HeapType)];
-	CHECK(slot.SlotIndex < cache.Params.Size());
-	cache.Params[slot.SlotIndex] = param;
-	m_DirtyDescriptorTables[EnumCast(slot.HeapType)] = true;
+	if (const auto* layout = GetLayout()) {
+		// cache parameter
+		const D3D12PipelineLayout::DescriptorSlot slot = layout->GetDescriptorSlot(setIndex, bindIndex);
+		DescriptorCache& cache = m_DescriptorCaches[EnumCast(slot.HeapType)];
+		CHECK(slot.SlotIndex < cache.Params.Size());
+		cache.Params[slot.SlotIndex] = param;
+		m_DirtyDescriptorTables[EnumCast(slot.HeapType)] = true;
+	}
+	else {
+		LOG_WARNING("[D3D12PipelineDescriptorCache::SetShaderParam] no pipline bound!");
+	}
 }
 
 D3D12GraphicsPipelineState* D3D12PipelineDescriptorCache::GetGraphicsPipelineState() {
@@ -399,18 +398,23 @@ void D3D12PipelineDescriptorCache::PreDraw(ID3D12GraphicsCommandList* cmd) {
 }
 
 const D3D12PipelineLayout* D3D12PipelineDescriptorCache::GetLayout() {
-	return m_PipelineType == EPipelineType::Graphics ? &m_GraphicsPipelineState->GetLayout() : &m_ComputePipelineState->GetLayout();
+	if(m_PipelineData) {
+		return m_PipelineType == EPipelineType::Graphics ? &m_GraphicsPipelineState->GetLayout() : &m_ComputePipelineState->GetLayout();\
+	}
+	return nullptr;
 }
 
-void D3D12PipelineDescriptorCache::ReserveDescriptors() {
-	for(uint32 i=0; i<EnumCast(EDynamicDescriptorType::Count); ++i) {
-		DescriptorCache& cache = m_DescriptorCaches[i];
+void D3D12PipelineDescriptorCache::ResetDescriptorCaches(){
+	for(auto& cache: m_DescriptorCaches) {
 		cache.DynamicDescriptor = DynamicDescriptorHandle::InvalidHandle();
 		cache.Params.Reset();
-		if(uint32 descriptorCount = GetLayout()->GetDescriptorCount((EDynamicDescriptorType)i)) {
-			cache.Params.Resize(descriptorCount, {});
+	}
+	m_DirtyDescriptorTables.Reset(false);
+	if(const D3D12PipelineLayout* layout = GetLayout()) {
+		for(uint32 i=0; i<EnumCast(EDynamicDescriptorType::Count); ++i) {
+			const uint32 descriptorCount = layout->GetDescriptorCount((EDynamicDescriptorType)i);
+			m_DescriptorCaches[i].Params.Resize(descriptorCount, {});
 		}
-		m_DirtyDescriptorTables[i] = false;
 	}
 }
  

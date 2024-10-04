@@ -1,6 +1,6 @@
 #include "Math/Public/Math.h"
-#include "Core/Public/Log.h"
 #include "Math/Public/MathBase.h"
+#include <cstring>
 
 namespace Math {
 #define MATH_GENERIC template<typename T>
@@ -292,12 +292,10 @@ namespace Math {
 
     MATH_GENERIC T* Matrix4x4<T>::operator[](int row_index)
 	{
-        CHECK(row_index < 4);
 		return Mat[row_index];
 	}
     MATH_GENERIC const T* Matrix4x4<T>::operator[](int row_index) const
 	{
-        CHECK(row_index < 4);
 		return Mat[row_index];
 	}
     MATH_GENERIC Matrix4x4<T> Matrix4x4<T>::operator*(const Matrix4x4<T>& m2) const

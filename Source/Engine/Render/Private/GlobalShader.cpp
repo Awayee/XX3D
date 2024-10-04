@@ -10,17 +10,12 @@ namespace Render {
 	inline bool LoadShaderCode(const XString& shaderFile, TArray<int8>& outCode) {
 		const File::FPath shaderFilePath{ shaderFile };
 		const XString shaderFileAbs = shaderFilePath.string();
-		File::RFile f(shaderFileAbs, File::EFileMode::AtEnd | File::EFileMode::Binary);
-		if (!f.is_open()) {
-			return false;
+		if(File::ReadFileWithSize f(shaderFileAbs.c_str(), true); f.IsOpen()) {
+			outCode.Resize(f.ByteSize());
+			f.Read(outCode.Data(), f.ByteSize());
+			return true;
 		}
-
-		uint32 fileSize = (uint32)f.tellg();
-		outCode.Resize(fileSize);
-		f.seekg(0);
-		f.read(outCode.Data(), fileSize);
-		f.close();
-		return true;
+		return false;
 	}
 
 	inline HLSLCompiler::ESPVShaderStage ToSPVShaderStage(EShaderStageFlags type) {

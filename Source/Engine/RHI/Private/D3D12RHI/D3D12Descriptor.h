@@ -2,7 +2,7 @@
 #include "D3D12Util.h"
 #include "Core/Public/Defines.h"
 #include "Core/Public/TArray.h"
-#include "Core/Public/TList.h"
+#include "Core/Public/Container.h"
 
 // Static descriptor: associating with resource, recycle when resource freed, using for resource setup
 // Dynamic descriptor: will reset when frame begin, means that user need allocate every frame, using for pipeline binding.
@@ -16,21 +16,6 @@ inline D3D12_CPU_DESCRIPTOR_HANDLE InvalidCPUDescriptor() { return { 0ull }; }
 inline D3D12_GPU_DESCRIPTOR_HANDLE InvalidGPUDescriptor() { return { 0ull }; }
 EDynamicDescriptorType ToDynamicDescriptorType(EBindingType type);
 EStaticDescriptorType ToStaticDescriptorType(EDynamicDescriptorType type);
-
-// a link-list for data reusing
-class FreeListAllocator {
-public:
-	NON_COPYABLE(FreeListAllocator);
-	struct Range { uint32 Start, End; };
-	FreeListAllocator() = default;
-	FreeListAllocator(FreeListAllocator&& rhs) noexcept;
-	FreeListAllocator& operator=(FreeListAllocator&& rhs) noexcept;
-	uint32 Allocate(uint32 allocSize);// allocate data, return start index, if failed, return DX_INVALID_INDEX
-	void Free(uint32 allocStart, uint32 allocSize);// free allocated data, by start index and size
-	bool IsEmpty() const;
-private:
-	TDoubleLinkList<Range> m_Ranges;
-};
 
 struct StaticDescriptorHandle {
 	uint32 HeapIndex{ DX_INVALID_INDEX };

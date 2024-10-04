@@ -1,6 +1,6 @@
 #include "Asset/Public/MeshAsset.h"
 #include "Core/Public/Json.h"
-#include "Math/Public/MathBase.h"
+#include "Math/Public/Math.h"
 #include "Core/Public/Log.h"
 #include <lz4.h>
 
@@ -28,6 +28,31 @@ namespace Asset {
 		}
 	};
 
+	struct PackedFTransform {
+		uint16 Position[3];
+		uint16 Euler[3];
+		uint16 Scale[3];
+		void Pack(const Math::FTransform& transform) {
+			const Math::FVector3 euler = transform.Rotation.ToEuler();
+			const Math::FVector3& pos = transform.Position;
+			const Math::FVector3& scale = transform.Scale;
+			for(uint32 i=0; i<3; ++i) {
+				Position[i] = Math::FloatToHalf(pos[i]);
+				Euler[i] = Math::FloatToHalf(euler[i]);
+				Scale[i] = Math::FloatToHalf(scale[i]);
+			}
+		}
+		void Unpack(Math::FTransform& transform) const {
+			Math::FVector3 euler;
+			for(uint32 i=0; i<3; ++i) {
+				transform.Position[i] = Math::HalfToFloat(Position[i]);
+				transform.Scale[i] = Math::HalfToFloat(Scale[i]);
+				euler[i] = Math::HalfToFloat(Euler[i]);
+			}
+			transform.Rotation = Math::FQuaternion::Euler(euler);
+		}
+	};
+
 	void CalcAABB(TConstArrayView<AssetVertex> vertices, Math::FVector3& outMin, Math::FVector3& outMax) {
 		outMin = { FLT_MAX };
 		outMax = { -FLT_MAX };
@@ -37,9 +62,9 @@ namespace Asset {
 		}
 	}
 
-	bool MeshAsset::Load(File::RFile& in) {
+	bool MeshAsset::Load(File::PathStr filePath) {
 		Json::Document doc;
-		if (!Json::ReadFile(in, doc)) {
+		if(!Json::ReadFile(filePath, doc, false)) {
 			return false;
 		}
 		if (doc.HasMember("Name")) {
@@ -65,9 +90,8 @@ namespace Asset {
 		return true;
 	}
 
-	bool MeshAsset::Save(File::WFile& out) {
-		Json::Document doc;
-		doc.SetObject();
+	bool MeshAsset::Save(File::PathStr filePath) {
+		Json::Document doc(Json::Type::kObjectType);
 
 		//name
 		Json::Value nameVal;
@@ -77,46 +101,43 @@ namespace Asset {
 		Json::Value primitives;
 		primitives.SetArray();
 		for (uint32 i = 0; i < Primitives.Size(); ++i) {
-			Json::Value v;
-			v.SetObject();
+			Json::Value v(Json::Type::kObjectType);
 			Json::AddString(v, "Material", Primitives[i].MaterialFile, doc.GetAllocator());
 			Json::AddString(v, "BinaryFile", Primitives[i].BinaryFile, doc.GetAllocator());
 			primitives.PushBack(v, doc.GetAllocator());
 		}
 		doc.AddMember("Primitives", primitives, doc.GetAllocator());
-		return Json::WriteFile(out, doc);
+		return Json::WriteFile(filePath, doc, false);
 	}
+
 	bool MeshAsset::LoadPrimitiveFile(const char* file, TArray<AssetVertex>& vertices, TArray<IndexType>& indices) {
 		PARSE_PROJECT_ASSET(file);
-		File::RFile f(file, File::EFileMode::Binary);
-		if (!f.is_open()) {
-			LOG_INFO("Failed to open file: %s", file);
+		File::ReadFile f(file, true);
+		if(!f.IsOpen()) {
+			LOG_WARNING("[MeshAsset::LoadPrimitiveFile] Failed to open file: %s", file);
 			return false;
 		}
-		f.seekg(0);
 
 		uint32 vertexCount, indexCount;
-		//header
-		f.read(BYTE_PTR(&vertexCount), sizeof(uint32));
-		f.read(BYTE_PTR(&indexCount), sizeof(uint32));
-		//vertices
-		if (vertexCount == 0) {
-			f.close();
+		f.Read(&vertexCount, sizeof(uint32));
+		f.Read(&indexCount, sizeof(uint32));
+		if(0 == vertexCount) {
+			LOG_WARNING("[MeshAsset::LoadPrimitiveFile] File is empty: %s", file);
 			return false;
 		}
 
 		EMeshCompressMode compressMode;
-		f.read(BYTE_PTR(&compressMode), sizeof(EMeshCompressMode));
+		f.Read(&compressMode, sizeof(EMeshCompressMode));
 		uint32 dataByteSize = vertexCount * sizeof(FVertexPack) + indexCount * sizeof(IndexType);
 		TArray<char> data(dataByteSize);
 		if (compressMode == EMeshCompressMode::NONE) {
-			f.read(data.Data(), dataByteSize);
+			f.Read(data.Data(), dataByteSize);
 		}
 		else if (compressMode == EMeshCompressMode::LZ4) {
 			uint32 compressedByteSize;
-			f.read(BYTE_PTR(&compressedByteSize), sizeof(uint32));
+			f.Read(&compressedByteSize, sizeof(uint32));
 			TArray<char> compressedData(compressedByteSize);
-			f.read(compressedData.Data(), compressedByteSize);
+			f.Read(compressedData.Data(), compressedByteSize);
 			LZ4_decompress_safe(compressedData.Data(), data.Data(), (int)compressedByteSize, (int)dataByteSize);
 		}
 
@@ -130,33 +151,28 @@ namespace Asset {
 		if (indexCount > 0) {
 			indices.Resize(indexCount);
 			IndexType* indexPtr = reinterpret_cast<IndexType*>(data.Data() + sizeof(FVertexPack) * vertexCount);
-			for (uint32 i = 0; i < indexCount; ++i) {
-				indices[i] = indexPtr[i];
-			}
+			memcpy(indices.Data(), indexPtr, indices.ByteSize());
 		}
-
-		f.close();
 		return true;
 	}
 
 	bool MeshAsset::ExportPrimitiveFile(const char* file, const TArray<AssetVertex>& vertices, const TArray<IndexType>& indices, EMeshCompressMode packMode) {
 		if (vertices.Size() == 0) {
-			LOG_INFO("null primitive!");
+			LOG_WARNING("null primitive!");
 			return false;
 		}
-
 		PARSE_PROJECT_ASSET(file);
-		File::WFile f(file, File::EFileMode::Binary | File::EFileMode::Write);
-		if (!f.is_open()) {
-			LOG_INFO("Failed to open file: %s", file);
+		File::WriteFile f(file, true);
+		if (!f.IsOpen()) {
+			LOG_WARNING("Failed to open file: %s", file);
 			return false;
 		}
 		uint32 vertexCount = vertices.Size();
 		uint32 indexCount = indices.Size();
 		uint32 dataByteSize = sizeof(FVertexPack) * vertexCount + sizeof(IndexType) * indexCount;
 		//header
-		f.write(CBYTE_PTR(&vertexCount), sizeof(uint32));
-		f.write(CBYTE_PTR(&indexCount), sizeof(uint32));
+		f.Write(&vertexCount, sizeof(uint32));
+		f.Write(&indexCount, sizeof(uint32));
 
 		//cpy vertices and indices;
 		TArray<char> data(dataByteSize);
@@ -170,11 +186,11 @@ namespace Asset {
 				indexPtr[i] = indices[i];
 			}
 		}
-		f.write(CBYTE_PTR(&packMode), sizeof(EMeshCompressMode));
+		f.Write(&packMode, sizeof(EMeshCompressMode));
 
 		// no pack
 		if (packMode == EMeshCompressMode::NONE) {
-			f.write(data.Data(), data.Size());
+			f.Write(data.Data(), data.Size());
 		}
 		//lz4 pack
 		else if (packMode == EMeshCompressMode::LZ4) {
@@ -182,12 +198,78 @@ namespace Asset {
 			TArray<char> compressedData(compressBound);
 			uint32 compressedSize = LZ4_compress_default(data.Data(), compressedData.Data(), (int)data.Size(), (int)compressBound);
 			compressedData.Resize(compressedSize);
-			f.write(CBYTE_PTR(&compressedSize), sizeof(uint32));
-			f.write(compressedData.Data(), compressedData.Size());
+			f.Write(&compressedSize, sizeof(uint32));
+			f.Write(compressedData.Data(), compressedData.Size());
 		}
-
-		f.close();
 		return true;
 	}
-	
+
+	bool InstancedMeshAsset::Load(File::PathStr filePath) {
+		Json::Document doc;
+		if (!Json::ReadFile(filePath, doc, false)) {
+			return false;
+		}
+		if (doc.HasMember("MeshFile")) {
+			MeshFile = doc["MeshFile"].GetString();
+		}
+		if (doc.HasMember("InstanceFile")) {
+			InstanceFile = doc["InstanceFile"].GetString();
+		}
+		return true;
+	}
+
+	bool InstancedMeshAsset::Save(File::PathStr filePath) {
+		Json::Document doc(Json::Type::kObjectType);
+		Json::AddStringMember(doc, "MeshFile", MeshFile, doc.GetAllocator());
+		Json::AddStringMember(doc, "InstanceFile", InstanceFile, doc.GetAllocator());
+		return Json::WriteFile(filePath, doc, false);
+	}
+
+	bool InstancedMeshAsset::LoadInstanceFile(const char* file, TArray<Math::FTransform>& instances) {
+		PARSE_PROJECT_ASSET(file);
+		instances.Reset();
+		if(File::ReadFileWithSize f(file, true); f.IsOpen()) {
+			// load meta data size
+			uint32 instanceSize;
+			f.Read(&instanceSize, sizeof(instanceSize));
+			TArray<PackedFTransform> packedTransforms(instanceSize);
+			// load and decompress
+			const uint32 compressedByteSize = f.ByteSize() - sizeof(instanceSize);
+			TArray<char> compressedData(compressedByteSize);
+			f.Read(compressedData.Data(), compressedByteSize);
+			LZ4_decompress_safe(compressedData.Data(), (char*)packedTransforms.Data(), (int)compressedByteSize, (int)packedTransforms.ByteSize());
+			// unpack
+			instances.Reserve(instanceSize);
+			for(auto& packedTransform: packedTransforms) {
+				packedTransform.Unpack(instances.EmplaceBack());
+			}
+		}
+		LOG_WARNING("[InstancedMeshAsset::LoadInstanceFile] Failed to load File: %s!", file);
+		return false;
+	}
+
+	bool InstancedMeshAsset::SaveInstanceFile(const char* file, TConstArrayView<Math::FTransform> instances) {
+		if(!instances.Size()) {
+			LOG_WARNING("[InstancedMeshAsset::SaveInstanceFile] no instances!");
+			return false;
+		}
+		PARSE_PROJECT_ASSET(file);
+		const uint32 instanceSize = instances.Size();
+		TArray<char> packedData(sizeof(PackedFTransform) * instanceSize);
+		PackedFTransform* packedDataPtr = (PackedFTransform*)packedData.Data();
+		for(uint32 i=0; i< instanceSize; ++i) {
+			packedDataPtr[i].Pack(instances[i]);
+		}
+		const uint32 compressBound = LZ4_compressBound((int)packedData.ByteSize());
+		TArray<char> compressedData(compressBound);
+		const uint32 compressedSize = LZ4_compress_default(packedData.Data(), compressedData.Data(), (int)packedData.Size(), (int)compressBound);
+		compressedData.Resize(compressedSize);
+		if (File::WriteFile f(file, true); f.IsOpen()) {
+			f.Write(&instanceSize, sizeof(instanceSize));
+			f.Write(compressedData.Data(), compressedData.ByteSize());
+			return true;
+		}
+		LOG_WARNING("[InstancedMeshAsset::SaveInstanceFile] Failed to load File: %s!", file);
+		return false;
+	}
 }

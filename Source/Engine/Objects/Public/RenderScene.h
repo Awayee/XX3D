@@ -8,7 +8,6 @@
 namespace Object {
 	class RenderCamera;
 	class DirectionalLight;
-	class SkyBox;
 
 	class RenderScene: public ECSScene{
 	public:
@@ -18,7 +17,6 @@ namespace Object {
 		~RenderScene();
 		RenderCamera* GetMainCamera() { return m_Camera.Get(); }
 		DirectionalLight* GetDirectionalLight() { return m_DirectionalLight.Get(); }
-		SkyBox* GetSkyBox() { return m_SkyBox.Get(); }
 		Render::DrawCallContext& GetDrawCallContext() { return m_DrawCallContext; }
 		void Update();
 		void Render(Render::RenderGraph& rg, Render::RGTextureNode* targetNode);
@@ -26,15 +24,10 @@ namespace Object {
 		static void Initialize();
 		static void Release();
 		static void Tick();
-		template<class T> static void RegisterSystemStatic() {
-			s_RegisterSystems.PushBack([](RenderScene* scene) { scene->RegisterSystem<T>(); });
-		}
 	private:
 		static TUniquePtr<RenderScene> s_Default;
-		static TArray<Func<void(RenderScene*)>> s_RegisterSystems;
 		TUniquePtr<DirectionalLight> m_DirectionalLight;
 		TUniquePtr<RenderCamera> m_Camera;
-		TUniquePtr<SkyBox> m_SkyBox;
 		Render::DrawCallContext m_DrawCallContext;
 		// fo gBuffer
 		USize2D m_TargetSize;
@@ -51,4 +44,12 @@ namespace Object {
 		void CreateTextureResources();
 		void CreatePSOs();
 	};
+
+	void RenderSceneAddConstructFunc(Func<void(RenderScene*)>&& f);
+
+	template<class T>
+	void RenderSceneRegisterSystem() {
+		RenderSceneAddConstructFunc([](RenderScene* scene) {scene->RegisterSystem<T>(); });
+	}
+#define RENDER_SCENE_REGISTER_SYSTEM(cls) private: inline static const uint8 s_RegisterSystem = (Object::RenderSceneRegisterSystem<cls>(), 0)
 }

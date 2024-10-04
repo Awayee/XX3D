@@ -344,7 +344,7 @@ public:
 		Reset(fillValue);
 	}
 
-	TStaticArray& operator =(const TStaticArray& rhs) {
+	TStaticArray& operator=(const TStaticArray& rhs) {
 		if (this != &rhs) {
 			memcpy(m_Data, rhs.m_Data, ByteSize());
 		}

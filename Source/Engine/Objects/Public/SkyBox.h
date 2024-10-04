@@ -1,25 +1,37 @@
 #pragma once
 #include "RHI/Public/RHI.h"
 #include "Render/Public/DrawCall.h"
+#include "Objects/Public/RenderScene.h"
 #include "Objects/Public/Camera.h"
+#include "Objects/Public/Level.h"
 
 namespace Object {
-	class SkyBox {
-	public:
-		SkyBox(Object::RenderCamera* camera);
-		~SkyBox();
-		void ResetCubeMap(const XString& file);
-		void CreateDrawCall(Render::DrawCallQueue& dcQueue);
-	private:
-		uint32 m_VertexCount{ 0 };
-		uint32 m_IndexCount{ 0 };
-		RHIBufferPtr m_VertexBuffer;
-		RHIBufferPtr m_IndexBuffer;
-		RHITexturePtr m_CubeMap;
-		RHIGraphicsPipelineStatePtr m_PSO;
-		Object::RenderCamera* m_Camera;
+	struct SkyBoxECSComp {
+		uint32 VertexCount;
+		uint32 IndexCount;
+		RHIBufferPtr VertexBuffer;
+		RHIBufferPtr IndexBuffer;
+		RHITexturePtr CubeMap;
+		RHIGraphicsPipelineStatePtr PSO;
+		SkyBoxECSComp();
+		void LoadCubeMap(const XString& file);
+		REGISTER_ECS_COMPONENT(SkyBoxECSComp);
+	};
 
-		void BuildPrimitive();
-		void CreatePSO();
+	class SkyBoxComponent: public LevelComponent {
+	public:
+		void OnLoad(const Json::Value& val) override;
+		void OnAdd() override;
+		void OnRemove() override;
+		void SetCubeMapFile(const XString& file);
+		const XString& GetCubeMapFile() const { return m_CubeMapFile; }
+	private:
+		XString m_CubeMapFile;
+		REGISTER_LEVEL_COMPONENT(SkyBoxComponent);
+	};
+
+	class SkyBoxSystem : public ECSSystem<SkyBoxECSComp> {
+		void Update(ECSScene* scene, SkyBoxECSComp* component) override;
+		RENDER_SCENE_REGISTER_SYSTEM(SkyBoxSystem);
 	};
 }

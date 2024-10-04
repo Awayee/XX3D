@@ -1,11 +1,11 @@
 #pragma once
 #include "D3D12Util.h"
-#include "D3D12Pipeline.h"
 #include "D3D12Resources.h"
 #include "RHI/Public/RHI.h"
 #include "Core/Public/Container.h"
 
 class D3D12Device;
+class D3D12PipelineDescriptorCache;
 
 class D3D12StagingBuffer: public D3D12Buffer {
 public:
@@ -60,7 +60,7 @@ private:
 	D3D12Device* m_Device;
 	ID3D12CommandAllocator* m_Allocator;
 	TDXPtr<ID3D12GraphicsCommandList> m_CommandList;
-	TArray<D3D12PipelineDescriptorCache> m_PipelineCaches;
+	TUniquePtr<D3D12PipelineDescriptorCache> m_DescriptorCache;
 	bool m_IsRecording;
 	// call before draw/dispatch
 	TMap<D3D12Texture*, ResourceState> m_ResStates;

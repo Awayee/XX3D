@@ -22,8 +22,18 @@ namespace Object {
     static constexpr ERHIFormat s_NormalFormat{ ERHIFormat::R8G8B8A8_UNORM };
     static constexpr ERHIFormat s_AlbedoFormat{ ERHIFormat::R8G8B8A8_UNORM };
 
+
+    TArray<Func<void(RenderScene*)>>& GetConstructFuncs() {
+        static TArray<Func<void(RenderScene*)>> s_ConstructFuncs {};
+        return s_ConstructFuncs;
+	    
+    }
+
+    void RenderSceneAddConstructFunc(Func<void(RenderScene*)>&& f) {
+        GetConstructFuncs().PushBack(f);
+    }
+
     TUniquePtr<RenderScene> RenderScene::s_Default;
-    TArray<Func<void(RenderScene*)>> RenderScene::s_RegisterSystems;
 
     struct LightUBO {
         Math::FVector3 LightDir; float _padding;
@@ -32,7 +42,7 @@ namespace Object {
 
     RenderScene::RenderScene(){
         // register systems
-        for(auto& func: s_RegisterSystems) {
+        for(auto& func: GetConstructFuncs()) {
             func(this);
         }
         // create PSOs
@@ -152,9 +162,6 @@ namespace Object {
             cmd->SetShaderParam(0, 7, RHIShaderParam::Sampler(Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp)));
         	cmd->Draw(6, 1, 0, 0);
         });
-
-        // sky box rendering after deferred lighting
-        m_SkyBox->CreateDrawCall(m_DrawCallContext.GetDrawCallQueue(Render::EDrawCallQueueType::DeferredLighting));
     }
 
     void RenderScene::CreateResources() {
@@ -162,7 +169,6 @@ namespace Object {
         m_DirectionalLight->SetRotation({ 0.0f, 0.0f, 0.0f });
         m_Camera.Reset(new RenderCamera());
         m_Camera->SetView({{ 0, 4, -4 }, { 0, 2, 0 }, { 0, 1, 0 }});
-        m_SkyBox.Reset(new SkyBox(m_Camera));
     }
 
     void RenderScene::CreateTextureResources() {

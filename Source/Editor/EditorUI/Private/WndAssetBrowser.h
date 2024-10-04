@@ -22,7 +22,7 @@ namespace Editor {
 		TArray<TUniquePtr<AssetViewBase>> m_Contents;
 		TArray<TUniquePtr<FolderAssetView>> m_Folders;
 
-		uint32 m_SelectedItem{ INVALLID_NODE };
+		uint32 m_SelectedItem{ INVALID_NODE };
 		ImVec2 m_ContextMenuPos;
 
 		static void OnFolderRebuildAllWindows(const FolderNode* node);

@@ -23,8 +23,8 @@ namespace Asset {
 		TArray<uint8> Pixels;
 	public:
 		TextureAsset() = default;
-		bool Load(File::RFile& in) override;
-		bool Save(File::WFile& out) override;
+		bool Load(File::PathStr filePath) override;
+		bool Save(File::PathStr filePath) override;
 		~TextureAsset() override;
 	};	
 }

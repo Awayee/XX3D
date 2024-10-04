@@ -1,6 +1,6 @@
 #include "WndViewport.h"
 #include "EditorUI/Public/EditorUIMgr.h"
-#include "Functions/Public/EditorLevelMgr.h"
+#include "Functions/Public/EditorLevel.h"
 #include "Functions/Public/EditorConfig.h"
 #include "Objects/Public/RenderScene.h"
 #include "Objects/Public/Camera.h"
@@ -66,7 +66,7 @@ namespace Editor {
 		if(!ImGui::IsWindowFocused()) {
 			return;
 		}
-
+		
 		Engine::EngineWindow* window = Engine::EngineWindow::Instance();
 		
 		//rotate
@@ -79,9 +79,9 @@ namespace Editor {
 				m_MouseDown = true;
 			}
 			// rotate camera
-			auto pos = Engine::EngineWindow::Instance()->GetCursorPos();
+			auto pos = window->GetCursorPos();
 			float x = pos.x, y = pos.y;
-			if (m_LastX == 0.0f && m_LastY == 0.0f) {
+			if (Math::IsNearlyZero(m_LastX) && Math::IsNearlyZero(m_LastY)) {
 				m_LastX = x;
 				m_LastY = y;
 			}

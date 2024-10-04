@@ -1,34 +1,39 @@
 #pragma once
+#include "Math/Public/Transform.h"
 #include "Asset/Public/MeshAsset.h"
 #include "Core/Public/TUniquePtr.h"
 #include "RHI/Public/RHI.h"
 #include "Render/Public/DrawCall.h"
 #include "Objects/Public/ECS.h"
+#include "Objects/Public/RenderScene.h"
+#include "Objects/Public/Level.h"
 
 namespace Object {
 	// transform
-	class TransformComponent {
-	public:
-		struct TransformInfo {
-			Math::FMatrix4x4 TransformMat{ Math::FMatrix4x4::IDENTITY };
-			Math::FMatrix4x4 InvTransformMat{ Math::FMatrix4x4::IDENTITY };
+	struct TransformECSComp {
+		struct MatrixData {
+			Math::FMatrix4x4 Transform{ Math::FMatrix4x4::IDENTITY };
+			Math::FMatrix4x4 InverseTransform{ Math::FMatrix4x4::IDENTITY };
 		};
-		void SetPosition(const Math::FVector3& pos);
-		void SetRotation(const Math::FQuaternion& rot);
-		void SetScale(const Math::FVector3& scale);
-		const Math::FVector3& GetPosition() const { return m_Position; }
-		const Math::FQuaternion& GetRotation() const { return m_Rotation; }
-		const Math::FVector3& GetScale() const { return m_Scale; }
-		const TransformInfo& GetTransformInfo() const { return m_TransformInfo; }
-		const Math::FMatrix4x4& GetTransformMat()const { return m_TransformInfo.TransformMat; }
-		const Math::FMatrix4x4& GetInvTransformMat() const { return m_TransformInfo.InvTransformMat; }
+		void SetTransform(const Math::FTransform& transform);
+		const Math::FTransform& GetTransform()const { return m_Transform; }
+		const MatrixData& GetMatrixData() const { return m_MatrixData; }
 	protected:
-		Math::FVector3 m_Position{ 0,0,0 };
-		Math::FQuaternion m_Rotation{ 0,0,0,1 };
-		Math::FVector3 m_Scale{ 1,1,1 };
-		TransformInfo m_TransformInfo;
+		Math::FTransform m_Transform;
+		MatrixData m_MatrixData;
 		void UpdateMat();
-		REGISTER_ECS_COMPONENT(TransformComponent);
+		REGISTER_ECS_COMPONENT(TransformECSComp);
+	};
+
+	class TransformComponent: public LevelComponent {
+	public:
+		Math::FTransform Transform;
+		void OnLoad(const Json::Value& val) override;
+		void OnAdd() override;
+		void OnRemove() override;
+		void TransformUpdated();
+	private:
+		REGISTER_LEVEL_COMPONENT(TransformComponent);
 	};
 
 	// static mesh
@@ -40,15 +45,50 @@ namespace Object {
 		RHITexture* Texture;
 		Math::AABB3 AABB;
 	};
-	struct StaticMeshComponent {
-		void BuildFromAsset(const Asset::MeshAsset& meshAsset);
+	struct MeshECSComp {
 		TArray<PrimitiveRenderData> Primitives;
-		REGISTER_ECS_COMPONENT(StaticMeshComponent);
+		void BuildFromAsset(const Asset::MeshAsset& meshAsset);
+		REGISTER_ECS_COMPONENT(MeshECSComp);
 	};
 
-	class MeshRenderSystem: public ECSSystem<TransformComponent, StaticMeshComponent> {
+	class MeshRenderSystem: public ECSSystem<TransformECSComp, MeshECSComp> {
+		void Update(ECSScene* ecsScene, TransformECSComp* transform, MeshECSComp* staticMesh) override;
+		RENDER_SCENE_REGISTER_SYSTEM(MeshRenderSystem);
+	};
+
+	class MeshComponent: public LevelComponent {
 	public:
-		void Update(ECSScene* ecsScene, TransformComponent* transform, StaticMeshComponent* staticMesh) override;
-		static void Initialize();
+		void OnLoad(const Json::Value& val) override;
+		void OnAdd() override;
+		void OnRemove() override;
+		void SetMeshFile(const XString& meshFile);
+		const XString& GetMeshFile() const { return m_MeshFile; }
+	private:
+		XString m_MeshFile;
+		REGISTER_LEVEL_COMPONENT(MeshComponent);
+	};
+
+	// instanced static mesh
+	struct InstancedDataECSComponent{
+		TArray<Math::FTransform> Instances;
+		void BuildInstances(const XString& instanceFile);
+		REGISTER_ECS_COMPONENT(InstancedDataECSComponent);
+	};
+
+	class InstancedMeshRenderSystem: public ECSSystem<MeshECSComp, InstancedDataECSComponent> {
+		void Update(ECSScene* scene, MeshECSComp* meshCom, InstancedDataECSComponent* instanceCom) override;
+		RENDER_SCENE_REGISTER_SYSTEM(InstancedMeshRenderSystem);
+	};
+
+	class InstanceDataComponent: public LevelComponent {
+	public:
+		void OnLoad(const Json::Value& val) override;
+		void OnAdd() override;
+		void OnRemove() override;
+		void SetInstanceFile(const XString& file);
+		const XString& GetInstanceFile() const { return m_InstanceFile; }
+	private:
+		XString m_InstanceFile;
+		REGISTER_LEVEL_COMPONENT(InstanceDataComponent);
 	};
 }

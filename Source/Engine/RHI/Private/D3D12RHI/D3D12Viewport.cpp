@@ -62,7 +62,7 @@ ERHIFormat D3D12Viewport::GetBackBufferFormat() {
 
 void D3D12Viewport::Present() {
 	const LONG presentFlags = m_EnableVSync ? 0 : DXGI_PRESENT_ALLOW_TEARING;
-	m_Swapchain->Present(0, presentFlags);
+	m_Swapchain->Present(!!m_EnableVSync, presentFlags);
 	m_Queue->SignalFence(m_PresentFence);
 	m_CurrentBackBuffer = (m_CurrentBackBuffer + 1) % BACK_BUFFER_COUNT;
 }

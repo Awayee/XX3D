@@ -67,24 +67,11 @@ namespace Editor {
 		void Open() override;
 	};
 
-	class LevelAssetView: public FileAssetViewTemplate<Asset::LevelAsset> {
+	class LevelAssetView: public FileAssetView {
 	public:
-		LevelAssetView(FileNode* node) : FileAssetViewTemplate<Asset::LevelAsset>(node) {}
+		using FileAssetView::FileAssetView;
 		void Open() override;
-		void Save() override;
 	};
 
-	inline TUniquePtr<AssetViewBase> CreateAssetView(FileNode* node) {
-		const XString& ext = node->GetPath().extension().string();
-		if(ext == ".mesh") {
-			return TUniquePtr(new MeshAssetView(node));
-		}
-		if(ext == ".texture") {
-			return TUniquePtr(new TextureAssetView(node));
-		}
-		if(ext == ".level") {
-			return TUniquePtr(new LevelAssetView(node));
-		}
-		return TUniquePtr(new FileAssetView(node));
-	}
+	TUniquePtr<AssetViewBase> CreateAssetView(FileNode* node);
 }

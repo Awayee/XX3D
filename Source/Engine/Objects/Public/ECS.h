@@ -168,10 +168,10 @@ namespace Object {
 
 		template<class T> void RemoveComponent(EntityID entityID) {
 			if (auto maskIter = m_EntityMasks.find(entityID); maskIter != m_EntityMasks.end()) {
-				maskIter->second &= ~T::GetComponentMask();
 				if (auto sysIter = m_Systems.find(maskIter->second); sysIter != m_Systems.end()) {
 					sysIter->second->RemoveEntity(entityID);
 				}
+				maskIter->second &= ~T::GetComponentMask();
 				m_ComponentContainerMgr.RemoveComponent<T>(entityID);
 			}
 			else {

@@ -1,8 +1,7 @@
 #pragma once
 #include "AssetCommon.h"
 #include "Math/Public/Vector.h"
-#include "Math/Public/Quaternion.h"
-#include "Core/Public/Log.h"
+#include "Core/Public/Json.h"
 
 namespace Asset {
 	struct LevelAsset : AssetBase {
@@ -14,6 +13,13 @@ namespace Asset {
 			Math::FVector3 Rotation;
 		};
 		TArray<MeshData> Meshes;
+
+		struct InstancedMeshData {
+			XString Name;
+			XString MeshFile;
+			XString InstanceFile;
+		};
+		TArray<InstancedMeshData> InstancedMeshes;
 
 		struct{
 			Math::FVector3 Eye;
@@ -29,7 +35,7 @@ namespace Asset {
 		}DirectionalLightData;
 
 		XString SkyBox;
-		bool Load(File::RFile& in) override;
-		bool Save(File::WFile& out) override;
+		bool Load(File::PathStr filePath) override;
+		bool Save(File::PathStr filePath) override;
 	};
 }

@@ -11,20 +11,16 @@ namespace Asset {
 
 	#define PARSE_ENGINE_ASSET(f)\
 		char f##__s[128]; StrCopy(f##__s, ENGINE_ASSETS); strcat(f##__s, f); f=f##__s
-
-	#define CBYTE_PTR reinterpret_cast<const char*>
-	#define BYTE_PTR reinterpret_cast<char*>
-
+	
 	struct AssetBase {
-
-		virtual bool Load(File::RFile& in) = 0;
-		virtual bool Save(File::WFile& out) = 0;
+		virtual bool Load(File::PathStr filePath) = 0;
+		virtual bool Save(File::PathStr filePath) = 0;
 		virtual ~AssetBase() = default;
 	};
 
 	struct UnknownAsset: public AssetBase {
-		bool Load(File::RFile& in) override { return true; }
-		bool Save(File::WFile& out) override { return true; }
+		bool Load(File::PathStr in) override { return true; }
+		bool Save(File::PathStr out) override { return true; }
 		~UnknownAsset() override = default;
 	};
 
@@ -36,10 +32,4 @@ namespace Asset {
 	};
 
 	typedef uint32 IndexType;
-
-	struct SPrimitiveData {
-		TArray<AssetVertex> Vertices;
-		TArray<uint32>  Indices;
-		TArray<XString>  Textures;
-	};
 }
