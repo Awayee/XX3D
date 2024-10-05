@@ -160,6 +160,10 @@ bool RHITexture::IsDimensionCompatible(ETextureDimension baseDimension, ETexture
     return false;
 }
 
+bool RHIDynamicBuffer::operator==(const RHIDynamicBuffer& rhs) const {
+    return BufferIndex == rhs.BufferIndex && Offset == rhs.Offset && Size == rhs.Size && Stride == rhs.Stride;
+}
+
 bool RHITextureSubRes::operator==(const RHITextureSubRes& rhs) const {
     return ViewFlags == rhs.ViewFlags && Dimension == rhs.Dimension &&
         MipIndex == rhs.MipIndex && MipSize == rhs.MipSize && ArrayIndex == rhs.ArrayIndex && ArraySize == rhs.ArraySize;
@@ -176,6 +180,29 @@ uint32 RHIRenderPassInfo::GetNumColorTargets() const {
 	    }
     }
     return RHI_COLOR_TARGET_MAX;
+}
+
+bool RHIShaderParam::operator==(const RHIShaderParam& rhs) const {
+    if(Type != rhs.Type) {
+        return false;
+    }
+    switch(Type) {
+    case EBindingType::StorageBuffer:
+    case EBindingType::UniformBuffer:
+        if(IsDynamicBuffer == rhs.IsDynamicBuffer) {
+            return false;
+        }
+        return IsDynamicBuffer ? (Data.DynamicBuffer == rhs.Data.DynamicBuffer) : (Data.Buffer == rhs.Data.Buffer && Data.Offset == rhs.Data.Offset && Data.Size == rhs.Data.Offset);
+    case EBindingType::Texture:
+        return Data.Texture == rhs.Data.Texture && Data.SubRes == rhs.Data.SubRes;
+    case EBindingType::Sampler:
+        return Data.Sampler == rhs.Data.Sampler;
+    default: return true;
+    }
+}
+
+bool RHIShaderParam::operator!=(const RHIShaderParam& rhs) const {
+    return !operator==(rhs);
 }
 
 RHIShaderParam RHIShaderParam::UniformBuffer(RHIBuffer* buffer, uint32 offset, uint32 size) {

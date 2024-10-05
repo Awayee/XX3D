@@ -240,7 +240,7 @@ enum class EQueueType : uint8 {
     Count
 };
 
-enum class ELogicOp {
+enum class ELogicOp: uint8 {
     Clear = 0,
     And = 1,
     AndReverse = 2,
@@ -257,4 +257,10 @@ enum class ELogicOp {
     OrInverted = 13,
     NAnd = 14,
     Set = 15,
+};
+
+enum class EPipelineType: uint8 {
+    Graphics,
+    Compute,
+    None
 };

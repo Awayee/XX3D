@@ -67,11 +67,6 @@ public:
 	D3D12ComputePipelineState* GetComputePipelineState();
 	void PreDraw(ID3D12GraphicsCommandList* cmd);
 private:
-	enum class EPipelineType {
-		Graphics,
-		Compute,
-		None
-	};
 	struct DescriptorCache {
 		TArray<RHIShaderParam> Params;
 		DynamicDescriptorHandle DynamicDescriptor;

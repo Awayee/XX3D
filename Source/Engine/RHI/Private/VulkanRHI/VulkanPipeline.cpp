@@ -144,79 +144,6 @@ void VulkanDescriptorSetMgr::AddPool() {
 	}
 }
 
-VulkanDescriptorSetParamCache::VulkanDescriptorSetParamCache(const RHIShaderParamSetLayout& layout): m_LayoutRef(layout) {
-	// compile layout
-	uint32 bufferIndex = 0, imageIndex = 0;
-	for(auto& binding: m_LayoutRef) {
-		if(BindingIsBuffer(binding.Type)) {
-			bufferIndex += binding.Count;
-		}
-		else if (BindingIsImage(binding.Type)) {
-			imageIndex += binding.Count;
-		}
-	}
-	m_WriteBuffers.Resize(bufferIndex, {});
-	m_WriteImages.Resize(imageIndex, {});
-	m_Writes.Resize(m_LayoutRef.Size(), {});
-	// allocate descriptor writes
-	bufferIndex = 0;
-	imageIndex = 0;
-	for(uint32 i=0; i< m_LayoutRef.Size(); ++i) {
-		auto& src = m_LayoutRef[i];
-		auto& write = m_Writes[i];
-		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write.pNext = nullptr;
-		write.dstSet = VK_NULL_HANDLE;// update by outer objects
-		write.dstBinding = i;
-		write.dstArrayElement = 0;
-		write.descriptorCount = src.Count;
-		write.descriptorType = ToVkDescriptorType(src.Type);
-		if(BindingIsBuffer(src.Type)) {
-			write.pBufferInfo = &m_WriteBuffers[bufferIndex];
-			bufferIndex += src.Count;
-		}
-		else if (BindingIsImage(src.Type)) {
-			write.pImageInfo = &m_WriteImages[imageIndex];
-			imageIndex += src.Count;
-		}
-	}
-}
-
-void VulkanDescriptorSetParamCache::SetParam(const VulkanDynamicBufferAllocator* allocator, uint32 bindIndex, const RHIShaderParam& param) {
-	CHECK(m_LayoutRef[bindIndex].Type == param.Type);
-	auto& write = m_Writes[bindIndex];
-	switch(param.Type) {
-	case EBindingType::UniformBuffer:
-	case EBindingType::StorageBuffer: {
-		auto& bufferInfo = const_cast<VkDescriptorBufferInfo*>(write.pBufferInfo)[param.ArrayIndex];
-		if(param.IsDynamicBuffer) {
-			const RHIDynamicBuffer& dBuffer = param.Data.DynamicBuffer;
-			bufferInfo.buffer = allocator->GetBufferHandle(param.Data.DynamicBuffer.BufferIndex);
-			bufferInfo.offset = dBuffer.Offset;
-			bufferInfo.range  = dBuffer.Size;
-		}
-		else {
-			VulkanBufferImpl* buffer = (VulkanBufferImpl*)param.Data.Buffer;
-			bufferInfo.buffer = buffer->GetBuffer();
-			bufferInfo.offset = param.Data.Offset;
-			bufferInfo.range = param.Data.Size;
-		}
-	}break;
-	case EBindingType::Texture:
-	case EBindingType::StorageTexture:{
-		VulkanRHITexture* texture = (VulkanRHITexture*)(param.Data.Texture);
-		auto& imageInfo = const_cast<VkDescriptorImageInfo*>(write.pImageInfo)[param.ArrayIndex];
-		imageInfo.imageView = texture->GetView(param.Data.SubRes); // TODO more view types
-		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	}break;
-	case EBindingType::Sampler: {
-		auto& imageInfo = const_cast<VkDescriptorImageInfo*>(write.pImageInfo)[param.ArrayIndex];
-		imageInfo.sampler = ((VulkanRHISampler*)param.Data.Sampler)->GetSampler();
-	}break;
-	default:break;
-	}
-}
-
 void VulkanPipelineLayout::Build(VulkanDevice* device, TConstArrayView<RHIShaderParamSetLayout> meta) {
 	CHECK(VK_NULL_HANDLE == Handle);
 	const uint32 layoutCount = meta.Size();
@@ -229,51 +156,6 @@ void VulkanPipelineLayout::Build(VulkanDevice* device, TConstArrayView<RHIShader
 	layoutInfo.pSetLayouts = DescriptorSetLayouts.Data();
 	VK_ASSERT(vkCreatePipelineLayout(device->GetDevice(), &layoutInfo, nullptr, &Handle), "PipelineLayout");
 	PipelineLayoutMeta = meta;
-}
-
-VulkanPipelineDescriptorSetCache::VulkanPipelineDescriptorSetCache(VulkanDevice* device, const VulkanPipelineLayout* layout):
-	m_Device(device), m_Layout(layout) {
-	const uint32 setCount = layout->PipelineLayoutMeta.Size();
-	// create parameter caches
-	m_ParamCaches.Reserve(setCount);
-	for(auto& dsLayout: layout->PipelineLayoutMeta) {
-		m_ParamCaches.EmplaceBack(dsLayout);
-	}
-	m_BindingSets.Resize(setCount, VK_NULL_HANDLE); // reserve null
-	m_DirtySets.Resize(setCount, true); // mark all ds dirty
-}
-
-VulkanPipelineDescriptorSetCache::~VulkanPipelineDescriptorSetCache() {
-}
-
-void VulkanPipelineDescriptorSetCache::SetParam(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& param) {
-	CHECK(setIndex < m_ParamCaches.Size());
-	m_ParamCaches[setIndex].SetParam(m_Device->GetDynamicBufferAllocator(), bindIndex, param);
-	m_DirtySets[setIndex] = true;
-}
-
-void VulkanPipelineDescriptorSetCache::Bind(VkCommandBuffer cmd, VkPipelineBindPoint point) {
-	// check if need write
-	for (uint32 i = 0; i < m_BindingSets.Size(); ++i) {
-		if (m_DirtySets[i]) {
-			ReallocateSet(i);
-			auto& writes = m_ParamCaches[i].GetWrites();
-			for (auto& write : writes) {
-				write.dstSet = m_BindingSets[i];
-			}
-			vkUpdateDescriptorSets(m_Device->GetDevice(), writes.Size(), writes.Data(), 0, nullptr);
-			m_DirtySets[i] = false;
-		}
-	}
-	// bind
-	vkCmdBindDescriptorSets(cmd, point, m_Layout->Handle, 0, m_BindingSets.Size(), m_BindingSets.Data(), 0, nullptr);
-}
-
-VkDescriptorSet VulkanPipelineDescriptorSetCache::ReallocateSet(uint32 setIndex) {
-	VkDescriptorSet set = m_Device->GetDescriptorMgr()->AllocateDescriptorSet(m_Layout->DescriptorSetLayouts[setIndex]);
-	m_AllDescriptorSets.PushBack(set);
-	m_BindingSets[setIndex] = set;
-	return set;
 }
 
 VulkanRHIGraphicsPipelineState::VulkanRHIGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc, VulkanDevice* device) :RHIGraphicsPipelineState(desc), m_Device(device) {
@@ -348,7 +230,7 @@ VulkanRHIGraphicsPipelineState::VulkanRHIGraphicsPipelineState(const RHIGraphics
 		VkPipelineColorBlendStateCreateInfo colorBlendInfo{ VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr, 0 };
 		colorBlendInfo.logicOpEnable = blendDesc.LogicOpEnable;
 		colorBlendInfo.logicOp = ToVkLogicOp(blendDesc.LogicOp);
-		uint32 blendStateCount = blendDesc.BlendStates.Size();
+		uint32 blendStateCount = desc.NumColorTargets;
 		TFixedArray<VkPipelineColorBlendAttachmentState> states(blendStateCount);
 		for (uint32 i = 0; i < blendStateCount; ++i) {
 			states[i] = ToAttachmentBlendState(blendDesc.BlendStates[i]);
@@ -368,7 +250,7 @@ VulkanRHIGraphicsPipelineState::VulkanRHIGraphicsPipelineState(const RHIGraphics
 		// rendering create info
 		VkPipelineRenderingCreateInfo renderingCreateInfo{ VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO, nullptr };
 		renderingCreateInfo.viewMask = 0;// TODO multi view
-		uint32 colorAttachmentCount = desc.ColorFormats.Size();
+		uint32 colorAttachmentCount = desc.NumColorTargets;
 		TFixedArray<VkFormat> colorAttachmentFormats(colorAttachmentCount);
 		for (uint32 i = 0; i < colorAttachmentCount; ++i) {
 			colorAttachmentFormats[i] = ToVkFormat(desc.ColorFormats[i]);
@@ -432,47 +314,184 @@ void VulkanRHIComputePipelineState::SetName(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_PIPELINE, m_Pipeline, name);
 }
 
-VulkanPipelineStateContainer::VulkanPipelineStateContainer(VulkanDevice* device) : m_Device(device){
-}
-
-void VulkanPipelineStateContainer::BindPipelineState(VulkanRHIGraphicsPipelineState* pso) {
-	PipelineData& data = m_Pipelines.EmplaceBack();
-	data.DescriptorSetCache.Reset(new VulkanPipelineDescriptorSetCache(m_Device, pso->GetPipelineLayout()));
-	data.PipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	data.GraphicsPipelineState = pso;
-}
-
-void VulkanPipelineStateContainer::BindPipelineState(VulkanRHIComputePipelineState* pso) {
-	PipelineData& data = m_Pipelines.EmplaceBack();
-	data.DescriptorSetCache.Reset(new VulkanPipelineDescriptorSetCache(m_Device, pso->GetPipelineLayout()));
-	data.PipelineBindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
-	data.ComputePipelineState = pso;
-}
-
-VulkanPipelineDescriptorSetCache* VulkanPipelineStateContainer::GetCurrentDescriptorSetCache() {
-	return m_Pipelines.IsEmpty() ? nullptr : m_Pipelines.Back().DescriptorSetCache.Get();
-}
-
-VulkanRHIComputePipelineState* VulkanPipelineStateContainer::GetCurrentComputePipelineState() {
-	if(!m_Pipelines.IsEmpty()) {
-		auto& data = m_Pipelines.Back();
-		if(VK_PIPELINE_BIND_POINT_COMPUTE == data.PipelineBindPoint) {
-			return data.ComputePipelineState;
+VulkanDescriptorSetParamCache::VulkanDescriptorSetParamCache(const RHIShaderParamSetLayout& layout) : m_LayoutRef(layout) {
+	// compile layout
+	uint32 bufferIndex = 0, imageIndex = 0;
+	for (auto& binding : m_LayoutRef) {
+		if (BindingIsBuffer(binding.Type)) {
+			bufferIndex += binding.Count;
 		}
+		else if (BindingIsImage(binding.Type)) {
+			imageIndex += binding.Count;
+		}
+	}
+	m_WriteBuffers.Resize(bufferIndex, {});
+	m_WriteImages.Resize(imageIndex, {});
+	m_Writes.Resize(m_LayoutRef.Size(), {});
+	// allocate descriptor writes
+	bufferIndex = 0;
+	imageIndex = 0;
+	for (uint32 i = 0; i < m_LayoutRef.Size(); ++i) {
+		auto& src = m_LayoutRef[i];
+		auto& write = m_Writes[i];
+		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write.pNext = nullptr;
+		write.dstSet = VK_NULL_HANDLE;// update by outer objects
+		write.dstBinding = i;
+		write.dstArrayElement = 0;
+		write.descriptorCount = src.Count;
+		write.descriptorType = ToVkDescriptorType(src.Type);
+		if (BindingIsBuffer(src.Type)) {
+			write.pBufferInfo = &m_WriteBuffers[bufferIndex];
+			bufferIndex += src.Count;
+		}
+		else if (BindingIsImage(src.Type)) {
+			write.pImageInfo = &m_WriteImages[imageIndex];
+			imageIndex += src.Count;
+		}
+	}
+}
+
+bool VulkanDescriptorSetParamCache::SetParam(const VulkanDynamicBufferAllocator* allocator, uint32 bindIndex, const RHIShaderParam& param) {
+	CHECK(m_LayoutRef[bindIndex].Type == param.Type);
+	auto& write = m_Writes[bindIndex];
+	switch (param.Type) {
+	case EBindingType::UniformBuffer:
+	case EBindingType::StorageBuffer: {
+		auto& bufferInfo = const_cast<VkDescriptorBufferInfo*>(write.pBufferInfo)[param.ArrayIndex];
+		VkBuffer bufferHandle;
+		uint32 offset, range;
+		if (param.IsDynamicBuffer) {
+			const RHIDynamicBuffer& dBuffer = param.Data.DynamicBuffer;
+			bufferHandle = allocator->GetBufferHandle(param.Data.DynamicBuffer.BufferIndex);
+			offset = dBuffer.Offset;
+			range = dBuffer.Size;
+		}
+		else {
+			VulkanBufferImpl* buffer = (VulkanBufferImpl*)param.Data.Buffer;
+			bufferHandle = buffer->GetBuffer();
+			offset = param.Data.Offset;
+			range = param.Data.Size;
+		}
+		if(bufferInfo.buffer == bufferHandle && bufferInfo.offset == offset && bufferInfo.range == range) {
+			return false;
+		}
+		bufferInfo.buffer = bufferHandle;
+		bufferInfo.offset = offset;
+		bufferInfo.range = range;
+	}break;
+	case EBindingType::Texture:
+	case EBindingType::StorageTexture: {
+		VulkanRHITexture* texture = (VulkanRHITexture*)(param.Data.Texture);
+		auto& imageInfo = const_cast<VkDescriptorImageInfo*>(write.pImageInfo)[param.ArrayIndex];
+		VkImageView targetView = texture->GetView(param.Data.SubRes);
+		if(imageInfo.imageView == targetView) {
+			return false;
+		}
+		imageInfo.imageView = texture->GetView(param.Data.SubRes); // TODO more view types
+		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	}break;
+	case EBindingType::Sampler: {
+		auto& imageInfo = const_cast<VkDescriptorImageInfo*>(write.pImageInfo)[param.ArrayIndex];
+		VkSampler targetSampler = ((VulkanRHISampler*)param.Data.Sampler)->GetSampler();
+		if(imageInfo.sampler == targetSampler) {
+			return false;
+		}
+		imageInfo.sampler = targetSampler;
+	}break;
+	default:break;
+	}
+	return true;
+}
+
+VulkanPipelineDescriptorSetCache::VulkanPipelineDescriptorSetCache(VulkanDevice* device):
+m_Device(device), m_PipelineData(nullptr), m_PipelineType(EPipelineType::None){}
+
+void VulkanPipelineDescriptorSetCache::BindGraphicsPipeline(const VulkanRHIGraphicsPipelineState* pipeline) {
+	m_GraphicsPipeline = pipeline;
+	m_PipelineType = EPipelineType::Graphics;
+	SetupParameterLayout();
+}
+
+void VulkanPipelineDescriptorSetCache::BindComputePipeline(const VulkanRHIComputePipelineState* pipeline) {
+	m_ComputePipeline = pipeline;
+	m_PipelineType = EPipelineType::Compute;
+	SetupParameterLayout();
+}
+
+void VulkanPipelineDescriptorSetCache::SetParam(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& param) {
+	CHECK(setIndex < m_ParamCaches.Size());
+	if(m_ParamCaches[setIndex].SetParam(m_Device->GetDynamicBufferAllocator(), bindIndex, param)) {
+		m_DirtySets[setIndex] = true;
+	}
+}
+
+void VulkanPipelineDescriptorSetCache::Bind(VkCommandBuffer cmd) {	// check if need write
+	for (uint32 i = 0; i < m_BindingSets.Size(); ++i) {
+		if (m_DirtySets[i]) {
+			ReallocateSet(i);
+			auto& writes = m_ParamCaches[i].GetWrites();
+			for (auto& write : writes) {
+				write.dstSet = m_BindingSets[i];
+			}
+			vkUpdateDescriptorSets(m_Device->GetDevice(), writes.Size(), writes.Data(), 0, nullptr);
+			m_DirtySets[i] = false;
+		}
+	}
+	// bind
+	vkCmdBindDescriptorSets(cmd, ToVkPipelineBindPoint(m_PipelineType), GetLayout()->Handle, 0, m_BindingSets.Size(), m_BindingSets.Data(), 0, nullptr);
+}
+
+void VulkanPipelineDescriptorSetCache::Reset() {
+	m_PipelineData = nullptr;
+	m_PipelineType = EPipelineType::None;
+	m_ParamCaches.Reset();
+	m_BindingSets.Reset();
+	m_DirtySets.Reset();
+	m_AllDescriptorSets.Reset();
+}
+
+VkPipelineBindPoint VulkanPipelineDescriptorSetCache::GetVkPipelineBindPoint() {
+	return ToVkPipelineBindPoint(m_PipelineType);
+}
+
+VkPipeline VulkanPipelineDescriptorSetCache::GetVkPipeline() {
+	if(EPipelineType::Graphics == m_PipelineType) {
+		return m_GraphicsPipeline->GetPipelineHandle();
+	}
+	else if (EPipelineType::Compute == m_PipelineType) {
+		return m_ComputePipeline->GetPipelineHandle();
 	}
 	return nullptr;
 }
 
-VulkanRHIGraphicsPipelineState* VulkanPipelineStateContainer::GetCurrentGraphicsPipelineState() {
-	if (!m_Pipelines.IsEmpty()) {
-		auto& data = m_Pipelines.Back();
-		if (VK_PIPELINE_BIND_POINT_GRAPHICS == data.PipelineBindPoint) {
-			return data.GraphicsPipelineState;
+void VulkanPipelineDescriptorSetCache::SetupParameterLayout() {
+	m_ParamCaches.Reset();
+	if(const VulkanPipelineLayout* layout = GetLayout()) {
+		const uint32 setCount = layout->PipelineLayoutMeta.Size();
+		// create parameter caches
+		m_ParamCaches.Reserve(setCount);
+		for (auto& dsLayout : layout->PipelineLayoutMeta) {
+			m_ParamCaches.EmplaceBack(dsLayout);
 		}
+		m_BindingSets.Resize(setCount, VK_NULL_HANDLE); // reserve null
+		m_DirtySets.Resize(setCount, true); // mark all ds dirty
 	}
-	return nullptr;
 }
 
-void VulkanPipelineStateContainer::Reset() {
-	m_Pipelines.Reset();
+VkDescriptorSet VulkanPipelineDescriptorSetCache::ReallocateSet(uint32 setIndex) {
+	VkDescriptorSet set = m_Device->GetDescriptorMgr()->AllocateDescriptorSet(GetLayout()->DescriptorSetLayouts[setIndex]);
+	m_AllDescriptorSets.PushBack(set);
+	m_BindingSets[setIndex] = set;
+	return set;
+}
+
+const VulkanPipelineLayout* VulkanPipelineDescriptorSetCache::GetLayout() {
+	if(EPipelineType::Graphics == m_PipelineType) {
+		return m_GraphicsPipeline->GetPipelineLayout();
+	}
+	if (EPipelineType::Compute == m_PipelineType) {
+		return m_ComputePipeline->GetPipelineLayout();
+	}
+	return nullptr;
 }

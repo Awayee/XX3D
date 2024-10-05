@@ -35,6 +35,15 @@
     },
     "Actors": [
         {
+            "Name": "SkyBox",
+            "Components": [
+                {
+                    "Name": "SkyBoxComponent",
+                    "CubeMapFile": "Levels/skybox.texture"
+                }
+            ]
+        },
+        {
             "Name": "Ground",
             "Components": [
                 {
@@ -58,15 +67,6 @@
                 {
                     "Name": "MeshComponent",
                     "MeshFile": "Meshes/Cube.mesh"
-                }
-            ]
-        },
-        {
-            "Name": "SkyBox",
-            "Components": [
-                {
-                    "Name": "SkyBoxComponent",
-                    "CubeMapFile": "Levels/skybox.texture"
                 }
             ]
         },

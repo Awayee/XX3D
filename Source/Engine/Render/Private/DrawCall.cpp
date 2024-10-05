@@ -28,35 +28,4 @@ namespace Render {
 			operator[](i).Execute(cmd);
 		}
 	}
-
-	DrawCallContext::DrawCallContext(DrawCallContext&& rhs) noexcept {
-		for(uint32 i=0; i<(uint32)EDrawCallQueueType::MaxNum; ++i) {
-			m_DrawCallQueues[i].Swap(rhs.m_DrawCallQueues[i]);
-		}
-	}
-
-	DrawCallContext& DrawCallContext::operator=(DrawCallContext&& rhs) noexcept {
-		for (uint32 i = 0; i < (uint32)EDrawCallQueueType::MaxNum; ++i) {
-			m_DrawCallQueues[i].Swap(rhs.m_DrawCallQueues[i]);
-		}
-		return *this;
-	}
-
-	void DrawCallContext::PushDrawCall(EDrawCallQueueType queueType, DrawCallFunc&& f) {
-		m_DrawCallQueues[(uint32)queueType].PushDrawCall(MoveTemp(f));
-	}
-
-	void DrawCallContext::ExecuteDraCall(EDrawCallQueueType queueType, RHICommandBuffer* cmd) {
-		m_DrawCallQueues[(uint32)queueType].Execute(cmd);
-	}
-
-	DrawCallQueue& DrawCallContext::GetDrawCallQueue(EDrawCallQueueType queueType) {
-		return m_DrawCallQueues[(uint32)queueType];
-	}
-
-	void DrawCallContext::Reset() {
-		for(auto& queue : m_DrawCallQueues) {
-			queue.Reset();
-		}
-	}
 }

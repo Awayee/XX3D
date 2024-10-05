@@ -6,12 +6,12 @@
 #include "Asset/Public/AssetLoader.h"
 
 namespace Object {
-	void TransformECSComp::SetTransform(const Math::FTransform& transform) {
+	void TransformECSComponent::SetTransform(const Math::FTransform& transform) {
 		m_Transform = transform;
 		UpdateMat();
 	}
 
-	void TransformECSComp::UpdateMat() {
+	void TransformECSComponent::UpdateMat() {
 		m_Transform.BuildMatrix(m_MatrixData.Transform);
 		m_Transform.BuildInverseMatrix(m_MatrixData.InverseTransform);
 	}
@@ -26,19 +26,19 @@ namespace Object {
 	}
 
 	void TransformComponent::OnAdd() {
-		GetScene()->AddComponent<TransformECSComp>(GetEntityID());
+		GetScene()->AddComponent<TransformECSComponent>(GetEntityID());
 	}
 
 	void TransformComponent::OnRemove() {
-		GetScene()->RemoveComponent<TransformECSComp>(GetEntityID());
+		GetScene()->RemoveComponent<TransformECSComponent>(GetEntityID());
 	}
 
 	void TransformComponent::TransformUpdated() {
-		TransformECSComp* component = GetScene()->GetComponent<TransformECSComp>(GetEntityID());
+		TransformECSComponent* component = GetScene()->GetComponent<TransformECSComponent>(GetEntityID());
 		component->SetTransform(Transform);
 	}
 
-	void MeshECSComp::BuildFromAsset(const Asset::MeshAsset& meshAsset) {
+	void MeshECSComponent::BuildFromAsset(const Asset::MeshAsset& meshAsset) {
 		auto r = RHI::Instance();
 		Primitives.Reset();
 		Primitives.Reserve(meshAsset.Primitives.Size());
@@ -68,33 +68,32 @@ namespace Object {
 	}
 
 	void MeshComponent::OnAdd() {
-		GetScene()->AddComponent<MeshECSComp>(GetEntityID());
+		GetScene()->AddComponent<MeshECSComponent>(GetEntityID());
 	}
 
 	void MeshComponent::OnRemove() {
-		GetScene()->RemoveComponent<MeshECSComp>(GetEntityID());
+		GetScene()->RemoveComponent<MeshECSComponent>(GetEntityID());
 	}
 
 	void MeshComponent::SetMeshFile(const XString& meshFile) {
 		m_MeshFile = meshFile;
-		MeshECSComp* component = GetScene()->GetComponent<MeshECSComp>(GetEntityID());
+		MeshECSComponent* component = GetScene()->GetComponent<MeshECSComponent>(GetEntityID());
 		Asset::MeshAsset asset;
 		Asset::AssetLoader::LoadProjectAsset(&asset, m_MeshFile.c_str());
 		component->BuildFromAsset(asset);
 	}
 
-	void MeshRenderSystem::Update(ECSScene* ecsScene, TransformECSComp* transform, MeshECSComp* staticMesh) {
+	void MeshRenderSystem::Update(ECSScene* ecsScene, TransformECSComponent* transform, MeshECSComponent* staticMesh) {
 		// update uniform
-		RHIDynamicBuffer uniformBuffer = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(TransformECSComp::MatrixData), &transform->GetMatrixData(), 0);
+		RHIDynamicBuffer uniformBuffer = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(TransformECSComponent::MatrixData), &transform->GetMatrixData(), 0);
 		// create draw call
 		Object::RenderScene* scene = (Object::RenderScene*)ecsScene;
 		Object::RenderCamera* mainCamera = scene->GetMainCamera();
 		Object::DirectionalLight* light = scene->GetDirectionalLight();
-		Render::DrawCallContext& drawCallContext = scene->GetDrawCallContext();
 		for(auto& primitive: staticMesh->Primitives) {
 			const Math::AABB3 aabb = primitive.AABB.Transform(transform->GetMatrixData().Transform);
 			if(mainCamera->GetFrustum().Cull(aabb)) {
-				drawCallContext.PushDrawCall(Render::EDrawCallQueueType::BasePass, [&primitive, uniformBuffer](RHICommandBuffer* cmd) {
+				scene->GetBasePasDrawCallQueue().PushDrawCall([&primitive, uniformBuffer](RHICommandBuffer* cmd) {
 					cmd->BindVertexBuffer(primitive.VertexBuffer.Get(), 0, 0);
 					cmd->BindIndexBuffer(primitive.IndexBuffer.Get(), 0);
 					cmd->SetShaderParam(1, 0, RHIShaderParam::UniformBuffer(uniformBuffer));
@@ -110,8 +109,7 @@ namespace Object {
 				for (uint32 i = 0; i < light->GetCascadeNum(); ++i) {
 					const auto& frustum = light->GetFrustum(i);
 					if(frustum.Cull(aabb)) {
-						auto& dcQueue = light->GetDrawCallQueue(i);
-						dcQueue.PushDrawCall([&primitive, uniformBuffer](RHICommandBuffer* cmd) {
+						light->GetDrawCallQueue(i).PushDrawCall([&primitive, uniformBuffer](RHICommandBuffer* cmd) {
 							cmd->SetShaderParam(1, 0, RHIShaderParam::UniformBuffer(uniformBuffer));
 							cmd->BindVertexBuffer(primitive.VertexBuffer.Get(), 0, 0);
 							cmd->BindIndexBuffer(primitive.IndexBuffer.Get(), 0);
@@ -147,7 +145,7 @@ namespace Object {
 		com->BuildInstances(file);
 	}
 
-	void InstancedMeshRenderSystem::Update(ECSScene* scene, MeshECSComp* meshCom, InstancedDataECSComponent* instanceCom) {
+	void InstancedMeshRenderSystem::Update(ECSScene* scene, MeshECSComponent* meshCom, InstancedDataECSComponent* instanceCom) {
 
 	}
 }

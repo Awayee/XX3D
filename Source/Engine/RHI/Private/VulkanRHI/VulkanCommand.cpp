@@ -225,7 +225,7 @@ m_Semaphore(smp),
 m_QueueType(queue),
 // TODO stage mask would be reset
 m_StageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT){
-	m_PipelineStateContainer.Reset(new VulkanPipelineStateContainer(context->GetDevice()));
+	m_PipelineDescriptorSetCache.Reset(new VulkanPipelineDescriptorSetCache(context->GetDevice()));
 }
 
 VulkanCommandBuffer::~VulkanCommandBuffer() {
@@ -235,7 +235,7 @@ VulkanCommandBuffer::~VulkanCommandBuffer() {
 
 void VulkanCommandBuffer::Reset() {
 	vkResetCommandBuffer(m_Handle, 0);
-	m_PipelineStateContainer->Reset();
+	m_PipelineDescriptorSetCache->Reset();
 	m_ScissorDirty = true;
 	m_ViewportDirty = true;
 	CheckBegin();
@@ -295,20 +295,24 @@ void VulkanCommandBuffer::EndRendering() {
 
 void VulkanCommandBuffer::BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) {
 	VulkanRHIGraphicsPipelineState* vkPipeline = static_cast<VulkanRHIGraphicsPipelineState*>(pipeline);
-	vkCmdBindPipeline(m_Handle, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipeline->GetPipelineHandle());
-	m_PipelineStateContainer->BindPipelineState(vkPipeline);
+	VkPipeline handle = vkPipeline->GetPipelineHandle();
+	if(m_PipelineDescriptorSetCache->GetVkPipeline() != handle) {
+		m_PipelineDescriptorSetCache->BindGraphicsPipeline(vkPipeline);
+		vkCmdBindPipeline(m_Handle, VK_PIPELINE_BIND_POINT_GRAPHICS, handle);
+	}
 }
 
 void VulkanCommandBuffer::BindComputePipeline(RHIComputePipelineState* pipeline) {
 	VulkanRHIComputePipelineState* vkPipeline = static_cast<VulkanRHIComputePipelineState*>(pipeline);
-	vkCmdBindPipeline(m_Handle, VK_PIPELINE_BIND_POINT_COMPUTE, vkPipeline->GetPipelineHandle());
-	m_PipelineStateContainer->BindPipelineState(vkPipeline);
+	VkPipeline handle = vkPipeline->GetPipelineHandle();
+	if(m_PipelineDescriptorSetCache->GetVkPipeline() != handle) {
+		m_PipelineDescriptorSetCache->BindComputePipeline(vkPipeline);
+		vkCmdBindPipeline(m_Handle, VK_PIPELINE_BIND_POINT_COMPUTE, handle);
+	}
 }
 
 void VulkanCommandBuffer::SetShaderParam(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& parameter) {
-	if(VulkanPipelineDescriptorSetCache* dsCache = m_PipelineStateContainer->GetCurrentDescriptorSetCache()) {
-		dsCache->SetParam(setIndex, bindIndex, parameter);
-	}
+	m_PipelineDescriptorSetCache->SetParam(setIndex, bindIndex, parameter);
 }
 
 void VulkanCommandBuffer::BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) {
@@ -453,21 +457,16 @@ void VulkanCommandBuffer::CheckEnd() {
 	}
 }
 
-void VulkanCommandBuffer::PrepareDraw() {
-	if(VulkanPipelineDescriptorSetCache* dsCache = m_PipelineStateContainer->GetCurrentDescriptorSetCache()) {
-		if(VulkanRHIGraphicsPipelineState* graphicsPSO = m_PipelineStateContainer->GetCurrentGraphicsPipelineState()) {
-			dsCache->Bind(m_Handle, VK_PIPELINE_BIND_POINT_GRAPHICS);
-			if(m_ViewportDirty) {
-				vkCmdSetViewport(m_Handle, 0, 1, &m_Viewport);
-				m_ViewportDirty = false;
-			}
-			if(m_ScissorDirty) {
-				vkCmdSetScissor(m_Handle, 0, 1, &m_Scissor);
-				m_ScissorDirty = false;
-			}
+void VulkanCommandBuffer::PrepareDraw(){
+	m_PipelineDescriptorSetCache->Bind(m_Handle);
+	if(VK_PIPELINE_BIND_POINT_GRAPHICS == m_PipelineDescriptorSetCache->GetVkPipelineBindPoint()) {
+		if (m_ViewportDirty) {
+			vkCmdSetViewport(m_Handle, 0, 1, &m_Viewport);
+			m_ViewportDirty = false;
 		}
-		else if(VulkanRHIComputePipelineState* computePSO = m_PipelineStateContainer->GetCurrentComputePipelineState()) {
-			dsCache->Bind(m_Handle, VK_PIPELINE_BIND_POINT_COMPUTE);
+		if (m_ScissorDirty) {
+			vkCmdSetScissor(m_Handle, 0, 1, &m_Scissor);
+			m_ScissorDirty = false;
 		}
 	}
 }

@@ -11,13 +11,15 @@ namespace Object {
 
 	class RenderScene: public ECSScene{
 	public:
+		static void AddConstructFunc(Func<void(RenderScene*)>&& f);
 		NON_COPYABLE(RenderScene);
 		NON_MOVEABLE(RenderScene);
 		RenderScene();
 		~RenderScene();
 		RenderCamera* GetMainCamera() { return m_Camera.Get(); }
 		DirectionalLight* GetDirectionalLight() { return m_DirectionalLight.Get(); }
-		Render::DrawCallContext& GetDrawCallContext() { return m_DrawCallContext; }
+		Render::DrawCallQueue& GetBasePasDrawCallQueue() { return m_BasePassDrawCallQueue; }
+		Render::DrawCallQueue& GetLightingPassDrawCallQueue() { return m_LightingPassDrawCallQueue; }
 		void Update();
 		void Render(Render::RenderGraph& rg, Render::RGTextureNode* targetNode);
 		static RenderScene* GetDefaultScene(); // TODO TEST
@@ -28,7 +30,8 @@ namespace Object {
 		static TUniquePtr<RenderScene> s_Default;
 		TUniquePtr<DirectionalLight> m_DirectionalLight;
 		TUniquePtr<RenderCamera> m_Camera;
-		Render::DrawCallContext m_DrawCallContext;
+		Render::DrawCallQueue m_BasePassDrawCallQueue;
+		Render::DrawCallQueue m_LightingPassDrawCallQueue;
 		// fo gBuffer
 		USize2D m_TargetSize;
 		RHITexturePtr m_GBufferNormal;
@@ -44,12 +47,6 @@ namespace Object {
 		void CreateTextureResources();
 		void CreatePSOs();
 	};
-
-	void RenderSceneAddConstructFunc(Func<void(RenderScene*)>&& f);
-
-	template<class T>
-	void RenderSceneRegisterSystem() {
-		RenderSceneAddConstructFunc([](RenderScene* scene) {scene->RegisterSystem<T>(); });
-	}
-#define RENDER_SCENE_REGISTER_SYSTEM(cls) private: inline static const uint8 s_RegisterSystem = (Object::RenderSceneRegisterSystem<cls>(), 0)
+#define RENDER_SCENE_REGISTER_SYSTEM(cls) private:\
+	inline static const uint8 s_RegisterSystem = (Object::RenderScene::AddConstructFunc([](RenderScene* scene){scene->RegisterSystem<cls>();}), 0)
 }

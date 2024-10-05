@@ -7,7 +7,7 @@
 #include "Core/Public/TUniquePtr.h"
 
 class VulkanCommandContext;
-class VulkanPipelineStateContainer;
+class VulkanPipelineDescriptorSetCache;
 
 class VulkanStagingBuffer : public VulkanBuffer {
 public:
@@ -63,7 +63,7 @@ private:
 	VkCommandBuffer m_Handle{ VK_NULL_HANDLE };
 	VkSemaphore m_Semaphore;// signal semaphore
 	EQueueType m_QueueType;
-	TUniquePtr<VulkanPipelineStateContainer> m_PipelineStateContainer;
+	TUniquePtr<VulkanPipelineDescriptorSetCache> m_PipelineDescriptorSetCache;
 	VkViewport m_Viewport {};
 	VkRect2D m_Scissor {};
 	VkPipelineStageFlags m_StageMask;

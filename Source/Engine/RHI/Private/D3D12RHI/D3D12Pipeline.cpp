@@ -242,7 +242,7 @@ D3D12GraphicsPipelineState::D3D12GraphicsPipelineState(const RHIGraphicsPipeline
 	d3d12BlendDesc.AlphaToCoverageEnable = false;
 	d3d12BlendDesc.IndependentBlendEnable = false;
 	D3D12_LOGIC_OP logicOp = blendDesc.LogicOpEnable ? D3D12_LOGIC_OP_NOOP : ToD3D12LogicOp(blendDesc.LogicOp);
-	for(uint32 i=0; i<blendDesc.BlendStates.Size(); ++i) {
+	for(uint32 i=0; i<desc.NumColorTargets; ++i) {
 		const RHIBlendState& blendState = blendDesc.BlendStates[i];
 		D3D12_RENDER_TARGET_BLEND_DESC& d3d12BlendState = d3d12BlendDesc.RenderTarget[i];
 		d3d12BlendState.BlendEnable = blendState.Enable;
@@ -282,8 +282,8 @@ D3D12GraphicsPipelineState::D3D12GraphicsPipelineState(const RHIGraphicsPipeline
 
 	d3d12Desc.PrimitiveTopologyType = ToD3D12PrimitiveTopologyType(desc.PrimitiveTopology);
 
-	d3d12Desc.NumRenderTargets = desc.ColorFormats.Size();
-	for(uint32 i=0; i<desc.ColorFormats.Size(); ++i) {
+	d3d12Desc.NumRenderTargets = desc.NumColorTargets;
+	for(uint32 i=0; i<desc.NumColorTargets; ++i) {
 		d3d12Desc.RTVFormats[i] = ToD3D12Format(desc.ColorFormats[i]);
 	}
 	d3d12Desc.DSVFormat = ToD3D12Format(desc.DepthStencilFormat);
@@ -328,8 +328,10 @@ void D3D12PipelineDescriptorCache::SetShaderParam(uint32 setIndex, uint32 bindIn
 		const D3D12PipelineLayout::DescriptorSlot slot = layout->GetDescriptorSlot(setIndex, bindIndex);
 		DescriptorCache& cache = m_DescriptorCaches[EnumCast(slot.HeapType)];
 		CHECK(slot.SlotIndex < cache.Params.Size());
-		cache.Params[slot.SlotIndex] = param;
-		m_DirtyDescriptorTables[EnumCast(slot.HeapType)] = true;
+		if(cache.Params[slot.SlotIndex] != param) {
+			cache.Params[slot.SlotIndex] = param;
+			m_DirtyDescriptorTables[EnumCast(slot.HeapType)] = true;
+		}
 	}
 	else {
 		LOG_WARNING("[D3D12PipelineDescriptorCache::SetShaderParam] no pipline bound!");

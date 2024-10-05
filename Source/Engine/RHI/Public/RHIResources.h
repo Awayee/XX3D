@@ -43,6 +43,7 @@ struct RHIDynamicBuffer {
 	uint32 Offset;
 	uint32 Size;
 	uint32 Stride;
+	bool operator==(const RHIDynamicBuffer& rhs) const;
 };
 
 // texture sub resource
@@ -222,7 +223,7 @@ struct RHIBlendState {
 };
 
 struct RHIBlendDesc {
-	TArray<RHIBlendState> BlendStates;
+	TStaticArray<RHIBlendState, RHI_COLOR_TARGET_MAX> BlendStates;
 	bool LogicOpEnable;
 	ELogicOp LogicOp;
 	float BlendConst[4];
@@ -272,10 +273,11 @@ struct RHIGraphicsPipelineStateDesc {
 	RHIBlendDesc BlendDesc;
 	RHIRasterizerState RasterizerState;
 	RHIDepthStencilState DepthStencilState;
-	EPrimitiveTopology PrimitiveTopology;
-	TArray<ERHIFormat> ColorFormats;
-	ERHIFormat DepthStencilFormat;
-	uint8 NumSamples;
+	EPrimitiveTopology PrimitiveTopology{ EPrimitiveTopology::TriangleList };
+	TStaticArray<ERHIFormat, RHI_COLOR_TARGET_MAX> ColorFormats{ ERHIFormat::Undefined };
+	uint8 NumColorTargets{ 0 };
+	ERHIFormat DepthStencilFormat{ ERHIFormat::Undefined };
+	uint8 NumSamples{ 1 };
 };
 
 class RHIGraphicsPipelineState: public RHIResource {
@@ -320,6 +322,8 @@ struct RHIShaderParam {
 	uint32 ArrayIndex = 0;
 	EBindingType Type{ EBindingType::MaxNum };
 	bool IsDynamicBuffer{ false };
+	bool operator==(const RHIShaderParam& rhs) const;
+	bool operator!=(const RHIShaderParam& rhs) const;
 	static RHIShaderParam UniformBuffer(RHIBuffer* buffer, uint32 offset, uint32 size);
 	static RHIShaderParam UniformBuffer(RHIBuffer* buffer) { return UniformBuffer(buffer, 0, buffer->GetDesc().ByteSize); }
 	static RHIShaderParam StorageBuffer(RHIBuffer* buffer, uint32 offset, uint32 size);

@@ -29,16 +29,11 @@ namespace Object {
 	    
     }
 
-    void RenderSceneAddConstructFunc(Func<void(RenderScene*)>&& f) {
-        GetConstructFuncs().PushBack(f);
-    }
-
     TUniquePtr<RenderScene> RenderScene::s_Default;
 
-    struct LightUBO {
-        Math::FVector3 LightDir; float _padding;
-        Math::FVector3 LightColor; float _padding1;
-    };
+    void RenderScene::AddConstructFunc(Func<void(RenderScene*)>&& f) {
+        GetConstructFuncs().PushBack(MoveTemp(f));
+    }
 
     RenderScene::RenderScene(){
         // register systems
@@ -59,7 +54,8 @@ namespace Object {
         m_Camera->UpdateBuffer();
         m_DirectionalLight->UpdateShadowCameras(m_Camera);
         m_DirectionalLight->UpdateShadowMapDrawCalls();
-        m_DrawCallContext.Reset();
+        m_BasePassDrawCallQueue.Reset();
+        m_LightingPassDrawCallQueue.Reset();
         UpdateSceneDrawCall();
         SystemUpdate();
     }
@@ -89,7 +85,7 @@ namespace Object {
         gBufferNode->WriteColorTarget(albedoNode, 1);
         gBufferNode->WriteDepthTarget(depthNode);
         gBufferNode->SetTask([this](RHICommandBuffer* cmd) {
-            m_DrawCallContext.ExecuteDraCall(Render::EDrawCallQueueType::BasePass, cmd);
+            GetBasePasDrawCallQueue().Execute(cmd);
         });
 
         // copy depth texture
@@ -120,7 +116,7 @@ namespace Object {
         deferredLightingNode->ReadDepthTarget(depthNode);
         deferredLightingNode->SetRenderArea(renderArea);
         deferredLightingNode->SetTask([this](RHICommandBuffer* cmd) {
-            m_DrawCallContext.ExecuteDraCall(Render::EDrawCallQueueType::DeferredLighting, cmd);
+            GetLightingPassDrawCallQueue().Execute(cmd);
         });
     }
 
@@ -141,13 +137,13 @@ namespace Object {
     }
 
     void RenderScene::UpdateSceneDrawCall() {
-        m_DrawCallContext.PushDrawCall(Render::EDrawCallQueueType::BasePass, [this](RHICommandBuffer* cmd) {
+        GetBasePasDrawCallQueue().PushDrawCall([this](RHICommandBuffer* cmd) {
             cmd->BindGraphicsPipeline(m_GBufferPSO);
             cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(m_Camera->GertUniformBuffer()));
         });
 
         // deferred lighting
-        m_DrawCallContext.PushDrawCall(Render::EDrawCallQueueType::DeferredLighting, [this](RHICommandBuffer* cmd) {
+        GetLightingPassDrawCallQueue().PushDrawCall([this](RHICommandBuffer* cmd) {
             cmd->BindGraphicsPipeline(m_DeferredLightingPSO);
             cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(m_Camera->GertUniformBuffer()));
             cmd->SetShaderParam(0, 1, RHIShaderParam::UniformBuffer(m_DirectionalLight->GetUniform()));
@@ -230,7 +226,7 @@ namespace Object {
             desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Back };
             desc.DepthStencilState = { true, true, ECompareType::Less, false };
             desc.PrimitiveTopology = EPrimitiveTopology::TriangleList;
-            desc.ColorFormats.Resize(colorFormats.Size());
+            desc.NumColorTargets = colorFormats.Size();
             for (uint32 i = 0; i < colorFormats.Size(); ++i) {
                 desc.ColorFormats[i] = colorFormats[i];
             }
@@ -260,7 +256,8 @@ namespace Object {
             desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Back };
             desc.DepthStencilState = { false, false, ECompareType::Always, false };
             desc.PrimitiveTopology = EPrimitiveTopology::TriangleList;
-            desc.ColorFormats.PushBack(colorFormat);
+            desc.ColorFormats[0] = colorFormat;
+            desc.NumColorTargets = 1;
             desc.DepthStencilFormat = RHI::Instance()->GetDepthFormat();
             desc.NumSamples = 1;
             m_DeferredLightingPSO = r->CreateGraphicsPipelineState(desc);

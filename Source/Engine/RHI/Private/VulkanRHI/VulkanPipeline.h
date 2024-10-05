@@ -1,7 +1,6 @@
 #pragma once
 #include "VulkanCommon.h"
 #include "Core/Public/Container.h"
-#include "Core/Public/TUniquePtr.h"
 #include "RHI/Public/RHIResources.h"
 
 class VulkanDevice;
@@ -26,40 +25,6 @@ private:
 	uint32 m_PoolMaxIndex;
 	void CreatePool(VkDescriptorPool* poolPtr);
 	void AddPool();
-};
-
-// cache parameters for writing descriptor set
-class VulkanDescriptorSetParamCache {
-public:
-	NON_COPYABLE(VulkanDescriptorSetParamCache);
-	VulkanDescriptorSetParamCache(const RHIShaderParamSetLayout& layout);
-	VulkanDescriptorSetParamCache(VulkanDescriptorSetParamCache&&)noexcept = default;
-	void SetParam(const VulkanDynamicBufferAllocator* allocator, uint32 bindIndex, const RHIShaderParam& param);
-	TArray<VkWriteDescriptorSet>& GetWrites() { return m_Writes; }
-private:
-	const RHIShaderParamSetLayout& m_LayoutRef;
-	TArray<VkDescriptorBufferInfo> m_WriteBuffers;
-	TArray<VkDescriptorImageInfo> m_WriteImages;
-	TArray<VkWriteDescriptorSet> m_Writes;
-};
-
-// cache descriptors for pipelines, this object must be freed before PSO
-class VulkanPipelineDescriptorSetCache {
-public:
-	NON_COPYABLE(VulkanPipelineDescriptorSetCache);
-	NON_MOVEABLE(VulkanPipelineDescriptorSetCache);
-	VulkanPipelineDescriptorSetCache(VulkanDevice* device, const VulkanPipelineLayout* layout);
-	~VulkanPipelineDescriptorSetCache();
-	void SetParam(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& param);
-	void Bind(VkCommandBuffer cmd, VkPipelineBindPoint point);
-private:
-	VulkanDevice* m_Device;
-	const VulkanPipelineLayout* m_Layout;// reference, for layout checking.
-	TArray<VulkanDescriptorSetParamCache> m_ParamCaches;
-	TArray<VkDescriptorSet> m_BindingSets; // current binding descriptor sets
-	TArray<bool> m_DirtySets; // mark set as dirty, to create new descriptor set handle
-	TArray<VkDescriptorSet> m_AllDescriptorSets;// all allocated descriptor sets
-	VkDescriptorSet ReallocateSet(uint32 setIndex);
 };
 
 // pipeline layout owned by pso
@@ -98,26 +63,48 @@ private:
 	VulkanDevice* m_Device;
 };
 
-class VulkanPipelineStateContainer {
+// cache parameters for writing descriptor set
+class VulkanDescriptorSetParamCache {
 public:
-	NON_COPYABLE(VulkanPipelineStateContainer);
-	NON_MOVEABLE(VulkanPipelineStateContainer);
-	explicit VulkanPipelineStateContainer(VulkanDevice* device);
-	void BindPipelineState(VulkanRHIGraphicsPipelineState* pso);
-	void BindPipelineState(VulkanRHIComputePipelineState* pso);
-	VulkanPipelineDescriptorSetCache* GetCurrentDescriptorSetCache();
-	VulkanRHIComputePipelineState* GetCurrentComputePipelineState();
-	VulkanRHIGraphicsPipelineState* GetCurrentGraphicsPipelineState();
+	NON_COPYABLE(VulkanDescriptorSetParamCache);
+	VulkanDescriptorSetParamCache(const RHIShaderParamSetLayout& layout);
+	VulkanDescriptorSetParamCache(VulkanDescriptorSetParamCache&&)noexcept = default;
+	// Cache descriptor write info, if info is modified, return true
+	bool SetParam(const VulkanDynamicBufferAllocator* allocator, uint32 bindIndex, const RHIShaderParam& param);
+	TArray<VkWriteDescriptorSet>& GetWrites() { return m_Writes; }
+private:
+	const RHIShaderParamSetLayout& m_LayoutRef;
+	TArray<VkDescriptorBufferInfo> m_WriteBuffers;
+	TArray<VkDescriptorImageInfo> m_WriteImages;
+	TArray<VkWriteDescriptorSet> m_Writes;
+};
+
+class VulkanPipelineDescriptorSetCache {
+public:
+	NON_COPYABLE(VulkanPipelineDescriptorSetCache);
+	NON_MOVEABLE(VulkanPipelineDescriptorSetCache);
+	VulkanPipelineDescriptorSetCache(VulkanDevice* device);
+	~VulkanPipelineDescriptorSetCache()  =default;
+	void BindGraphicsPipeline(const VulkanRHIGraphicsPipelineState* pipeline);
+	void BindComputePipeline(const VulkanRHIComputePipelineState* pipeline);
+	void SetParam(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& param);
+	void Bind(VkCommandBuffer cmd);
 	void Reset();
+	VkPipelineBindPoint GetVkPipelineBindPoint();
+	VkPipeline GetVkPipeline();
 private:
 	VulkanDevice* m_Device;
-	struct PipelineData {
-		VkPipelineBindPoint PipelineBindPoint;
-		union {
-			VulkanRHIGraphicsPipelineState* GraphicsPipelineState;
-			VulkanRHIComputePipelineState* ComputePipelineState;
-		};
-		TUniquePtr<VulkanPipelineDescriptorSetCache> DescriptorSetCache;
+	union {
+		const VulkanRHIGraphicsPipelineState* m_GraphicsPipeline;
+		const VulkanRHIComputePipelineState* m_ComputePipeline;
+		void* m_PipelineData;
 	};
-	TArray<PipelineData> m_Pipelines;
+	EPipelineType m_PipelineType;
+	TArray<VulkanDescriptorSetParamCache> m_ParamCaches;
+	TArray<VkDescriptorSet> m_BindingSets; // current binding descriptor sets
+	TArray<bool> m_DirtySets; // mark set as dirty, to create new descriptor set handle
+	TArray<VkDescriptorSet> m_AllDescriptorSets;// all allocated descriptor sets
+	void SetupParameterLayout();
+	VkDescriptorSet ReallocateSet(uint32 setIndex);
+	const VulkanPipelineLayout* GetLayout();
 };

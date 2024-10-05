@@ -41,7 +41,7 @@ namespace Object {
 		desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Null }; // do not cull
 		desc.DepthStencilState = { true, true, ECompareType::LessEqual, false };
 		desc.PrimitiveTopology = EPrimitiveTopology::TriangleList;
-		desc.ColorFormats.PushBack(colorFormat);
+		desc.NumColorTargets = 1;
 		desc.ColorFormats[0] = colorFormat;
 		desc.DepthStencilFormat = RHI::Instance()->GetDepthFormat();
 		desc.NumSamples = 1;
@@ -110,7 +110,7 @@ namespace Object {
 
 	void SkyBoxSystem::Update(ECSScene* scene, SkyBoxECSComp* component) {
 		RenderScene* renderScene = (RenderScene*)scene;
-		Render::DrawCallQueue& queue = renderScene->GetDrawCallContext().GetDrawCallQueue(Render::EDrawCallQueueType::DeferredLighting);
+		Render::DrawCallQueue& queue = renderScene->GetLightingPassDrawCallQueue();
 		queue.PushDrawCall([renderScene, component](RHICommandBuffer* cmd) {
 			cmd->BindGraphicsPipeline(component->PSO);
 			cmd->BindVertexBuffer(component->VertexBuffer, 0, 0);

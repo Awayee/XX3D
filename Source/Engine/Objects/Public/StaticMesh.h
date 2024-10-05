@@ -9,8 +9,11 @@
 #include "Objects/Public/Level.h"
 
 namespace Object {
+	// The level components registered by REGISTER_LEVEL_COMPONENT handles game and editor logic;
+	// the ECS components registered by REGISTER_ECS_COMPONENT handles rendering.
+
 	// transform
-	struct TransformECSComp {
+	struct TransformECSComponent {
 		struct MatrixData {
 			Math::FMatrix4x4 Transform{ Math::FMatrix4x4::IDENTITY };
 			Math::FMatrix4x4 InverseTransform{ Math::FMatrix4x4::IDENTITY };
@@ -22,7 +25,7 @@ namespace Object {
 		Math::FTransform m_Transform;
 		MatrixData m_MatrixData;
 		void UpdateMat();
-		REGISTER_ECS_COMPONENT(TransformECSComp);
+		REGISTER_ECS_COMPONENT(TransformECSComponent);
 	};
 
 	class TransformComponent: public LevelComponent {
@@ -45,14 +48,14 @@ namespace Object {
 		RHITexture* Texture;
 		Math::AABB3 AABB;
 	};
-	struct MeshECSComp {
+	struct MeshECSComponent {
 		TArray<PrimitiveRenderData> Primitives;
 		void BuildFromAsset(const Asset::MeshAsset& meshAsset);
-		REGISTER_ECS_COMPONENT(MeshECSComp);
+		REGISTER_ECS_COMPONENT(MeshECSComponent);
 	};
 
-	class MeshRenderSystem: public ECSSystem<TransformECSComp, MeshECSComp> {
-		void Update(ECSScene* ecsScene, TransformECSComp* transform, MeshECSComp* staticMesh) override;
+	class MeshRenderSystem: public ECSSystem<TransformECSComponent, MeshECSComponent> {
+		void Update(ECSScene* ecsScene, TransformECSComponent* transform, MeshECSComponent* staticMesh) override;
 		RENDER_SCENE_REGISTER_SYSTEM(MeshRenderSystem);
 	};
 
@@ -75,8 +78,8 @@ namespace Object {
 		REGISTER_ECS_COMPONENT(InstancedDataECSComponent);
 	};
 
-	class InstancedMeshRenderSystem: public ECSSystem<MeshECSComp, InstancedDataECSComponent> {
-		void Update(ECSScene* scene, MeshECSComp* meshCom, InstancedDataECSComponent* instanceCom) override;
+	class InstancedMeshRenderSystem: public ECSSystem<MeshECSComponent, InstancedDataECSComponent> {
+		void Update(ECSScene* scene, MeshECSComponent* meshCom, InstancedDataECSComponent* instanceCom) override;
 		RENDER_SCENE_REGISTER_SYSTEM(InstancedMeshRenderSystem);
 	};
 

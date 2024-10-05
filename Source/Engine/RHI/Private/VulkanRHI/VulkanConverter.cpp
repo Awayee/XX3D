@@ -501,3 +501,11 @@ void ToImageSubResourceRange(RHITextureSubRes subRes, VkImageSubresourceRange& o
 	out.baseArrayLayer = subRes.ArrayIndex * perLayerSize;
 	out.layerCount = subRes.ArraySize * perLayerSize;
 }
+
+VkPipelineBindPoint ToVkPipelineBindPoint(EPipelineType type) {
+	switch (type) {
+	case EPipelineType::Graphics: return VK_PIPELINE_BIND_POINT_GRAPHICS;
+	case EPipelineType::Compute: return VK_PIPELINE_BIND_POINT_COMPUTE;
+	default: return VK_PIPELINE_BIND_POINT_MAX_ENUM;
+	}
+}
