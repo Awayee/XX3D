@@ -189,7 +189,7 @@ bool RHIShaderParam::operator==(const RHIShaderParam& rhs) const {
     switch(Type) {
     case EBindingType::StorageBuffer:
     case EBindingType::UniformBuffer:
-        if(IsDynamicBuffer == rhs.IsDynamicBuffer) {
+        if(IsDynamicBuffer != rhs.IsDynamicBuffer) {
             return false;
         }
         return IsDynamicBuffer ? (Data.DynamicBuffer == rhs.Data.DynamicBuffer) : (Data.Buffer == rhs.Data.Buffer && Data.Offset == rhs.Data.Offset && Data.Size == rhs.Data.Offset);

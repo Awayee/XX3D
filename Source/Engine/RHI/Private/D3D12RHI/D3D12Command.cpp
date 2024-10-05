@@ -91,17 +91,21 @@ void D3D12CommandList::EndRendering() {
 
 void D3D12CommandList::BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) {
 	auto* d3d12Pipeline = (D3D12GraphicsPipelineState*)pipeline;
-	m_CommandList->SetPipelineState(d3d12Pipeline->GetPipelineState());
-	m_CommandList->SetGraphicsRootSignature(d3d12Pipeline->GetRootSignature());
-	m_CommandList->IASetPrimitiveTopology(d3d12Pipeline->GetPrimitiveTopology());
-	m_DescriptorCache->BindGraphicsPipelineState(d3d12Pipeline);
+	if(m_DescriptorCache->GetD3D12PipelineState() != d3d12Pipeline->GetPipelineState()) {
+		m_CommandList->SetPipelineState(d3d12Pipeline->GetPipelineState());
+		m_CommandList->SetGraphicsRootSignature(d3d12Pipeline->GetRootSignature());
+		m_CommandList->IASetPrimitiveTopology(d3d12Pipeline->GetPrimitiveTopology());
+		m_DescriptorCache->BindGraphicsPipelineState(d3d12Pipeline);
+	}
 }
 
 void D3D12CommandList::BindComputePipeline(RHIComputePipelineState* pipeline) {
 	auto* d3d12Pipeline = (D3D12ComputePipelineState*)pipeline;
-	m_CommandList->SetPipelineState(d3d12Pipeline->GetPipelineState());
-	m_CommandList->SetComputeRootSignature(d3d12Pipeline->GetRootSignature());
-	m_DescriptorCache->BindComputePipelineState(d3d12Pipeline);
+	if(m_DescriptorCache->GetD3D12PipelineState() != d3d12Pipeline->GetPipelineState()) {
+		m_CommandList->SetPipelineState(d3d12Pipeline->GetPipelineState());
+		m_CommandList->SetComputeRootSignature(d3d12Pipeline->GetRootSignature());
+		m_DescriptorCache->BindComputePipelineState(d3d12Pipeline);
+	}
 }
 
 void D3D12CommandList::SetShaderParam(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& parameter) {

@@ -63,8 +63,7 @@ public:
 	void BindComputePipelineState(D3D12ComputePipelineState* pipeline);
 	void Reset();
 	void SetShaderParam(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& param);
-	D3D12GraphicsPipelineState* GetGraphicsPipelineState();
-	D3D12ComputePipelineState* GetComputePipelineState();
+	ID3D12PipelineState* GetD3D12PipelineState();
 	void PreDraw(ID3D12GraphicsCommandList* cmd);
 private:
 	struct DescriptorCache {

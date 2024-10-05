@@ -338,12 +338,14 @@ void D3D12PipelineDescriptorCache::SetShaderParam(uint32 setIndex, uint32 bindIn
 	}
 }
 
-D3D12GraphicsPipelineState* D3D12PipelineDescriptorCache::GetGraphicsPipelineState() {
-	return m_PipelineType == EPipelineType::Graphics ? m_GraphicsPipelineState : nullptr;
-}
-
-D3D12ComputePipelineState* D3D12PipelineDescriptorCache::GetComputePipelineState() {
-	return m_PipelineType == EPipelineType::Compute ? m_ComputePipelineState : nullptr;
+ID3D12PipelineState* D3D12PipelineDescriptorCache::GetD3D12PipelineState() {
+	if(EPipelineType::Graphics == m_PipelineType) {
+		return m_GraphicsPipelineState->GetPipelineState();
+	}
+	if(EPipelineType::Compute == m_PipelineType) {
+		return m_ComputePipelineState->GetPipelineState();
+	}
+	return nullptr;
 }
 
 void D3D12PipelineDescriptorCache::PreDraw(ID3D12GraphicsCommandList* cmd) {
@@ -400,8 +402,11 @@ void D3D12PipelineDescriptorCache::PreDraw(ID3D12GraphicsCommandList* cmd) {
 }
 
 const D3D12PipelineLayout* D3D12PipelineDescriptorCache::GetLayout() {
-	if(m_PipelineData) {
-		return m_PipelineType == EPipelineType::Graphics ? &m_GraphicsPipelineState->GetLayout() : &m_ComputePipelineState->GetLayout();\
+	if (EPipelineType::Graphics == m_PipelineType) {
+		return &m_GraphicsPipelineState->GetLayout();
+	}
+	if (EPipelineType::Compute == m_PipelineType) {
+		return &m_ComputePipelineState->GetLayout();
 	}
 	return nullptr;
 }

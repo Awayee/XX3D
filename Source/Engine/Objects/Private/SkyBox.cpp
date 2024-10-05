@@ -115,7 +115,7 @@ namespace Object {
 			cmd->BindGraphicsPipeline(component->PSO);
 			cmd->BindVertexBuffer(component->VertexBuffer, 0, 0);
 			cmd->BindIndexBuffer(component->IndexBuffer, 0);
-			cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(renderScene->GetMainCamera()->GertUniformBuffer()));
+			cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(renderScene->GetMainCamera()->GetUniformBuffer()));
 			RHITexture* cubeTex = component->CubeMap.Get();
 			if (!cubeTex) {
 				cubeTex = Render::DefaultResources::Instance()->GetDefaultTextureCube(Render::DefaultResources::TEX_WHITE);
