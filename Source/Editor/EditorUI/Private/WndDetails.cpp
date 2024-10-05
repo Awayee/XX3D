@@ -1,5 +1,6 @@
 #include "WndDetails.h"
 #include "AssetView.h"
+#include "UIExtent.h"
 #include "EditorUI/Public/EditorUIMgr.h"
 #include "Functions/Public/EditorLevel.h"
 #include "Objects/Public/SkyBox.h"
@@ -21,7 +22,7 @@ namespace Editor {
 
 	void MeshGUI(Object::MeshComponent* com) {
 		XString file = com->GetMeshFile();
-		if (Editor::DraggableFileItemAssets("File", file, "*.mesh")) {
+		if (ImGui::DraggableFileItemAssets("File##Mesh", file, "*.mesh")) {
 			com->SetMeshFile(file);
 		}
 	}
@@ -29,7 +30,7 @@ namespace Editor {
 
 	void InstancedDataGUI(Object::InstanceDataComponent* com) {
 		XString file = com->GetInstanceFile();
-		if (Editor::DraggableFileItemAssets("File", file, "*.instd")) {
+		if (ImGui::DraggableFileItemAssets("File##InstanceData", file, "*.instd")) {
 			com->SetInstanceFile(file);
 		}
 	}
@@ -37,14 +38,14 @@ namespace Editor {
 
 	void SkyBoxGUI(Object::SkyBoxComponent* com) {
 		XString skyBoxFile = com->GetCubeMapFile();
-		if (Editor::DraggableFileItemAssets("File", skyBoxFile, "*.texture")) {
+		if (ImGui::DraggableFileItemAssets("File##SkyBox", skyBoxFile, "*.texture")) {
 			com->SetCubeMapFile(skyBoxFile);
 		}
 	}
 	REGISTER_LEVEL_EDIT_OnGUI(Object::SkyBoxComponent, SkyBoxGUI);
 
 	WndDetails::WndDetails() : EditorWndBase("Details") {
-		EditorUIMgr::Instance()->AddMenu("Window", m_Name.c_str(), {}, &m_Enable);
+		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
 	}
 
 	void WndDetails::Update() {
@@ -95,8 +96,7 @@ namespace Editor {
 		if (m_IsAddingComponent) {
 			ImGui::OpenPopup("Details_AddComponent");
 			if(ImGui::BeginPopup("Details_AddComponent")) {
-				if ((ImGui::IsMouseClicked(ImGuiMouseButton_Left) || ImGui::IsMouseClicked(ImGuiMouseButton_Right))
-					&& !ImGui::IsWindowHovered()) {
+				if (ImGui::ImGuiIsMouseClicked() && !ImGui::IsWindowHovered()) {
 					m_IsAddingComponent = false;
 				}
 				auto& fac = Object::LevelComponentFactory::Instance();
@@ -108,9 +108,6 @@ namespace Editor {
 					}
 				}
 				ImGui::EndPopup();
-			}
-			else {
-				m_IsAddingComponent = false;
 			}
 		}
 	}

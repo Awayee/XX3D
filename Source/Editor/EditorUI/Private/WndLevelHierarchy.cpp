@@ -62,37 +62,52 @@ namespace Editor {
 			return;
 		}
 		uint32 selectedActorIdx = levelMgr->GetSelected();
+		uint32 mouseOnIdx = INVALID_INDEX;
 		for (uint32 i = 0; i < level->GetActorSize(); ++i) {
 			Object::LevelActor* actor = level->GetActor(i);
 			ImGui::PushID(static_cast<int>(i));
 			if(m_RenamingIdx == i) {
+				ImGui::SetKeyboardFocusHere();
 				if(ImGui::InputText("##", m_ActorName.Data(), m_ActorName.Size(), ImGuiInputTextFlags_EnterReturnsTrue)) {
 					actor->SetName(m_ActorName.Data());
 					m_RenamingIdx = INVALID_INDEX;
 				}
 			}
 			else if (ImGui::Selectable(actor->GetName().c_str(), selectedActorIdx == i)) {
-				m_RenamingIdx = INVALID_INDEX;
 				selectedActorIdx = i;
-				levelMgr->SetSelected(i);
 			}
 			ImGui::PopID();
 			//right click
-			if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
-				m_EditActorIdx = i;
+			if (ImGui::IsItemHovered()) {
+				mouseOnIdx = i;
 			}
 		}
+		if(ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
+			m_ContextMenuIdx = mouseOnIdx;
+		}
+		if(ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+			if(m_RenamingIdx != mouseOnIdx) {
+				m_RenamingIdx = INVALID_INDEX;
+			}
+			if(ImGui::IsWindowHovered()) {
+				levelMgr->SetSelected(mouseOnIdx);
+			}
+		}
+		if(ImGui::IsKeyReleased(ImGuiKey_Escape)) {
+			m_RenamingIdx = INVALID_INDEX;
+		}
+
 		if(ImGui::BeginPopupContextWindow("Hierarchy_ContextMenu", ImGuiPopupFlags_MouseButtonRight)) {
 			m_RenamingIdx = INVALID_INDEX;
-			if(m_EditActorIdx != INVALID_INDEX) {
-				Object::LevelActor* actor = level->GetActor(m_EditActorIdx);
+			if(m_ContextMenuIdx != INVALID_INDEX) {
+				Object::LevelActor* actor = level->GetActor(m_ContextMenuIdx);
 				if (ImGui::MenuItem("Rename")) {
-					m_RenamingIdx = m_EditActorIdx;
+					m_RenamingIdx = m_ContextMenuIdx;
 					StrCopy(m_ActorName.Data(), actor->GetName().c_str());
 				}
 				if (ImGui::MenuItem("Delete")) {
 					levelMgr->GetLevel()->RemoveActor(actor);
-					if (levelMgr->GetSelected() == m_EditActorIdx) {
+					if (levelMgr->GetSelected() == m_ContextMenuIdx) {
 						levelMgr->SetSelected(INVALID_INDEX);
 					}
 				}
@@ -103,7 +118,7 @@ namespace Editor {
 			ImGui::EndPopup();
 		}
 		else {
-			m_EditActorIdx = INVALID_INDEX;
+			m_ContextMenuIdx = INVALID_INDEX;
 		}
 	}
 }

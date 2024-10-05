@@ -1,4 +1,5 @@
 #include "WndAssetBrowser.h"
+#include "UIExtent.h"
 #include "EditorUI/Public/EditorUIMgr.h"
 #include "Functions/Public/AssetImporter.h"
 
@@ -30,7 +31,7 @@ namespace {
 		void WndContent() override {
 			ImGui::Text("Import to %s", GetPathStr().c_str());
 			// update the target filename
-			if (Editor::DraggableFileItemGlobal("Src File", m_SrcFile, "*.glb;*.gltf;*.fbx")) {
+			if (ImGui::DraggableFileItemGlobal("Src File", m_SrcFile, "*.glb;*.gltf;*.fbx")) {
 				XString nameStr = File::FPath{ m_SrcFile }.stem().string();
 				StrCopy(m_DstFileName.Data(), nameStr.c_str());
 			}
@@ -59,7 +60,7 @@ namespace {
 		void WndContent() override {
 			ImGui::Text("Import to %s", GetPathStr().c_str());
 			// update the target filename
-			if (Editor::DraggableFileItemGlobal("Src File", m_SrcFile, "*.jpg;*.png")) {
+			if (ImGui::DraggableFileItemGlobal("Src File", m_SrcFile, "*.jpg;*.png")) {
 				XString nameStr = File::FPath{ m_SrcFile }.stem().string();
 				StrCopy(m_DstFileName.Data(), nameStr.c_str());
 			}
@@ -93,7 +94,7 @@ namespace {
 			static const char* srcNames[CUBE_MAP_FILE_NUM] = {"right ", "left  ", "top   ", "bottom", "front ", "back  " };
 			ImGui::Text("Import to %s", GetPathStr().c_str());
 			for (uint32 i = 0; i < CUBE_MAP_FILE_NUM; ++i) {
-				if (Editor::DraggableFileItemGlobal(srcNames[i], m_SrcFiles[i], "*.jpg;*.png") && i == 0) {
+				if (ImGui::DraggableFileItemGlobal(srcNames[i], m_SrcFiles[i], "*.jpg;*.png") && i == 0) {
 					// update the target filename
 					XString nameStr = File::FPath{ m_SrcFiles[i] }.stem().string();
 					StrCopy(m_DstFileName.Data(), nameStr.c_str());
@@ -352,7 +353,7 @@ namespace Editor {
 			}
 			if(ImGui::MenuItem("Show in Explore")) {
 				File::FPath fullPath = m_CurrentFolder->GetFullPath();
-				OpenFileExplorer(fullPath.string().c_str());
+				ImGui::OpenFileExplorer(fullPath.string().c_str());
 			}
 			ImGui::EndPopup();
 		}

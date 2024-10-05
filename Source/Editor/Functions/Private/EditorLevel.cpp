@@ -81,7 +81,7 @@ namespace Editor {
 		actorValues.Write("Actors");
 		File::FPath fullPath{ PROJECT_ASSETS };
 		fullPath.append(file);
-		return Json::WriteFile(fullPath.string().c_str(), doc, false);
+		return Json::WriteFile(fullPath.string().c_str(), doc, false, true);
 	}
 
 	uint32 EditorLevel::GetActorSize() {

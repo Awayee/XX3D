@@ -1,7 +1,6 @@
 #pragma once
 #include "Objects/Public/RenderScene.h"
 #include "Core/Public/Json.h"
-#include "Asset/Public/LevelAsset.h"
 
 namespace Object {
 	class LevelActor;

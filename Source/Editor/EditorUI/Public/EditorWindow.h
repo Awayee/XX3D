@@ -37,11 +37,6 @@ namespace Editor {
 	private:
 		Func<void()> m_Func;
 		void WndContent() override;
-	};;
-
-	XString OpenFileDialog(const char* filter);
-	void OpenFileExplorer(const char* path);
-	bool DraggableFileItemAssets(const char* name, XString& file, const char* filter);
-	bool DraggableFileItemGlobal(const char* name, XString& file, const char* filter);
+	};
 }
 	

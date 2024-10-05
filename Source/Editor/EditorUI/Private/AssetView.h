@@ -3,7 +3,6 @@
 #include "Asset/Public/MeshAsset.h"
 #include "Core/Public/TUniquePtr.h"
 #include "Asset/Public/TextureAsset.h"
-#include "Asset/Public/LevelAsset.h"
 
 namespace Editor {
 

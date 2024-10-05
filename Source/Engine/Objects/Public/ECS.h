@@ -221,9 +221,7 @@ struct StaticMesh {
 
 class MeshRenderSys: public Object::ECSSystem<Transform, StaticMesh> {
 public:
-	void Update(Object::ECSScene* scene, Object::EntityID entityID, Transform* transform, StaticMesh* staticMesh) override {
-		// do something...
-	}
+	void Update(Object::ECSScene* scene, Transform* transform, StaticMesh* staticMesh) override { /*Do something*/ }
 };
 
 void CreatMeshObject(Object::ECSScene* scene) {

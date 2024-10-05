@@ -2,6 +2,7 @@
 #include "Functions/Public/EditorLevel.h"
 #include "EditorUI/Public/EditorUIMgr.h"
 #include "EditorUI/Public/EditorWindow.h"
+#include "UIExtent.h"
 
 namespace Editor {
 	FolderAssetView::FolderAssetView(FolderNode* node): m_Node(node) {
@@ -48,23 +49,8 @@ namespace Editor {
 
 				//material
 				File::FPath primitivePath = primitive.BinaryFile;
-				ImGui::Text(primitivePath.stem().string().c_str()); ImGui::SameLine();
-				if(ImGui::BeginDragDropTarget()) {
-					ImGui::Button(primitive.MaterialFile.empty() ? "None" : primitive.MaterialFile.c_str());
-					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("File")) {
-						ASSERT(payload->DataSize == sizeof(FileNode), "");
-						const FileNode* fileNode = reinterpret_cast<const FileNode*>(payload->Data);
-						if(fileNode->GetExt() == ".texture") {
-							primitive.MaterialFile = fileNode->GetPathStr();
-							node->Save();
-							EditorLevelMgr::Instance()->ReloadLevel();
-						}
-					}
-					ImGui::EndDragDropTarget();
-				}
-				else {
-					ImGui::Button(primitive.MaterialFile.empty() ? "None" : primitive.MaterialFile.c_str());
-				}
+				const XString primitiveName = File::FPath{ primitive.BinaryFile }.stem().string();
+				ImGui::DraggableFileItemAssets(primitiveName.c_str(), primitive.MaterialFile, ".texture");
 			}
 			if(ImGui::Button("Save")) {
 				node->Save();
