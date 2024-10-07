@@ -12,7 +12,6 @@ namespace Object {
 		RHIBufferPtr VertexBuffer;
 		RHIBufferPtr IndexBuffer;
 		RHITexturePtr CubeMap;
-		RHIGraphicsPipelineStatePtr PSO;
 		SkyBoxECSComp();
 		void LoadCubeMap(const XString& file);
 		REGISTER_ECS_COMPONENT(SkyBoxECSComp);

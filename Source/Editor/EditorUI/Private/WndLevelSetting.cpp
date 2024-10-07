@@ -33,25 +33,15 @@ namespace Editor {
 			if(ImGui::ColorPicker3("Color", lightColor.Data(), ImGuiColorEditFlags_None)) {
 				light->SetColor(lightColor);
 			}
-			bool isEnableShadow = light->GetEnableShadow();
-			if(ImGui::Checkbox("Enable Shadow", &isEnableShadow)) {
-				light->SetEnableShadow(isEnableShadow);
-			}
-			bool isEnableShadowDebug = light->GetEnableShadowDebug();
-			if(ImGui::Checkbox("Shadow Debug", &isEnableShadowDebug)) {
-				light->SetEnableShadowDebug(isEnableShadowDebug);
-			}
-			float shadowDistance = light->GetShadowDistance();
-			if(ImGui::DragFloat("Shadow Distance", &shadowDistance, 1.0f, 0.0f, 9999.0f)) {
-				light->SetShadowDistance(shadowDistance);
-			}
-			float logDistribution = light->GetLogDistribution();
-			if(ImGui::DragFloat("Log Distribution", &logDistribution, 0.01f, 0.0f, 1.0f)) {
-				light->SetLogDistribution(logDistribution);
-			}
+			Object::DirectionalShadowConfig config = light->GetShadowConfig();
+			bool isDirty{ false };
+			isDirty |= ImGui::Checkbox("Enable Shadow", &config.EnableShadow);
+			isDirty |= ImGui::Checkbox("Shadow Debug", &config.EnableDebug);
+			isDirty |= ImGui::DragFloat("Shadow Distance", &config.ShadowDistance, 1.0f, 0.0f, 9999.0f);
+			isDirty |= ImGui::DragFloat("Log Distribution", &config.LogDistribution, 0.01f, 0.0f, 1.0f);
 			static TStaticArray<uint32, 5> s_ShadowMapSizes{ 256, 512, 1024, 2048, 4096 };
 			static TStaticArray<const char*, 5> s_ShadowMapSizeNames{ "256", "512", "1024", "2048", "4096" };
-			const uint32 shadowMapSize = light->GetShadowMapSize();
+			const uint32 shadowMapSize = config.ShadowMapSize;
 			int currentItem;
 			for(int i=0; i<(int)s_ShadowMapSizes.Size(); ++i) {
 				if (s_ShadowMapSizes[i] == shadowMapSize) {
@@ -60,15 +50,13 @@ namespace Editor {
 				}
 			}
 			if(ImGui::Combo("ShadowMap Size", &currentItem, s_ShadowMapSizeNames.Data(), s_ShadowMapSizeNames.Size())) {
-				light->SetShadowMapSize(s_ShadowMapSizes[currentItem]);
+				config.ShadowMapSize = s_ShadowMapSizes[currentItem];
+				isDirty = true;
 			}
-
-			float biasConst, biasSlope;
-			light->GetShadowBias(&biasConst, &biasSlope);
-			bool biasModified = ImGui::DragFloat("BiasConst", &biasConst, 0.01f, 0.0f, 100.0f);
-			biasModified |= ImGui::DragFloat("BiasSlope", &biasSlope, 0.01f, 0.0f, 100.0f);
-			if(biasModified) {
-				light->SetShadowBias(biasConst, biasSlope);
+			isDirty |= ImGui::DragFloat("Bias Const", &config.ShadowBiasConstant, 0.01f, 0.0f, 100.0f);
+			isDirty |= ImGui::DragFloat("Bias Slope", &config.ShadowBiasSlope, 0.01f, 0.0f, 100.0f);
+			if(isDirty) {
+				light->SetShadowConfig(config);
 			}
 		}
 		if(ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {

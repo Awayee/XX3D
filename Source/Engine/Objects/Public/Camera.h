@@ -1,7 +1,6 @@
 #pragma once
 #include "Math/Public/Math.h"
 #include "Math/Public/Geometry.h"
-#include "Asset/Public/AssetCommon.h"
 #include "RHI/Public/RHI.h"
 
 namespace Object {

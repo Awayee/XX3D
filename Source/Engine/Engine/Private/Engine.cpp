@@ -8,7 +8,7 @@
 #include "Render/Public/GlobalShader.h"
 #include "System/Public/FrameCounter.h"
 #include "System/Public/Timer.h"
-#include "Objects/Public/TextureResource.h"
+#include "Objects/Public/RenderResource.h"
 #include "Objects/Public/StaticMesh.h"
 #include "Objects/Public/RenderScene.h"
 
@@ -42,6 +42,7 @@ namespace Engine {
 		Render::GlobalShaderMap::Initialize();
 		Render::Renderer::Initialize();
 		Object::TextureResourceMgr::Initialize();
+		Object::StaticPipelineStateMgr::Initialize();
 		Object::RenderScene::Initialize();
 		s_RunningEngine = this;
 	}
@@ -50,6 +51,7 @@ namespace Engine {
 		// wait renderer
 		Render::Renderer::Release();
 		Object::RenderScene::Release();
+		Object::StaticPipelineStateMgr::Release();
 		Object::TextureResourceMgr::Release();
 		Render::GlobalShaderMap::Release();
 		Render::DefaultResources::Release();

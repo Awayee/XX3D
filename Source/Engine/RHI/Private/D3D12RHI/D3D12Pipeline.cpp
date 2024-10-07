@@ -295,6 +295,11 @@ D3D12GraphicsPipelineState::D3D12GraphicsPipelineState(const RHIGraphicsPipeline
 	m_PrimitiveTopology = ToD3D12PrimitiveTopology(desc.PrimitiveTopology);
 }
 
+void D3D12GraphicsPipelineState::SetName(const char* name) {
+	XWString nameW = String2WString(name);
+	m_Pipeline->SetName(nameW.c_str());
+}
+
 D3D12ComputePipelineState::D3D12ComputePipelineState(const RHIComputePipelineStateDesc& desc, D3D12Device* device): RHIComputePipelineState(desc) {
 	CHECK(m_Layout.InitLayout(desc.Layout, device->GetDevice()));
 	D3D12_COMPUTE_PIPELINE_STATE_DESC d3d12Desc;

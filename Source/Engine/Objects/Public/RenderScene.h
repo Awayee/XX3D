@@ -22,6 +22,8 @@ namespace Object {
 		Render::DrawCallQueue& GetLightingPassDrawCallQueue() { return m_LightingPassDrawCallQueue; }
 		void Update();
 		void Render(Render::RenderGraph& rg, Render::RGTextureNode* targetNode);
+		inline static ERHIFormat GetGBufferNormalFormat() { return ERHIFormat::R8G8B8A8_UNORM; }
+		inline static ERHIFormat GetGBufferAlbedoFormat() { return ERHIFormat::R8G8B8A8_UNORM; }
 		static RenderScene* GetDefaultScene(); // TODO TEST
 		static void Initialize();
 		static void Release();
@@ -38,14 +40,11 @@ namespace Object {
 		RHITexturePtr m_GBufferAlbedo;
 		RHITexturePtr m_Depth;
 		RHITexturePtr m_DepthSRV;
-		RHIGraphicsPipelineStatePtr m_GBufferPSO;
 		// for deferred lighting
-		RHIGraphicsPipelineStatePtr m_DeferredLightingPSO;
+		RHIGraphicsPipelineState* m_DeferredLightingPSO;
 
-		void UpdateSceneDrawCall();
-		void CreateResources();
+		void CreateDeferredLightingDrawCall();
 		void CreateTextureResources();
-		void CreatePSOs();
 	};
 #define RENDER_SCENE_REGISTER_SYSTEM(cls) private:\
 	inline static const uint8 s_RegisterSystem = (Object::RenderScene::AddConstructFunc([](RenderScene* scene){scene->RegisterSystem<cls>();}), 0)

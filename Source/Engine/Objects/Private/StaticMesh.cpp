@@ -1,9 +1,83 @@
 #include "Objects/Public/StaticMesh.h"
 #include "Objects/Public/DirectionalLight.h"
 #include "Objects/Public/RenderScene.h"
-#include "Objects/Public/TextureResource.h"
+#include "Objects/Public/RenderResource.h"
 #include "Render/Public/DefaultResource.h"
 #include "Asset/Public/AssetLoader.h"
+#include "Render/Public/GlobalShader.h"
+
+namespace {
+	IMPLEMENT_GLOBAL_SHADER(MeshGBufferVS, "GBuffer.hlsl", "MainVS", EShaderStageFlags::Vertex);
+	IMPLEMENT_GLOBAL_SHADER(MeshGBufferPS, "GBuffer.hlsl", "MainPS", EShaderStageFlags::Pixel);
+	IMPLEMENT_GLOBAL_SHADER(DirectionalShadowVS, "DirectionalShadow.hlsl", "MainVS", EShaderStageFlags::Vertex);
+	IMPLEMENT_GLOBAL_SHADER(DirectionalShadowPS, "DirectionalShadow.hlsl", "MainPS", EShaderStageFlags::Pixel);
+
+	void InitializeMeshGBufferPSO(RHIGraphicsPipelineStateDesc& desc) {
+		Render::GlobalShaderMap* globalShaderMap = Render::GlobalShaderMap::Instance();
+		const TStaticArray<ERHIFormat, 2> colorFormats = { Object::RenderScene::GetGBufferNormalFormat(), Object::RenderScene::GetGBufferAlbedoFormat() };
+		const ERHIFormat depthFormat = RHI::Instance()->GetDepthFormat();
+		desc.VertexShader = globalShaderMap->GetShader<MeshGBufferVS>()->GetRHI();
+		desc.PixelShader = globalShaderMap->GetShader<MeshGBufferPS>()->GetRHI();
+		// ds layout
+		auto& layout = desc.Layout;
+		layout.Resize(3);
+		layout[0] = {
+			{EBindingType::UniformBuffer, EShaderStageFlags::Vertex | EShaderStageFlags::Pixel},
+		};
+		layout[1] = {
+			{EBindingType::UniformBuffer, EShaderStageFlags::Vertex}
+		};
+		layout[2] = {
+			{EBindingType::Texture, EShaderStageFlags::Pixel},
+			{EBindingType::Sampler, EShaderStageFlags::Pixel},
+		};
+		// vertex input
+		auto& vi = desc.VertexInput;
+		vi.Bindings = { {0, sizeof(Asset::AssetVertex), false} };
+		vi.Attributes = {
+			{POSITION, 0, 0, 0, ERHIFormat::R32G32B32_SFLOAT, 0},// position
+			{NORMAL, 0, 1, 0, ERHIFormat::R32G32B32_SFLOAT, offsetof(Asset::AssetVertex, Normal)},//normal
+			{TANGENT, 0, 2, 0, ERHIFormat::R32G32B32_SFLOAT, offsetof(Asset::AssetVertex, Tangent)},//tangent
+			{TEXCOORD, 0, 3, 0, ERHIFormat::R32G32_SFLOAT, offsetof(Asset::AssetVertex, UV)},// uv
+		};
+
+		desc.BlendDesc.BlendStates = { {false}, {false} };
+		desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Back };
+		desc.DepthStencilState = { true, true, ECompareType::Less, false };
+		desc.PrimitiveTopology = EPrimitiveTopology::TriangleList;
+		desc.NumColorTargets = colorFormats.Size();
+		for (uint32 i = 0; i < colorFormats.Size(); ++i) {
+			desc.ColorFormats[i] = colorFormats[i];
+		}
+		desc.DepthStencilFormat = depthFormat;
+		desc.NumSamples = 1;
+	}
+
+	void InitializeMeshDirectionalShadowPSO(RHIGraphicsPipelineStateDesc& desc) {
+		// shader
+		Render::GlobalShaderMap* globalShaderMap = Render::GlobalShaderMap::Instance();
+		desc.VertexShader = globalShaderMap->GetShader<DirectionalShadowVS>()->GetRHI();
+		desc.PixelShader = globalShaderMap->GetShader<DirectionalShadowPS>()->GetRHI();
+		// layout
+		auto& layout = desc.Layout;
+		layout.Resize(2);
+		layout[0] = { {EBindingType::UniformBuffer, EShaderStageFlags::Vertex} };// camera
+		layout[1] = { {EBindingType::UniformBuffer, EShaderStageFlags::Vertex} };// mesh
+		// vertex input
+		auto& vi = desc.VertexInput;
+		vi.Bindings = { {0, sizeof(Asset::AssetVertex), false} };
+		vi.Attributes = { {POSITION, 0, 0, 0, ERHIFormat::R32G32B32_SFLOAT, 0} };
+
+		desc.BlendDesc.BlendStates = { {false}, {false} };
+		desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Null, false, 3.0f, 3.0f };
+		desc.DepthStencilState = { true, true, ECompareType::Less, false };
+		desc.PrimitiveTopology = EPrimitiveTopology::TriangleList;
+		desc.DepthStencilFormat = RHI::Instance()->GetDepthFormat();
+		desc.NumSamples = 1;
+	}
+
+	static const uint32 s_MeshGBufferPSOID{ Object::StaticPipelineStateMgr::RegisterPSOInitializer(InitializeMeshGBufferPSO) };
+}
 
 namespace Object {
 	void TransformECSComponent::SetTransform(const Math::FTransform& transform) {
@@ -83,9 +157,31 @@ namespace Object {
 		component->BuildFromAsset(asset);
 	}
 
+	MeshRenderSystem::MeshRenderSystem() {
+		RHIGraphicsPipelineStateDesc desc;
+		InitializeMeshDirectionalShadowPSO(desc);
+		m_DirectionalShadowPSO = RHI::Instance()->CreateGraphicsPipelineState(desc);
+	}
+
+	void MeshRenderSystem::PreUpdate(ECSScene* ecsScene) {
+		// check and update shadow pso
+		Object::RenderScene* scene = (Object::RenderScene*)ecsScene;
+		const Object::DirectionalLight* light = scene->GetDirectionalLight();
+		const auto& cfg = light->GetShadowConfig();
+		const auto& desc = m_DirectionalShadowPSO->GetDesc();
+		const auto& rasterizerState = desc.RasterizerState;
+		if(Math::FloatEqual(rasterizerState.DepthBiasConstant, cfg.ShadowBiasConstant) && Math::FloatEqual(rasterizerState.DepthBiasSlope, cfg.ShadowBiasSlope)) {
+			return;
+		}
+		auto newDesc = desc;
+		newDesc.RasterizerState.DepthBiasConstant = cfg.ShadowBiasConstant;
+		newDesc.RasterizerState.DepthBiasSlope = cfg.ShadowBiasSlope;
+		m_DirectionalShadowPSO = RHI::Instance()->CreateGraphicsPipelineState(newDesc);
+	}
+
 	void MeshRenderSystem::Update(ECSScene* ecsScene, TransformECSComponent* transform, MeshECSComponent* staticMesh) {
 		// update uniform
-		RHIDynamicBuffer uniformBuffer = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(TransformECSComponent::MatrixData), &transform->GetMatrixData(), 0);
+		RHIDynamicBuffer meshUniform = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(TransformECSComponent::MatrixData), &transform->GetMatrixData(), 0);
 		// create draw call
 		Object::RenderScene* scene = (Object::RenderScene*)ecsScene;
 		Object::RenderCamera* mainCamera = scene->GetMainCamera();
@@ -93,10 +189,14 @@ namespace Object {
 		for(auto& primitive: staticMesh->Primitives) {
 			const Math::AABB3 aabb = primitive.AABB.Transform(transform->GetMatrixData().Transform);
 			if(mainCamera->GetFrustum().Cull(aabb)) {
-				scene->GetBasePasDrawCallQueue().PushDrawCall([&primitive, uniformBuffer](RHICommandBuffer* cmd) {
+				RHIDynamicBuffer cameraUniform = mainCamera->GetUniformBuffer();
+				scene->GetBasePasDrawCallQueue().PushDrawCall([&primitive, meshUniform, cameraUniform](RHICommandBuffer* cmd) {
+					RHIGraphicsPipelineState* pso = StaticPipelineStateMgr::Instance()->GetGraphicsPipelineState(s_MeshGBufferPSOID);
+					cmd->BindGraphicsPipeline(pso);
 					cmd->BindVertexBuffer(primitive.VertexBuffer.Get(), 0, 0);
 					cmd->BindIndexBuffer(primitive.IndexBuffer.Get(), 0);
-					cmd->SetShaderParam(1, 0, RHIShaderParam::UniformBuffer(uniformBuffer));
+					cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(cameraUniform));
+					cmd->SetShaderParam(1, 0, RHIShaderParam::UniformBuffer(meshUniform));
 					// material albedo
 					cmd->SetShaderParam(2, 0, RHIShaderParam::Texture(primitive.Texture));
 					RHISampler* defaultSampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp);
@@ -109,10 +209,14 @@ namespace Object {
 				for (uint32 i = 0; i < light->GetCascadeNum(); ++i) {
 					const auto& frustum = light->GetFrustum(i);
 					if(frustum.Cull(aabb)) {
-						light->GetDrawCallQueue(i).PushDrawCall([&primitive, uniformBuffer](RHICommandBuffer* cmd) {
-							cmd->SetShaderParam(1, 0, RHIShaderParam::UniformBuffer(uniformBuffer));
+						RHIDynamicBuffer shadowUniform = light->GetShadowUniform(i);
+						RHIGraphicsPipelineState* pso = m_DirectionalShadowPSO.Get();
+						light->GetDrawCallQueue(i).PushDrawCall([&primitive, pso, shadowUniform, meshUniform](RHICommandBuffer* cmd) {
+							cmd->BindGraphicsPipeline(pso);
 							cmd->BindVertexBuffer(primitive.VertexBuffer.Get(), 0, 0);
 							cmd->BindIndexBuffer(primitive.IndexBuffer.Get(), 0);
+							cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(shadowUniform));
+							cmd->SetShaderParam(1, 0, RHIShaderParam::UniformBuffer(meshUniform));
 							cmd->DrawIndexed(primitive.IndexCount, 1, 0, 0, 0);
 						});
 					}

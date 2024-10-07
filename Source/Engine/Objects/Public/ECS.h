@@ -117,18 +117,19 @@ namespace Object {
 		friend ECSScene;
 		TArray<EntityID> m_Entities;
 		TMap<EntityID, uint32> m_Entity2Indices;
-		virtual void UpdateEntry(ECSScene* scene, ECSComponentContainerMgr& mgr) = 0;
+		virtual void PreUpdate(ECSScene* ecsScene) {/*Do nothing*/ }
+		virtual void UpdateEntry(ECSScene* ecsScene, ECSComponentContainerMgr& mgr) = 0;
 	};
 
 	template<class ...T>
 	class ECSSystem: public ECSSystemBase {
 	public:
 		static ComponentMask GetComponentMask() { return (0 | ... | T::GetComponentMask()); } // only for c++17
-		virtual void Update(ECSScene* scene, T*...components) = 0;
+		virtual void Update(ECSScene* ecsScene, T*...components) = 0;
 	private:
-		void UpdateEntry(ECSScene* scene, ECSComponentContainerMgr& mgr) final {
+		void UpdateEntry(ECSScene* ecsScene, ECSComponentContainerMgr& mgr) final {
 			for(EntityID entityID: m_Entities) {
-				Update(scene, mgr.GetComponent<T>(entityID)...);
+				Update(ecsScene, mgr.GetComponent<T>(entityID)...);
 			}
 		}
 	};
@@ -193,6 +194,7 @@ namespace Object {
 
 		void SystemUpdate() {
 			for(auto&[comMask, sys]: m_Systems) {
+				sys->PreUpdate(this);
 				sys->UpdateEntry(this, m_ComponentContainerMgr);
 			}
 		}

@@ -32,6 +32,7 @@ class D3D12GraphicsPipelineState: public RHIGraphicsPipelineState {
 public:
 	D3D12GraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc, D3D12Device* device);
 	~D3D12GraphicsPipelineState() override = default;
+	void SetName(const char* name) override;
 	ID3D12RootSignature* GetRootSignature() { return m_Layout.GetRootSignature(); }
 	ID3D12PipelineState* GetPipelineState() { return m_Pipeline.Get(); }
 	D3D_PRIMITIVE_TOPOLOGY GetPrimitiveTopology() const { return m_PrimitiveTopology; }

@@ -28,4 +28,22 @@ namespace Object {
 		TextureResourceMgr() = default;
 		~TextureResourceMgr() = default;
 	};
+
+	// pre-initialized pipeline states
+	class StaticPipelineStateMgr {
+		SINGLETON_INSTANCE(StaticPipelineStateMgr);
+	public:
+		typedef void(*ComputePipelineInitializer)(RHIComputePipelineStateDesc&);
+		typedef void(*GraphicsPipelineInitializer)(RHIGraphicsPipelineStateDesc& desc);
+		static uint32 RegisterPSOInitializer(GraphicsPipelineInitializer func);
+		static uint32 RegisterPSOInitializer(ComputePipelineInitializer func);
+		void ReCreatePipelineState(uint32 psoID, const RHIGraphicsPipelineStateDesc& desc);
+		RHIGraphicsPipelineState* GetGraphicsPipelineState(uint32 psoID);
+		RHIComputePipelineState* GetComputePipelineState(uint32 psoID);
+	private:
+		TArray<RHIGraphicsPipelineStatePtr> m_GraphicsPipelineStates;
+		TArray<RHIComputePipelineStatePtr> m_ComputePipelineStates;
+		StaticPipelineStateMgr();
+		~StaticPipelineStateMgr() = default;
+	};
 }

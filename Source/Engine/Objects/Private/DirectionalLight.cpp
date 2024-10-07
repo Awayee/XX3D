@@ -1,12 +1,8 @@
 #include "Objects/Public/DirectionalLight.h"
 #include "System/Public/EngineConfig.h"
-#include "Math/Public/Math.h"
 #include "Render/Public/GlobalShader.h"
 
 namespace {
-
-	IMPLEMENT_GLOBAL_SHADER(DirectionalShadowVS, "DirectionalShadow.hlsl", "MainVS", EShaderStageFlags::Vertex);
-	IMPLEMENT_GLOBAL_SHADER(DirectionalShadowPS, "DirectionalShadow.hlsl", "MainPS", EShaderStageFlags::Pixel);
 
 }
 
@@ -44,39 +40,13 @@ namespace Object {
 
 	DirectionalLight::DirectionalLight() {
 		// load shadow map size
-		SetShadowMapSize(Engine::ConfigManager::GetData().DefaultShadowMapSize);
+		m_ShadowConfig.ShadowMapSize = Engine::ConfigManager::GetData().DefaultShadowMapSize;
 	}
 
 	void DirectionalLight::SetRotation(const Math::FVector3& euler) {
 		Math::FQuaternion q = Math::FQuaternion::Euler(euler);
 		m_LightDir = q.RotateVector3(DEFAULT_DIR);
 		m_LightEuler = euler;
-	}
-
-	void DirectionalLight::SetEnableShadow(bool isEnable) {
-		m_EnableShadow = isEnable;
-	}
-
-	void DirectionalLight::SetShadowMapSize(uint32 size) {
-		m_ShadowMapSize = Math::UpperExp2(size);
-		m_ShadowMapTextureDirty = true;
-	}
-
-	void DirectionalLight::SetShadowBias(float biasConst, float biasSlope) {
-		if(m_ShadowMapPSO) {
-			const auto& desc = m_ShadowMapPSO->GetDesc().RasterizerState;
-			if(Math::FloatEqual(desc.DepthBiasConstant, biasConst) && Math::FloatEqual(desc.DepthBiasSlope, biasSlope)) {
-				return;
-			}
-		}
-		m_ShadowBiasConstant = biasConst;
-		m_ShadowBiasSlope = biasSlope;
-		m_ShadowMapPSODirty = true;
-	}
-
-	void DirectionalLight::GetShadowBias(float* outBiasConst, float* outBiasSlope) {
-		*outBiasConst = m_ShadowBiasConstant;
-		*outBiasSlope = m_ShadowBiasSlope;
 	}
 
 	Render::DrawCallQueue& DirectionalLight::GetDrawCallQueue(uint32 i) {
@@ -89,12 +59,12 @@ namespace Object {
 		return m_CascadeCameras[i].Frustum;
 	}
 
-	void DirectionalLight::UpdateShadowCameras(Object::RenderCamera* renderCamera) {
+	void DirectionalLight::Update(Object::RenderCamera* renderCamera) {
 		// split the frustum of render camera
 		const auto& srcView = renderCamera->GetView();
 		const auto& srcProj = renderCamera->GetProjection();
 		TStaticArray<float, CASCADE_NUM + 1> splits;
-		SplitFrustum(splits, srcProj.Near, m_ShadowDistance, m_LogDistribution);
+		SplitFrustum(splits, srcProj.Near, m_ShadowConfig.ShadowDistance, m_ShadowConfig.LogDistribution);
 		for(uint32 i=0; i<CASCADE_NUM; ++i) {
 			// get 8 frustum corners
 			Object::FrustumCorner fc;
@@ -133,36 +103,26 @@ namespace Object {
 			m_VPMats[i] = m_CascadeCameras[i].GetViewProjectMatrix();
 		}
 
-		// Update uniforms
-		LightUBO ubo;
-		ubo.Dir = m_LightDir;
-		ubo.Color = m_LightColor;
-		for (uint32 i = 0; i < CASCADE_NUM; ++i) {
-			ubo.FarDistances[i] = m_FarDistances[i];
-			ubo.VPMats[i] = m_VPMats[i];
-			m_ShadowUniforms[i] = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(Math::FMatrix4x4), &ubo.VPMats[i], 0);
+		for (auto& queue : m_DrawCallQueues) {
+			queue.Reset();
 		}
-		ubo.ShadowDebug.X = m_EnableShadowDebug ? 1.0f : 0.0f;
-		m_Uniform = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(ubo), &ubo, 0);
-	}
 
-	void DirectionalLight::UpdateShadowMapDrawCalls() {
-		// lazy create resources
-		if(m_ShadowMapTextureDirty) {
-			CreateShadowMapTexture();
-			m_ShadowMapTextureDirty = false;
-		}
-		if(m_ShadowMapPSODirty) {
-			CreateShadowMapPSO();
-			m_ShadowMapPSODirty = false;
-		}
-		for(uint32 i=0; i<CASCADE_NUM; ++i) {
-			m_DrawCallQueues[i].Reset();
-			if (m_EnableShadow) {
-				m_DrawCallQueues[i].PushDrawCall([this, i](RHICommandBuffer* cmd) {
-					cmd->BindGraphicsPipeline(m_ShadowMapPSO);
-					cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(m_ShadowUniforms[i]));
-				});
+		if(m_ShadowConfig.EnableShadow) {
+
+			// Update uniforms
+			LightUBO ubo;
+			ubo.Dir = m_LightDir;
+			ubo.Color = m_LightColor;
+			for (uint32 i = 0; i < CASCADE_NUM; ++i) {
+				ubo.FarDistances[i] = m_FarDistances[i];
+				ubo.VPMats[i] = m_VPMats[i];
+				m_ShadowUniforms[i] = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(Math::FMatrix4x4), &ubo.VPMats[i], 0);
+			}
+			ubo.ShadowDebug.X = m_ShadowConfig.EnableDebug ? 1.0f : 0.0f;
+			m_Uniform = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(ubo), &ubo, 0);
+			// lazy create resources
+			if (!m_ShadowMapTexture.Get() || m_ShadowMapTexture->GetDesc().Width != m_ShadowConfig.ShadowMapSize) {
+				CreateShadowMapTexture();
 			}
 		}
 	}
@@ -170,35 +130,10 @@ namespace Object {
 	void DirectionalLight::CreateShadowMapTexture() {
 		const ERHIFormat depthFormat = RHI::Instance()->GetDepthFormat();
 		RHITextureDesc desc = RHITextureDesc::Texture2DArray(CASCADE_NUM);
-		desc.Width = desc.Height = m_ShadowMapSize;
+		desc.Width = desc.Height = m_ShadowConfig.ShadowMapSize;
 		desc.Format = depthFormat;
 		desc.Flags = ETextureFlags::DepthStencilTarget | ETextureFlags::SRV;
 		desc.ClearValue.DepthStencil = { 1.0f, 0u };
 		m_ShadowMapTexture = RHI::Instance()->CreateTexture(desc);
-	}
-
-	void DirectionalLight::CreateShadowMapPSO() {
-		RHIGraphicsPipelineStateDesc desc{};
-		// shader
-		Render::GlobalShaderMap* globalShaderMap = Render::GlobalShaderMap::Instance();
-		desc.VertexShader = globalShaderMap->GetShader<DirectionalShadowVS>()->GetRHI();
-		desc.PixelShader = globalShaderMap->GetShader<DirectionalShadowPS>()->GetRHI(); // TODO will report ERROR if nullptr
-		// layout
-		auto& layout = desc.Layout;
-		layout.Resize(2);
-		layout[0] = { {EBindingType::UniformBuffer, EShaderStageFlags::Vertex} };// camera
-		layout[1] = { {EBindingType::UniformBuffer, EShaderStageFlags::Vertex} };// mesh
-		// vertex input
-		auto& vi = desc.VertexInput;
-		vi.Bindings = { {0, sizeof(Asset::AssetVertex), false} };
-		vi.Attributes = {	{POSITION, 0, 0, 0, ERHIFormat::R32G32B32_SFLOAT, 0} };
-
-		desc.BlendDesc.BlendStates = { {false}, {false} };
-		desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Null, false, m_ShadowBiasConstant, m_ShadowBiasConstant };
-		desc.DepthStencilState = { true, true, ECompareType::Less, false };
-		desc.PrimitiveTopology = EPrimitiveTopology::TriangleList;
-		desc.DepthStencilFormat = RHI::Instance()->GetDepthFormat();
-		desc.NumSamples = 1;
-		m_ShadowMapPSO = RHI::Instance()->CreateGraphicsPipelineState(desc);
 	}
 }

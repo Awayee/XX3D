@@ -3,22 +3,15 @@
 #include "Asset/Public/AssetLoader.h"
 #include "Render/Public/GlobalShader.h"
 #include "Asset/Public/TextureAsset.h"
-#include "Objects/Public/TextureResource.h"
+#include "Objects/Public/RenderResource.h"
 #include "Render/Public/DefaultResource.h"
 
 namespace {
 	IMPLEMENT_GLOBAL_SHADER(SkyBoxVS, "SkyBox.hlsl", "MainVS", EShaderStageFlags::Vertex);
 	IMPLEMENT_GLOBAL_SHADER(SkyBoxPS, "SkyBox.hlsl", "MainPS", EShaderStageFlags::Pixel);
-}
 
-namespace Object {
-
-	static const XString BOX_FILE = "Meshes/Cube.mesh";
-
-	SkyBoxECSComp::SkyBoxECSComp() : VertexCount(0), IndexCount(0){
-		// Create PSO
+	void CreateSkyBoxPSO(RHIGraphicsPipelineStateDesc& desc) {
 		ERHIFormat colorFormat = RHI::Instance()->GetViewport()->GetBackBufferFormat();
-		RHIGraphicsPipelineStateDesc desc{};
 		Render::GlobalShaderMap* globalShaderMap = Render::GlobalShaderMap::Instance();
 		desc.VertexShader = globalShaderMap->GetShader<SkyBoxVS>()->GetRHI();
 		desc.PixelShader = globalShaderMap->GetShader<SkyBoxPS>()->GetRHI();
@@ -36,7 +29,6 @@ namespace Object {
 		vi.Attributes = {
 			{POSITION, 0, 0, 0, ERHIFormat::R32G32B32_SFLOAT, 0},// position
 		};
-
 		desc.BlendDesc.BlendStates = { {false} };
 		desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Null }; // do not cull
 		desc.DepthStencilState = { true, true, ECompareType::LessEqual, false };
@@ -45,7 +37,16 @@ namespace Object {
 		desc.ColorFormats[0] = colorFormat;
 		desc.DepthStencilFormat = RHI::Instance()->GetDepthFormat();
 		desc.NumSamples = 1;
-		PSO = RHI::Instance()->CreateGraphicsPipelineState(desc);
+	}
+
+	static const uint32 s_SkyBoxPSOID{ Object::StaticPipelineStateMgr::Instance()->RegisterPSOInitializer(CreateSkyBoxPSO) };
+}
+
+namespace Object {
+
+	static const XString BOX_FILE = "Meshes/Cube.mesh";
+
+	SkyBoxECSComp::SkyBoxECSComp() : VertexCount(0), IndexCount(0){
 
 		// Build primitive
 		Asset::MeshAsset meshAsset;
@@ -112,7 +113,8 @@ namespace Object {
 		RenderScene* renderScene = (RenderScene*)scene;
 		Render::DrawCallQueue& queue = renderScene->GetLightingPassDrawCallQueue();
 		queue.PushDrawCall([renderScene, component](RHICommandBuffer* cmd) {
-			cmd->BindGraphicsPipeline(component->PSO);
+			RHIGraphicsPipelineState* pso = StaticPipelineStateMgr::Instance()->GetGraphicsPipelineState(s_SkyBoxPSOID);
+			cmd->BindGraphicsPipeline(pso);
 			cmd->BindVertexBuffer(component->VertexBuffer, 0, 0);
 			cmd->BindIndexBuffer(component->IndexBuffer, 0);
 			cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(renderScene->GetMainCamera()->GetUniformBuffer()));
