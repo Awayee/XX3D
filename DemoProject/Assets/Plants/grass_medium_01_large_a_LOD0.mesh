@@ -1,0 +1,9 @@
+{
+    "Name": "grass_medium_01_large_a_LOD0",
+    "Primitives": [
+        {
+            "Material": "Plants/grass_medium_01_diff.texture",
+            "BinaryFile": "Plants/grass_medium_01_large_a_LOD00.primitive"
+        }
+    ]
+}

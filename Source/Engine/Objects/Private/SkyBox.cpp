@@ -7,8 +7,15 @@
 #include "Render/Public/DefaultResource.h"
 
 namespace {
-	IMPLEMENT_GLOBAL_SHADER(SkyBoxVS, "SkyBox.hlsl", "MainVS", EShaderStageFlags::Vertex);
-	IMPLEMENT_GLOBAL_SHADER(SkyBoxPS, "SkyBox.hlsl", "MainPS", EShaderStageFlags::Pixel);
+	class SkyBoxVS: public Render::GlobalShader {
+		GLOBAL_SHADER_IMPLEMENT(SkyBoxVS, "SkyBox.hlsl", "MainVS", EShaderStageFlags::Vertex);
+		SHADER_PERMUTATION_EMPTY();
+	};
+
+	class SkyBoxPS: public Render::GlobalShader {
+		GLOBAL_SHADER_IMPLEMENT(SkyBoxPS, "SkyBox.hlsl", "MainPS", EShaderStageFlags::Pixel);
+		SHADER_PERMUTATION_EMPTY();
+	};
 
 	void CreateSkyBoxPSO(RHIGraphicsPipelineStateDesc& desc) {
 		ERHIFormat colorFormat = RHI::Instance()->GetViewport()->GetBackBufferFormat();
@@ -27,7 +34,7 @@ namespace {
 		auto& vi = desc.VertexInput;
 		vi.Bindings = { {0, sizeof(Asset::AssetVertex), false} };
 		vi.Attributes = {
-			{POSITION, 0, 0, 0, ERHIFormat::R32G32B32_SFLOAT, 0},// position
+			{POSITION(0), 0, 0, ERHIFormat::R32G32B32_SFLOAT, 0},// position
 		};
 		desc.BlendDesc.BlendStates = { {false} };
 		desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Null }; // do not cull

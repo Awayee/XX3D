@@ -4,7 +4,7 @@
 
 D3D12DynamicBufferAllocator::D3D12DynamicBufferAllocator(ID3D12Device* device, uint32 pageSize) : m_Device(device), m_PageSize(pageSize), m_AllocatedIndex(DX_INVALID_INDEX) {}
 
-D3D12DynamicBufferAllocator::Allocation D3D12DynamicBufferAllocator::Allocate(EBufferFlags flags, uint32 size, const void* data) {
+RHIDynamicBuffer D3D12DynamicBufferAllocator::Allocate(EBufferFlags flags, uint32 size, const void* data, uint32 stride) {
 	size = AlignConstantBufferSize(size);
 	ASSERT(size <= m_PageSize, "Dynamic allocation size is greater than page size!");
 	if (DX_INVALID_INDEX == m_AllocatedIndex || (m_PageSize - m_BufferChunks[m_AllocatedIndex].AllocatedSize) < size) {
@@ -18,12 +18,49 @@ D3D12DynamicBufferAllocator::Allocation D3D12DynamicBufferAllocator::Allocate(EB
 	}
 	uint8* mappedPointer = (uint8*)chunk.MappedData + offset;
 	memcpy(mappedPointer, data, size);
-	return { m_AllocatedIndex, offset, size };
+	return { m_AllocatedIndex, offset, size, stride };
 }
 
 ID3D12Resource* D3D12DynamicBufferAllocator::GetResource(uint32 bufferIndex) {
 	CHECK(bufferIndex < m_BufferChunks.Size());
 	return m_BufferChunks[bufferIndex].Buffer;
+}
+
+void D3D12DynamicBufferAllocator::CreateCBV(const RHIDynamicBuffer& dBuffer, D3D12_CPU_DESCRIPTOR_HANDLE descriptorHandle) {
+	ID3D12Resource* resource = m_BufferChunks[dBuffer.BufferIndex].Buffer;
+	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
+	cbvDesc.BufferLocation = resource->GetGPUVirtualAddress() + dBuffer.Offset;
+	cbvDesc.SizeInBytes = dBuffer.Size;
+	m_Device->CreateConstantBufferView(&cbvDesc, descriptorHandle);
+}
+
+void D3D12DynamicBufferAllocator::CreateUAV(const RHIDynamicBuffer& dBuffer, D3D12_CPU_DESCRIPTOR_HANDLE descriptorHandle) {
+	ID3D12Resource* resource = m_BufferChunks[dBuffer.BufferIndex].Buffer;
+	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc;
+	uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+	// if stride == 0, as raw buffer, otherwise as structured buffer
+	if (dBuffer.Stride == 0) {
+		uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+		uavDesc.Buffer.FirstElement = dBuffer.Offset / sizeof(uint32);
+		uavDesc.Buffer.NumElements = dBuffer.Size / sizeof(uint32);
+		uavDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+	}
+	else {
+		uavDesc.Buffer.StructureByteStride = dBuffer.Stride;
+		uavDesc.Buffer.FirstElement = dBuffer.Offset / dBuffer.Stride;
+		uavDesc.Buffer.NumElements = dBuffer.Size / dBuffer.Stride;
+		uavDesc.Format = DXGI_FORMAT_UNKNOWN;
+	}
+	m_Device->CreateUnorderedAccessView(resource, nullptr, &uavDesc, descriptorHandle);
+}
+
+D3D12_VERTEX_BUFFER_VIEW D3D12DynamicBufferAllocator::CreateVertexBufferView(const RHIDynamicBuffer& dBuffer) {
+	ID3D12Resource* resource = m_BufferChunks[dBuffer.BufferIndex].Buffer;
+	D3D12_VERTEX_BUFFER_VIEW vbv;
+	vbv.BufferLocation = resource->GetGPUVirtualAddress() + dBuffer.Offset;
+	vbv.SizeInBytes = dBuffer.Size;
+	vbv.StrideInBytes = dBuffer.Stride;
+	return vbv;
 }
 
 void D3D12DynamicBufferAllocator::UnmapAllocations() {

@@ -26,14 +26,17 @@ namespace Render {
 		default: return HLSLCompiler::ESPVShaderStage::Invalid;
 		}
 	}
-	GlobalShader::GlobalShader(const XString& shaderFile, const XString& entry, EShaderStageFlags type) {
+	GlobalShader::GlobalShader(const XString& shaderFile, const XString& entry, EShaderStageFlags type, TConstArrayView<ShaderDefine> defines, uint32 permutationID) {
 		TArray<int8> codeData;
-		const XString spvFile = s_HLSLCompiler->GetCompileOutputFile(shaderFile, entry);
-		if(!LoadShaderCode(spvFile, codeData)) {
-			if(s_HLSLCompiler->Compile(shaderFile, entry, ToSPVShaderStage(type), {})) {
-				LOG_DEBUG("Shader compiled: %s, %s, %s", shaderFile.c_str(), entry.c_str(), spvFile.c_str());
-				if (!LoadShaderCode(spvFile, codeData)) {
-					LOG_ERROR("Could not load shader file: %s", spvFile.c_str());
+		const XString outputFile = s_HLSLCompiler->GetCompileOutputFile(shaderFile, entry, permutationID);
+		if(!LoadShaderCode(outputFile, codeData)) {
+			if(s_HLSLCompiler->Compile(shaderFile, entry, ToSPVShaderStage(type), defines, permutationID)) {
+				for(const auto& define: defines) {
+					LOG_DEBUG("    #define %s %s", define.Name.c_str(), define.Value.c_str());
+				}
+				LOG_DEBUG("Shader compiled: %s, %s, %s", shaderFile.c_str(), entry.c_str(), outputFile.c_str());
+				if (!LoadShaderCode(outputFile, codeData)) {
+					LOG_ERROR("Could not load shader file: %s", outputFile.c_str());
 				}
 			}
 			else {
@@ -41,9 +44,6 @@ namespace Render {
 			}
 		}
 		m_RHIShader = RHI::Instance()->CreateShader(type, codeData.Data(), codeData.Size(), entry);
-	}
-
-	GlobalShader::~GlobalShader() {
 	}
 
 	RHIShader* GlobalShader::GetRHI() {
@@ -62,8 +62,5 @@ namespace Render {
 		else {
 			CHECK(0);
 		}
-	}
-
-	GlobalShaderMap::~GlobalShaderMap() {
 	}
 }

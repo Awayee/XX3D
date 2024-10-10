@@ -42,7 +42,8 @@ public:
 	void BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) override;
 	void BindComputePipeline(RHIComputePipelineState* pipeline) override;
 	void SetShaderParam(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& parameter) override;
-	void BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) override;
+	void BindVertexBuffer(RHIBuffer* buffer, uint32 slot, uint64 offset) override;
+	void BindVertexBuffer(const RHIDynamicBuffer& buffer, uint32 slot, uint32 offset) override;
 	void BindIndexBuffer(RHIBuffer* buffer, uint64 offset) override;
 	void SetViewport(FRect rect, float minDepth, float maxDepth) override;
 	void SetScissor(Rect rect) override;

@@ -43,26 +43,16 @@ namespace Editor {
 		virtual void OnDrag() override;
 	};
 
-	template<typename T>
-	class FileAssetViewTemplate : public FileAssetView {
-	protected:
-		T* m_Asset = nullptr;
-	public:
-		FileAssetViewTemplate(FileNode* node): FileAssetView(node){
-			m_Asset = m_Node->GetAsset<T>();
-		}
-	};
-
 	// asset extents
-	class MeshAssetView : public FileAssetViewTemplate<Asset::MeshAsset> {
+	class MeshAssetView : public FileAssetView {
 	public:
-		MeshAssetView(FileNode* node) : FileAssetViewTemplate<Asset::MeshAsset>(node) {}
+		MeshAssetView(FileNode* node) : FileAssetView(node) {}
 		void Open() override;
 	};
 
-	class TextureAssetView: public FileAssetViewTemplate<Asset::TextureAsset> {
+	class TextureAssetView: public FileAssetView {
 	public:
-		TextureAssetView(FileNode* node) : FileAssetViewTemplate<Asset::TextureAsset>(node) {}
+		TextureAssetView(FileNode* node) : FileAssetView(node) {}
 		void Open() override;
 	};
 

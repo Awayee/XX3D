@@ -58,6 +58,10 @@ public:
 		return !!m_Ptr;
 	}
 
+	bool operator !()const{
+		return !m_Ptr;
+	}
+
 	T* operator->() {
 		return m_Ptr;
 	}

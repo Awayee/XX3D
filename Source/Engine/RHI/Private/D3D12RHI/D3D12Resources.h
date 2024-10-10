@@ -19,6 +19,7 @@ public:
 	~D3D12Buffer() override = default;
 	void SetName(const char* name) override;
 	void UpdateData(const void* data, uint32 byteSize, uint32 offset) override;
+	void UpdateData(Func<void(void*)>&& f);
 	ID3D12Resource* GetResource() { return m_Resource.Get(); }
 protected:
 	TDXPtr<ID3D12Resource> m_Resource;

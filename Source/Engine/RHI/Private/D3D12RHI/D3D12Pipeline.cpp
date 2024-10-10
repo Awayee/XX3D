@@ -66,32 +66,13 @@ inline bool CreateRootSignatureUtil(ID3D12Device* device, TConstArrayView<D3D12_
 	return true;
 }
 
-inline void CreateDynamicBufferView(D3D12Device* device, const RHIDynamicBuffer& dBuffer, EBindingType type, D3D12_CPU_DESCRIPTOR_HANDLE descriptorHandle) {
-	ID3D12Resource* resource = device->GetDynamicMemoryAllocator()->GetResource(dBuffer.BufferIndex);
+inline void CreateDynamicBufferView(D3D12DynamicBufferAllocator* allocator, const RHIDynamicBuffer& dBuffer, EBindingType type, D3D12_CPU_DESCRIPTOR_HANDLE descriptorHandle) {
 	switch (type) {
 	case EBindingType::UniformBuffer: {
-		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
-		cbvDesc.BufferLocation = resource->GetGPUVirtualAddress() + dBuffer.Offset;
-		cbvDesc.SizeInBytes = dBuffer.Size;
-		device->GetDevice()->CreateConstantBufferView(&cbvDesc, descriptorHandle);
+		allocator->CreateCBV(dBuffer, descriptorHandle);
 	} break;
 	case EBindingType::StorageBuffer: {
-		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc;
-		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-		// if stride == 0, as raw buffer, otherwise as structured buffer
-		if (dBuffer.Stride == 0) {
-			uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
-			uavDesc.Buffer.FirstElement = dBuffer.Offset / sizeof(uint32);
-			uavDesc.Buffer.NumElements = dBuffer.Size / sizeof(uint32);
-			uavDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-		}
-		else {
-			uavDesc.Buffer.StructureByteStride = dBuffer.Stride;
-			uavDesc.Buffer.FirstElement = dBuffer.Offset / dBuffer.Stride;
-			uavDesc.Buffer.NumElements = dBuffer.Size / dBuffer.Stride;
-			uavDesc.Format = DXGI_FORMAT_UNKNOWN;
-		}
-		device->GetDevice()->CreateUnorderedAccessView(resource, nullptr, &uavDesc, descriptorHandle);
+		allocator->CreateUAV(dBuffer, descriptorHandle);
 	}break;
 	default: break;
 	}
@@ -232,7 +213,7 @@ D3D12GraphicsPipelineState::D3D12GraphicsPipelineState(const RHIGraphicsPipeline
 		inputEle.InputSlot = attr.Binding;
 		inputEle.AlignedByteOffset = attr.Offset;
 		inputEle.InputSlotClass = binding.PerInstance ? D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA : D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-		inputEle.InstanceDataStepRate = 0; // TODO
+		inputEle.InstanceDataStepRate = binding.PerInstance ? 1 : 0;
 	}
 	d3d12Desc.InputLayout = { inputElements.Data(), inputElements.Size() };
 
@@ -371,7 +352,7 @@ void D3D12PipelineDescriptorCache::PreDraw(ID3D12GraphicsCommandList* cmd) {
 				dstHandle.ptr += (uint64)(slot * allocator->GetIncrementSize());
 				// dynamic buffer, create cbv or uav at dynamic descriptor.
 				if (param.IsDynamicBuffer) {
-					CreateDynamicBufferView(m_Device, param.Data.DynamicBuffer, param.Type, dstHandle);
+					CreateDynamicBufferView(m_Device->GetDynamicMemoryAllocator(), param.Data.DynamicBuffer, param.Type, dstHandle);
 				}
 				// other resource, copy descriptor to dynamic descriptor
 				else if (D3D12_CPU_DESCRIPTOR_HANDLE srcHandle = GetParameterStaticDescriptor(param); srcHandle.ptr) {

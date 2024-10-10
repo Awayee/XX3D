@@ -112,9 +112,14 @@ void D3D12CommandList::SetShaderParam(uint32 setIndex, uint32 bindIndex, const R
 	m_DescriptorCache->SetShaderParam(setIndex, bindIndex, parameter);
 }
 
-void D3D12CommandList::BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) {
+void D3D12CommandList::BindVertexBuffer(RHIBuffer* buffer, uint32 slot, uint64 offset) {
 	D3D12_VERTEX_BUFFER_VIEW vb = ((D3D12BufferImpl*)buffer)->GetVertexBufferView();
-	m_CommandList->IASetVertexBuffers(first, 1, &vb);
+	m_CommandList->IASetVertexBuffers(slot, 1, &vb);
+}
+
+void D3D12CommandList::BindVertexBuffer(const RHIDynamicBuffer& buffer, uint32 slot, uint32 offset) {
+	D3D12_VERTEX_BUFFER_VIEW vb = m_Device->GetDynamicMemoryAllocator()->CreateVertexBufferView(buffer);
+	m_CommandList->IASetVertexBuffers(slot, 1, &vb);
 }
 
 void D3D12CommandList::BindIndexBuffer(RHIBuffer* buffer, uint64 offset) {
@@ -167,7 +172,7 @@ void D3D12CommandList::CopyBufferToTexture(RHIBuffer* buffer, RHITexture* textur
 		srcLocation.pResource = d3d12Buffer;
 		srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 		srcLocation.PlacedFootprint.Offset = arr * slicePitch;
-		srcLocation.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		srcLocation.PlacedFootprint.Footprint.Format = ToD3D12Format(texDesc.Format);
 		srcLocation.PlacedFootprint.Footprint.Width = cpyWidth;
 		srcLocation.PlacedFootprint.Footprint.Height = cpyHeight;
 		srcLocation.PlacedFootprint.Footprint.Depth = texDesc.Depth;

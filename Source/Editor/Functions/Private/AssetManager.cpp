@@ -173,12 +173,6 @@ namespace Editor {
 		return File::IsSubPathOf(folderNode->m_RelativePath, m_RelativePath);
 	}
 
-	void FileNode::Save() {
-		if(Asset::AssetLoader::SaveProjectAsset(m_Asset.Get(), m_PathStr.c_str())) {
-			LOG_INFO("FileNode::Save %s", GetPathStr().c_str());
-		}
-	}
-
 	AssetManager::AssetManager(const char* rootPath) {
 		m_RootPath = rootPath;
 		BuildTree();
@@ -261,16 +255,23 @@ namespace Editor {
 	}
 
 	NodeID AssetManager::CreateFile(File::FPath&& relativePath, NodeID parent) {
-		const NodeID id = m_Files.Size();
-		m_Files.EmplaceBack(this, id).ResetPath(MoveTemp(relativePath), parent);
-		FolderNode* parentNode = GetFolderNode(parent);
-		if (parentNode) {
+		if (FolderNode* parentNode = GetFolderNode(parent)) {
+			for(const NodeID id: parentNode->m_Files) {
+				FileNode* fileNode = GetFileNode(id);
+				if(fileNode->GetPath() == relativePath) {
+					fileNode->ResetPath(MoveTemp(relativePath), parent);
+					return id;
+				}
+			}
+			const NodeID id = m_Files.Size();
+			m_Files.EmplaceBack(this, id).ResetPath(MoveTemp(relativePath), parent);
 			parentNode->m_Files.PushBack(id);
 			if (m_OnFolderModified) {
 				m_OnFolderModified(parentNode);
 			}
+			return id;
 		}
-		return id;
+		return INVALID_NODE;
 	}
 
 	void AssetManager::ReloadFolder(NodeID nodeId, bool recursively) {

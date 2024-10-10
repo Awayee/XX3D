@@ -15,7 +15,7 @@ namespace Editor {
 		void AddMenuBar(const XString& barName);
 		void AddMenu(const XString& barName, const XString& name, Func<void()>&& func, bool* pToggle);
 		EditorWndBase* AddWindow(const char* name, Func<void()>&& func, ImGuiWindowFlags flags = ImGuiWindowFlags_None);
-		void AddWindow(TUniquePtr<EditorWndBase>&& wnd);
+		void AddWindow(TUniquePtr<EditorWndBase>&& wndPtr);
 		RHITexture* GetSceneTexture() { return m_SceneTexture; }
 		void SetSceneTexture(RHITexture* texture) { m_SceneTexture = texture; }
 	private:

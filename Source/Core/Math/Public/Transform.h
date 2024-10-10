@@ -5,26 +5,26 @@
 
 namespace Math {
 	template<typename T> struct Transform {
-		Vector3<T> Position{ Vector3<T>::ZERO };
-		Vector3<T> Scale{ Vector3<T>::ONE };
-		Quaternion<T> Rotation{Quaternion<T>::IDENTITY};
+		Vector3<T> Position{ 0,0,0 };
+		Vector3<T> Scale{ 1,1,1 };
+		Quaternion<T> Rotation{ 0,0,0,1 };
 
-		const static Transform<T> IDENTITY;
+		static const Transform<T> IDENTITY;
 		static Transform MakeFromMatrix(const Math::Matrix4x4<T>& mat) {
 			Transform transform;
 			mat.Decomposition(transform.Position, transform.Scale, transform.Rotation);
 			return transform;
 		}
 
-		void BuildMatrix(Math::Matrix4x4<T>& mat) {
+		void BuildMatrix(Math::Matrix4x4<T>& mat) const {
 			mat.MakeTransform(Position, Scale, Rotation);
 		}
 
-		void BuildInverseMatrix(Math::Matrix4x4<T>& mat) {
+		void BuildInverseMatrix(Math::Matrix4x4<T>& mat) const {
 			mat.MakeInverseTransform(Position, Scale, Rotation);
 		}
 
-		Math::Matrix4x4<T> ToMatrix() {
+		Math::Matrix4x4<T> ToMatrix() const {
 			Math::Matrix4x4<T> matrix;
 			matrix.MakeTransform(Position, Scale, Rotation);
 			return matrix;
@@ -46,7 +46,7 @@ namespace Math {
 		}
 	};
 
-	template <typename T> const Transform<T> Transform<T>::IDENTITY{};
+	template<typename T> const Transform<T> Transform<T>::IDENTITY{};
 
 	typedef Transform<float> FTransform;
 }

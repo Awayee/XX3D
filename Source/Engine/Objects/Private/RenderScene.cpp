@@ -8,8 +8,15 @@
 #include "Objects/Public/RenderResource.h"
 #include "Render/Public/GlobalShader.h"
 namespace {
-    IMPLEMENT_GLOBAL_SHADER(DeferredLightingVS, "DeferredLightingPBR.hlsl", "MainVS", EShaderStageFlags::Vertex);
-    IMPLEMENT_GLOBAL_SHADER(DeferredLightingPS, "DeferredLightingPBR.hlsl", "MainPS", EShaderStageFlags::Pixel);
+    class DeferredLightingVS : public Render::GlobalShader {
+        GLOBAL_SHADER_IMPLEMENT(DeferredLightingVS, "DeferredLightingPBR.hlsl", "MainVS", EShaderStageFlags::Vertex);
+        SHADER_PERMUTATION_EMPTY();
+    };
+    class DeferredLightingPS: public Render::GlobalShader {
+        GLOBAL_SHADER_IMPLEMENT(DeferredLightingPS, "DeferredLightingPBR.hlsl", "MainPS", EShaderStageFlags::Pixel);
+        SHADER_PERMUTATION_EMPTY();
+    };
+
     void InitializeDeferredLightingPipelineDesc(RHIGraphicsPipelineStateDesc& desc) {
         RHI* r = RHI::Instance();
         Render::GlobalShaderMap* globalShaderMap = Render::GlobalShaderMap::Instance();

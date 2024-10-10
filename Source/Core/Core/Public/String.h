@@ -72,3 +72,7 @@ inline bool StrEmpty(const char* str) {
 inline bool StrContains(const char* str, const char* subStr) {
 	return std::strstr(str, subStr) != nullptr;
 }
+
+inline size_t StringSize(const char* str) {
+	return std::strlen(str);
+}

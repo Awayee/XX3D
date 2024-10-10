@@ -57,19 +57,10 @@ namespace Editor {
 	//file
 	class FileNode: public PathNode {
 	private:
-		TUniquePtr<Asset::AssetBase> m_Asset;
 		TArray<std::pair<EventID, Func<void(FileNode*)>>> m_OnFileChange;
 		friend class AssetManager;
 	public:
 		FileNode(const AssetManager* owner, NodeID id): PathNode(owner, id){}
-		template<typename T> T* GetAsset() {
-			if (!m_Asset.Get()) {//lazy load
-				m_Asset.Reset(new T);
-				Asset::AssetLoader::LoadProjectAsset(m_Asset.Get(), m_RelativePath.string().c_str());
-			}
-			return static_cast<T*>(m_Asset.Get());
-		}
-		void Save();
 	};
 
 	class AssetManager {

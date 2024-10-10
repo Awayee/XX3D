@@ -7,15 +7,13 @@ class D3D12Uploader;
 
 class D3D12DynamicBufferAllocator {
 public:
-	struct Allocation {
-		uint32 BufferIndex;
-		uint32 Offset;
-		uint32 Size;
-	};
 	D3D12DynamicBufferAllocator(ID3D12Device* device, uint32 pageSize);
 	~D3D12DynamicBufferAllocator() = default;
-	Allocation Allocate(EBufferFlags flags, uint32 size, const void* data);
+	RHIDynamicBuffer Allocate(EBufferFlags flags, uint32 size, const void* data, uint32 stride);
 	ID3D12Resource* GetResource(uint32 bufferIndex);
+	void CreateCBV(const RHIDynamicBuffer& dBuffer, D3D12_CPU_DESCRIPTOR_HANDLE descriptorHandle);
+	void CreateUAV(const RHIDynamicBuffer& dBuffer, D3D12_CPU_DESCRIPTOR_HANDLE descriptorHandle);
+	D3D12_VERTEX_BUFFER_VIEW CreateVertexBufferView(const RHIDynamicBuffer& dBuffer);
 	void UnmapAllocations();
 private:
 	ID3D12Device* m_Device;

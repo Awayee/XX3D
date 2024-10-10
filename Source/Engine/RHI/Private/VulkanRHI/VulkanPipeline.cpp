@@ -7,8 +7,8 @@
 #include "VulkanMemory.h"
 
 inline uint64 GetLayoutHash(const RHIShaderParamSetLayout& bindingLayout) {
-	const uint64* dataU64 = reinterpret_cast<const uint64*>(bindingLayout.Data());
-	return DataArrayHash(dataU64, bindingLayout.Size());
+	const uint32* dataU32 = reinterpret_cast<const uint32*>(bindingLayout.Data());
+	return DataArrayHash(dataU32, bindingLayout.Size());
 }
 
 inline bool BindingIsBuffer(EBindingType type) {

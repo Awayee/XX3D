@@ -60,7 +60,47 @@ namespace Object {
 	}
 
 	void DirectionalLight::Update(Object::RenderCamera* renderCamera) {
+		// clear draw call
+		for (auto& queue : m_DrawCallQueues) {
+			queue.Reset();
+		}
 		// split the frustum of render camera
+		UpdateCascadeSplits(renderCamera);
+
+		// Update uniforms
+		LightUBO ubo{};
+		ubo.Dir = m_LightDir;
+		ubo.Color = m_LightColor;
+		if(GetEnableShadow()) {
+			ubo.ShadowDebug.X = m_ShadowConfig.EnableDebug ? 1.0f : 0.0f;
+			for (uint32 i = 0; i < CASCADE_NUM; ++i) {
+				ubo.FarDistances[i] = m_FarDistances[i];
+				ubo.VPMats[i] = m_VPMats[i];
+				m_ShadowUniforms[i] = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(Math::FMatrix4x4), &ubo.VPMats[i], 0);
+			}
+		}
+		m_Uniform = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(ubo), &ubo, 0);
+
+		// lazy create resources
+		if (GetEnableShadow() && (!m_ShadowMapTexture || m_ShadowMapTexture->GetDesc().Width != m_ShadowConfig.ShadowMapSize)) {
+			CreateShadowMapTexture();
+		}
+	}
+
+	void DirectionalLight::CreateShadowMapTexture() {
+		const ERHIFormat depthFormat = RHI::Instance()->GetDepthFormat();
+		RHITextureDesc desc = RHITextureDesc::Texture2DArray(CASCADE_NUM);
+		desc.Width = desc.Height = m_ShadowConfig.ShadowMapSize;
+		desc.Format = depthFormat;
+		desc.Flags = ETextureFlags::DepthStencilTarget | ETextureFlags::SRV;
+		desc.ClearValue.DepthStencil = { 1.0f, 0u };
+		m_ShadowMapTexture = RHI::Instance()->CreateTexture(desc);
+	}
+
+	void DirectionalLight::UpdateCascadeSplits(Object::RenderCamera* renderCamera) {
+		if (!GetEnableShadow()) {
+			return;
+		}
 		const auto& srcView = renderCamera->GetView();
 		const auto& srcProj = renderCamera->GetProjection();
 		TStaticArray<float, CASCADE_NUM + 1> splits;
@@ -84,8 +124,7 @@ namespace Object {
 			auto viewMat = dstView.GetViewMatrix();
 			Math::FVector3 min{ FLT_MAX }, max{ -FLT_MAX };
 			for(const auto& corner: fc.Corners) {
-				auto transformedCornerW = viewMat * Math::FVector4(corner.X, corner.Y, corner.Z, 1.0f);
-				Math::FVector3 transformedCorner = { transformedCornerW.X, transformedCornerW.Y, transformedCornerW.Z };
+				Math::FVector3 transformedCorner = viewMat.TransformCoord(corner);
 				min = Math::FVector3::Min(transformedCorner, min);
 				max = Math::FVector3::Max(transformedCorner, max);
 			}
@@ -102,38 +141,5 @@ namespace Object {
 			m_FarDistances[i] = cascadeFar;
 			m_VPMats[i] = m_CascadeCameras[i].GetViewProjectMatrix();
 		}
-
-		for (auto& queue : m_DrawCallQueues) {
-			queue.Reset();
-		}
-
-		if(m_ShadowConfig.EnableShadow) {
-
-			// Update uniforms
-			LightUBO ubo;
-			ubo.Dir = m_LightDir;
-			ubo.Color = m_LightColor;
-			for (uint32 i = 0; i < CASCADE_NUM; ++i) {
-				ubo.FarDistances[i] = m_FarDistances[i];
-				ubo.VPMats[i] = m_VPMats[i];
-				m_ShadowUniforms[i] = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(Math::FMatrix4x4), &ubo.VPMats[i], 0);
-			}
-			ubo.ShadowDebug.X = m_ShadowConfig.EnableDebug ? 1.0f : 0.0f;
-			m_Uniform = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(ubo), &ubo, 0);
-			// lazy create resources
-			if (!m_ShadowMapTexture.Get() || m_ShadowMapTexture->GetDesc().Width != m_ShadowConfig.ShadowMapSize) {
-				CreateShadowMapTexture();
-			}
-		}
-	}
-
-	void DirectionalLight::CreateShadowMapTexture() {
-		const ERHIFormat depthFormat = RHI::Instance()->GetDepthFormat();
-		RHITextureDesc desc = RHITextureDesc::Texture2DArray(CASCADE_NUM);
-		desc.Width = desc.Height = m_ShadowConfig.ShadowMapSize;
-		desc.Format = depthFormat;
-		desc.Flags = ETextureFlags::DepthStencilTarget | ETextureFlags::SRV;
-		desc.ClearValue.DepthStencil = { 1.0f, 0u };
-		m_ShadowMapTexture = RHI::Instance()->CreateTexture(desc);
 	}
 }

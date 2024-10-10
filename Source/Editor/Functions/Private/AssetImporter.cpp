@@ -31,7 +31,7 @@ uint32 GetPrimitiveCount(const tinygltf::Model& model, const tinygltf::Node& nod
 	return count;
 }
 
-void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TArray<Asset::MeshAsset::SPrimitive>& primitives, uint32& index) {
+void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TArray<Asset::MeshAsset::SPrimitive>& primitives, uint32& index, float uniformScale) {
 	if (node.mesh > -1) {
 		const tinygltf::Mesh& mesh = model.meshes[node.mesh];
 		for (uint32 i = 0; i < mesh.primitives.size(); i++) {
@@ -73,9 +73,9 @@ void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TArr
 			vertices.Resize(vertexCount);
 
 			for (uint32 v = 0; v < vertexCount; v++) {
-				vertices[v].Position.X = bufferPos[v * posByteStride];
-				vertices[v].Position.Y = bufferPos[v * posByteStride + 1];
-				vertices[v].Position.Z = bufferPos[v * posByteStride + 2];
+				vertices[v].Position.X = uniformScale * bufferPos[v * posByteStride];
+				vertices[v].Position.Y = uniformScale * bufferPos[v * posByteStride + 1];
+				vertices[v].Position.Z = uniformScale * bufferPos[v * posByteStride + 2];
 				vertices[v].Normal.X = bufferNormals[v * normByteStride];
 				vertices[v].Normal.Y = bufferNormals[v * normByteStride + 1];
 				vertices[v].Normal.Z = bufferNormals[v * normByteStride + 2];
@@ -158,7 +158,7 @@ void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TArr
 
 	if (node.children.size() > 0) {
 		for (uint32 i = 0; i < node.children.size(); i++) {
-			LoadGLTFNode(model, model.nodes[node.children[i]], primitives, index);
+			LoadGLTFNode(model, model.nodes[node.children[i]], primitives, index, uniformScale);
 		}
 	}
 }
@@ -171,20 +171,22 @@ uint32 GetPrimitiveCount(const aiScene* aScene, aiNode* aNode) {
 	return count;
 }
 
-void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TArray<Asset::MeshAsset::SPrimitive>& primitives) {
+void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TArray<Asset::MeshAsset::SPrimitive>& primitives, float uniformScale) {
 	for (uint32 i = 0; i < aNode->mNumMeshes; i++) {
 		aiMesh* aMesh = aScene->mMeshes[aNode->mMeshes[i]];
 		TArray<Asset::AssetVertex>& vertices = primitives[i].Vertices;
 		TArray<uint32>& indices = primitives[i].Indices;
 		//TArray<std::string>& textures = meshInfos[i].textures;
 
+		if(0 == aMesh->mNumVertices || 0 == aMesh->mNumFaces) {
+			LOG_WARNING("[LoadFbxNode] Num of vertex or num of index is 0!");
+		}
 		// vertices
 		vertices.Resize(aMesh->mNumVertices);
 		for (uint32 i = 0; i < aMesh->mNumVertices; i++) {
-			vertices[i].Position.X = aMesh->mVertices[i].x;
-			vertices[i].Position.Y = aMesh->mVertices[i].y;
-			vertices[i].Position.Z = aMesh->mVertices[i].z;
-
+			vertices[i].Position.X = uniformScale * aMesh->mVertices[i].x;
+			vertices[i].Position.Y = uniformScale * aMesh->mVertices[i].y;
+			vertices[i].Position.Z = uniformScale * aMesh->mVertices[i].z;
 			vertices[i].Normal.X = aMesh->mNormals[i].x;
 			vertices[i].Normal.Y = aMesh->mNormals[i].y;
 			vertices[i].Normal.Z = aMesh->mNormals[i].z;
@@ -260,18 +262,33 @@ void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TArray<Asset::MeshAsset::
 	}
 
 	for (uint32 i = 0; i < aNode->mNumChildren; i++) {
-		LoadFbxNode(aScene, aNode->mChildren[i], primitives);
+		LoadFbxNode(aScene, aNode->mChildren[i], primitives, uniformScale);
 	}
 }
 
-bool ImportGLB(const char* file, Asset::MeshAsset& asset) {
+// TODO gltf internal textures
+bool LoadImageDataFunction(tinygltf::Image*, const int, std::string*,
+                                      std::string*, int, int,
+                                      const unsigned char*, int,
+                                      void* user_pointer) {
+	return true;
+}
+
+bool ImportGLTF(const char* file, Asset::MeshAsset& asset, bool isBinary, float uniformScale) {
 	tinygltf::Model gltfModel;
 	tinygltf::TinyGLTF gltfContext;
+	gltfContext.SetImageLoader(LoadImageDataFunction, nullptr);
 	XString error;
 	XString warning;
 	XString fullPath(file);
-	if (!gltfContext.LoadBinaryFromFile(&gltfModel, &error, &warning, fullPath)) {
-		LOG_WARNING("Failed to load GLTF mesh: %s", file);
+	if(isBinary) {
+		if (!gltfContext.LoadBinaryFromFile(&gltfModel, &error, &warning, fullPath)) {
+			LOG_WARNING("Failed to load binary GLTF mesh: %s, Error: %s", file, error.c_str());
+			return false;
+		}
+	}
+	else if (!gltfContext.LoadASCIIFromFile(&gltfModel, &error, &warning, fullPath)) {
+		LOG_WARNING("Failed to load GLTF mesh: %s, Error: %s", file, error.c_str());
 		return false;
 	}
 	const tinygltf::Scene& scene = gltfModel.scenes[gltfModel.defaultScene > -1 ? gltfModel.defaultScene : 0];
@@ -283,14 +300,14 @@ bool ImportGLB(const char* file, Asset::MeshAsset& asset) {
 	asset.Primitives.Resize(primitiveCount);
 	primitiveCount = 0;
 	for (uint32 i = 0; i < scene.nodes.size(); i++) {
-		LoadGLTFNode(gltfModel, gltfModel.nodes[scene.nodes[i]], asset.Primitives, primitiveCount);
+		LoadGLTFNode(gltfModel, gltfModel.nodes[scene.nodes[i]], asset.Primitives, primitiveCount, uniformScale);
 	}
 	asset.Name = File::FPath(fullPath).stem().string();
 	LOG_INFO("Succeed to load GLTF mesh: %s", file);
 	return true;
 }
 
-bool ImportFBX(const char* file, Asset::MeshAsset& asset) {
+bool ImportFBX(const char* file, Asset::MeshAsset& asset, float uniformScale) {
 	File::FPath fullPath(file);
 	Assimp::Importer importer;
 	const aiScene* aScene = importer.ReadFile(fullPath.string().c_str(), aiProcess_Triangulate | aiProcess_FlipUVs);
@@ -300,13 +317,13 @@ bool ImportFBX(const char* file, Asset::MeshAsset& asset) {
 	}
 	uint32 primitiveCount = GetPrimitiveCount(aScene, aScene->mRootNode);
 	asset.Primitives.Resize(primitiveCount);
-	LoadFbxNode(aScene, aScene->mRootNode, asset.Primitives);
+	LoadFbxNode(aScene, aScene->mRootNode, asset.Primitives, uniformScale);
 	asset.Name = File::FPath(fullPath).stem().string();
 	LOG_INFO("Succeed to load GLTF mesh: %s", file);
 	return true;
 }
 
-bool ImportMeshAsset(const XString& srcFile, const XString& dstFile) {
+bool ImportMeshAsset(const XString& srcFile, const XString& dstFile, float uniformScale) {
 	Asset::MeshAsset asset;
 	auto saveFile = dstFile;
 	bool r = false;
@@ -316,13 +333,20 @@ bool ImportMeshAsset(const XString& srcFile, const XString& dstFile) {
 		saveFile = relativePath.string();
 	}
 	if (StrEndsWith(srcFile.c_str(), ".glb")) {
-		r = ImportGLB(srcFile.c_str(), asset);
+		r = ImportGLTF(srcFile.c_str(), asset, true, uniformScale);
+	}
+	else if (StrEndsWith(srcFile.c_str(), ".gltf")) {
+		r = ImportGLTF(srcFile.c_str(), asset, false, uniformScale);
 	}
 	else if (StrEndsWith(srcFile.c_str(), ".fbx")) {
-		r = ImportFBX(srcFile.c_str(), asset);
+		r = ImportFBX(srcFile.c_str(), asset, uniformScale);
+	}
+	else {
+		LOG_WARNING("[ImportMeshAsset] Unsupported file type: %s", srcFile.c_str());
+		return false;
 	}
 	if(!r) {
-		LOG_WARNING("Can not import mesh %s", srcFile.c_str());
+		LOG_WARNING("[ImportMeshAsset] Can not import mesh %s", srcFile.c_str());
 		return r;
 	}
 
@@ -390,8 +414,8 @@ bool ImportTexture2DAsset(const XString& srcFile, const XString& dstFile, int do
 		asset.Pixels.Resize(downsizedByteSize);
 		stbir_resize_uint8_linear(s.Data, width, height, 0, 
 			asset.Pixels.Data(), downsizedWidth, downsizeHeight, 0, stbir_pixel_layout::STBIR_4CHANNEL);
-		asset.Width = width;
-		asset.Height = height;
+		asset.Width = downsizedWidth;
+		asset.Height = downsizeHeight;
 	}
 	else {
 		asset.Width = width;

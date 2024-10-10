@@ -84,7 +84,12 @@ namespace Object {
 	};
 
 	class InstancedMeshRenderSystem: public ECSSystem<MeshECSComponent, InstancedDataECSComponent> {
-		void Update(ECSScene* scene, MeshECSComponent* meshCom, InstancedDataECSComponent* instanceCom) override;
+	public:
+		InstancedMeshRenderSystem();
+	private:
+		RHIGraphicsPipelineStatePtr m_DirectionalShadowPSO; // Shadow pso may be dynamic
+		void PreUpdate(ECSScene* ecsScene) override;
+		void Update(ECSScene* ecsScene, MeshECSComponent* meshCom, InstancedDataECSComponent* instanceCom) override;
 		RENDER_SCENE_REGISTER_SYSTEM(InstancedMeshRenderSystem);
 	};
 

@@ -38,8 +38,8 @@ namespace Asset {
 			const Math::FVector3& scale = transform.Scale;
 			for(uint32 i=0; i<3; ++i) {
 				Position[i] = Math::FloatToHalf(pos[i]);
-				Euler[i] = Math::FloatToHalf(euler[i]);
 				Scale[i] = Math::FloatToHalf(scale[i]);
+				Euler[i] = Math::FloatToHalf(euler[i]);
 			}
 		}
 		void Unpack(Math::FTransform& transform) const {
@@ -243,6 +243,7 @@ namespace Asset {
 			for(auto& packedTransform: packedTransforms) {
 				packedTransform.Unpack(instances.EmplaceBack());
 			}
+			return true;
 		}
 		LOG_WARNING("[InstancedMeshAsset::LoadInstanceFile] Failed to load File: %s!", file);
 		return false;

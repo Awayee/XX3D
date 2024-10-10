@@ -80,10 +80,10 @@ namespace Editor {
 
 	EditorWndBase* EditorUIMgr::AddWindow(const char* name, Func<void()>&& func, ImGuiWindowFlags flags) {
 		// check if exist
-		for(auto& widget: m_Windows) {
-			if(widget->m_Name == name) {
-				widget.Reset(new EditorFuncWnd(name, func, flags));
-				return (EditorWndBase*)widget.Get();
+		for(auto& wnd: m_Windows) {
+			if(wnd->m_Name == name) {
+				wnd.Reset(new EditorFuncWnd(name, func, flags));
+				return (EditorWndBase*)wnd.Get();
 			}
 		}
 		TUniquePtr<EditorFuncWnd> wndPtr(new EditorFuncWnd(name, func, flags));
@@ -92,7 +92,13 @@ namespace Editor {
 		return ptr;
 	}
 
-	void EditorUIMgr::AddWindow(TUniquePtr<EditorWndBase>&& wnd) {
-		m_Windows.PushBack(MoveTemp(wnd));
+	void EditorUIMgr::AddWindow(TUniquePtr<EditorWndBase>&& wndPtr) {
+		for(auto& wnd: m_Windows) {
+			if(wnd->m_Name == wndPtr->m_Name) {
+				wnd = MoveTemp(wndPtr);
+				return;
+			}
+		}
+		m_Windows.PushBack(MoveTemp(wndPtr));
 	}
 }

@@ -328,10 +328,19 @@ namespace Math {
     }
     MATH_GENERIC Vector4<T> Matrix4x4<T>::operator*(const Vector4<T>& v) const
     {
-        return Vector4<T>(Mat[0][0] * v.X + Mat[0][1] * v.Y + Mat[0][2] * v.Z + Mat[0][3] * v.W,
+#ifdef MATRIX_COL_MAJOR
+        return Vector4<T>(
+            Mat[0][0] * v.X + Mat[1][0] * v.Y + Mat[2][0] * v.Z + Mat[3][0] * v.W,
+            Mat[0][1] * v.X + Mat[1][1] * v.Y + Mat[2][1] * v.Z + Mat[3][1] * v.W,
+            Mat[0][2] * v.X + Mat[1][2] * v.Y + Mat[2][2] * v.Z + Mat[3][2] * v.W,
+            Mat[0][3] * v.X + Mat[1][3] * v.Y + Mat[2][3] * v.Z + Mat[3][3] * v.W);
+#else
+        return Vector4<T>(
+            Mat[0][0] * v.X + Mat[0][1] * v.Y + Mat[0][2] * v.Z + Mat[0][3] * v.W,
             Mat[1][0] * v.X + Mat[1][1] * v.Y + Mat[1][2] * v.Z + Mat[1][3] * v.W,
             Mat[2][0] * v.X + Mat[2][1] * v.Y + Mat[2][2] * v.Z + Mat[2][3] * v.W,
             Mat[3][0] * v.X + Mat[3][1] * v.Y + Mat[3][2] * v.Z + Mat[3][3] * v.W);
+#endif
     }
     MATH_GENERIC Matrix4x4<T> Matrix4x4<T>::operator+(const Matrix4x4<T>& m2) const
     {

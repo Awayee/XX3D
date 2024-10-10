@@ -183,16 +183,6 @@ struct RHIRenderPassInfo {
 	uint32 GetNumColorTargets() const;
 };
 
-// Semantic defines
-#define POSITION "POSITION"
-#define COLOR "COLOR"
-#define NORMAL "NORMAL"
-#define TEXCOORD "TEXCOORD"
-#define TANGENT "TANGENT"
-#define BINORMAL "BINORMAL"
-#define BLENDINDICES "BLENDINDICES"
-#define BLENDWEIGHT "BLENDWEIGHT"
-
 struct RHIVertexInputInfo {
 	struct BindingDesc {
 		uint32 Binding;
@@ -210,6 +200,17 @@ struct RHIVertexInputInfo {
 	TArray<BindingDesc> Bindings;
 	TArray<AttributeDesc> Attributes;
 };
+
+// Semantic defines
+#define POSITION(idx) "POSITION", idx
+#define COLOR(idx) "COLOR", idx
+#define NORMAL(idx) "NORMAL", idx
+#define TEXCOORD(idx) "TEXCOORD", idx
+#define TANGENT(idx) "TANGENT", idx
+#define BINORMAL(idx) "BINORMAL", idx
+#define BLENDINDICES(idx) "BLENDINDICES", idx
+#define BLENDWEIGHT(idx) "BLENDWEIGHT", idx
+#define INSTANCE_TRANSFORM(idx) "INSTANCE_TRANSFORM", idx
 
 struct RHIBlendState {
 	bool Enable{ false };

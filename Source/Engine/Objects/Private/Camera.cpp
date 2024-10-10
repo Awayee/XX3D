@@ -99,24 +99,37 @@ namespace Object {
 	}
 
 	void FrustumCorner::BuildFromPerspective(const CameraView& view, float n, float f, float fov, float aspect) {
-		const float tanHalfFov = Math::Tan(fov * 0.5f);
-		const Math::FVector3 cameraPos = view.Eye;
-		Math::FVector3 cameraRight, cameraUp, cameraFront;
-		view.CalcAxis(cameraRight, cameraUp, cameraFront);
-		Math::FVector3 center = cameraPos + n * cameraFront;
-		Math::FVector3 up = n * tanHalfFov * cameraUp;
-		Math::FVector3 right = n * tanHalfFov * aspect * cameraRight;
-		LeftBottomNear = center - right - up;
-		RightBottomNear = center + right - up;
-		LeftTopNear = center - right + up;
-		RightTopNear = center + right + up;
-		center = cameraPos + f * cameraFront;
-		up = f * tanHalfFov * cameraUp;
-		right = f * tanHalfFov * aspect * cameraRight;
-		LeftBottomFar = center - right - up;
-		RightBottomFar = center + right - up;
-		LeftTopFar = center - right + up;
-		RightTopFar = center + right + up;
+		//const float tanHalfFov = Math::Tan(fov * 0.5f);
+		//const Math::FVector3 cameraPos = view.Eye;
+		//Math::FVector3 cameraRight, cameraUp, cameraFront;
+		//view.CalcAxis(cameraRight, cameraUp, cameraFront);
+		//Math::FVector3 center = cameraPos + n * cameraFront;
+		//Math::FVector3 up = n * tanHalfFov * cameraUp;
+		//Math::FVector3 right = n * tanHalfFov * aspect * cameraRight;
+		//LeftBottomNear = center - right - up;
+		//RightBottomNear = center + right - up;
+		//LeftTopNear = center - right + up;
+		//RightTopNear = center + right + up;
+		//center = cameraPos + f * cameraFront;
+		//up = f * tanHalfFov * cameraUp;
+		//right = f * tanHalfFov * aspect * cameraRight;
+		//LeftBottomFar = center - right - up;
+		//RightBottomFar = center + right - up;
+		//LeftTopFar = center - right + up;
+		//RightTopFar = center + right + up;
+		LeftBottomNear = { -1.0f, -1.0f, 0.0f };
+		RightBottomNear = { 1.0f, -1.0f, 0.0f };
+		LeftTopNear = { -1.0f, 1.0f, 0.0f };
+		RightTopNear = { 1.0f, 1.0f, 0.0f };
+		LeftBottomFar = { -1.0f, -1.0f, 1.0f };
+		RightBottomFar = { 1.0f, -1.0f, 1.0f };
+		LeftTopFar = { -1.0f, 1.0f, 1.0f };
+		RightTopNear = { 1.0f, 1.0f, 1.0f };
+		const Math::FMatrix4x4 camProj = Math::FMatrix4x4::PerspectiveMatrix(fov, aspect, n, f);
+		Math::FMatrix4x4 invVp = (camProj * view.GetViewMatrix()).Inverse();
+		for(auto& corner: Corners) {
+			corner = invVp.TransformCoord(corner);
+		}
 	}
 
 	void FrustumCorner::BuildFormOrtho(const CameraView& view, float n, float f, float viewSize, float aspect) {

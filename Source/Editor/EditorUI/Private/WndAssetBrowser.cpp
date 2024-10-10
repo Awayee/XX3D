@@ -28,6 +28,7 @@ namespace {
 		MeshImporter(Editor::NodeID folderNode): AssetBuilderBase("MeshImporter", folderNode) {}
 	private:
 		XString m_SrcFile;
+		float m_UniformScale{ 1.0f };
 		void WndContent() override {
 			ImGui::Text("Import to %s", GetPathStr().c_str());
 			// update the target filename
@@ -35,11 +36,11 @@ namespace {
 				XString nameStr = File::FPath{ m_SrcFile }.stem().string();
 				StrCopy(m_DstFileName.Data(), nameStr.c_str());
 			}
+			ImGui::DragFloat("Uniform Scale", &m_UniformScale, 0.1f, 0.0001f, 9999.0f);
 			ImGui::InputText("Dst File Name", m_DstFileName.Data(), m_DstFileName.ByteSize());
-
 			if (ImGui::Button("Import")) {
 				File::FPath filePath = GetPath(); filePath.append(m_DstFileName.Data()).replace_extension(".mesh");
-				if(ImportMeshAsset(m_SrcFile, filePath.string())) {
+				if(ImportMeshAsset(m_SrcFile, filePath.string(), m_UniformScale)) {
 					LOG_INFO("Mesh imported: %s", m_SrcFile.c_str());
 					RefreshNode(MoveTemp(filePath));
 				}
@@ -60,7 +61,7 @@ namespace {
 		void WndContent() override {
 			ImGui::Text("Import to %s", GetPathStr().c_str());
 			// update the target filename
-			if (ImGui::DraggableFileItemGlobal("Src File", m_SrcFile, "*.jpg;*.png")) {
+			if (ImGui::DraggableFileItemGlobal("Src File", m_SrcFile, "*.jpg;*.png*.tga")) {
 				XString nameStr = File::FPath{ m_SrcFile }.stem().string();
 				StrCopy(m_DstFileName.Data(), nameStr.c_str());
 			}

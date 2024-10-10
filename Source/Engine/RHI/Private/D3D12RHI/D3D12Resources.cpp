@@ -44,6 +44,13 @@ void D3D12Buffer::UpdateData(const void* data, uint32 byteSize, uint32 offset) {
 	m_Resource->Unmap(0, nullptr);
 }
 
+void D3D12Buffer::UpdateData(Func<void(void*)>&& f) {
+	void* mappedData;
+	DX_CHECK(m_Resource->Map(0, nullptr, &mappedData));
+	f(mappedData);
+	m_Resource->Unmap(0, nullptr);
+}
+
 void D3D12Buffer::SetName(const char* name) {
 	XWString nameW = String2WString(name);
 	m_Resource->SetName(nameW.c_str());
@@ -243,12 +250,29 @@ void D3D12TextureImpl::UpdateData(const void* data, uint32 byteSize, RHITextureS
 	// calc buffer size, and allocate staging buffer
 	const uint8 mip = subRes.MipIndex;
 	const uint32 mipWidth = desc.GetMipLevelWidth(mip), mipHeight = desc.GetMipLevelHeight(mip);
-	const uint32 rowSize = AlignTexturePitchSize(mipWidth * desc.GetPixelByteSize());
-	const uint32 sliceSize = AlignTextureSliceSize(mipHeight * rowSize);
-	const uint32 bufferSize = sliceSize * subRes.ArraySize * GetD3D12PerArraySliceSize(subRes.Dimension);
+	const uint32 srcRowByteSize = mipWidth * desc.GetPixelByteSize();
+	const uint32 dstRowByteSize = AlignTexturePitchSize(srcRowByteSize);
+	const uint32 srcSliceByteSize = mipHeight * dstRowByteSize;
+	const uint32 dstSliceByteSize = AlignTextureSliceSize(srcSliceByteSize);
+	const uint32 bufferSize = dstSliceByteSize * subRes.ArraySize * GetD3D12PerArraySliceSize(subRes.Dimension);
 	D3D12Buffer* stagingBuffer = m_Device->GetUploader()->AllocateStaging(bufferSize);
-	stagingBuffer->UpdateData(data, byteSize, 0);
-
+	// if data size is aligned, copy directly, otherwise copy row-by-row.
+	if (srcRowByteSize == dstRowByteSize && srcSliceByteSize == dstSliceByteSize) {
+		stagingBuffer->UpdateData(data, byteSize, 0);
+	}
+	else {
+		stagingBuffer->UpdateData([=](void* mappedData) {
+			for(uint16 arr=0; arr<subRes.ArraySize; ++arr) {
+				uint8* dstData = (uint8*)mappedData + (size_t)((subRes.ArrayIndex + arr) * dstSliceByteSize);
+				const uint8* srcData = (const uint8*)data + (size_t)(arr * srcSliceByteSize);
+				for (uint32 row=0; row<mipHeight; ++row) {
+					memcpy(dstData, srcData, (size_t)srcRowByteSize);
+					dstData += (size_t)dstRowByteSize;
+					srcData += (size_t)srcRowByteSize;
+				}
+			}
+		});
+	}
 	// transition state
 	D3D12CommandList* uploadCmd = m_Device->GetCommandMgr()->GetQueue(EQueueType::Graphics)->GetUploadCommand();
 	uploadCmd->TransitionTextureState(this, EResourceState::Unknown, EResourceState::TransferDst, subRes);

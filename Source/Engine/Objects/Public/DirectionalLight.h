@@ -55,5 +55,6 @@ namespace Object {
 		TStaticArray<RHIDynamicBuffer, CASCADE_NUM> m_ShadowUniforms;// for shadow map
 
 		void CreateShadowMapTexture();
+		void UpdateCascadeSplits(Object::RenderCamera* renderCamera);
 	};
 }

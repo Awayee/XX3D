@@ -17,11 +17,8 @@ namespace Editor {
 	private:
 		static constexpr NodeID MAX_FOLDER_NUM = 0xffff;
 		static TArray<WndAssetBrowser*> s_Instances;
-
 		FolderNode* m_CurrentFolder{nullptr};
 		TArray<TUniquePtr<AssetViewBase>> m_Contents;
-		TArray<TUniquePtr<FolderAssetView>> m_Folders;
-
 		uint32 m_SelectedItem{ INVALID_NODE };
 		ImVec2 m_ContextMenuPos;
 

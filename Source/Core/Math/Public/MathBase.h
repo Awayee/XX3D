@@ -66,14 +66,25 @@ namespace Math {
 	inline unsigned char PackFloat01(float x) { return (unsigned char)(x * 255.0f); }
 	inline float PackFloat01(unsigned char x) { return (float)x / 255.0f; }
 
+	// reference https://stackoverflow.com/questions/1659440/32-bit-to-16-bit-floating-point-conversion
+	// float32 to float16
 	inline unsigned short FloatToHalf(float x) {
-		unsigned int f = *(reinterpret_cast<unsigned int*>(&x));
-		unsigned short h = ((f >> 16) & 0x8000) | (((f & 0x7f800000) - 0x38000000) >> 13) | ((f >> 13) & 0x03ff);
-		return h;
+		// IEEE-754 16-bit floating-point format (without infinity): 1-5-10, exp-15, +-131008.0, +-6.1035156E-5, +-5.9604645E-8, 3.311 digits
+		const unsigned int b = *(const unsigned int*)(&x) + 0x00001000; // round-to-nearest-even: add last bit after truncated mantissa
+		const unsigned int e = (b & 0x7F800000) >> 23; // exponent
+		const unsigned int m = b & 0x007FFFFF; // mantissa; in line below: 0x007FF000 = 0x00800000-0x00001000 = decimal indicator flag - initial rounding
+		return (b & 0x80000000) >> 16 | (e > 112) * ((((e - 112) << 10) & 0x7C00) | m >> 13) | ((e < 113) & (e > 101)) * ((((0x007FF000 + m) >> (125 - e)) + 1) >> 1) | (e > 143) * 0x7FFF; // sign : normalized : denormalized : saturate
 	}
-	inline float HalfToFloat(unsigned short value) {
-		unsigned int f = ((value & 0x8000) << 16) | (((value & 0x7c00) + 0x1C000) << 13) | ((value & 0x03ff) << 13);
-		return *(reinterpret_cast<float*>(&f));
+	// float16 to float32
+	inline float HalfToFloat(unsigned short x) {
+		// IEEE-754 16-bit floating-point format (without infinity): 1-5-10, exp-15, +-131008.0, +-6.1035156E-5, +-5.9604645E-8, 3.311 digits
+		const unsigned int e = (x & 0x7C00) >> 10; // exponent
+		const unsigned int m = (x & 0x03FF) << 13; // mantissa
+		const float mFloat = (float)m;
+		const unsigned int mUint = *(const unsigned int*)(&mFloat);
+		const unsigned int v = mUint >> 23; // evil log2 bit hack to count leading zeros in denormalized format
+		const unsigned int result = (x & 0x8000) << 16 | (e != 0) * ((e + 112) << 23 | m) | ((e == 0) & (m != 0)) * ((v - 37) << 23 | ((m << (150 - v)) & 0x007FE000)); // sign : normalized : denormalized
+		return *(const float*)&result;
 	}
 
 	template<typename T> T UpperExp2(T x) {

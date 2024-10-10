@@ -2,7 +2,6 @@
 #include "Context/Public/Editor.h"
 #include "Engine/Public/Engine.h"
 #include "HLSLCompiler/HLSLCompiler.h"
-
 int main() {
 	//clear all compiled shader cache
 	{

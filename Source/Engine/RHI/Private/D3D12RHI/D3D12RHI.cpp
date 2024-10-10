@@ -139,8 +139,7 @@ void D3D12RHI::SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, EQueueTy
 }
 
 RHIDynamicBuffer D3D12RHI::AllocateDynamicBuffer(EBufferFlags bufferFlags, uint32 bufferSize, const void* bufferData, uint32 stride) {
-	auto a = m_Device->GetDynamicMemoryAllocator()->Allocate(bufferFlags, bufferSize, bufferData);
-	return { a.BufferIndex, a.Offset, a.Size, stride };
+	return m_Device->GetDynamicMemoryAllocator()->Allocate(bufferFlags, bufferSize, bufferData, stride);
 }
 
 D3D12Device* D3D12RHI::GetDevice() {

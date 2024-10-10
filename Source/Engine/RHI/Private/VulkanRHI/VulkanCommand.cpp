@@ -315,9 +315,15 @@ void VulkanCommandBuffer::SetShaderParam(uint32 setIndex, uint32 bindIndex, cons
 	m_PipelineDescriptorSetCache->SetParam(setIndex, bindIndex, parameter);
 }
 
-void VulkanCommandBuffer::BindVertexBuffer(RHIBuffer* buffer, uint32 first, uint64 offset) {
+void VulkanCommandBuffer::BindVertexBuffer(RHIBuffer* buffer, uint32 slot, uint64 offset) {
 	VkBuffer vkBuffer = static_cast<VulkanBufferImpl*>(buffer)->GetBuffer();
-	vkCmdBindVertexBuffers(m_Handle, first, 1, &vkBuffer, &offset);
+	vkCmdBindVertexBuffers(m_Handle, slot, 1, &vkBuffer, &offset);
+}
+
+void VulkanCommandBuffer::BindVertexBuffer(const RHIDynamicBuffer& buffer, uint32 slot, uint32 offset) {
+	VkBuffer vkBuffer = m_Owner->GetDevice()->GetDynamicBufferAllocator()->GetBufferHandle(buffer.BufferIndex);
+	VkDeviceSize bufferOffset = (VkDeviceSize)(buffer.Offset + offset);
+	vkCmdBindVertexBuffers(m_Handle, slot, 1, &vkBuffer, &bufferOffset);
 }
 
 void VulkanCommandBuffer::BindIndexBuffer(RHIBuffer* buffer, uint64 offset) {
@@ -381,7 +387,7 @@ void VulkanCommandBuffer::CopyBufferToTexture(RHIBuffer* buffer, RHITexture* tex
 	ToImageSubResourceLayers(dstSubRes, region.imageSubresource);
 	region.imageOffset = { dstOffset.x, dstOffset.y, dstOffset.z };
 	const auto& desc = vkTex->GetDesc();
-	region.imageExtent = { desc.GetMipLevelHeight(dstSubRes.MipIndex), desc.GetMipLevelHeight(dstSubRes.MipIndex), desc.Depth };
+	region.imageExtent = { desc.GetMipLevelWidth(dstSubRes.MipIndex), desc.GetMipLevelHeight(dstSubRes.MipIndex), desc.Depth };
 	vkCmdCopyBufferToImage(m_Handle, ((VulkanBufferImpl*)buffer)->GetBuffer(), vkTex->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
