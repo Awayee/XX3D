@@ -1,9 +1,21 @@
 #include "Objects/Public/DirectionalLight.h"
+#include "Asset/Public/AssetCommon.h"
 #include "System/Public/EngineConfig.h"
 #include "Render/Public/GlobalShader.h"
+#include "Objects/Public/RenderResource.h"
 
 namespace {
+	class DirectionalShadowVS : public Render::GlobalShader {
+		GLOBAL_SHADER_IMPLEMENT(DirectionalShadowVS, "DirectionalShadow.hlsl", "MainVS", EShaderStageFlags::Vertex);
+		SHADER_PERMUTATION_BEGIN_SWITCH(INSTANCED, false);
+		SHADER_PERMUTATION_END(INSTANCED);
+	};
 
+	class DirectionalShadowPS : public Render::GlobalShader {
+		GLOBAL_SHADER_IMPLEMENT(DirectionalShadowPS, "DirectionalShadow.hlsl", "MainPS", EShaderStageFlags::Pixel);
+		SHADER_PERMUTATION_BEGIN_SWITCH(INSTANCED, false);
+		SHADER_PERMUTATION_END(INSTANCED);
+	};
 }
 
 namespace Object {
@@ -36,6 +48,14 @@ namespace Object {
 			out[i] = result;
 		}
 		out[cascadeNum] = zFar;
+	}
+
+	inline bool IsPSODepthBiasMatch(RHIGraphicsPipelineState* pso, float biasConst, float biasSlope) {
+		if(pso) {
+			const auto& rasterizer = pso->GetDesc().RasterizerState;
+			return Math::FloatEqual(biasConst, rasterizer.DepthBiasConstant) && Math::FloatEqual(biasSlope, rasterizer.DepthBiasSlope);
+		}
+		return false;
 	}
 
 	DirectionalLight::DirectionalLight() {
@@ -82,9 +102,32 @@ namespace Object {
 		m_Uniform = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(ubo), &ubo, 0);
 
 		// lazy create resources
-		if (GetEnableShadow() && (!m_ShadowMapTexture || m_ShadowMapTexture->GetDesc().Width != m_ShadowConfig.ShadowMapSize)) {
+		if (GetEnableShadow() && !IsShadowMapValid()) {
 			CreateShadowMapTexture();
 		}
+
+		// check shadow bias and recreate pso
+		if(GetEnableShadow()) {
+			const float biasConst = m_ShadowConfig.ShadowBiasConstant, biasSlope = m_ShadowConfig.ShadowBiasSlope;
+			if(!IsPSODepthBiasMatch(m_CSMRenderingPSO, biasConst, biasSlope)) {
+				CreateCSMRenderingPSO();
+			}
+			if(!IsPSODepthBiasMatch(m_CSMInstancedRenderPSO, biasConst, biasSlope)) {
+				CreateCSMInstancedRenderingPSO();
+			}
+		}
+	}
+
+	RHIGraphicsPipelineState* DirectionalLight::GetCSMRenderingPSO() {
+		return m_CSMRenderingPSO.Get();
+	}
+
+	RHIGraphicsPipelineState* DirectionalLight::GetCSMInstancedRenderingPSO() {
+		return m_CSMInstancedRenderPSO.Get();
+	}
+
+	bool DirectionalLight::IsShadowMapValid() {
+		return m_ShadowMapTexture.Get() && m_ShadowMapTexture->GetDesc().Width == m_ShadowConfig.ShadowMapSize;
 	}
 
 	void DirectionalLight::CreateShadowMapTexture() {
@@ -97,49 +140,98 @@ namespace Object {
 		m_ShadowMapTexture = RHI::Instance()->CreateTexture(desc);
 	}
 
+	void DirectionalLight::CreateCSMRenderingPSO() {
+		RHIGraphicsPipelineStateDesc desc{};
+		// shader
+		Render::GlobalShaderMap* globalShaderMap = Render::GlobalShaderMap::Instance();
+		desc.VertexShader = globalShaderMap->GetShader<DirectionalShadowVS>()->GetRHI();
+		desc.PixelShader = globalShaderMap->GetShader<DirectionalShadowPS>()->GetRHI(); // TODO will report ERROR if nullptr
+		// layout
+		auto& layout = desc.Layout;
+		layout.Resize(2);
+		layout[0] = { {EBindingType::UniformBuffer, EShaderStageFlags::Vertex} };// camera
+		layout[1] = { {EBindingType::UniformBuffer, EShaderStageFlags::Vertex} };// mesh
+		// vertex input
+		auto& vi = desc.VertexInput;
+		vi.Bindings = { {0, sizeof(Asset::AssetVertex), false} };
+		vi.Attributes = { {POSITION(0), 0, 0, ERHIFormat::R32G32B32_SFLOAT, 0} };
+
+		desc.BlendDesc.BlendStates = { {false}, {false} };
+		desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Null, false, m_ShadowConfig.ShadowBiasConstant, m_ShadowConfig.ShadowBiasSlope };
+		desc.DepthStencilState = { true, true, ECompareType::Less, false };
+		desc.PrimitiveTopology = EPrimitiveTopology::TriangleList;
+		desc.DepthStencilFormat = RHI::Instance()->GetDepthFormat();
+		desc.NumSamples = 1;
+		m_CSMRenderingPSO = RHI::Instance()->CreateGraphicsPipelineState(desc);
+	}
+
+	void DirectionalLight::CreateCSMInstancedRenderingPSO() {
+		RHIGraphicsPipelineStateDesc desc;
+		// shader
+		Render::GlobalShaderMap* globalShaderMap = Render::GlobalShaderMap::Instance();
+		DirectionalShadowVS::ShaderPermutation vsp; vsp.INSTANCED = true;
+		desc.VertexShader = globalShaderMap->GetShader<DirectionalShadowVS>(vsp)->GetRHI();
+		DirectionalShadowPS::ShaderPermutation psp; psp.INSTANCED = true;
+		desc.PixelShader = globalShaderMap->GetShader<DirectionalShadowPS>(psp)->GetRHI();
+		// layout
+		desc.Layout = { { {EBindingType::UniformBuffer, EShaderStageFlags::Vertex} } };// camera
+		// vertex input
+		auto& vi = desc.VertexInput;
+		vi.Bindings = {
+			{0, sizeof(Asset::AssetVertex), false},
+			{1, sizeof(Math::FMatrix4x4), true} };
+		vi.Attributes = {
+			{POSITION(0), 0, 0, ERHIFormat::R32G32B32_SFLOAT, 0},
+			// instance transform
+			{ INSTANCE_TRANSFORM(0), 0, 1, ERHIFormat::R32G32B32A32_SFLOAT, 0 },
+			{INSTANCE_TRANSFORM(1), 1, 1, ERHIFormat::R32G32B32A32_SFLOAT, sizeof(Math::FVector4)},
+			{INSTANCE_TRANSFORM(2), 2, 1, ERHIFormat::R32G32B32A32_SFLOAT, sizeof(Math::FVector4) * 2},
+			{INSTANCE_TRANSFORM(3), 3, 1, ERHIFormat::R32G32B32A32_SFLOAT, sizeof(Math::FVector4) * 3}, };
+
+		desc.BlendDesc.BlendStates = { {false}, {false} };
+		desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Back, false, m_ShadowConfig.ShadowBiasConstant, m_ShadowConfig.ShadowBiasSlope };
+		desc.DepthStencilState = { true, true, ECompareType::Less, false };
+		desc.PrimitiveTopology = EPrimitiveTopology::TriangleList;
+		desc.DepthStencilFormat = RHI::Instance()->GetDepthFormat();
+		desc.NumSamples = 1;
+		m_CSMInstancedRenderPSO = RHI::Instance()->CreateGraphicsPipelineState(desc);
+	}
+
 	void DirectionalLight::UpdateCascadeSplits(Object::RenderCamera* renderCamera) {
 		if (!GetEnableShadow()) {
 			return;
 		}
 		const auto& srcView = renderCamera->GetView();
 		const auto& srcProj = renderCamera->GetProjection();
+		const float viewDistance = srcProj.Far - srcProj.Near;
+		Object::FrustumCorner cameraFC;
+		cameraFC.Build(srcView, srcProj);
 		TStaticArray<float, CASCADE_NUM + 1> splits;
 		SplitFrustum(splits, srcProj.Near, m_ShadowConfig.ShadowDistance, m_ShadowConfig.LogDistribution);
 		for(uint32 i=0; i<CASCADE_NUM; ++i) {
 			// get 8 frustum corners
-			Object::FrustumCorner fc;
-			float cascadeNear = splits[i];
-			float cascadeFar = splits[i + 1];
-			if(EProjType::Perspective == srcProj.ProjType) {
-				fc.BuildFromPerspective(srcView, cascadeNear, cascadeFar, srcProj.Fov, srcProj.Aspect);
-			}
-			else {
-				fc.BuildFormOrtho(srcView, cascadeNear, cascadeFar, srcProj.ViewSize, srcProj.Aspect);
-			}
+			const float cascadeNear = splits[i];
+			const float cascadeFar = splits[i + 1];
+			const float cascadeNearRatio = (cascadeNear - srcProj.Near) / viewDistance;
+			const float cascadeFarRatio = (cascadeFar - srcProj.Near) / viewDistance;
+			Object::FrustumCorner cascadeFC;
+			cameraFC.GetSubFrustumCorner(cascadeNearRatio, cascadeFarRatio, cascadeFC);
 			// transform corners to light view space, and get min-max for aabb
-			Object::CameraView dstView;
-			dstView.Eye = fc.GetCenter();
-			dstView.At = dstView.Eye + m_LightDir;
-			dstView.Up = { 0.0f, 1.0f, 0.0f };
-			auto viewMat = dstView.GetViewMatrix();
+			Math::FVector3 cornerCenter = cascadeFC.GetCenter();
+			const Object::CameraView lightCameraView{ cornerCenter, cornerCenter + m_LightDir, {0.0f, 1.0f, 0.0f} };
+			Math::FMatrix4x4 lightCameraViewMat = lightCameraView.GetViewMatrix();
 			Math::FVector3 min{ FLT_MAX }, max{ -FLT_MAX };
-			for(const auto& corner: fc.Corners) {
-				Math::FVector3 transformedCorner = viewMat.TransformCoord(corner);
+			for(const auto& corner: cascadeFC.Corners) {
+				Math::FVector3 transformedCorner = lightCameraViewMat.TransformCoord(corner);
 				min = Math::FVector3::Min(transformedCorner, min);
 				max = Math::FVector3::Max(transformedCorner, max);
 			}
-			Math::AABB3 aabb = Math::AABB3::MinMax(min, max);
-			Math::FVector3 extent = aabb.Extent();
-			// expand Z, to ensure objects locate far from camera, to avoid clip by projection
-			extent.Z *= (1.4f - (float)i * 0.1f);
-			// expand X, to ensure objects out of the bound can cast shadow
-			extent.X *= 1.4f - (float)i * 0.05f;
-			Object::CameraProjection dstProj;
-			dstProj.SetOrtho(-extent.Z, extent.Z, extent.Y, extent.X / extent.Y);
-			// set camera
-			m_CascadeCameras[i].Set(dstView, dstProj);
+			// build projection matrix by min and max.
+			const Object::CameraProjection lightCameraProj = Object::CameraProjection::Orthographic(min.X, max.X, min.Y, max.Y, min.Z, max.Z);
+			Math::FMatrix4x4 lightCameraProjMat = lightCameraProj.GetProjectMatrix();
+			m_CascadeCameras[i].Set(lightCameraView, lightCameraProj);
 			m_FarDistances[i] = cascadeFar;
-			m_VPMats[i] = m_CascadeCameras[i].GetViewProjectMatrix();
+			m_VPMats[i] = lightCameraProjMat * lightCameraViewMat;
 		}
 	}
 }

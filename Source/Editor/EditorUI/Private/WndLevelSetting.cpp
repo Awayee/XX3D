@@ -26,7 +26,7 @@ namespace Editor {
 		if(ImGui::CollapsingHeader("DirectionalLight", ImGuiTreeNodeFlags_DefaultOpen)) {
 			Object::DirectionalLight* light = scene->GetDirectionalLight();
 			Math::FVector3 lightRotation = light->GetRotation();
-			if(ImGui::DragFloat3("Rotation", lightRotation.Data(), 0.01f, -4.0f, 4.0f)) {
+			if(ImGui::DragFloat3("Rotation", lightRotation.Data(), 0.01f, -Math::PI * 2.0f, Math::PI * 2.0f)) {
 				light->SetRotation(lightRotation);
 			}
 			Math::FVector3 lightColor = light->GetColor();
@@ -58,6 +58,7 @@ namespace Editor {
 			if(isDirty) {
 				light->SetShadowConfig(config);
 			}
+
 		}
 		if(ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
 			Object::RenderCamera* camera = scene->GetMainCamera();
@@ -71,7 +72,7 @@ namespace Editor {
 				}
 			}
 			{   // projection
-				auto projection = camera->GetProjection();
+				auto projection = camera->GetProjectionData();
 				bool modified = ImGui::Combo("ProjType", (int*)&projection.ProjType, "Perspective\0Ortho");
 				modified |= ImGui::DragFloat("Near", &projection.Near, 0.1f, 0.0f, 9999.0f);
 				modified |= ImGui::DragFloat("Far", &projection.Far, 0.1f, 1.0f, 9999.0f);
@@ -79,10 +80,10 @@ namespace Editor {
 					modified |= ImGui::DragFloat("Fov", &projection.Fov, 0.1f, 0.1f, 3.1f); // almost from 0 to PI
 				}
 				else if (projection.ProjType == Object::EProjType::Ortho) {
-					modified |= ImGui::DragFloat("Size", &projection.ViewSize, 0.1f, 0.1f, 9999.0f);
+					modified |= ImGui::DragFloat("Size", &projection.HalfHeight, 0.1f, 0.1f, 9999.0f);
 				}
 				if(modified) {
-					camera->SetProjection(projection);
+					camera->SetProjectionData(projection);
 				}
 			}
 		}

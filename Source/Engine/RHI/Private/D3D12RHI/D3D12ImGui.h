@@ -11,7 +11,7 @@ public:
 	void FrameBegin() override;
 	void FrameEnd() override;
 	void RenderDrawData(RHICommandBuffer* cmd) override;
-	ImTextureID RegisterImGuiTexture(RHITexture* texture, RHISampler* sampler) override;
+	ImTextureID RegisterImGuiTexture(RHITexture* texture, RHITextureSubRes subRes, RHISampler* sampler) override;
 	void RemoveImGuiTexture(ImTextureID textureID) override;
 private:
 	ImGuiContext* m_Context;

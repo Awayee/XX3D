@@ -174,11 +174,13 @@ void VulkanDynamicBufferAllocator::UnmapAllocations() {
 	if(VK_INVALID_INDEX != m_AllocatedIndex) {
 		// unmap buffers and reset allocations
 		for(uint32 i=0; i<=m_AllocatedIndex; ++i) {
-			m_BufferChunks[i].Allocation.Unmap();
-			m_BufferChunks[i].AllocatedSize = 0;
-			m_BufferChunks[i].MappedData = nullptr;
+			auto& bufferChunk = m_BufferChunks[i];
+			if(bufferChunk.MappedData) {
+				bufferChunk.Allocation.Unmap();
+				bufferChunk.AllocatedSize = 0;
+				bufferChunk.MappedData = nullptr;
+			}
 		}
-		m_AllocatedIndex = 0;
 	}
 }
 

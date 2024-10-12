@@ -74,10 +74,10 @@ void VulkanImGui::RenderDrawData(RHICommandBuffer* cmd) {
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), static_cast<VulkanCommandBuffer*>(cmd)->GetHandle());
 }
 
-ImTextureID VulkanImGui::RegisterImGuiTexture(RHITexture* texture, RHISampler* sampler) {
+ImTextureID VulkanImGui::RegisterImGuiTexture(RHITexture* texture, RHITextureSubRes subRes, RHISampler* sampler) {
 	VulkanRHITexture* vkTexture = (VulkanRHITexture*)texture;
 	VulkanRHISampler* vkSampler = (VulkanRHISampler*)sampler;
-	return ImGui_ImplVulkan_AddTexture(vkSampler->GetSampler(), vkTexture->GetDefaultView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	return ImGui_ImplVulkan_AddTexture(vkSampler->GetSampler(), vkTexture->GetView(subRes), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 void VulkanImGui::RemoveImGuiTexture(ImTextureID textureID) {

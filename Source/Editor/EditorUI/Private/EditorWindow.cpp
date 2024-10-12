@@ -35,6 +35,9 @@ namespace Editor {
 		}
 	}
 
+	EditorFuncWnd::EditorFuncWnd(const char* name, const Func<void()>& func, ImGuiWindowFlags flags) : EditorWndBase(name, flags, EWndUpdateOrder::Order1), m_Func(func) {
+		AutoDelete();
+	}
 	void EditorFuncWnd::WndContent() {
 		m_Func();
 	}

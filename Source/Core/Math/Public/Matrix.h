@@ -108,9 +108,8 @@ namespace Math {
         /** Tests 2 matrices for inequality.
          */
         bool operator!=(const Matrix4x4<T>& m2) const;
-        /** Creates a standard 4x4 transformation matrix with a zero translation part from a rotation/scaling 3x3
- * matrix.
- */
+        /** Creates a standard 4x4 transformation matrix with a zero translation part from a rotation/scaling 3x3  matrix.
+		 */
         void SetMatrix3x3(const Matrix3x3<T>& mat3);
         Matrix4x4<T> Transpose() const;
 
@@ -185,6 +184,7 @@ namespace Math {
 
         Vector3<T> TransformCoord(const Vector3<T>& v);
 
+        // View matrix in left-hand
         static Matrix4x4<T> ViewMatrix(const Vector3<T>& position, const Quaternion<T>& orientation, const Matrix4x4<T>* reflectMat = nullptr);
 
         static Matrix4x4<T> LookAtMatrix(const Vector3<T>& eye, const Vector3<T>& at, const Vector3<T>& up);

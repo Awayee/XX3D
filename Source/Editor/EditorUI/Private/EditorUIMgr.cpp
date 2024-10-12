@@ -45,15 +45,17 @@ namespace Editor {
 
 		ImGui::End();
 		//windows
-		for (uint32 i = 0; i < m_Windows.Size();) {
-			auto& wnd = m_Windows[i];
-			if(wnd->m_ToDelete) {
-				m_Windows.SwapRemoveAt(i);
-			}
-			else {
-				++i;
-				wnd->Update();
-				wnd->Display();
+		for(auto& wndArray: m_Windows) {
+			for (uint32 i = 0; i < wndArray.Size();) {
+				auto& wnd = wndArray[i];
+				if (wnd->m_ToDelete) {
+					wndArray.SwapRemoveAt(i);
+				}
+				else {
+					++i;
+					wnd->Update();
+					wnd->Display();
+				}
 			}
 		}
 		RHIImGui::Instance()->FrameEnd();
@@ -80,7 +82,8 @@ namespace Editor {
 
 	EditorWndBase* EditorUIMgr::AddWindow(const char* name, Func<void()>&& func, ImGuiWindowFlags flags) {
 		// check if exist
-		for(auto& wnd: m_Windows) {
+		auto& wndArray = m_Windows[EnumCast(EditorFuncWnd::FUNC_WND_ORDER)];
+		for(auto& wnd: wndArray) {
 			if(wnd->m_Name == name) {
 				wnd.Reset(new EditorFuncWnd(name, func, flags));
 				return (EditorWndBase*)wnd.Get();
@@ -88,17 +91,18 @@ namespace Editor {
 		}
 		TUniquePtr<EditorFuncWnd> wndPtr(new EditorFuncWnd(name, func, flags));
 		EditorWndBase* ptr = wndPtr.Get();
-		m_Windows.PushBack(MoveTemp(wndPtr));
+		wndArray.PushBack(MoveTemp(wndPtr));
 		return ptr;
 	}
 
 	void EditorUIMgr::AddWindow(TUniquePtr<EditorWndBase>&& wndPtr) {
-		for(auto& wnd: m_Windows) {
+		auto& wndArray = m_Windows[EnumCast(wndPtr->m_Order)];
+		for(auto& wnd: wndArray) {
 			if(wnd->m_Name == wndPtr->m_Name) {
 				wnd = MoveTemp(wndPtr);
 				return;
 			}
 		}
-		m_Windows.PushBack(MoveTemp(wndPtr));
+		wndArray.PushBack(MoveTemp(wndPtr));
 	}
 }

@@ -1,14 +1,14 @@
 {
     "Camera": {
         "Eye": [
-            -0.16279590129852295,
-            0.9741652011871338,
-            2.7683897018432617
+            65.12092590332031,
+            1.4501644372940063,
+            66.91993713378906
         ],
         "At": [
-            -0.11164583265781403,
-            0.9191824793815613,
-            1.7712132930755615
+            65.2017822265625,
+            1.2527216672897339,
+            65.94296264648438
         ],
         "Up": [
             0.0,
@@ -19,7 +19,7 @@
         "Near": 0.20000000298023224,
         "Far": 1000.0,
         "Fov": 0.8999999761581421,
-        "ViewSize": 2.4000000953674316
+        "HalfHeight": 2.4000000953674316
     },
     "DirectionalLight": {
         "Rotation": [
@@ -49,14 +49,14 @@
                 {
                     "Name": "TransformComponent",
                     "Position": [
-                        0.0,
+                        64.0,
                         -0.5,
-                        0.0
+                        64.0
                     ],
                     "Scale": [
-                        100.0,
+                        128.0,
                         1.0,
-                        100.0
+                        128.0
                     ],
                     "Rotation": [
                         0.0,
@@ -76,9 +76,9 @@
                 {
                     "Name": "TransformComponent",
                     "Position": [
-                        1.0,
+                        64.0,
                         0.0,
-                        0.0
+                        64.0
                     ],
                     "Scale": [
                         1.0,
@@ -103,9 +103,9 @@
                 {
                     "Name": "TransformComponent",
                     "Position": [
+                        65.0,
                         0.0,
-                        0.0,
-                        0.0
+                        64.0
                     ],
                     "Scale": [
                         1.0,
@@ -130,9 +130,9 @@
                 {
                     "Name": "TransformComponent",
                     "Position": [
-                        -1.0,
+                        66.0,
                         0.0,
-                        0.0
+                        64.0
                     ],
                     "Scale": [
                         1.0,
@@ -157,9 +157,9 @@
                 {
                     "Name": "TransformComponent",
                     "Position": [
-                        -2.299999952316284,
+                        67.0,
                         0.5,
-                        0.0
+                        64.0
                     ],
                     "Scale": [
                         1.0,
@@ -175,6 +175,19 @@
                 {
                     "Name": "MeshComponent",
                     "MeshFile": "Meshes/Sphere.mesh"
+                }
+            ]
+        },
+        {
+            "Name": "Grass",
+            "Components": [
+                {
+                    "Name": "MeshComponent",
+                    "MeshFile": "Plants/grass_medium_01_large_a_LOD0.mesh"
+                },
+                {
+                    "Name": "InstanceDataComponent",
+                    "InstanceFile": "Plants/grass_instances.instd"
                 }
             ]
         }

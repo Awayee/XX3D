@@ -805,16 +805,16 @@ namespace Math {
         Vector3<T> u = Vector3<T>::Cross(f, r); // up
 #ifdef MATRIX_COL_MAJOR
         return{
-		     r.X,          u.X,       -f.X,        0,
-		     r.Y,          u.Y,       -f.Y,        0,
-		     r.Z,          u.Z,       -f.Z,        0,
-             -r.Dot(eye), -u.Dot(eye), f.Dot(eye), 1
+		     r.X,          u.X,         f.X,        0,
+		     r.Y,          u.Y,         f.Y,        0,
+		     r.Z,          u.Z,         f.Z,        0,
+             -r.Dot(eye), -u.Dot(eye), -f.Dot(eye), 1
         };
 #else
         return{
              r.X,   r.Y,   r.Z,  -r.Dot(eye),
              u.X,   u.Y,   u.Z,  -u.Dot(eye),
-            -f.X,  -f.Y,  -f.Z,   f.Dot(eye),
+             f.X,   f.Y,   f.Z,  -f.Dot(eye),
                0,     0,     0,   1
         };
 #endif
@@ -827,15 +827,15 @@ namespace Math {
         return{
 		    (T)1 / (aspect * tanHalfFov),  0, 0,  0,
 		    0, (T)1 / tanHalfFov,  0,  0,
-		    0,  0, -zFar / (zFar - zNear), -1,
+		    0,  0, zFar / (zFar - zNear), 1,
 		    0, 0, -zFar * zNear / (zFar - zNear), 0
         };
 #else
         return {
             (T)1 / (aspect * tanHalfFov),  0, 0,  0,
             0, (T)1 / tanHalfFov,  0,  0,
-            0,  0, -zFar / (zFar - zNear), -zFar * zNear / (zFar - zNear),
-            0, 0, -1, 0
+            0,  0, zFar / (zFar - zNear), -zFar * zNear / (zFar - zNear),
+            0, 0, 1, 0
         };
 #endif
     }
@@ -850,7 +850,7 @@ namespace Math {
         T C = -(right + left) * invWidth;
         T D = -(top + bottom) * invHeight;
         // z from 0 to 1
-        T q = -invDistance;
+        T q = invDistance;
         T qn = -zNear * invDistance;
 #ifdef MATRIX_COL_MAJOR
         return {

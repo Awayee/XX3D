@@ -66,6 +66,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityF
 	else if (VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT == severity) {
 		LOG_ERROR("[Vulkan Error] %s", pCallbackData->pMessage);
 	}
+	else {
+		LOG_DEBUG("%s", pCallbackData->pMessage);
+	}
 	return VK_FALSE;
 }
 
@@ -75,7 +78,6 @@ inline void SetupDebugInfo(VkDebugUtilsMessengerCreateInfoEXT& debugInfo) {
 	debugInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 	debugInfo.pfnUserCallback = DebugCallback;
 }
-
 
 VulkanContext::VulkanContext(bool enableDebug, uint32 apiVersion): m_APIVersion(apiVersion) {
 	CreateInstance(enableDebug);
@@ -183,6 +185,7 @@ void VulkanContext::CreateInstance(bool enableDebug) {
 	createInfo.enabledExtensionCount = extensions.Size();
 	createInfo.ppEnabledExtensionNames = extensions.Data();
 	createInfo.enabledLayerCount = 0;
+	createInfo.ppEnabledLayerNames = nullptr;
 	createInfo.pNext = nullptr;
 
 	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};

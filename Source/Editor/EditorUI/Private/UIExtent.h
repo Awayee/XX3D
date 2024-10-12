@@ -2,8 +2,6 @@
 #include "Core/Public/String.h"
 #include <imgui.h>
 namespace ImGui {
-
-
 	XString OpenFileDialog(const char* filter);
 
 	void OpenFileExplorer(const char* path);

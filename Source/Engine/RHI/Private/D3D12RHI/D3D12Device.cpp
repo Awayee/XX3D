@@ -67,9 +67,12 @@ void D3D12DynamicBufferAllocator::UnmapAllocations() {
 	if (DX_INVALID_INDEX != m_AllocatedIndex) {
 		// unmap buffers and reset allocations
 		for (uint32 i = 0; i <= m_AllocatedIndex; ++i) {
-			m_BufferChunks[i].Buffer->Unmap(0, nullptr);
-			m_BufferChunks[i].MappedData = nullptr;
-			m_BufferChunks[i].AllocatedSize = 0;
+			auto& bufferChunk = m_BufferChunks[i];
+			if(bufferChunk.MappedData) {
+				bufferChunk.Buffer->Unmap(0, nullptr);
+				bufferChunk.MappedData = nullptr;
+				bufferChunk.AllocatedSize = 0;
+			}
 		}
 		m_AllocatedIndex = 0;
 	}

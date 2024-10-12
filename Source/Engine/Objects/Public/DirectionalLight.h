@@ -35,6 +35,11 @@ namespace Object {
 		// for scene rendering
 		const RHIDynamicBuffer& GetLightingUniform() { return m_Uniform; }
 		const RHIDynamicBuffer& GetShadowUniform(uint32 cascade) { return m_ShadowUniforms[cascade]; }
+		// lazy load pso
+		RHIGraphicsPipelineState* GetCSMRenderingPSO();
+		RHIGraphicsPipelineState* GetCSMInstancedRenderingPSO();
+		// check if shadow texture matches shadow config
+		bool IsShadowMapValid();
 	private:
 		// for scene render
 		static constexpr uint32 CASCADE_NUM = 4;
@@ -47,7 +52,8 @@ namespace Object {
 		// for shadow
 		DirectionalShadowConfig m_ShadowConfig;
 		RHITexturePtr m_ShadowMapTexture; // lazy create
-		RHIGraphicsPipelineStatePtr m_ShadowMapPSO;// lazy create
+		RHIGraphicsPipelineStatePtr m_CSMRenderingPSO;// lazy create
+		RHIGraphicsPipelineStatePtr m_CSMInstancedRenderPSO;// lazy create
 		TStaticArray<Object::Camera, CASCADE_NUM> m_CascadeCameras;
 		TStaticArray<Render::DrawCallQueue, CASCADE_NUM> m_DrawCallQueues;
 		TStaticArray<float, CASCADE_NUM> m_FarDistances;
@@ -55,6 +61,8 @@ namespace Object {
 		TStaticArray<RHIDynamicBuffer, CASCADE_NUM> m_ShadowUniforms;// for shadow map
 
 		void CreateShadowMapTexture();
+		void CreateCSMRenderingPSO();
+		void CreateCSMInstancedRenderingPSO();
 		void UpdateCascadeSplits(Object::RenderCamera* renderCamera);
 	};
 }

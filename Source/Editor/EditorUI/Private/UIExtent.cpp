@@ -1,6 +1,7 @@
 #include "UIExtent.h"
 #include "EditorUI/Public/EditorWindow.h"
 #include "Functions/Public/AssetManager.h"
+#include "Window/Public/EngineWindow.h"
 #ifdef _WIN32
 #include <Windows.h>
 #endif

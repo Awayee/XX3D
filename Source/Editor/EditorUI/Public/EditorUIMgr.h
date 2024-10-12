@@ -29,7 +29,7 @@ namespace Editor {
 			TArray<MenuItem> Items;
 		};
 		TArray<MenuColumn> m_MenuBar;
-		TArray<TUniquePtr<EditorWndBase>> m_Windows;
+		TStaticArray<TArray<TUniquePtr<EditorWndBase>>, EnumCast(EWndUpdateOrder::OrderMax)> m_Windows;
 		RHITexture* m_SceneTexture{ nullptr };
 
 		EditorUIMgr() = default;

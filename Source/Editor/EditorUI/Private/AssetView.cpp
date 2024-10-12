@@ -20,7 +20,7 @@ namespace {
 			m_Texture = RHI::Instance()->CreateTexture(desc);
 			m_Texture->UpdateData(m_Asset.Pixels.Size(), m_Asset.Pixels.Data());
 			auto* sampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp);
-			m_TextureID = RHIImGui::Instance()->RegisterImGuiTexture(m_Texture.Get(), sampler);
+			m_TextureID = RHIImGui::Instance()->RegisterImGuiTexture(m_Texture.Get(), m_Texture->GetDesc().GetDefaultSubRes(), sampler);
 			AutoDelete();
 			// zoom to fit
 			const float w = (float)desc.Width, h = (float)desc.Height;
@@ -64,7 +64,6 @@ namespace {
 			// drag image
 			if (m_Dragging && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
 				const ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
-				const ImVec2 wndSize = ImGui::GetWindowSize();
 				const float newScrollX = Math::Clamp(ImGui::GetScrollX() - dragDelta.x, 0.0f, textureSize.x);
 				const float newScrollY = Math::Clamp(ImGui::GetScrollY() - dragDelta.y, 0.0f, textureSize.y);
 				ImGui::SetScrollX(newScrollX);

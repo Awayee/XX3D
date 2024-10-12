@@ -53,13 +53,12 @@ namespace Object {
 			const float near = cameraParam["Near"].GetFloat();
 			const float far = cameraParam["Far"].GetFloat();
 			const float fov = cameraParam["Fov"].GetFloat();
-			const float viewSize = cameraParam["ViewSize"].GetFloat();
+			const float halfHeight = cameraParam["HalfHeight"].GetFloat();
 			Object::RenderCamera* camera = m_Scene->GetMainCamera();
 			const Object::CameraView view{ eye, at, up };
 			camera->SetView(view);
-			float aspect = camera->GetProjection().Aspect;
-			const Object::CameraProjection projection{projType, near, far, aspect, fov, viewSize };
-			camera->SetProjection(projection);
+			const Object::RenderCamera::ProjectionData projectionData{ projType, near, far, fov, halfHeight };
+			camera->SetProjectionData(projectionData);
 		}
 		if (doc.HasMember("DirectionalLight")) {
 			const rapidjson::Value& directionalLightParam = doc["DirectionalLight"].GetObject();

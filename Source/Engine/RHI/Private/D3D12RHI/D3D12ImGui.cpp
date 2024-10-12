@@ -72,11 +72,11 @@ void D3D12ImGui::RenderDrawData(RHICommandBuffer* cmd) {
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), d3d12Cmd);
 }
 
-ImTextureID D3D12ImGui::RegisterImGuiTexture(RHITexture* texture, RHISampler* sampler) {
+ImTextureID D3D12ImGui::RegisterImGuiTexture(RHITexture* texture, RHITextureSubRes subRes, RHISampler* sampler) {
 	D3D12Texture* d3d12Texture = (D3D12Texture*)texture;
 	StaticDescriptorHandle descriptor = m_DescriptorAllocator->AllocateDescriptorSlot();
 	D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_DescriptorAllocator->GetCPUHandle(descriptor);
-	m_Device->CopyDescriptorsSimple(1, cpuHandle, d3d12Texture->GetDescriptor(ETexDescriptorType::SRV), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	m_Device->CopyDescriptorsSimple(1, cpuHandle, d3d12Texture->GetDescriptor(ETexDescriptorType::SRV, subRes), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = m_DescriptorAllocator->GetGPUHandle(descriptor);
 	ImTextureID imID = (ImTextureID)gpuHandle.ptr;
 	m_ImTextureDescriptorMap[imID] = descriptor;

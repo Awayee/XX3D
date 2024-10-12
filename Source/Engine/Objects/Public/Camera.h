@@ -18,14 +18,16 @@ namespace Object {
 	};
 
 	struct CameraProjection {
-		EProjType ProjType{ EProjType::Perspective };
-		float Near{ 1.0f };
-		float Far{ 100.0f };
-		float Aspect{ 1.0f };
-		float Fov{ 1.0f }; // vertical fov
-		float ViewSize{ 1.0f };// vertical view size
-		void SetPerspective(float zNear, float zFar, float fov, float aspect);
-		void SetOrtho(float zNear, float zFar, float viewSize, float aspect);
+		EProjType ProjType;
+		float Near;
+		float Far;
+		union {
+			struct { float Fov, Aspect; };
+			struct { float Left, Right, Bottom, Top; };
+		};
+		CameraProjection();
+		static CameraProjection Perspective(float fov, float aspect, float zNear, float zFar);
+		static CameraProjection Orthographic(float left, float right, float bottom, float top, float zNear, float zFar);
 		Math::FMatrix4x4 GetProjectMatrix() const;
 	};
 
@@ -42,22 +44,30 @@ namespace Object {
 		void UpdateFrustum();
 	};
 
-	union FrustumCorner {
-		struct {
-			Math::FVector3 LeftBottomNear, RightBottomNear, LeftTopNear, RightTopNear;
-			Math::FVector3 LeftBottomFar, RightBottomFar, LeftTopFar, RightTopFar;
+	struct FrustumCorner {
+		union {
+			struct {
+				Math::FVector3 LeftBottomNear, RightBottomNear, LeftTopNear, RightTopNear;
+				Math::FVector3 LeftBottomFar, RightBottomFar, LeftTopFar, RightTopFar;
+			};
+			TStaticArray<Math::FVector3, 8> Corners;
 		};
-		TStaticArray<Math::FVector3, 8> Corners;
-		FrustumCorner() {}
+		FrustumCorner() : Corners{} {}
+		FrustumCorner(const FrustumCorner& rhs) : Corners(rhs.Corners) {}
 		void Build(const CameraView& view, const CameraProjection& proj);
 		void BuildFromPerspective(const CameraView& view, float n, float f, float fov, float aspect);
-		void BuildFormOrtho(const CameraView& view, float n, float f, float viewSize, float aspect);
+		void BuildFormOrtho(const CameraView& view, float n, float f, float left, float right, float bottom, float top);
 		Math::FVector3 GetCenter() const;
+		void GetSubFrustumCorner(float n, float f, FrustumCorner& out) const; // n and f is in range [0, 1]
 	};
 
 	// cached the matices for rendering
 	class RenderCamera {
 	public:
+		struct ProjectionData {
+			EProjType ProjType;
+			float Near, Far, Fov, HalfHeight;
+		};
 		RenderCamera();
 		RenderCamera(const RenderCamera&) = default;
 		RenderCamera(RenderCamera&&) noexcept = default;
@@ -65,6 +75,8 @@ namespace Object {
 		const CameraView& GetView() const { return m_Camera.View; }
 		void  SetProjection(const CameraProjection& projection);
 		const CameraProjection& GetProjection() const { return m_Camera.Projection; }
+		void  SetProjectionData(const ProjectionData& data);
+		const ProjectionData& GetProjectionData() const { return m_ProjectionData; }
 		void  SetAspect(float aspect);
 		const Math::Frustum& GetFrustum()const { return m_Camera.Frustum; }
 		const Math::FMatrix4x4& GetViewMatrix() { return m_ViewMatrix; }
@@ -75,12 +87,15 @@ namespace Object {
 		const RHIDynamicBuffer& GetUniformBuffer();
 		~RenderCamera();
 	private:
+		float m_Aspect;
+		ProjectionData m_ProjectionData;
 		Camera m_Camera;
 		Math::FMatrix4x4 m_ViewMatrix;
 		Math::FMatrix4x4 m_ProjectMatrix;
 		Math::FMatrix4x4 m_ViewProjectMatrix;
 		Math::FMatrix4x4 m_InvViewProjectMatrix;
 		RHIDynamicBuffer m_Uniform;
+		void UpdateProjection();
 		void UpdateProjectMatrix();
 	};
 }

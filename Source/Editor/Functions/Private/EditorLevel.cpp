@@ -46,7 +46,7 @@ namespace Editor {
 		// camera
 		Object::RenderCamera* camera = m_Scene->GetMainCamera();
 		auto& view = camera->GetView();
-		auto& projection = camera->GetProjection();
+		auto& projection = camera->GetProjectionData();
 		Json::ValueWriter cameraVal(Json::Type::kObjectType, doc);
 		cameraVal.AddFloatArray("Eye", view.Eye.Data(), 3);
 		cameraVal.AddFloatArray("At", view.At.Data(), 3);
@@ -55,7 +55,7 @@ namespace Editor {
 		cameraVal.AddMember("Near", projection.Near);
 		cameraVal.AddMember("Far", projection.Far);
 		cameraVal.AddMember("Fov", projection.Fov);
-		cameraVal.AddMember("ViewSize", projection.ViewSize);
+		cameraVal.AddMember("HalfHeight", projection.HalfHeight);
 		cameraVal.Write("Camera");
 		// directional 
 		Object::DirectionalLight* dLight = m_Scene->GetDirectionalLight();

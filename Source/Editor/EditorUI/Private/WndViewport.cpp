@@ -171,7 +171,7 @@ namespace Editor {
 			desc.Flags = ETextureFlags::SRV | ETextureFlags::ColorTarget;
 			m_RenderTarget = RHI::Instance()->CreateTexture(desc);
 			RHISampler* sampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp);
-			m_RenderTargetID = RHIImGui::Instance()->RegisterImGuiTexture(m_RenderTarget, sampler);
+			m_RenderTargetID = RHIImGui::Instance()->RegisterImGuiTexture(m_RenderTarget, m_RenderTarget->GetDesc().GetDefaultSubRes(), sampler);
 		}
 		
 		Editor::EditorUIMgr::Instance()->SetSceneTexture(m_RenderTarget);

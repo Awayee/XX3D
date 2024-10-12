@@ -6,8 +6,8 @@ enum : uint32 {
     RHI_FRAME_IN_FLIGHT_MAX = 1,// TODO solve the errors when RHI_FRAME_IN_FLIGHT_MAX greater than 1
     RHI_COLOR_TARGET_MAX = 8,
     RHI_TEXTURE_ARRAY_MAX = 1024,
-    RHI_TEXTURE_MIP_MAX = 64,
-    RHI_DYNAMIC_BUFFER_PAGE = 1 << 20,
+    RHI_TEXTURE_MIP_MAX = 32,
+    RHI_DYNAMIC_BUFFER_PAGE = 2 << 20,
 };
 
 enum class ERHIFormat: uint8 {

@@ -12,7 +12,7 @@ public:
 	virtual void FrameBegin() = 0;
 	virtual void FrameEnd() = 0;
 	virtual void RenderDrawData(RHICommandBuffer* cmd) = 0;
-	virtual ImTextureID RegisterImGuiTexture(RHITexture* texture, RHISampler* sampler) = 0;
+	virtual ImTextureID RegisterImGuiTexture(RHITexture* texture, RHITextureSubRes subRes, RHISampler* sampler) = 0;
 	virtual void RemoveImGuiTexture(ImTextureID textureID) = 0;
 private:
 	static TUniquePtr<RHIImGui> s_Instance;

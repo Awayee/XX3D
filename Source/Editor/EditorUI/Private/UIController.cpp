@@ -7,6 +7,7 @@
 #include "WndDetails.h"
 #include "WndLevelHierarchy.h"
 #include "WndLevelSetting.h"
+#include "WndDebugView.h"
 #include "System/Public/EngineConfig.h"
 
 namespace Editor {
@@ -132,6 +133,7 @@ namespace Editor {
 		uiMgr->AddWindow(TUniquePtr(new WndLevelSetting()));
 		uiMgr->AddWindow(TUniquePtr(new WndLevelHierarchy()));
 		uiMgr->AddWindow(TUniquePtr(new WndDetails()));
+		uiMgr->AddWindow(TUniquePtr(new WndDebugView()));
 		uiMgr->AddMenu("Menu", "Config", EditorConfigSetting, nullptr);
 		uiMgr->AddMenu("Menu", "Save Layout", SaveLayout, nullptr);
 		uiMgr->AddMenu("Menu", "Exit", EditorExit, nullptr);
