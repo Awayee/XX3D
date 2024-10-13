@@ -51,7 +51,6 @@ namespace Editor {
 			// display textures
 			ImGui::SliderInt("Array Index", &m_ShadowMapArrayIdx, 0, (int)m_ShadowMapImGuiIDs.Size()-1);
 			const float contentWidth = ImGui::GetContentRegionAvail().x;
-			LOG_DEBUG("ContentSize (%f, %f)", contentWidth, ImGui::GetContentRegionAvail().y);
 			float w = (float)shadowMap->GetDesc().Width;
 			float h = (float)shadowMap->GetDesc().Height;
 			h = contentWidth * h / w;

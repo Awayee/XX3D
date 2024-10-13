@@ -2,7 +2,6 @@
 #include "VulkanDevice.h"
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
-#include "System/Public/FrameCounter.h"
 
 constexpr uint32 DYNAMIC_PAGE_SIZE = 16 << 10;
 

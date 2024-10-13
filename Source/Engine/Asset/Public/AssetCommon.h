@@ -1,17 +1,9 @@
 #pragma once
-#include "Core/Public/String.h"
 #include "Math/Public/Vector.h"
 #include "Core/Public/Defines.h"
 #include "Core/Public/File.h"
-#include "Core/Public/String.h"
 
-namespace Asset {
-	#define PARSE_PROJECT_ASSET(f)\
-		char f##__s[128]; StrCopy(f##__s, PROJECT_ASSETS); strcat(f##__s, f); f=f##__s
-
-	#define PARSE_ENGINE_ASSET(f)\
-		char f##__s[128]; StrCopy(f##__s, ENGINE_ASSETS); strcat(f##__s, f); f=f##__s
-	
+namespace Asset {	
 	struct AssetBase {
 		virtual bool Load(File::PathStr filePath) = 0;
 		virtual bool Save(File::PathStr filePath) = 0;

@@ -4,7 +4,8 @@
 #include "VulkanPipeline.h"
 #include "Core/Public/TArray.h"
 #include "VulkanDevice.h"
-#include "System/Public/FrameCounter.h"
+#include "Math/Public/MathBase.h"
+#include "System/Public/Timer.h"
 
 namespace {
 	void GetPipelineBarrierStage(VkImageLayout oldLayout, VkImageLayout newLayout, VkAccessFlags& srcAccessMask, VkAccessFlags& dstAccessMask, VkPipelineStageFlags& srcStage, VkPipelineStageFlags& dstStage) {
@@ -92,15 +93,15 @@ namespace {
 			imageBlit.srcSubresource.baseArrayLayer = baseLayer;
 			imageBlit.srcSubresource.layerCount = layerCount;
 			imageBlit.srcSubresource.mipLevel = i - 1;
-			imageBlit.srcOffsets[1].x = std::max((int32_t)(width >> (i - 1)), 1);
-			imageBlit.srcOffsets[1].y = std::max((int32_t)(height >> (i - 1)), 1);
+			imageBlit.srcOffsets[1].x = Math::Max((int32_t)(width >> (i - 1)), 1);
+			imageBlit.srcOffsets[1].y = Math::Max((int32_t)(height >> (i - 1)), 1);
 			imageBlit.srcOffsets[1].z = 1;
 
 			imageBlit.dstSubresource.aspectMask = aspect;
 			imageBlit.dstSubresource.layerCount = layerCount;
 			imageBlit.dstSubresource.mipLevel = i;
-			imageBlit.dstOffsets[1].x = std::max((int32_t)(width >> i), 1);
-			imageBlit.dstOffsets[1].y = std::max((int32_t)(height >> i), 1);
+			imageBlit.dstOffsets[1].x = Math::Max((int32_t)(width >> i), 1);
+			imageBlit.dstOffsets[1].y = Math::Max((int32_t)(height >> i), 1);
 			imageBlit.dstOffsets[1].z = 1;
 
 			VkImageSubresourceRange mipSubRange{};
@@ -190,7 +191,7 @@ namespace {
 
 
 VulkanStagingBuffer::VulkanStagingBuffer(uint32 bufferSize, VulkanDevice* device) : VulkanBuffer(RHIBufferDesc{ EBufferFlags::CopySrc, bufferSize }, device) {
-	m_CreateFrame = FrameCounter::GetFrame();
+	m_CreateFrame = Engine::Timer::GetFrame();
 }
 
 VulkanUploader::VulkanUploader(VulkanDevice* device) : m_Device(device) {
@@ -206,7 +207,7 @@ VulkanStagingBuffer* VulkanUploader::AcquireBuffer(uint32 bufferSize) {
 }
 
 void VulkanUploader::BeginFrame() {
-	const uint32 frame = FrameCounter::GetFrame();
+	const uint32 frame = Engine::Timer::GetFrame();
 	for (uint32 i = 0; i < m_StagingBuffers.Size(); ) {
 		const uint32 createFrame = m_StagingBuffers[i]->GetCreateFrame();
 		if (createFrame + RHI_FRAME_IN_FLIGHT_MAX < frame) {

@@ -15,25 +15,8 @@ namespace HLSLCompiler {
 		XString Name;
 		XString Value;
 	};
-	// Clear all compiled shader cache, for recompiling all.
-	void ClearShaderCompileCache();
 
-	class HLSLCompilerBase {
-	public:
-		virtual ~HLSLCompilerBase() = default;
-		virtual XString GetCompileOutputFile(const XString& hlslFile, const XString& entryPoint, uint32 permutationID) = 0;
-		virtual bool Compile(const XString& hlslFile, const XString& entryPoint, ESPVShaderStage stage, TConstArrayView<SPVDefine> defines, uint32 permutationID) = 0;
-	};
+	bool CompileHLSLToSPV(const XString& hlslFile, const XString& entryPoint, ESPVShaderStage stage, TConstArrayView<SPVDefine> defines, const XString& outputFile);
 
-	class SPVCompiler: public HLSLCompilerBase {
-	public:
-		XString GetCompileOutputFile(const XString& hlslFile, const XString& entryPoint, uint32 permutationID) override;
-		bool Compile(const XString& hlslFile, const XString& entryPoint, ESPVShaderStage stage, TConstArrayView<SPVDefine> defines, uint32 permutationID) override;
-	};
-
-	class DXSCompiler: public HLSLCompilerBase {
-	public:
-		XString GetCompileOutputFile(const XString& hlslFile, const XString& entryPoint, uint32 permutationID) override;
-		bool Compile(const XString& hlslFile, const XString& entryPoint, ESPVShaderStage stage, TConstArrayView<SPVDefine> defines, uint32 permutationID) override;
-	};
+	bool CompileHLSLWithSign(const XString& hlslFile, const XString& entryPoint, ESPVShaderStage stage, TConstArrayView<SPVDefine> defines, const XString& outputFile);
 }

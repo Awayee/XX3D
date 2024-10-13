@@ -38,9 +38,9 @@ namespace Object {
 
 	bool Level::LoadFile(const char* file) {
 		Json::Document doc;
-		File::FPath fullPath{ PROJECT_ASSETS };
-		fullPath.append(file);
-		if(!Json::ReadFile(fullPath.string().c_str(), doc, false)) {
+		XString fullPath = Asset::AssetLoader::GetAbsolutePath(file).string();
+		if(!Json::ReadFile(fullPath.c_str(), doc, false)) {
+			LOG_WARNING("Failed to load level: %s", file);
 			return false;
 		}
 		if(doc.HasMember("Camera")) {

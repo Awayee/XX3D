@@ -1,6 +1,6 @@
 #include "Render/Public/Renderer.h"
 #include"Render/Public/DefaultResource.h"
-#include "System/Public/FrameCounter.h"
+#include "System/Public/Timer.h"
 #include "Window/Public/EngineWindow.h"
 
 namespace Render {
@@ -55,7 +55,7 @@ namespace Render {
 		if(!SizeValid()) {
 			return;
 		}
-		const uint32 frameIndex = FrameCounter::GetFrame() % RHI_FRAME_IN_FLIGHT_MAX;
+		const uint32 frameIndex = Engine::Timer::GetFrame() % RHI_FRAME_IN_FLIGHT_MAX;
 		RHIFence* fence = m_Fences[frameIndex].Get();
 
 		if (m_SizeDirty) {

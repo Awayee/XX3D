@@ -109,7 +109,7 @@ namespace Editor {
 			int z = (int)window->IsKeyDown(Engine::EKey::W) - (int)window->IsKeyDown(Engine::EKey::S);
 			int y = (int)window->IsKeyDown(Engine::EKey::E) - (int)window->IsKeyDown(Engine::EKey::Q);
 			if (x || y || z) {
-				const float dt = Engine::CTimer::Instance()->GetDeltaTime();
+				const float dt = Engine::Timer::GetDeltaTime();
 				const float scale = EditorConfig::GetCameraMoveSpeed() * (dt / 41.67f);
 				MoveCamera(camera, (float)x * scale, (float)y * scale, (float)z * scale, true);
 			}
@@ -150,7 +150,7 @@ namespace Editor {
 		// show fps
 		if(EditorConfig::GetDisplayFPS()) {
 			ImGui::SetCursorPos(ImVec2(32, 32));
-			const uint32 fps = (uint32)Engine::CTimer::Instance()->GetFPS();
+			const uint32 fps = (uint32)Engine::Timer::GetFPS();
 			const bool isFpsLow = fps < 60u;
 			const ImVec4 color{ isFpsLow ? 1.0f : 0.0f, isFpsLow ? 0.0f : 1.0f, 0.0f, 1.0f };
 			ImGui::TextColored(color, "FPS=%u", fps);

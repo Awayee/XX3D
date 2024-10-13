@@ -8,7 +8,7 @@
 #include "WndLevelHierarchy.h"
 #include "WndLevelSetting.h"
 #include "WndDebugView.h"
-#include "System/Public/EngineConfig.h"
+#include "System/Public/Configuration.h"
 
 namespace Editor {
 	void SetImGuiStyle() {
@@ -100,10 +100,8 @@ namespace Editor {
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 		io.ConfigWindowsMoveFromTitleBarOnly = true;
 
-		File::FPath fontPath = Asset::AssetLoader::AssetPath();
-		fontPath.append(Engine::ConfigManager::GetData().DefaultFontPath);
-
-		io.Fonts->AddFontFromFileTTF(fontPath.string().c_str(), contentScale * 16, nullptr, nullptr);
+		const XString fontFile = Engine::EngineConfig::Instance().GetEngineAssetDir().append(Engine::EngineConfig::Instance().GetDefaultFont()).string();
+		io.Fonts->AddFontFromFileTTF(fontFile.c_str(), contentScale * 16, nullptr, nullptr);
 		ASSERT(io.Fonts->Build(), "Failed to build fonts");
 		io.IniFilename = nullptr; // Do not save settings
 		// Load imgui.ini

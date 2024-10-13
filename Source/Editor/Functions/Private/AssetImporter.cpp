@@ -328,7 +328,7 @@ bool ImportMeshAsset(const XString& srcFile, const XString& dstFile, float unifo
 	auto saveFile = dstFile;
 	bool r = false;
 	if (saveFile.empty()) {
-		File::FPath relativePath = File::RelativePath(File::FPath(srcFile), Asset::AssetLoader::AssetPath());
+		File::FPath relativePath = Asset::AssetLoader::GetRelativePath(srcFile.c_str());
 		relativePath.replace_extension(".mesh");
 		saveFile = relativePath.string();
 	}
@@ -390,7 +390,7 @@ struct StbiImageScope {
 bool ImportTexture2DAsset(const XString& srcFile, const XString& dstFile, int downsize, Asset::ETextureCompressMode compressMode) {
 	XString saveFile = dstFile;
 	if (saveFile.empty()) {
-		File::FPath relativePath = File::RelativePath(File::FPath(srcFile), Asset::AssetLoader::AssetPath());
+		File::FPath relativePath = Asset::AssetLoader::GetRelativePath(srcFile.c_str());
 		relativePath.replace_extension(".texture");
 		saveFile = relativePath.string();
 	}
@@ -436,7 +436,7 @@ bool ImportTextureCubeAsset(TConstArrayView<XString> srcFiles, const XString& ds
 	}
 	XString saveFile = dstFile;
 	if(saveFile.empty()) {
-		File::FPath relativePath = File::RelativePath(File::FPath(srcFiles[0]), Asset::AssetLoader::AssetPath());
+		File::FPath relativePath = Asset::AssetLoader::GetRelativePath(srcFiles[0].c_str());
 		relativePath.replace_extension(".texture");
 		saveFile = relativePath.string();
 	}

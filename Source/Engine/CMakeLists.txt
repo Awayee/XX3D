@@ -16,7 +16,7 @@ target_compile_definitions(${TARGET_NAME} PRIVATE USE_VMA)
 
 target_link_libraries(${TARGET_NAME} PUBLIC "Core")
 target_link_libraries(${TARGET_NAME} PUBLIC "ShaderCompiler")
-target_include_directories(${TARGET_NAME} PUBLIC ${SOURCE_PATH}/Engine)
+target_include_directories(${TARGET_NAME} PUBLIC ${ENGINE_SOURCE_DIR}/Engine)
 
 # #add include files
 # file(GLOB PUBLIC_DIRECTORY PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/*")

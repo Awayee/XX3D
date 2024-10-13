@@ -4,7 +4,7 @@
 #include "Objects/Public/DirectionalLight.h"
 #include "Objects/Public/SkyBox.h"
 #include "Objects/Public/StaticMesh.h"
-#include "System/Public/EngineConfig.h"
+#include "System/Public/Configuration.h"
 
 namespace Editor {
 	void TransformSave(Object::TransformComponent* com, Json::ValueWriter& val) {
@@ -79,9 +79,8 @@ namespace Editor {
 			actorValues.PushBack(actorValue);
 		}
 		actorValues.Write("Actors");
-		File::FPath fullPath{ PROJECT_ASSETS };
-		fullPath.append(file);
-		return Json::WriteFile(fullPath.string().c_str(), doc, false, true);
+		XString fullPath = Asset::AssetLoader::GetAbsolutePath(file).string();
+		return Json::WriteFile(fullPath.c_str(), doc, false, true);
 	}
 
 	uint32 EditorLevel::GetActorSize() {
@@ -127,7 +126,7 @@ namespace Editor {
 		// initialize type info
 		LevelComponentEditProxyFactory::Instance().Initialize();
 		m_Level.Reset(new EditorLevel(Object::RenderScene::GetDefaultScene()));
-		File::FPath path = Engine::ConfigManager::GetData().StartLevel;
+		File::FPath path = Engine::ProjectConfig::Instance().StartLevel;
 		if (auto node = ProjectAssetMgr::Instance()->GetFileNode(path)) {
 			LoadLevel(node->GetPathStr().c_str());
 		}

@@ -6,6 +6,7 @@
 
 namespace Render {
 	using ShaderDefine = HLSLCompiler::SPVDefine;
+	using ShaderStage = HLSLCompiler::ESPVShaderStage;
 	class GlobalShader {
 	public:
 		GlobalShader(const XString& shaderFile, const XString& entry, EShaderStageFlags type, TConstArrayView<ShaderDefine> defines, uint32 permutationID);
@@ -13,6 +14,13 @@ namespace Render {
 		RHIShader* GetRHI();
 	private:
 		RHIShaderPtr m_RHIShader;
+	};
+
+	class HLSLCompilerBase {
+	public:
+		virtual ~HLSLCompilerBase() = default;
+		virtual XString GetCompileOutputFile(const XString& hlslFile, const XString& entryPoint, uint32 permutationID) = 0;
+		virtual bool Compile(const XString& hlslFile, const XString& entryPoint, ShaderStage stage, TConstArrayView<ShaderDefine> defines, uint32 permutationID) = 0;
 	};
 
 	class GlobalShaderMap {

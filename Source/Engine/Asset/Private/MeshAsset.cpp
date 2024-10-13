@@ -1,7 +1,9 @@
 #include "Asset/Public/MeshAsset.h"
+#include "Asset/Public/AssetLoader.h"
 #include "Core/Public/Json.h"
 #include "Math/Public/Math.h"
 #include "Core/Public/Log.h"
+#include "System/Public/Configuration.h"
 #include <lz4.h>
 
 namespace Asset {
@@ -111,8 +113,8 @@ namespace Asset {
 	}
 
 	bool MeshAsset::LoadPrimitiveFile(const char* file, TArray<AssetVertex>& vertices, TArray<IndexType>& indices) {
-		PARSE_PROJECT_ASSET(file);
-		File::ReadFile f(file, true);
+		const XString fileFullPath = AssetLoader::GetAbsolutePath(file).string();
+		File::ReadFile f(fileFullPath, true);
 		if(!f.IsOpen()) {
 			LOG_WARNING("[MeshAsset::LoadPrimitiveFile] Failed to open file: %s", file);
 			return false;
@@ -161,8 +163,8 @@ namespace Asset {
 			LOG_WARNING("null primitive!");
 			return false;
 		}
-		PARSE_PROJECT_ASSET(file);
-		File::WriteFile f(file, true);
+		const XString fileFullPath = AssetLoader::AssetPath().append(file).string();
+		File::WriteFile f(fileFullPath, true);
 		if (!f.IsOpen()) {
 			LOG_WARNING("Failed to open file: %s", file);
 			return false;
@@ -226,9 +228,9 @@ namespace Asset {
 	}
 
 	bool InstancedMeshAsset::LoadInstanceFile(const char* file, TArray<Math::FTransform>& instances) {
-		PARSE_PROJECT_ASSET(file);
+		const XString fileFullPath = AssetLoader::AssetPath().append(file).string();
 		instances.Reset();
-		if(File::ReadFileWithSize f(file, true); f.IsOpen()) {
+		if(File::ReadFileWithSize f(fileFullPath, true); f.IsOpen()) {
 			// load meta data size
 			uint32 instanceSize;
 			f.Read(&instanceSize, sizeof(instanceSize));
@@ -254,7 +256,7 @@ namespace Asset {
 			LOG_WARNING("[InstancedMeshAsset::SaveInstanceFile] no instances!");
 			return false;
 		}
-		PARSE_PROJECT_ASSET(file);
+		const XString fileFullPath = AssetLoader::AssetPath().append(file).string();
 		const uint32 instanceSize = instances.Size();
 		TArray<char> packedData(sizeof(PackedFTransform) * instanceSize);
 		PackedFTransform* packedDataPtr = (PackedFTransform*)packedData.Data();
@@ -265,7 +267,7 @@ namespace Asset {
 		TArray<char> compressedData(compressBound);
 		const uint32 compressedSize = LZ4_compress_default(packedData.Data(), compressedData.Data(), (int)packedData.Size(), (int)compressBound);
 		compressedData.Resize(compressedSize);
-		if (File::WriteFile f(file, true); f.IsOpen()) {
+		if (File::WriteFile f(fileFullPath, true); f.IsOpen()) {
 			f.Write(&instanceSize, sizeof(instanceSize));
 			f.Write(compressedData.Data(), compressedData.ByteSize());
 			return true;

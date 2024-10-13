@@ -11,8 +11,8 @@ file(GLOB_RECURSE CPP_FILES "*.cpp")
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${H_FILES} ${CPP_FILES})
 
 add_library(${TARGET_NAME} ${H_FILES} ${CPP_FILES})
-target_link_libraries(${TARGET_NAME} PUBLIC "Core")
-target_include_directories(${TARGET_NAME} PUBLIC ${SOURCE_PATH}/ShaderCompiler)
+target_link_libraries(${TARGET_NAME} PRIVATE "Core")
+target_include_directories(${TARGET_NAME} PUBLIC ${ENGINE_SOURCE_DIR}/ShaderCompiler)
 
 # dxc
 target_link_libraries(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/DirectXShaderCompiler/lib/x64/dxcompiler.lib)

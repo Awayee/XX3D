@@ -25,7 +25,7 @@ namespace Editor {
 		NodeID m_ID{ 0 };
 		NodeID m_ParentID{ INVALID_NODE };
 		File::FPath m_RelativePath;//relative path
-		XString m_PathStr;
+		XString m_RelativePathStr;
 		XString m_Name;
 		XString m_Ext;
 		friend class AssetManager;
@@ -36,7 +36,7 @@ namespace Editor {
 		const File::FPath& GetPath() const { return m_RelativePath; }
 		XString GetExt() const { return m_Ext; }
 		File::FPath GetFullPath() const;
-		const XString& GetPathStr() const { return m_PathStr; }
+		const XString& GetPathStr() const { return m_RelativePathStr; }
 		NodeID GetID() const { return m_ID; }
 		NodeID ParentFolder() const { return m_ParentID; }
 	};
@@ -65,7 +65,7 @@ namespace Editor {
 
 	class AssetManager {
 	public:
-		AssetManager(const char* rootPath);
+		AssetManager(File::FPath&& rootPath);
 		FileNode* GetFileNode(NodeID id);
 		FolderNode* GetFolderNode(NodeID id);
 		FileNode* GetFileNode(const File::FPath& path);
@@ -93,11 +93,11 @@ namespace Editor {
 	class EngineAssetMgr: public AssetManager {
 		SINGLETON_INSTANCE(EngineAssetMgr);
 	private:
-		EngineAssetMgr(): AssetManager(ENGINE_ASSETS){}
+		EngineAssetMgr();
 	};
 	class ProjectAssetMgr: public AssetManager {
 		SINGLETON_INSTANCE(ProjectAssetMgr);
 	private:
-		ProjectAssetMgr(): AssetManager(PROJECT_ASSETS){}
+		ProjectAssetMgr();
 	};
 }

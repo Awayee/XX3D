@@ -2,8 +2,9 @@
 #include "VulkanCommand.h"
 #include "VulkanConverter.h"
 #include "Math/Public/Math.h"
-#include "System/Public/FrameCounter.h"
+#include "System/Public/Timer.h"
 #include <GLFW/glfw3.h>
+
 
 inline VkSurfaceFormatKHR ChooseSurfaceFormat(const VkSurfaceFormatKHR* data, uint32 count) {
 	static VkSurfaceFormatKHR s_PreferredFormat{ VK_FORMAT_R8G8B8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
@@ -130,7 +131,7 @@ void VulkanViewport::Present() {
 }
 
 VkSemaphore VulkanViewport::GetCurrentSemaphore() const {
-	return m_Semaphores[FrameCounter::GetFrame() % RHI_FRAME_IN_FLIGHT_MAX];
+	return m_Semaphores[Engine::Timer::GetFrame() % RHI_FRAME_IN_FLIGHT_MAX];
 }
 
 USize2D VulkanViewport::GetSize() const {

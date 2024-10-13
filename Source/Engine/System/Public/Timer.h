@@ -3,26 +3,25 @@
 #include "Core/Public/Defines.h"
 
 namespace Engine {
-	class CTimer{
+	class Timer{
 	public:
-		static CTimer* Instance() { return &s_Instance; }
+		static Timer& Instance() { return s_Instance; }
+		static float GetFPS() { return Instance().m_FPS; }
+		static float GetDeltaTime() { return Instance().m_DeltaTime; }
+		static uint32 GetFrame() { return Instance().m_FrameCounter; }
 		void Tick();
 		void Reset();
-		void Pause();
-		float GetFPS() { return m_FPS; }
-		float GetDeltaTime() { return m_DeltaTime; }
 	private:
 		TimePoint m_NowTime{ NowTimePoint()};
 		uint32 m_FrameCounter{ 0U };
 		float m_DeltaTime{ 0.0f };
-		bool m_Paused{ false };
 		float m_LastFrameDurationMs{ 0.0f };
 		float m_FPS{ 0.0f };
-		static CTimer s_Instance;
-		NON_COPYABLE(CTimer);
-		NON_MOVEABLE(CTimer);
-		CTimer() = default;
-		~CTimer() = default;
+		static Timer s_Instance;
+		NON_COPYABLE(Timer);
+		NON_MOVEABLE(Timer);
+		Timer() = default;
+		~Timer() = default;
 	};
 
 	// LOG the time duration of a code segment

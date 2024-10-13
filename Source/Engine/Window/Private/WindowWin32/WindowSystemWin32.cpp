@@ -35,10 +35,9 @@ namespace Engine {
 		wc.lpszMenuName = 0;
 		wc.lpszClassName = initInfo.Title;
 		if (!RegisterClass(&wc)) {
-			MessageBox(nullptr, "RegisterClass Failed.", nullptr, 0);
-			CHECK(0);
+			LOG_ERROR("RegisterClass Failed.");
 		}
-		LONG dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+		LONG dwStyle = WS_OVERLAPPEDWINDOW;
 		if(initInfo.Resizeable) {
 			dwStyle |= WS_THICKFRAME | WS_MAXIMIZEBOX;
 		}
@@ -57,19 +56,20 @@ namespace Engine {
 		if (!result) {
 			CHECK(0);
 		}
-		ShowWindow(m_HWnd, SW_SHOW);
+		ShowWindow(m_HWnd, SW_SHOWDEFAULT);
 		UpdateWindow(m_HWnd);
 		InitKeyButtonCodeMap();
 	}
 
 	void WindowSystemWin32::Update(){
 		MSG msg = { 0 };
-		if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-		if (msg.message == WM_QUIT || msg.message == WM_CLOSE) {
-			Engine::XXEngine::ShutDown();
+		while (::PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE)){
+			::TranslateMessage(&msg);
+			::DispatchMessage(&msg);
+			if (msg.message == WM_QUIT || msg.message == WM_CLOSE) {
+				Engine::XXEngine::ShutDown();
+				return;
+			}
 		}
 	}
 
@@ -269,7 +269,6 @@ namespace Engine {
 			DragFinish(hDrop);
 			return 0;
 		}
-
 		return DefWindowProc(hwnd, msg, wParam, lParam);
 	}
 

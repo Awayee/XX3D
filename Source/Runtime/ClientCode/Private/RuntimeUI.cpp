@@ -35,7 +35,7 @@ namespace Runtime {
 		if (m_NeedDraw) {
 			ImGui::Begin("Debug");
 			// display fps
-			uint32 fps = (uint32)Engine::CTimer::Instance()->GetFPS();
+			uint32 fps = (uint32)Engine::Timer::GetFPS();
 			ImGui::Text("FPS=%u", fps);
 			// capture frame
 			if (ImGui::Button("CaptureFrame")) {

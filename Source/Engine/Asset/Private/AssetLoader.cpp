@@ -1,10 +1,8 @@
 #include "Asset/Public/AssetLoader.h"
+#include "System/Public/Configuration.h"
 #include "Core/Public/Log.h"
 
 namespace Asset {
-
-	XString AssetLoader::s_EngineAssetPath{ ENGINE_ASSETS };
-	XString AssetLoader::s_ProjectAssetPath{ PROJECT_ASSETS };
 
 	namespace {
 		// TODO Temporary to check the file content, all assets will be binary
@@ -14,13 +12,20 @@ namespace Asset {
 	}
 
 	File::FPath AssetLoader::AssetPath() {
-		return s_ProjectAssetPath;
+		return Engine::EngineConfig::Instance().GetProjectAssetDir();
+	}
+
+	File::FPath AssetLoader::GetRelativePath(File::PathStr fullPath) {
+		return File::RelativePath(fullPath, Engine::EngineConfig::Instance().GetProjectAssetDir());
+	}
+
+	File::FPath AssetLoader::GetAbsolutePath(File::PathStr filePath) {
+		return Engine::EngineConfig::Instance().GetProjectAssetDir().append(filePath);
 	}
 
 	bool AssetLoader::LoadProjectAsset(AssetBase* asset, File::PathStr filePath) {
-		File::FPath fullPath(s_ProjectAssetPath);
-		fullPath.append(filePath);
-		if(!asset->Load(fullPath.string().c_str())) {
+		const XString fullPath = AssetPath().append(filePath).string();
+		if(!asset->Load(fullPath.c_str())) {
 			LOG_WARNING("[AssetLoader::LoadProjectAsset] Failed to load file: %s", filePath);
 			return false;
 		}
@@ -28,9 +33,8 @@ namespace Asset {
 	}
 
 	bool AssetLoader::LoadEngineAsset(AssetBase* asset, File::PathStr filePath) {
-		File::FPath fullPath(s_EngineAssetPath);
-		fullPath.append(filePath);
-		if (!asset->Load(fullPath.string().c_str())) {
+		const XString fullPath = Engine::EngineConfig::Instance().GetEngineAssetDir().append(filePath).string();
+		if (!asset->Load(fullPath.c_str())) {
 			LOG_WARNING("[AssetLoader::LoadEngineAsset] Failed to load file: %s", filePath);
 			return false;
 		}
@@ -38,9 +42,8 @@ namespace Asset {
 	}
 
 	bool AssetLoader::SaveProjectAsset(AssetBase* asset, File::PathStr filePath) {
-		File::FPath fullPath(s_ProjectAssetPath);
-		fullPath.append(filePath);
-		if (!asset->Save(fullPath.string().c_str())) {
+		const XString fullPath = AssetPath().append(filePath).string();
+		if (!asset->Save(fullPath.c_str())) {
 			LOG_WARNING("[AssetLoader::SaveProjectAsset] Failed to save file: %s", filePath);
 			return false;
 		}

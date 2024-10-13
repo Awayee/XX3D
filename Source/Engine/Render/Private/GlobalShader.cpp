@@ -1,11 +1,14 @@
 #include "Render/Public/GlobalShader.h"
 #include "Core/Public/File.h"
-#include "System/Public/EngineConfig.h"
+#include "System/Public/Configuration.h"
 #include "HLSLCompiler/HLSLCompiler.h"
+
+#define SHADER_SPV_EXTENSION ".spv"
+#define SHADER_DXS_EXTENSION ".dxc"
 
 namespace Render {
 
-	static TUniquePtr<HLSLCompiler::HLSLCompilerBase> s_HLSLCompiler;
+	static TUniquePtr<HLSLCompilerBase> s_HLSLCompiler;
 
 	inline bool LoadShaderCode(const XString& shaderFile, TArray<int8>& outCode) {
 		const File::FPath shaderFilePath{ shaderFile };
@@ -26,6 +29,49 @@ namespace Render {
 		default: return HLSLCompiler::ESPVShaderStage::Invalid;
 		}
 	}
+
+	inline XString FixShaderFileName(const XString& hlslFile) {
+		XString result;
+		if (auto extIndex = hlslFile.rfind(".hlsl"); extIndex != hlslFile.npos) {
+			result = hlslFile.substr(0, extIndex);
+		}
+		else {
+			result = hlslFile;
+		}
+		std::replace(result.begin(), result.end(), '/', '_');
+		return result;
+	}
+
+	inline XString GetShaderFullPath(const XString& shaderFile) {
+		return Engine::EngineConfig::Instance().GetShaderDir().append(shaderFile).string();
+	}
+
+	class SPVCompiler : public HLSLCompilerBase {
+	public:
+		XString GetCompileOutputFile(const XString& hlslFile, const XString& entryPoint, uint32 permutationID) override {
+			XString resultFile = Engine::EngineConfig::Instance().GetCompiledShaderDir().append(FixShaderFileName(hlslFile)).string();
+			resultFile.append(entryPoint).append(ToString(permutationID)).append(SHADER_SPV_EXTENSION);
+			return resultFile;
+		}
+		bool Compile(const XString& hlslFile, const XString& entryPoint, ShaderStage stage, TConstArrayView<ShaderDefine> defines, uint32 permutationID) override {
+			XString outputFile = GetCompileOutputFile(hlslFile, entryPoint, permutationID);
+			return HLSLCompiler::CompileHLSLToSPV(GetShaderFullPath(hlslFile), entryPoint, stage, defines, outputFile);
+		}
+	};
+
+	class DXSCompiler : public HLSLCompilerBase {
+	public:
+		XString GetCompileOutputFile(const XString& hlslFile, const XString& entryPoint, uint32 permutationID) override {
+			XString resultFile = Engine::EngineConfig::Instance().GetCompiledShaderDir().append(FixShaderFileName(hlslFile)).string();
+			resultFile.append(entryPoint).append(ToString(permutationID)).append(SHADER_DXS_EXTENSION);
+			return resultFile;
+		}
+		bool Compile(const XString& hlslFile, const XString& entryPoint, ShaderStage stage, TConstArrayView<ShaderDefine> defines, uint32 permutationID) override{
+			XString outputFile = GetCompileOutputFile(hlslFile, entryPoint, permutationID);
+			return HLSLCompiler::CompileHLSLWithSign(GetShaderFullPath(hlslFile), entryPoint, stage, defines, outputFile);
+		}
+	};
+
 	GlobalShader::GlobalShader(const XString& shaderFile, const XString& entry, EShaderStageFlags type, TConstArrayView<ShaderDefine> defines, uint32 permutationID) {
 		TArray<int8> codeData;
 		const XString outputFile = s_HLSLCompiler->GetCompileOutputFile(shaderFile, entry, permutationID);
@@ -52,12 +98,12 @@ namespace Render {
 
 	GlobalShaderMap::GlobalShaderMap() {
 		// initialize shader compiler
-		auto rhiType = Engine::ConfigManager::GetData().RHIType;
+		auto rhiType = Engine::ProjectConfig::Instance().RHIType;
 		if(Engine::ERHIType::Vulkan == rhiType) {
-			s_HLSLCompiler.Reset(new HLSLCompiler::SPVCompiler());
+			s_HLSLCompiler.Reset(new SPVCompiler());
 		}
 		else if (Engine::ERHIType::D3D12 == rhiType) {
-			s_HLSLCompiler.Reset(new HLSLCompiler::DXSCompiler());
+			s_HLSLCompiler.Reset(new DXSCompiler());
 		}
 		else {
 			CHECK(0);

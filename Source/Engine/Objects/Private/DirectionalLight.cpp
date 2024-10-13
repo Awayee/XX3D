@@ -1,6 +1,6 @@
 #include "Objects/Public/DirectionalLight.h"
 #include "Asset/Public/AssetCommon.h"
-#include "System/Public/EngineConfig.h"
+#include "System/Public/Configuration.h"
 #include "Render/Public/GlobalShader.h"
 #include "Objects/Public/RenderResource.h"
 
@@ -60,7 +60,7 @@ namespace Object {
 
 	DirectionalLight::DirectionalLight() {
 		// load shadow map size
-		m_ShadowConfig.ShadowMapSize = Engine::ConfigManager::GetData().DefaultShadowMapSize;
+		m_ShadowConfig.ShadowMapSize = Engine::ProjectConfig::Instance().DefaultShadowMapSize;
 	}
 
 	void DirectionalLight::SetRotation(const Math::FVector3& euler) {

@@ -122,7 +122,7 @@ VkPhysicalDevice VulkanContext::PickPhysicalDevice() {
 		vkGetPhysicalDeviceProperties(info.PhysicalDevice, &info.Properties);
 	}
 
-	bool useIntegratedGPU = Engine::ConfigManager::GetData().UseIntegratedGPU;
+	bool useIntegratedGPU = Engine::ProjectConfig::Instance().UseIntegratedGPU;
 	deviceInfos.Sort([useIntegratedGPU](const PhysicalDeviceInfo& l, const PhysicalDeviceInfo& r)->bool {
 		if(l.Properties.deviceType == r.Properties.deviceType) {
 			return l.Order < r.Order;
@@ -173,7 +173,7 @@ void VulkanContext::CreateInstance(bool enableDebug) {
 	// app info
 	VkApplicationInfo appInfo{};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	appInfo.pApplicationName = PROJECT_NAME;
+	appInfo.pApplicationName = Engine::ProjectConfig::Instance().ProjectName.c_str();
 	appInfo.applicationVersion = VK_MAKE_VERSION(0, 0, 0);
 	appInfo.pEngineName = ENGINE_NAME;
 	appInfo.engineVersion = VK_MAKE_VERSION(0, 0, 0);

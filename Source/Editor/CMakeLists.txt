@@ -12,23 +12,29 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${H_FILES} ${CPP_FILES})
 
 add_executable(${TARGET_NAME} ${H_FILES} ${CPP_FILES})
 target_link_libraries(${TARGET_NAME} PRIVATE "Engine")
-target_include_directories(${TARGET_NAME} PRIVATE ${SOURCE_PATH}/Editor)
+target_include_directories(${TARGET_NAME} PRIVATE ${ENGINE_SOURCE_DIR}/Editor)
 
-#stb image
+# stb image
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/stb_image)
 
-#imgui
+# imgui
 target_link_libraries(${TARGET_NAME} PRIVATE "imgui")
 
-#tiny gltf
+# tiny gltf
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/tinygltf)
 
-#assimp
+# assimp
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/assimpWin64/include)
 target_link_libraries(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/assimpWin64/lib/assimp-vc140-mt.lib)
 
-#RenderDoc
+# RenderDoc
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/RenderDoc)
+
+# Set compile output .exe path
+set_target_properties(${TARGET_NAME} PROPERTIES
+    OUTPUT_NAME_DEBUG "XXEditor_Debug"
+    OUTPUT_NAME_RELEASE "XXEditor"
+)
 
 set(COPY_DLLS
     ${THIRD_PARTY}/assimpWin64/lib/assimp-vc140-mt.dll

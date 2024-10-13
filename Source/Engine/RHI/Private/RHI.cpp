@@ -1,7 +1,7 @@
 #include "RHI/Public/RHI.h"
 #include "VulkanRHI/VulkanRHI.h"
 #include "D3D12RHI/D3D12RHI.h"
-#include "System/Public/EngineConfig.h"
+#include "System/Public/Configuration.h"
 #include "Core/Public/Log.h"
 #include "Core/Public/Concurrency.h"
 #include "Window/Public/EngineWindow.h"
@@ -61,7 +61,7 @@ void RHI::Initialize() {
 
 	// Load RHI Config.
 	// Load RenderDoc firstly
-	if (Engine::ConfigManager::GetData().EnableRenderDoc) {
+	if (Engine::ProjectConfig::Instance().EnableRenderDoc) {
 		s_RenderDocAPI = LoadRenderDocAPI();
 		if (s_RenderDocAPI) {
 			s_RenderDocAPI->SetCaptureFilePathTemplate("RenderDocCapture/Capture");
@@ -69,7 +69,7 @@ void RHI::Initialize() {
 			LOG_INFO("RenderDoc loaded!");
 		}
 	}
-	const Engine::ERHIType rhiType = Engine::ConfigManager::GetData().RHIType;
+	const Engine::ERHIType rhiType = Engine::ProjectConfig::Instance().RHIType;
 	// Create RHI instance.
 	const WindowHandle wnd = Engine::EngineWindow::Instance()->GetWindowHandle();
 	const USize2D extent = Engine::EngineWindow::Instance()->GetWindowSize();

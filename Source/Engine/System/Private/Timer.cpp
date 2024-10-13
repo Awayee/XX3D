@@ -3,12 +3,9 @@
 
 namespace Engine {
 
-	CTimer CTimer::s_Instance;
+	Timer Timer::s_Instance;
 
-	void CTimer::Tick() {
-		if (m_Paused) {
-			return;
-		}
+	void Timer::Tick() {
 		// compute delta time
 		TimePoint nowTime = NowTimePoint();
 		m_DeltaTime = GetDurationMill<float>(m_NowTime, nowTime);
@@ -24,14 +21,10 @@ namespace Engine {
 		}
 	}
 
-	void CTimer::Reset() {
+	void Timer::Reset() {
 		m_FrameCounter = 0;
 		m_FPS = 0;
 		m_NowTime = NowTimePoint();
-	}
-
-	void CTimer::Pause() {
-		m_Paused = true;
 	}
 
 	DurationScope::DurationScope(const char* name): m_Name(name) {

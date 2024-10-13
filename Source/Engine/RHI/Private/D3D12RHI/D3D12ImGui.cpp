@@ -46,7 +46,6 @@ void D3D12ImGui::FrameBegin() {
 
 void D3D12ImGui::FrameEnd() {
 	ImGui::EndFrame();
-	ImGui::UpdatePlatformWindows();
 }
 
 void D3D12ImGui::RenderDrawData(RHICommandBuffer* cmd) {

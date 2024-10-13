@@ -1,4 +1,5 @@
-/build
 /.vs
+/Binaries
+/build
 *.spv
 *.dxc

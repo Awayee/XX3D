@@ -2,6 +2,7 @@
 #include "VulkanCommon.h"
 #include "VulkanResources.h"
 #include "VulkanDevice.h"
+#include "RHI/Public/RHI.h"
 
 class VulkanBackBuffer: public VulkanRHITexture {
 public:

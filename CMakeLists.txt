@@ -15,25 +15,14 @@ set(BUILD_SHARED_LIBS OFF)
 
 # directory setup
 ## engine path
-set(ENGINE_PATH ${${ENGINE_NAME}_SOURCE_DIR})
-set(THIRD_PARTY ${ENGINE_PATH}/ThirdParty)
-set(SOURCE_PATH ${ENGINE_PATH}/Source)
-set(SHADER_PATH ${ENGINE_PATH}/Source/Shaders)
-set(ENGINE_ASSETS ${ENGINE_PATH}/Assets) # inner assets
-## project path
-set(PROJECT_NAME "DemoProject")
-set(PROJECT_PATH ${ENGINE_PATH}/${PROJECT_NAME}) # customize project path here
-set(PROJECT_ASSETS ${PROJECT_PATH}/Assets)
-set(PROJECT_CONFIG ${PROJECT_PATH}/Config)
+set(ENGINE_DIR ${${ENGINE_NAME}_SOURCE_DIR})
+set(ENGINE_SOURCE_DIR ${ENGINE_DIR}/Source)
+set(THIRD_PARTY ${ENGINE_SOURCE_DIR}/ThirdParty)
+set(EXECUTABE_DIR ${ENGINE_DIR}/Binaries)
 
 add_definitions(
     -D_CRT_SECURE_NO_WARNINGS
     -DENGINE_NAME="${ENGINE_NAME}"
-    -DSHADER_PATH="${SHADER_PATH}/"
-    -DENGINE_ASSETS="${ENGINE_PATH}/Assets/"
-    -DPROJECT_NAME="${PROJECT_NAME}"
-    -DPROJECT_ASSETS="${PROJECT_ASSETS}/"
-    -DPROJECT_CONFIG="${PROJECT_CONFIG}/"
 )
 
 macro (DEPENDENCY TARGET_NAME DEPENDENCY_NAME)
@@ -43,12 +32,18 @@ endmacro(DEPENDENCY)
 
 SET_PROPERTY(GLOBAL PROPERTY USE_FOLDERS ON)
 
-add_subdirectory("ThirdParty")
+# set compile output dir and work dir
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${EXECUTABE_DIR}) # lib output
+Set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${EXECUTABE_DIR}) # debug exe output
+Set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${EXECUTABE_DIR}) # release exe output
+set(CMAKE_VS_DEBUGGER_WORKING_DIRECTORY ${EXECUTABE_DIR}) # executable dir
+
 add_subdirectory("Source/Core")
 add_subdirectory("Source/Engine")
 add_subdirectory("Source/Editor")
 add_subdirectory("Source/Runtime")
 add_subdirectory("Source/ShaderCompiler")
-add_subdirectory("Source/Shaders")
+add_subdirectory("Source/ThirdParty")
+add_subdirectory("Shaders")
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT "Editor")

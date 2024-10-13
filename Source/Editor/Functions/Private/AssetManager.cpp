@@ -4,6 +4,7 @@
 #include "Core/Public/String.h"
 #include "Functions/Public/AssetImporter.h"
 #include "Math/Public/Math.h"
+#include "System/Public/Configuration.h"
 
 
 namespace {
@@ -153,16 +154,14 @@ namespace Editor {
 	void PathNode::ResetPath(File::FPath&& relativePath, NodeID parent) {
 		m_RelativePath = MoveTemp(relativePath);
 		m_ParentID = parent;
-		m_PathStr = m_RelativePath.string();
-		std::replace(m_PathStr.begin(), m_PathStr.end(), '\\', '/');
+		m_RelativePathStr = m_RelativePath.string();
+		std::replace(m_RelativePathStr.begin(), m_RelativePathStr.end(), '\\', '/');
 		m_Name = m_RelativePath.filename().string();
 		m_Ext = m_RelativePath.has_extension() ? m_RelativePath.extension().string() : "";
 	}
 
 	File::FPath PathNode::GetFullPath() const {
-		File::FPath path{ Asset::AssetLoader::AssetPath() };
-		path.append(m_RelativePath.string());
-		return path;
+		return Asset::AssetLoader::GetAbsolutePath(m_RelativePathStr.c_str());
 	}
 
 
@@ -173,8 +172,8 @@ namespace Editor {
 		return File::IsSubPathOf(folderNode->m_RelativePath, m_RelativePath);
 	}
 
-	AssetManager::AssetManager(const char* rootPath) {
-		m_RootPath = rootPath;
+	AssetManager::AssetManager(File::FPath&& rootPath) {
+		m_RootPath = MoveTemp(rootPath);
 		BuildTree();
 	}
 
@@ -385,4 +384,8 @@ namespace Editor {
 		m_Root = BuildFolderRecursively(m_RootPath, INVALID_NODE);
 		m_Folders[m_Root].m_Name = m_RootPath.parent_path().stem().string();
 	}
+
+	EngineAssetMgr::EngineAssetMgr() : AssetManager(Engine::EngineConfig::Instance().GetEngineAssetDir()) {}
+
+	ProjectAssetMgr::ProjectAssetMgr() : AssetManager(Engine::EngineConfig::Instance().GetProjectAssetDir()) {}
 }

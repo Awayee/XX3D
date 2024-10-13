@@ -6,6 +6,8 @@
 #include "Functions/Public/AssetManager.h"
 #include "Functions/Public/EditorLevel.h"
 #include "RHI/Public/RHIImGui.h"
+#include "System/Public/Configuration.h"
+#include "Window/Public/EngineWindow.h"
 
 namespace Editor {
 	class EditorSceneRenderer: public Render::ISceneRenderer {
@@ -38,6 +40,8 @@ namespace Editor {
 			cfg.EnableVSync = true;
 			return cfg;
 		});
+		//clear all compiled shader cache, to recompile them.
+		File::RemoveDir(Engine::EngineConfig::Instance().GetCompiledShaderDir());
 	}
 
 	XXEditor::XXEditor(): XXEngine() {

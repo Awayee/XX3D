@@ -57,6 +57,19 @@ inline XString ToString(T val) {
 	return std::to_string(val);
 }
 
+template<typename T>
+inline T StringToNum(const char* str) {
+	return (T)std::atoi(str);
+}
+
+template<> inline float StringToNum(const char* str) {
+	return (float)std::atof(str);
+}
+
+template<> inline double StringToNum(const char* str) {
+	return (double)std::atof(str);
+}
+
 inline void StrCopy(char* dst, const char* src) {
 	std::strcpy(dst, src);
 }

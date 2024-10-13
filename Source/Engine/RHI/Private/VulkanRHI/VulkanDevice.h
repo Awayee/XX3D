@@ -3,6 +3,7 @@
 #include "Core/Public/TUniquePtr.h"
 #include "VulkanCommon.h"
 #include "VulkanContext.h"
+#include "RHI/Public/RHI.h"
 
 class VulkanDescriptorSetMgr;
 class VulkanUploader;

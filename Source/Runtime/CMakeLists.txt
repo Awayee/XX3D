@@ -12,11 +12,16 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${H_FILES} ${CPP_FILES})
 
 add_executable(${TARGET_NAME} ${H_FILES} ${CPP_FILES})
 target_link_libraries(${TARGET_NAME} PRIVATE "Engine")
-target_include_directories(${TARGET_NAME} PRIVATE ${SOURCE_PATH}/Runtime)
+target_include_directories(${TARGET_NAME} PRIVATE ${ENGINE_SOURCE_DIR}/Runtime)
 
-#imgui
+# imgui
 target_link_libraries(${TARGET_NAME} PRIVATE "imgui")
 
+# Set compile output .exe path
+set_target_properties(${TARGET_NAME} PROPERTIES
+    OUTPUT_NAME_DEBUG "XXRuntime_Debug"
+    OUTPUT_NAME_RELEASE "XXRuntime"
+)
 # copy dlls
 set(COPY_DLLS
     ${THIRD_PARTY}/DirectXShaderCompiler/bin/x64/dxcompiler.dll

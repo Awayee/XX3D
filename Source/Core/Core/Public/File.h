@@ -86,5 +86,9 @@ namespace File {
 	typedef std::function<void(const DirEntry&)> FForEachPathFunc;
 	void ForeachPath(const char* folder, FForEachPathFunc&& func, bool recursively = false);
 	void ForeachPath(const DirEntry& path, FForEachPathFunc&& func, bool recursively = false);
+
+	inline FPath GetExecutablePath() {
+		return std::filesystem::current_path();
+	}
 }
 

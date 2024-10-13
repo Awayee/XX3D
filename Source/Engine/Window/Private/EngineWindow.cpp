@@ -2,7 +2,7 @@
 #include "Core/Public/Concurrency.h"
 #include "Core/Public/Log.h"
 #include "Core/Public/TUniquePtr.h"
-#include "System/Public/EngineConfig.h"
+#include "System/Public/Configuration.h"
 #include "Window/Private/WindowGLFW/WindowSystemGLFW.h"
 #include "WIndow/Private/WindowWin32/WindowSystemWin32.h"
 
@@ -11,12 +11,12 @@ namespace Engine {
 	TUniquePtr<EngineWindow> EngineWindow::s_Instance;
 
 	void EngineWindow::Initialize() {
-		const auto& configData = ConfigManager::GetData();
+		const auto& configData = ProjectConfig::Instance();
 		ERHIType rhiType = configData.RHIType;
 		WindowInitInfo windowInfo;
-		windowInfo.Width = configData.WindowSize.w;
-		windowInfo.Height = configData.WindowSize.h;
-		windowInfo.Title = PROJECT_NAME;
+		windowInfo.Width = configData.WindowWidth;
+		windowInfo.Height = configData.WindowHeight;
+		windowInfo.Title = Engine::ProjectConfig::Instance().ProjectName.c_str();
 		windowInfo.Resizeable = true;
 		if (ERHIType::Vulkan == rhiType) {
 			s_Instance.Reset(new WindowSystemGLFW(windowInfo));

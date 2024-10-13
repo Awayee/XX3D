@@ -8,24 +8,9 @@
 #define SHADER_MODEL_VS L"vs_6_0"
 #define SHADER_MODEL_PS L"ps_6_0"
 #define SHADER_MODEL_CS L"cs_6_0"
-#define SHADER_COMPILE_OUTPUT SHADER_PATH##"compiled/"
-#define SHADER_SPV_EXTENSION ".spv"
-#define SHADER_DXS_EXTENSION ".dxc"
 
 namespace {
 	using namespace HLSLCompiler;
-
-	inline XString FixShaderFileName(const XString& hlslFile) {
-		XString result;
-		if (auto extIndex = hlslFile.rfind(".hlsl"); extIndex != hlslFile.npos) {
-			result = hlslFile.substr(0, extIndex);
-		}
-		else {
-			result = hlslFile;
-		}
-		std::replace(result.begin(), result.end(), '/', '_');
-		return result;
-	}
 
 	inline const wchar_t* GetShaderModule(ESPVShaderStage stage) {
 		switch (stage) {
@@ -45,8 +30,6 @@ namespace {
 
 	template<typename T>
 	using TDXPtr = TUniquePtr<T, TDXDeleter<T>>;
-
-
 
 	class DXCompiler {
 	public:
@@ -165,20 +148,19 @@ namespace {
 		}
 		
 		bool Compiler(const XString& hlslFile, const XString& entryPoint, ESPVShaderStage stage, TConstArrayView<SPVDefine> defines, TArrayView<LPCWSTR> preArgs, const XString& outputFile) {
-			File::FPath inputFile{ SHADER_PATH };
-			inputFile.append(hlslFile);
-			const wchar_t* hlslFileW = inputFile.c_str();
 			// make file directory if not exist
+			File::FPath outputFileFullPath{ outputFile };
 			{
-				File::FPath outFilePath{ SHADER_COMPILE_OUTPUT };
-				if (!File::Exist(outFilePath)) {
-					File::MakeDir(outFilePath);
+				File::FPath outputDirPath = outputFileFullPath.parent_path();
+				if (!File::Exist(outputDirPath)) {
+					File::MakeDir(outputDirPath);
 				}
 			}
+			XWString hlslFileW = String2WString(hlslFile);
 			// Load the HLSL text shader from disk
 			uint32_t codePage = DXC_CP_ACP;
 			TDXPtr<IDxcBlobEncoding> sourceBlob;
-			HRESULT r = m_Utils->LoadFile(hlslFileW, &codePage, sourceBlob.Address());
+			HRESULT r = m_Utils->LoadFile(hlslFileW.c_str(), &codePage, sourceBlob.Address());
 			if (FAILED(r)) {
 				LOG_ERROR("[HLSLCompiler] Could not load shader file: %s", hlslFile.c_str());
 				return false;
@@ -206,7 +188,7 @@ namespace {
 			XWString entryPointW = String2WString(entryPoint);
 			const wchar_t* shaderModel = GetShaderModule(stage);
 			TDXPtr<IDxcCompilerArgs> args;
-			m_Utils->BuildArguments(hlslFileW, entryPointW.c_str(), shaderModel, preArgs.Data(), preArgs.Size(), dxcDefines.Data(), dxcDefines.Size(), args.Address());
+			m_Utils->BuildArguments(hlslFileW.c_str(), entryPointW.c_str(), shaderModel, preArgs.Data(), preArgs.Size(), dxcDefines.Data(), dxcDefines.Size(), args.Address());
 
 			// include handler
 			TDXPtr<IDxcIncludeHandler> includeHandler;
@@ -262,31 +244,12 @@ namespace {
 
 namespace HLSLCompiler {
 
-	void ClearShaderCompileCache() {
-		const File::FPath path{ SHADER_COMPILE_OUTPUT };
-		File::RemoveDir(path);
-	}
-
-	XString SPVCompiler::GetCompileOutputFile(const XString& hlslFile, const XString& entryPoint, uint32 permutationID) {
-		XString resultFile{ SHADER_COMPILE_OUTPUT };
-		resultFile.append(FixShaderFileName(hlslFile)).append(entryPoint).append(ToString(permutationID)).append(SHADER_SPV_EXTENSION);
-		return resultFile;
-	}
-
-	bool SPVCompiler::Compile(const XString& hlslFile, const XString& entryPoint, ESPVShaderStage stage, TConstArrayView<SPVDefine> defines, uint32 permutationID) {
+	bool CompileHLSLToSPV(const XString& hlslFile, const XString& entryPoint, ESPVShaderStage stage, TConstArrayView<SPVDefine> defines, const XString& outputFile) {
 		TArray<LPCWSTR> args{ L"-spirv" };
-		XString outputFile = GetCompileOutputFile(hlslFile, entryPoint, permutationID);
-		return DXCompiler{ false }.Compiler(hlslFile, entryPoint, stage, defines, args, outputFile);
+		return DXCompiler(false).Compiler(hlslFile, entryPoint, stage, defines, args, outputFile);
 	}
 
-	XString DXSCompiler::GetCompileOutputFile(const XString& hlslFile, const XString& entryPoint, uint32 permutationID) {
-		XString resultFile{ SHADER_COMPILE_OUTPUT };
-		resultFile.append(FixShaderFileName(hlslFile)).append(entryPoint).append(ToString(permutationID)).append(SHADER_DXS_EXTENSION);
-		return resultFile;
-	}
-
-	bool DXSCompiler::Compile(const XString& hlslFile, const XString& entryPoint, ESPVShaderStage stage, TConstArrayView<SPVDefine> defines, uint32 permutationID) {
-		XString outputFile = GetCompileOutputFile(hlslFile, entryPoint, permutationID);
-		return DXCompiler{ true }.Compiler(hlslFile, entryPoint, stage, defines, {}, outputFile);
+	bool CompileHLSLWithSign(const XString& hlslFile, const XString& entryPoint, ESPVShaderStage stage, TConstArrayView<SPVDefine> defines, const XString& outputFile) {
+		return DXCompiler(false).Compiler(hlslFile, entryPoint, stage, defines, {}, outputFile);
 	}
 }

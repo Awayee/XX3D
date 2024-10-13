@@ -2,12 +2,12 @@
 #include "D3D12Device.h"
 #include "D3D12Resources.h"
 #include "D3D12Pipeline.h"
-#include "System/Public/FrameCounter.h"
+#include "System/Public/Timer.h"
 #include "Math/Public/Math.h"
 #include <WinPixEventRuntime/pix3.h>
 
 D3D12StagingBuffer::D3D12StagingBuffer(uint32 byteSize, ID3D12Device* device): D3D12Buffer(RHIBufferDesc{EBufferFlags::CopySrc, byteSize}, device) {
-	m_CreateFrame = FrameCounter::GetFrame();
+	m_CreateFrame = Engine::Timer::GetFrame();
 }
 
 D3D12Buffer* D3D12Uploader::AllocateStaging(uint32 byteSize) {
@@ -16,7 +16,7 @@ D3D12Buffer* D3D12Uploader::AllocateStaging(uint32 byteSize) {
 
 void D3D12Uploader::BeginFrame() {
 	// check and release resource
-	const uint32 frame = FrameCounter::GetFrame();
+	const uint32 frame = Engine::Timer::GetFrame();
 	for (uint32 i = 0; i < m_Stagings.Size(); ) {
 		const uint32 createFrame = m_Stagings[i]->GetCreateFrame();
 		if (createFrame + RHI_FRAME_IN_FLIGHT_MAX < frame) {

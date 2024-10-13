@@ -14,6 +14,7 @@ namespace Engine {
         uint32 Height;
         const char* Title;
         bool Resizeable;
+        bool EnableDropFile;
 
     };
 
