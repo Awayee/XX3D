@@ -1,7 +1,7 @@
 #include "System/Public/Configuration.h"
 #include "Core/Public/Container.h"
 
-#define SHADER_COMPILED_DIR_NAME "Compiled"
+#define SHADER_COMPILED_DIR_NAME "CompiledShaders"
 #define ASSET_DIR_NAME "Assets"
 #define SHADER_DIR_NAME "Shaders"
 #define ENGINE_CONFIG_FILENAME "EngineConfig.ini"
@@ -42,7 +42,7 @@ namespace Engine {
 	}
 
 	File::FPath EngineConfig::GetCompiledShaderDir() const {
-		return GetShaderDir().append(SHADER_COMPILED_DIR_NAME);
+		return GetExecutableDir().append(SHADER_COMPILED_DIR_NAME);
 	}
 
 	File::FPath EngineConfig::GetProjectAssetDir() const {
