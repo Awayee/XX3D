@@ -10,6 +10,23 @@
 #include "Window/Public/EngineWindow.h"
 
 namespace Editor {
+
+	void TestWindowFunc() {
+		Engine::EngineWindow* window = Engine::EngineWindow::Instance();
+		// TODO test
+		window->RegisterOnCursorPosFunc([](float x, float y) {LOG_DEBUG("OnCursorPos(%f, %f)", x, y); });
+		window->RegisterOnKeyFunc([](Engine::EKey key, Engine::EInput input) {LOG_DEBUG("OnKey(%i, %i)", key, input); });
+		window->RegisterOnMouseButtonFunc([](Engine::EBtn btn, Engine::EInput input) {LOG_DEBUG("OnMouseButton(%i, %i)", btn, input); });
+		window->RegisterOnScrollFunc([](float x, float y) {LOG_DEBUG("OnScroll(%f,%f)", x, y); });
+		window->RegisterOnWindowFocusFunc([](bool b) {LOG_DEBUG("OnWindowFocus(%i)", b); });
+		window->RegisterOnDropFunc([](int num, const char** path) {
+			LOG_DEBUG("OnDrop(%i)", num);
+			for (int i = 0; i < num; ++i) {
+				LOG_DEBUG("    Path=%s", path[i]);
+			}
+			});
+	}
+
 	class EditorSceneRenderer: public Render::ISceneRenderer {
 	public:
 		void Render(Render::RenderGraph& rg, Render::RGTextureNode* backBufferNode) override {

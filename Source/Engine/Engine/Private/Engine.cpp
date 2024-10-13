@@ -10,23 +10,6 @@
 #include "Objects/Public/RenderResource.h"
 #include "Objects/Public/RenderScene.h"
 
-void TestWindowFunc() {
-
-	Engine::EngineWindow* window = Engine::EngineWindow::Instance();
-	// TODO test
-	window->RegisterOnCursorPosFunc([](float x, float y) {LOG_DEBUG("OnCursorPos(%f, %f)", x, y); });
-	window->RegisterOnKeyFunc([](Engine::EKey key, Engine::EInput input) {LOG_DEBUG("OnKey(%i, %i)", key, input); });
-	window->RegisterOnMouseButtonFunc([](Engine::EBtn btn, Engine::EInput input) {LOG_DEBUG("OnMouseButton(%i, %i)", btn, input); });
-	window->RegisterOnScrollFunc([](float x, float y) {LOG_DEBUG("OnScroll(%f,%f)", x, y); });
-	window->RegisterOnWindowFocusFunc([](bool b) {LOG_DEBUG("OnWindowFocus(%i)", b); });
-	window->RegisterOnDropFunc([](int num, const char** path) {
-		LOG_DEBUG("OnDrop(%i)", num);
-		for (int i = 0; i < num; ++i) {
-			LOG_DEBUG("    Path=%s", path[i]);
-		}
-	});
-}
-
 namespace Engine {
 
 	XXEngine* s_RunningEngine{ nullptr };
@@ -36,7 +19,6 @@ namespace Engine {
 		EngineConfig::Initialize();
 		ProjectConfig::Initialize();
 		EngineWindow::Initialize();
-		TestWindowFunc();
 		RHI::Initialize();
 		Render::DefaultResources::Initialize();
 		Render::GlobalShaderMap::Initialize();
