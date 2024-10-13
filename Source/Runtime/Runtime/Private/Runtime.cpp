@@ -3,6 +3,8 @@
 #include "ClientCode/Public/RuntimeUI.h"
 #include "RHI/Public/RHIImGui.h"
 #include "Render/Public/Renderer.h"
+#include "RHI/Public/RHI.h"
+#include "Window/Public/EngineWindow.h"
 
 namespace Runtime {
 
@@ -29,10 +31,11 @@ namespace Runtime {
 	};
 
 	void XXRuntime::PreInitialize() {
-		RHI::SetInitConfigBuilder([]()->RHIInitConfig {
-			RHIInitConfig cfg{};
+		RHI::SetInitSetupFunc([](RHIInitConfig& cfg) {
 			cfg.EnableVSync = false;
-			return cfg;
+		});
+		Engine::EngineWindow::SetInitSetupFunc([](Engine::WindowInitInfo& info) {
+			info.Resizeable = false;
 		});
 	}
 

@@ -33,11 +33,11 @@ namespace Engine {
 		wc.hCursor = LoadCursor(0, IDC_ARROW);
 		wc.hbrBackground = (HBRUSH)GetStockObject(NULL_BRUSH);
 		wc.lpszMenuName = 0;
-		wc.lpszClassName = initInfo.Title;
+		wc.lpszClassName = initInfo.Title.c_str();
 		if (!RegisterClass(&wc)) {
 			LOG_ERROR("RegisterClass Failed.");
 		}
-		LONG dwStyle = WS_OVERLAPPEDWINDOW;
+		LONG dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
 		if(initInfo.Resizeable) {
 			dwStyle |= WS_THICKFRAME | WS_MAXIMIZEBOX;
 		}
@@ -45,11 +45,10 @@ namespace Engine {
 		AdjustWindowRect(&R, dwStyle, false);
 		int width = R.right - R.left;
 		int height = R.bottom - R.top;
-		m_HWnd = CreateWindow(initInfo.Title, initInfo.Title,
+		m_HWnd = CreateWindow(initInfo.Title.c_str(), initInfo.Title.c_str(),
 			dwStyle, CW_USEDEFAULT, CW_USEDEFAULT, width, height, 0, 0, m_HAppInst, 0);
 		if (!m_HWnd) {
-			MessageBox(0, "CreateWindow Failed.", 0, 0);
-			CHECK(0);
+			LOG_ERROR("CreateWindow Failed.");
 		}
 		// handle dpi scale
 		BOOL result = SetProcessDPIAware();
@@ -117,15 +116,19 @@ namespace Engine {
 		return GetFocusMode() && GetAsyncKeyState(m_MouseButtonMap.GetNum(btn)) & KEY_STATE_PRESSING;
 	}
 
+	void WindowSystemWin32::RegisterOnDropFunc(OnDropFunc&& func) {
+		EngineWindow::RegisterOnDropFunc(MoveTemp(func));
+		DragAcceptFiles(m_HWnd, TRUE);
+	}
+
 	LRESULT WindowSystemWin32::MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam);
 		switch (msg){
 		case WM_CREATE:
-			DragAcceptFiles(hwnd, TRUE);
-			return 0;
 			// WM_ACTIVATE is sent when the window is activated or deactivated.  
 			// We pause the game when the window is deactivated and unpause it 
-			// when it becomes active.  
+			// when it becomes active.
+			return 0;
 		case WM_ACTIVATE:
 			if (LOWORD(wParam) == WA_INACTIVE){
 				m_AppPaused = true;
@@ -265,7 +268,7 @@ namespace Engine {
 				DragQueryFile(hDrop, i, pathStr[i].data(), MAX_PATH);
 				paths[i] = pathStr[i].c_str();
 			}
-			OnDrag((int)fileCount, paths.Data());
+			OnDrop((int)fileCount, paths.Data());
 			DragFinish(hDrop);
 			return 0;
 		}
@@ -452,7 +455,7 @@ namespace Engine {
 		}
 	}
 
-	void WindowSystemWin32::OnDrag(int num, const char** paths) {
+	void WindowSystemWin32::OnDrop(int num, const char** paths) {
 		for(auto& func: m_OnDropFunc) {
 			func(num, paths);
 		}

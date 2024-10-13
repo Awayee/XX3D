@@ -22,6 +22,7 @@ namespace Engine {
 		FOffset2D GetCursorPos() override;
 		bool IsKeyDown(EKey key) override;
 		bool IsMouseDown(EBtn btn) override;
+		void RegisterOnDropFunc(OnDropFunc&& func) override;
 	private:
 		TInputBidirectionalMap2<EKey> m_KeyMap;
 		TInputBidirectionalMap<VK_LBUTTON, VK_XBUTTON2, EBtn> m_MouseButtonMap;
@@ -44,6 +45,6 @@ namespace Engine {
 		void OnKeyRepeat(int key);
 		void OnFocus(bool isFocused);
 		void OnScroll(int val);
-		void OnDrag(int num, const char** paths);
+		void OnDrop(int num, const char** paths);
 	};
 }

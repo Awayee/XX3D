@@ -9,6 +9,11 @@
 namespace Engine {
 
 	TUniquePtr<EngineWindow> EngineWindow::s_Instance;
+	WindowInitSetup EngineWindow::s_InitSetup{ nullptr };
+
+	void EngineWindow::SetInitSetupFunc(WindowInitSetup f) {
+		s_InitSetup = f;
+	}
 
 	void EngineWindow::Initialize() {
 		const auto& configData = ProjectConfig::Instance();
@@ -16,8 +21,10 @@ namespace Engine {
 		WindowInitInfo windowInfo;
 		windowInfo.Width = configData.WindowWidth;
 		windowInfo.Height = configData.WindowHeight;
-		windowInfo.Title = Engine::ProjectConfig::Instance().ProjectName.c_str();
-		windowInfo.Resizeable = true;
+		windowInfo.Title = Engine::ProjectConfig::Instance().ProjectName;
+		if(s_InitSetup) {
+			s_InitSetup(windowInfo);
+		}
 		if (ERHIType::Vulkan == rhiType) {
 			s_Instance.Reset(new WindowSystemGLFW(windowInfo));
 		}

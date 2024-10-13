@@ -21,6 +21,7 @@ namespace Engine {
 		FOffset2D GetCursorPos() override;
 		bool IsKeyDown(EKey key) override;
 		bool IsMouseDown(EBtn btn) override;
+		void RegisterOnDropFunc(OnDropFunc&& func) override;
 	private:
 		TInputBidirectionalMap2<EKey> m_KeyMap;
 		TInputBidirectionalMap<GLFW_MOUSE_BUTTON_1, GLFW_MOUSE_BUTTON_LAST, EBtn> m_MouseButtonMap;

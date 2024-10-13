@@ -7,7 +7,7 @@ namespace Engine {
 		glfwInit();
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		glfwWindowHint(GLFW_RESIZABLE, initInfo.Resizeable);
-		m_Window = glfwCreateWindow(initInfo.Width, initInfo.Height, initInfo.Title, nullptr, nullptr);
+		m_Window = glfwCreateWindow(initInfo.Width, initInfo.Height, initInfo.Title.c_str(), nullptr, nullptr);
 		glfwSetWindowUserPointer(m_Window, (void*)this);
 		InitKeyButtonCodeMap();
 		m_Size.w = static_cast<uint32>(initInfo.Width);
@@ -70,6 +70,11 @@ namespace Engine {
 
 	bool WindowSystemGLFW::IsMouseDown(EBtn btn) {
 		return GLFW_PRESS == glfwGetMouseButton(m_Window, m_MouseButtonMap.GetNum(btn));
+	}
+
+	void WindowSystemGLFW::RegisterOnDropFunc(OnDropFunc&& func) {
+		EngineWindow::RegisterOnDropFunc(MoveTemp(func));
+		glfwSetDropCallback(m_Window, OnDrop);
 	}
 
 	void WindowSystemGLFW::InitKeyButtonCodeMap(){
@@ -221,7 +226,6 @@ namespace Engine {
 		glfwSetScrollCallback(m_Window, OnScroll);
 		glfwSetWindowSizeCallback(m_Window, OnWindowSize);
 		glfwSetWindowFocusCallback(m_Window, OnWindowFocus);
-		glfwSetDropCallback(m_Window, OnDrop);
 	}
 
 

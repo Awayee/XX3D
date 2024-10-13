@@ -1,5 +1,6 @@
 #pragma once
 #include "InputEnum.h"
+#include "Core/Public/String.h"
 #include "Core/Public/BaseStructs.h"
 #include "Core/Public/Func.h"
 #include "Core/Public/TUniquePtr.h"
@@ -12,10 +13,8 @@ namespace Engine {
     struct WindowInitInfo {
         uint32 Width;
         uint32 Height;
-        const char* Title;
-        bool Resizeable;
-        bool EnableDropFile;
-
+	    XString Title;
+        bool Resizeable{ false };
     };
 
     struct WindowIcon {
@@ -24,8 +23,11 @@ namespace Engine {
         unsigned char* Pixels;
     };
 
+    typedef void(*WindowInitSetup)(WindowInitInfo& info);
+
 	class EngineWindow {
 	public:
+        static void SetInitSetupFunc(WindowInitSetup f);
         static void Initialize();
         static void Release();
         static EngineWindow* Instance();
@@ -58,17 +60,18 @@ namespace Engine {
         void RegisterOnScrollFunc(OnScrollFunc&& func);
         void RegisterOnWindowSizeFunc(OnWindowSizeFunc&& func);
         void RegisterOnWindowFocusFunc(OnWindowFocus&& func);
-        void RegisterOnDropFunc(OnDropFunc&& func);
+        virtual void RegisterOnDropFunc(OnDropFunc&& func); // need enable dropping files before setting callback 
 	protected:
         TArray<OnKeyFunc>         m_OnKeyFunc;
         TArray<OnMouseButtonFunc> m_OnMouseButtonFunc;
         TArray<OnCursorPosFunc>   m_OnCursorPosFunc;
         TArray<OnScrollFunc>      m_OnScrollFunc;
-        TArray<OnDropFunc>        m_OnDropFunc;
         TArray<OnWindowSizeFunc>  m_OnWindowSizeFunc;
         TArray<OnWindowFocus>     m_OnWindowFocusFunc;
+        TArray<OnDropFunc>        m_OnDropFunc;
 	private:
         static TUniquePtr<EngineWindow> s_Instance;
+        static WindowInitSetup s_InitSetup;
 	};
 
     // Map engine key code to system key code

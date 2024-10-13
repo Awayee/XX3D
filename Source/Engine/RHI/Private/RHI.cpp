@@ -47,10 +47,10 @@ namespace {
 static RENDERDOC_API_1_6_0* s_RenderDocAPI{ nullptr };
 
 TUniquePtr<RHI> RHI::s_Instance{ nullptr };
-RHIInitConfigBuilder RHI::s_InitConfigBuilder{ nullptr };
+RHIInitSetup RHI::s_InitSetup{ nullptr };
 
-void RHI::SetInitConfigBuilder(RHIInitConfigBuilder f) {
-	s_InitConfigBuilder = f;
+void RHI::SetInitSetupFunc(RHIInitSetup f) {
+	s_InitSetup = f;
 }
 
 RHI* RHI::Instance() {
@@ -73,7 +73,10 @@ void RHI::Initialize() {
 	// Create RHI instance.
 	const WindowHandle wnd = Engine::EngineWindow::Instance()->GetWindowHandle();
 	const USize2D extent = Engine::EngineWindow::Instance()->GetWindowSize();
-	const RHIInitConfig cfg = s_InitConfigBuilder ? s_InitConfigBuilder() : RHIInitConfig{};
+	RHIInitConfig cfg{};
+	if (s_InitSetup) {
+		s_InitSetup(cfg);
+	}
 	switch(rhiType) {
 	case Engine::ERHIType::Vulkan:
 		s_Instance.Reset(new VulkanRHI(wnd, extent, cfg));

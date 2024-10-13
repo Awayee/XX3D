@@ -27,11 +27,11 @@ struct RHIInitConfig {
 	bool EnableMSAA  : 1;
 	RHIInitConfig() : EnableDebug(ENABLE_RHI_DEBUG), EnableVSync(false), EnableMSAA(false) {}
 };
-typedef RHIInitConfig(*RHIInitConfigBuilder)();
+typedef void(*RHIInitSetup)(RHIInitConfig& cfg);
 
 class RHI{
 public:
-	static void SetInitConfigBuilder(RHIInitConfigBuilder f);
+	static void SetInitSetupFunc(RHIInitSetup f);
 	static RHI* Instance();
 	static void Initialize();
 	static void Release();
@@ -56,7 +56,7 @@ public:
 protected:
 	friend TDefaultDeleter<RHI>;
 	static TUniquePtr<RHI> s_Instance;
-	static RHIInitConfigBuilder s_InitConfigBuilder;
+	static RHIInitSetup s_InitSetup;
 	RHI() = default;
 	NON_COPYABLE(RHI);
 	NON_MOVEABLE(RHI);

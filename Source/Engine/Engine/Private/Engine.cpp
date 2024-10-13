@@ -8,7 +8,6 @@
 #include "Render/Public/GlobalShader.h"
 #include "System/Public/Timer.h"
 #include "Objects/Public/RenderResource.h"
-#include "Objects/Public/StaticMesh.h"
 #include "Objects/Public/RenderScene.h"
 
 void TestWindowFunc() {
@@ -34,8 +33,10 @@ namespace Engine {
 
 	XXEngine::XXEngine(): m_Running(false) {
 		ASSERT(!s_RunningEngine, "Multi XXEngine object is Invalid!");
+		EngineConfig::Initialize();
 		ProjectConfig::Initialize();
 		EngineWindow::Initialize();
+		TestWindowFunc();
 		RHI::Initialize();
 		Render::DefaultResources::Initialize();
 		Render::GlobalShaderMap::Initialize();

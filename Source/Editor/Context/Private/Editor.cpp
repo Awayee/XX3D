@@ -35,10 +35,12 @@ namespace Editor {
 	};
 
 	void XXEditor::PreInitialize() {
-		RHI::SetInitConfigBuilder([]()->RHIInitConfig {
-			RHIInitConfig cfg{};
+		RHI::SetInitSetupFunc([](RHIInitConfig& cfg){
 			cfg.EnableVSync = true;
-			return cfg;
+		});
+		Engine::EngineWindow::SetInitSetupFunc([](Engine::WindowInitInfo& info) {
+			info.Resizeable = true;
+			info.Title = StringFormat("%s XXEditor", info.Title.c_str());
 		});
 		//clear all compiled shader cache, to recompile them.
 		File::RemoveDir(Engine::EngineConfig::Instance().GetCompiledShaderDir());
