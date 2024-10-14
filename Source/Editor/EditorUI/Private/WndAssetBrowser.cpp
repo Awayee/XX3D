@@ -2,6 +2,7 @@
 #include "UIExtent.h"
 #include "EditorUI/Public/EditorUIMgr.h"
 #include "Functions/Public/AssetImporter.h"
+#include "Util/Public/Random.h"
 
 namespace {
 	static constexpr uint32 INPUT_CHAR_SIZE = 128;
@@ -138,6 +139,7 @@ namespace {
 		float m_BatchUniformHeight{ 0.0f };
 		int m_InstanceSize{ 0 };
 		int m_InstanceEditIndex{ 0 };
+		bool m_RandomXZ{ true };
 		TArray<Math::FTransform> m_Instances;
 		
 		void WndContent() override {
@@ -148,13 +150,17 @@ namespace {
 				ImGui::DragFloatRange2("Y Range", &m_BatchStartPos.Y, &m_BatchEndPos.Y, -9999.0f, 9999.0f);
 				ImGui::DragInt2("Density", m_BatchDensity.Data(), 1, 1, 9999);
 				ImGui::DragFloat("Height", &m_BatchUniformHeight);
+				ImGui::Checkbox("Random XZ", &m_RandomXZ);
 				if(ImGui::Button("Generate")) {
 					m_InstanceSize = m_BatchDensity.X * m_BatchDensity.Y;
 					m_Instances.Resize((uint32)m_InstanceSize, Math::FTransform::IDENTITY);
 					const Math::FVector2 delta{ (m_BatchEndPos.X - m_BatchStartPos.X) / (float)m_BatchDensity.X, (m_BatchEndPos.Y - m_BatchStartPos.Y) / (float)m_BatchDensity.Y };
 					for (int dy = 0; dy < m_BatchDensity.Y; ++dy) {
 						for (int dx = 0; dx < m_BatchDensity.X; ++dx) {
-							const Math::FVector2 pos = m_BatchStartPos + delta * Math::FVector2{ (float)dx, (float)dy };
+							Math::FVector2 pos = m_BatchStartPos + delta * Math::FVector2{ (float)dx, (float)dy };
+							if(m_RandomXZ) {
+								pos += Math::FVector2{Util::RandomF(0.0f, delta.X), Util::RandomF(0.0f, delta.Y)};
+							}
 							m_Instances[dy * m_BatchDensity.X + dx].Position = {pos.X, m_BatchUniformHeight, pos.Y};
 						}
 					}

@@ -3,6 +3,7 @@
 #include "Core/Public/Container.h"
 #include "HLSLCompiler/HLSLCompiler.h"
 #include "RHI/Public/RHI.h"
+#include "Util/Public/Algorithm.h"
 
 namespace Render {
 	using ShaderDefine = HLSLCompiler::SPVDefine;
