@@ -164,6 +164,17 @@ namespace Object {
 			// aabb
 			primitive.AABB = srcPrimitive.AABB;
 		}
+		// calc aabb
+		if(Primitives.Size()) {
+			uint32 i = 0;
+			AABB = Primitives[i++].AABB;
+			for (; i < Primitives.Size(); ++i) {
+				AABB.Union(Primitives[i].AABB);
+			}
+		}
+		else {
+			AABB = {};
+		}
 	}
 
 	void MeshComponent::OnLoad(const Json::Value& val) {
@@ -234,7 +245,10 @@ namespace Object {
 	}
 
 	void InstancedDataECSComponent::BuildInstances(const XString& instanceFile) {
-		Asset::InstancedMeshAsset::LoadInstanceFile(instanceFile.c_str(), Instances);
+	}
+
+	void InstancedDataECSComponent::BuildInstances(const Math::AABB3& resAABB, TArray<Math::FTransform>&& instances) {
+		InstanceData.Build(resAABB, MoveTemp(instances));
 	}
 
 	void InstanceDataComponent::OnLoad(const Json::Value& val) {
@@ -253,8 +267,15 @@ namespace Object {
 
 	void InstanceDataComponent::SetInstanceFile(const XString& file) {
 		m_InstanceFile = file;
-		auto* com = GetScene()->GetComponent<InstancedDataECSComponent>(GetEntityID());
-		com->BuildInstances(file);
+		const auto* meshCom = GetScene()->GetComponent<MeshECSComponent>(GetEntityID());
+		if(!meshCom) {
+			LOG_WARNING("[InstanceDataComponent::SetInstanceFile] Mesh not found!");
+			return;
+		}
+		TArray<Math::FTransform> instances;
+		Asset::InstancedMeshAsset::LoadInstanceFile(m_InstanceFile.c_str(), instances);
+		auto* dataCom = GetScene()->GetComponent<InstancedDataECSComponent>(GetEntityID());
+		dataCom->BuildInstances(meshCom->AABB, MoveTemp(instances));
 	}
 
 	void InstancedMeshRenderSystem::Update(ECSScene* ecsScene, MeshECSComponent* meshCom, InstancedDataECSComponent* instanceCom) {
@@ -262,66 +283,51 @@ namespace Object {
 		Object::RenderScene* scene = (Object::RenderScene*)ecsScene;
 		Object::RenderCamera* mainCamera = scene->GetMainCamera();
 		Object::DirectionalLight* light = scene->GetDirectionalLight();
-		const auto& instances = instanceCom->Instances;
-		for (auto& primitive : meshCom->Primitives) {
-			TArray<Math::FMatrix4x4> instancesMain; instancesMain.Reserve(instances.Size());
-			TArray<TArray<Math::FMatrix4x4>> instancesInShadow(light->GetCascadeNum());
-			for(auto& inst: instancesInShadow) {
-				inst.Reserve(instances.Size());
-			}
-			for (auto& instance : instances) {
-				Math::FMatrix4x4 matrix;
-				instance.BuildMatrix(matrix);
-				const Math::AABB3 aabb = primitive.AABB.Transform(matrix);
-				if (mainCamera->GetFrustum().Cull(aabb)) {
-					instancesMain.PushBack(matrix);
+		// main camera
+		{
+			TArray<Math::FMatrix4x4> instances;
+			instanceCom->InstanceData.Cull(mainCamera->GetFrustum(), instances);
+			if(instances.Size()) {
+				RHIDynamicBuffer instanceBuffer = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Index, instances.ByteSize(), instances.Data(), sizeof(Math::FMatrix4x4));
+				RHIDynamicBuffer cameraUniform = mainCamera->GetUniformBuffer();
+				uint32 instanceCount = instances.Size();
+				for(auto& primitive: meshCom->Primitives) {
+					scene->GetBasePasDrawCallQueue().PushDrawCall([&primitive, instanceBuffer, cameraUniform, instanceCount](RHICommandBuffer* cmd) {
+						RHIGraphicsPipelineState* pso = StaticPipelineStateMgr::Instance()->GetGraphicsPipelineState(s_InstancedMeshGBufferPSOID);
+						cmd->BindGraphicsPipeline(pso);
+						cmd->BindVertexBuffer(primitive.VertexBuffer.Get(), 0, 0);
+						cmd->BindVertexBuffer(instanceBuffer, 1, 0);
+						cmd->BindIndexBuffer(primitive.IndexBuffer.Get(), 0);
+						cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(cameraUniform));
+						// material albedo
+						cmd->SetShaderParam(1, 0, RHIShaderParam::Texture(primitive.Texture));
+						RHISampler* defaultSampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp);
+						cmd->SetShaderParam(1, 1, RHIShaderParam::Sampler(defaultSampler));
+						cmd->DrawIndexed(primitive.IndexCount, instanceCount, 0, 0, 0);
+					});
 				}
-				if (light->GetEnableShadow()) {
-					for(uint32 i=0; i<light->GetCascadeNum(); ++i) {
-						if(light->GetFrustum(i).Cull(aabb)) {
-							instancesInShadow[i].PushBack(matrix);
-						}
+			}
+		}
+		// cascade shadow
+		if (RHIGraphicsPipelineState* pso = light->GetCSMInstancedRenderingPSO(); pso && light->GetEnableShadow()) {
+			for(uint32 i=0; i<light->GetCascadeNum(); ++i) {
+				TArray<Math::FMatrix4x4> instances;
+				instanceCom->InstanceData.Cull(light->GetFrustum(i), instances);
+				if(instances.Size()) {
+					RHIDynamicBuffer shadowUniform = light->GetShadowUniform(i);
+					RHIDynamicBuffer instanceBuffer = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Vertex, instances.ByteSize(), instances.Data(), sizeof(Math::FMatrix4x4));
+					uint32 instanceCount = instances.Size();
+					for(auto& primitive: meshCom->Primitives) {
+						light->GetDrawCallQueue(i).PushDrawCall([&primitive, pso, instanceBuffer, shadowUniform, instanceCount, this](RHICommandBuffer* cmd) {
+							cmd->BindGraphicsPipeline(pso);
+							cmd->BindVertexBuffer(primitive.VertexBuffer.Get(), 0, 0);
+							cmd->BindVertexBuffer(instanceBuffer, 1, 0);
+							cmd->BindIndexBuffer(primitive.IndexBuffer.Get(), 0);
+							cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(shadowUniform));
+							cmd->DrawIndexed(primitive.IndexCount, instanceCount, 0, 0, 0);
+						});
 					}
 				}
-			}
-			if (instancesMain.Size()) {
-				RHIDynamicBuffer instanceBuffer = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Vertex, instancesMain.ByteSize(), instancesMain.Data(), sizeof(Math::FMatrix4x4));
-				RHIDynamicBuffer cameraUniform = mainCamera->GetUniformBuffer();
-				uint32 instanceCount = instancesMain.Size();
-				scene->GetBasePasDrawCallQueue().PushDrawCall([&primitive, instanceBuffer, cameraUniform, instanceCount](RHICommandBuffer* cmd) {
-					RHIGraphicsPipelineState* pso = StaticPipelineStateMgr::Instance()->GetGraphicsPipelineState(s_InstancedMeshGBufferPSOID);
-					cmd->BindGraphicsPipeline(pso);
-					cmd->BindVertexBuffer(primitive.VertexBuffer.Get(), 0, 0);
-					cmd->BindVertexBuffer(instanceBuffer, 1, 0);
-					cmd->BindIndexBuffer(primitive.IndexBuffer.Get(), 0);
-					cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(cameraUniform));
-					// material albedo
-					cmd->SetShaderParam(1, 0, RHIShaderParam::Texture(primitive.Texture));
-					RHISampler* defaultSampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp);
-					cmd->SetShaderParam(1, 1, RHIShaderParam::Sampler(defaultSampler));
-					cmd->DrawIndexed(primitive.IndexCount, instanceCount, 0, 0, 0);
-				});
-			}
-			for(uint32 i=0; i<light->GetCascadeNum(); ++i) {
-				if(instancesInShadow[i].IsEmpty()) {
-					continue;
-				}
-				auto& instInShadow = instancesInShadow[i];
-				RHIDynamicBuffer shadowUniform = light->GetShadowUniform(i);
-				RHIDynamicBuffer instanceBuffer = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Vertex, instInShadow.ByteSize(), instInShadow.Data(), sizeof(Math::FMatrix4x4));
-				RHIGraphicsPipelineState* pso = light->GetCSMInstancedRenderingPSO();
-				if(!pso) {
-					continue;
-				}
-				uint32 instanceCount = instInShadow.Size();
-				light->GetDrawCallQueue(i).PushDrawCall([&primitive, pso, instanceBuffer, shadowUniform, instanceCount, this](RHICommandBuffer* cmd) {
-					cmd->BindGraphicsPipeline(pso);
-					cmd->BindVertexBuffer(primitive.VertexBuffer.Get(), 0, 0);
-					cmd->BindVertexBuffer(instanceBuffer, 1, 0);
-					cmd->BindIndexBuffer(primitive.IndexBuffer.Get(), 0);
-					cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(shadowUniform));
-					cmd->DrawIndexed(primitive.IndexCount, instanceCount, 0, 0, 0);
-				});
 			}
 		}
 	}

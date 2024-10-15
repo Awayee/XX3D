@@ -1,5 +1,5 @@
 #include "VulkanPipeline.h"
-#include "Util/Public/Algorithm.h"
+#include "Core/Public/Algorithm.h"
 #include "VulkanConverter.h"
 #include "Core/Public/Log.h"
 #include "VulkanResources.h"

@@ -7,6 +7,7 @@
 #include "Objects/Public/ECS.h"
 #include "Objects/Public/RenderScene.h"
 #include "Objects/Public/Level.h"
+#include "Objects/Public/InstanceDataMgr.h"
 
 namespace Object {
 	// The level components registered by REGISTER_LEVEL_COMPONENT handles game and editor logic;
@@ -50,6 +51,7 @@ namespace Object {
 	};
 	struct MeshECSComponent {
 		TArray<PrimitiveRenderData> Primitives;
+		Math::AABB3 AABB;
 		void BuildFromAsset(const Asset::MeshAsset& meshAsset);
 		REGISTER_ECS_COMPONENT(MeshECSComponent);
 	};
@@ -74,8 +76,9 @@ namespace Object {
 
 	// instanced static mesh
 	struct InstancedDataECSComponent{
-		TArray<Math::FTransform> Instances;
+		InstanceDataMgr InstanceData;
 		void BuildInstances(const XString& instanceFile);
+		void BuildInstances(const Math::AABB3& resAABB, TArray<Math::FTransform>&& instances);
 		REGISTER_ECS_COMPONENT(InstancedDataECSComponent);
 	};
 

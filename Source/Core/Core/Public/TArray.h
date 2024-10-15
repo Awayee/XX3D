@@ -508,6 +508,9 @@ public:
 	}
 
 	typedef std::function<bool(const T&, const T&)>  SortFunc;
+	void Sort(uint32 start, uint32 end, const SortFunc& f) {
+		std::sort(Base::begin() + start, Base::begin() + end, f);
+	}
 	void Sort(const SortFunc& f) { std::sort(Base::begin(), Base::end(), f); }
 
 	void Sort() { std::sort(Base::begin(), Base::end(), std::less<T>()); }
@@ -533,6 +536,10 @@ public:
 
 	void Swap(TArray& r) {
 		Base::swap(r);
+	}
+
+	void SwapEle(uint32 i, uint32 j) {
+		std::swap(Base::at(i), Base::at(j));
 	}
 
 	void Replace(T oldVal, T newVal) {

@@ -3,6 +3,7 @@
 #include "Functions/Public/EditorLevel.h"
 #include "EditorUI/Public/EditorUIMgr.h"
 #include "Render/Public/DefaultResource.h"
+#include "Objects/Public/RenderResource.h"
 #include "Window/Public/EngineWindow.h"
 
 namespace {
@@ -12,8 +13,9 @@ namespace {
 			if(!Asset::AssetLoader::LoadProjectAsset(&m_Asset, m_PathStr.c_str())) {
 				return;
 			}
+			// TODO compatible with cubemap
 			RHITextureDesc desc = RHITextureDesc::Texture2D();
-			desc.Format = ERHIFormat::R8G8B8A8_UNORM;
+			desc.Format = Object::TextureResource::ConvertTextureFormat(m_Asset.Type);
 			desc.Width = m_Asset.Width;
 			desc.Height = m_Asset.Height;
 			desc.Flags = ETextureFlags::SRV | ETextureFlags::CopyDst;
