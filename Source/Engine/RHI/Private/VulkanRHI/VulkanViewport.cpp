@@ -119,11 +119,10 @@ ERHIFormat VulkanViewport::GetBackBufferFormat() {
 }
 
 void VulkanViewport::Present() {
-	TArray<VkSemaphore> waitSemaphores;
-	m_Device->GetCommandContext()->GetLastSubmissionSemaphores(waitSemaphores);
+	VkSemaphore waitSemaphore = m_Device->GetCommandContext()->GetLastSubmissionSemaphore();
 	VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr };
-	presentInfo.waitSemaphoreCount = waitSemaphores.Size();
-	presentInfo.pWaitSemaphores = waitSemaphores.Data();
+	presentInfo.waitSemaphoreCount = waitSemaphore ? 1 : 0;
+	presentInfo.pWaitSemaphores = waitSemaphore ? &waitSemaphore: nullptr;
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = &m_Swapchain;
 	presentInfo.pImageIndices = &m_BackBufferIdx;

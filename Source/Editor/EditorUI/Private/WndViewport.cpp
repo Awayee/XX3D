@@ -50,10 +50,8 @@ namespace Editor {
 		camera->SetView({eye, at, tempUp});
 	}
 
-	WndViewport::WndViewport() : EditorWndBase("Viewport", ImGuiWindowFlags_NoBackground) {
-		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
-		EditorUIMgr::Instance()->AddMenu("Render", "Capture", []() {RHI::Instance()->CaptureFrame(); }, nullptr);
-		m_Flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+	WndViewport::WndViewport() : EditorWndBase("Viewport", ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse) {
+		EditorUIMgr::Instance()->AddMenu("Window", m_Name.c_str(), {}, &m_Enable);
 	}
 
 	WndViewport::~WndViewport() {
@@ -116,15 +114,13 @@ namespace Editor {
 		}
 	}
 
-	void WndViewport::Update() {
+	void WndViewport::WndContent() {
 		// if this window is hided, disable the main pass rendering
 		if (!m_Enable && m_ViewportShow) {
 			Editor::EditorUIMgr::Instance()->SetSceneTexture(nullptr);
 			m_ViewportShow = false;
 		}
-	}
 
-	void WndViewport::WndContent() {
 		EditorLevel* level = Editor::EditorLevelMgr::Instance()->GetLevel();
 		if(!level) {
 			return;

@@ -37,8 +37,8 @@ void VulkanRHI::BeginFrame() {
 }
 
 void VulkanRHI::BeginRendering() {
-	m_Device->GetDynamicBufferAllocator()->UnmapAllocations();
 	m_Device->GetDynamicBufferAllocator()->GC();
+	m_Device->GetDynamicBufferAllocator()->UnmapAllocations();
 }
 
 ERHIFormat VulkanRHI::GetDepthFormat() {

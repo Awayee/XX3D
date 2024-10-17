@@ -6,6 +6,9 @@
 
 namespace Editor {
 
+	EditorWndBase::EditorWndBase(const char* name, ImGuiWindowFlags flags, EWndUpdateOrder order):
+		m_Name(name), m_Flags(flags), m_Order(order), m_LastEnable(true), m_Enable(true), m_ToDelete(false), m_AutoDelete(false) {}
+
 	void EditorWndBase::Delete() {
 		m_ToDelete = true;
 	}
@@ -18,7 +21,16 @@ namespace Editor {
 		m_Enable = false;
 	}
 
-	void EditorWndBase::Display() {
+	void EditorWndBase::Tick() {
+		// check open or close
+		if(m_Enable && !m_LastEnable) {
+			OnOpen();
+		}
+		else if(!m_Enable && m_LastEnable) {
+			OnClose();
+		}
+		m_LastEnable = m_Enable;
+
 		if (m_Enable) {
 			if (ImGui::Begin(m_Name.c_str(), &m_Enable, m_Flags)) {
 				// support right click to focus window

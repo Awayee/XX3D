@@ -26,6 +26,7 @@ private:
 	uint32 m_PageSize;
 	uint32 m_AllocatedIndex;
 	uint32 AllocateChunk();
+	uint32 PrepareChunk(uint32 requiredSize);
 };
 
 class D3D12Device {

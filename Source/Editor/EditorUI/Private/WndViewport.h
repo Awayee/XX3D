@@ -21,7 +21,6 @@ namespace Editor {
 		bool m_ViewportShow{ false };
 
 		void CameraControl(Object::RenderCamera* camera);
-		void Update() override;
 		void WndContent() override;
 		void SetupRenderTarget();
 	};

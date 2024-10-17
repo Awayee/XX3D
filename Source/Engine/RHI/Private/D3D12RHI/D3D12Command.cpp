@@ -43,6 +43,10 @@ void D3D12CommandList::Reset() {
 	}
 }
 
+void D3D12CommandList::Close() {
+	CheckClose();
+}
+
 void D3D12CommandList::BeginRendering(const RHIRenderPassInfo& info) {
 	// color target
 	const uint32 colorTargetSize = info.GetNumColorTargets();
@@ -206,7 +210,6 @@ void D3D12CommandList::CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstT
 		dstLocation.SubresourceIndex = dstTexDesc.MipSize * (dstSubRes.ArrayIndex * srcPerArraySize + i) + dstSubRes.MipIndex;
 		D3D12_BOX srcBox{ srcOffset.x, srcOffset.y, srcOffset.z,
 			srcOffset.x + extent.w, srcOffset.y + extent.h, srcOffset.z + extent.d };
-		auto desc1 = d3d12SrcTex->GetDesc();
 		m_CommandList->CopyTextureRegion(&dstLocation, dstOffset.x, dstOffset.y, dstOffset.z, &srcLocation, &srcBox);
 	}
 }
@@ -287,6 +290,12 @@ void D3D12CommandList::CheckBegin() {
 
 void D3D12CommandList::CheckClose() {
 	if(m_IsRecording) {
+		// check the  resource state and write to texture
+		for(auto& [tex, resStateOnCmd] : m_ResStates) {
+			ResourceState& resStateOnTex = tex->GetResState();
+			resStateOnTex = resStateOnCmd;
+		}
+		m_ResStates.clear();
 		m_CommandList->Close();
 		m_IsRecording = false;
 	}
@@ -294,15 +303,6 @@ void D3D12CommandList::CheckClose() {
 
 void D3D12CommandList::PreDraw() {
 	m_DescriptorCache->PreDraw(m_CommandList);
-}
-
-void D3D12CommandList::OnSubmit() {
-	// check the  resource state and write to texture
-	for(auto& [tex, resStateOnCmd] : m_ResStates) {
-		ResourceState& resStateOnTex = tex->GetResState();
-		resStateOnTex = resStateOnCmd;
-	}
-	m_ResStates.clear();
 }
 
 void D3D12Queue::Initialize(D3D12Device* device, EQueueType type) {
@@ -337,7 +337,6 @@ void D3D12Queue::Initialize(D3D12Device* device, EQueueType type) {
 void D3D12Queue::BeginFrame() {
 	m_CommonAllocator->Reset();
 	if(m_UploadCmd->m_IsRecording) {
-		m_UploadCmd->CheckClose();
 		auto* cmd = m_UploadCmd.Get();
 		ExecuteCommandLists({cmd});
 	}
@@ -360,7 +359,6 @@ void D3D12Queue::ExecuteCommandLists(TArrayView<D3D12CommandList*> cmds) {
 	TArray<ID3D12CommandList*> d3dCmds; d3dCmds.Reserve(cmds.Size());
 	for (D3D12CommandList* cmd : cmds) {
 		cmd->CheckClose();
-		cmd->OnSubmit();
 		d3dCmds.PushBack(cmd->GetD3D12Ptr());
 	}
 	m_CmdQueue->ExecuteCommandLists(d3dCmds.Size(), d3dCmds.Data());

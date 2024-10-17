@@ -8,6 +8,7 @@
 #include "WndLevelHierarchy.h"
 #include "WndLevelSetting.h"
 #include "WndDebugView.h"
+#include "WndRenderGraph.h"
 #include "System/Public/Configuration.h"
 
 namespace Editor {
@@ -132,9 +133,11 @@ namespace Editor {
 		uiMgr->AddWindow(TUniquePtr(new WndLevelHierarchy()));
 		uiMgr->AddWindow(TUniquePtr(new WndDetails()));
 		uiMgr->AddWindow(TUniquePtr(new WndDebugView()));
+		uiMgr->AddWindow(TUniquePtr(new WndRenderGraph()));
 		uiMgr->AddMenu("Menu", "Config", EditorConfigSetting, nullptr);
 		uiMgr->AddMenu("Menu", "Save Layout", SaveLayout, nullptr);
 		uiMgr->AddMenu("Menu", "Exit", EditorExit, nullptr);
+		uiMgr->AddMenu("Render", "Capture Frame", []() {RHI::Instance()->CaptureFrame(); }, nullptr);
 	}
 
 	UIController::~UIController() {

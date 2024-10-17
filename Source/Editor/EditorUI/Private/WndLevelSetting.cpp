@@ -8,7 +8,7 @@
 namespace Editor {
 
 	WndLevelSetting::WndLevelSetting(): EditorWndBase("LevelSetting") {
-		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
+		EditorUIMgr::Instance()->AddMenu("Window", m_Name.c_str(), {}, &m_Enable);
 	}
 
 	WndLevelSetting::~WndLevelSetting() {

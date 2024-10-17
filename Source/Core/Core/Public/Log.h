@@ -13,7 +13,7 @@
 	do{\
 		if(!(x)){\
 			std::cerr<<"[ERROR] "<<__FILE__<<','<<__LINE__<<std::endl;\
-			LOG_ERROR(s);\
+			std::abort();\
 		}\
 	} while (false)
 

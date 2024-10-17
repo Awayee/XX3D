@@ -24,7 +24,7 @@ target_include_directories(${TARGET_NAME} PUBLIC ${ENGINE_SOURCE_DIR}/Engine)
 #     target_include_directories(${TARGET_NAME} PRIVATE "${folder}/Public")
 # endforeach()
 
-#dx
+# dx
 target_link_libraries(${TARGET_NAME} PRIVATE
 d3d12.lib
 dxgi.lib
@@ -34,40 +34,33 @@ winmm.lib
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/DirectX/include)
 
 
-#glfw
+# glfw
 target_link_libraries(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/glfwWin64/lib-vc2019/glfw3.lib)
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/glfwWin64/include)
 
-#vulkan
+# vulkan
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/Vulkan/include)
 
-#vma
+# vma
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/VulkanMemoryAllocator/include)
 
-#stb image
-target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/stb_image)
+# imgui
+target_link_libraries(${TARGET_NAME} PUBLIC "imgui")
 
-#imgui
-target_link_libraries(${TARGET_NAME} PRIVATE "imgui")
+# imnodes
+target_link_libraries(${TARGET_NAME} PUBLIC "imnodes")
 
-#tiny gltf
-target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/tinygltf)
-
-#assimp
-target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/assimpWin64/include)
-target_link_libraries(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/assimpWin64/lib/assimp-vc140-mt.lib)
-
-#lz4
+# lz4
 target_link_libraries(${TARGET_NAME} PRIVATE "lz4")
 
-#zlib
+# zlib
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/zlib/include)
 target_link_libraries(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/zlib/lib/zlib.lib)
 target_link_libraries(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/zlib/lib/zlibstatic.lib)
 
-#RenderDoc
+# RenderDoc
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/RenderDoc)
 
-#WinPixEventRuntime
+# WinPixEventRuntime
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/WinPixEventRuntime/Include)
 target_link_libraries(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/WinPixEventRuntime/bin/x64/WinPixEventRuntime.lib)

@@ -6,6 +6,7 @@ class RHICommandBuffer {
 public:
 	virtual ~RHICommandBuffer() {}
 	virtual void Reset() = 0;
+	virtual void Close() = 0;
 	virtual void BeginRendering(const RHIRenderPassInfo& info) = 0;
 	virtual void EndRendering() = 0;
 	virtual void BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) = 0;

@@ -15,7 +15,7 @@ namespace Editor {
 	// tab window
 	class EditorWndBase {
 	public:
-		EditorWndBase(XString&& name, ImGuiWindowFlags flags=ImGuiWindowFlags_None, EWndUpdateOrder order=EWndUpdateOrder::Order0): m_Name(MoveTemp(name)), m_Flags(flags){}
+		explicit EditorWndBase(const char* name, ImGuiWindowFlags flags=ImGuiWindowFlags_None, EWndUpdateOrder order=EWndUpdateOrder::Order0);
 		virtual ~EditorWndBase() = default;
 		void Delete();
 		void AutoDelete();
@@ -28,13 +28,15 @@ namespace Editor {
 		friend EditorUIMgr;
 		XString m_Name;
 		int32 m_Flags;
-		bool m_ToDelete{ false };//mark this widget is to delete
-		bool m_Enable{ true };
-		bool m_AutoDelete{ false };
-		EWndUpdateOrder m_Order{ EWndUpdateOrder::Order0 };
-		void Display();
-		virtual void Update() {}
-		virtual void WndContent() = 0;
+		EWndUpdateOrder m_Order;
+		bool m_Enable;
+		bool m_LastEnable : 1;
+		bool m_ToDelete : 1;//mark this widget is to delete
+		bool m_AutoDelete : 1;
+		void Tick();
+		virtual void WndContent() {/*Do nothing*/}
+		virtual void OnOpen() {/*Do nothing*/}
+		virtual void OnClose() {/*Do nothing*/}
 	};
 
 	class EditorFuncWnd: public EditorWndBase {

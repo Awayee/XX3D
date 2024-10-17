@@ -31,12 +31,12 @@ private:
 
 class VulkanCommandBuffer : public RHICommandBuffer {
 public:
-	VulkanCommandBuffer(VulkanCommandContext* context, VkCommandBuffer handle, VkSemaphore smp, EQueueType queue);
+	VulkanCommandBuffer(VulkanCommandContext* context, VkCommandBuffer handle, EQueueType queue);
 	~VulkanCommandBuffer() override;
 	VkCommandBuffer GetHandle() const { return m_Handle; }
-	VkSemaphore GetSemaphore() const { return m_Semaphore; }
 	EQueueType GetQueueType()const { return m_QueueType; }
 	void Reset() override;
+	void Close() override;
 	void BeginRendering(const RHIRenderPassInfo& info) override;
 	void EndRendering() override;
 	void BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) override;
@@ -62,14 +62,10 @@ private:
 	friend VulkanCommandContext;
 	VulkanCommandContext* m_Owner;
 	VkCommandBuffer m_Handle{ VK_NULL_HANDLE };
-	VkSemaphore m_Semaphore;// signal semaphore
 	EQueueType m_QueueType;
 	TUniquePtr<VulkanPipelineDescriptorSetCache> m_PipelineDescriptorSetCache;
 	VkViewport m_Viewport {};
 	VkRect2D m_Scissor {};
-	VkPipelineStageFlags m_StageMask;
-	bool m_ViewportDirty{ false };
-	bool m_ScissorDirty{ false };
 	bool m_HasBegun{ false };
 	void CheckBegin();
 	void CheckEnd();
@@ -78,6 +74,19 @@ private:
 };
 
 typedef TArray<VulkanCommandBuffer*> VulkanCommandSubmission;
+
+class SemaphoreCache {
+public:
+	SemaphoreCache(VkDevice device): m_Device(device), m_CurrentIdx(0){}
+	~SemaphoreCache();
+	VkSemaphore Get();
+	void Reset();
+	void GC();
+private:
+	TArray<VkSemaphore> m_Semaphores;
+	VkDevice m_Device;
+	uint32 m_CurrentIdx;
+};
 
 class VulkanCommandContext {
 public:
@@ -90,10 +99,8 @@ public:
 	// Input command buffers for parallel execution.
 	void SubmitCommandBuffers(TArrayView<VulkanCommandBuffer*> cmds, EQueueType queue, VkSemaphore waitSemaphore, VkFence completeFence);
 	void BeginFrame();
-	// Get the last submitted command buffer(s) for next submission.
-	const VulkanCommandSubmission& GetLastSubmission();
 	// Get the semaphores of commands last submitted.
-	const void GetLastSubmissionSemaphores(TArray<VkSemaphore>& outSmps);
+	VkSemaphore GetLastSubmissionSemaphore();
 	// Get the command buffer for upload, always exists.
 	VulkanCommandBuffer* GetUploadCmd(EQueueType queue);
 
@@ -102,6 +109,7 @@ private:
 	VulkanDevice* m_Device;
 	TStaticArray<VkCommandPool, EnumCast(EQueueType::Count)> m_CommandPools;
 	TStaticArray<TUniquePtr<VulkanCommandBuffer>, EnumCast(EQueueType::Count)> m_UploadCmds; // TODO double buffers
-	TArray<VulkanCommandSubmission> m_Submissions;
+	SemaphoreCache m_SemaphoreCache;
+	VkSemaphore m_LastSemaphore;
 	VkCommandPool GetCommandPool(EQueueType queue);
 };

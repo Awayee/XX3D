@@ -10,7 +10,6 @@ namespace Editor {
 		uint32 m_ContextMenuIdx{ INVALID_INDEX };
 		uint32 m_RenamingIdx{ INVALID_INDEX };
 		TStaticArray<char, NAME_SIZE> m_ActorName{};
-		void Update() override;
 		void WndContent() override;
 	};
 }

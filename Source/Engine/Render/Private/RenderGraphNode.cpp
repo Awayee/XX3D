@@ -63,8 +63,7 @@ namespace Render {
 		WriteDepthTarget(node, node->GetDesc().GetDefaultSubRes(), bClear);
 	}
 
-	void RGRenderNode::Run(ICmdAllocator* cmdAlloc) {
-		RHICommandBuffer* cmd = cmdAlloc->GetCmd(EQueueType::Graphics);
+	void RGRenderNode::Run(RHICommandBuffer* cmd) {
 		if (!m_Name.empty()) {
 			cmd->BeginDebugLabel(m_Name.c_str(), nullptr);
 		}
@@ -112,16 +111,12 @@ namespace Render {
 		}
 
 		// state transition after rendering 
-		bool bPresent = false; // check whether pass is for present // TODO use discrete cmd to present?
 		{
 			for (uint32 i = 0; i < RHI_COLOR_TARGET_MAX; ++i) {
 				if (!m_ColorTargets[i].Node) {
 					break;
 				}
 				m_ColorTargets[i].Node->TransitionToTargetState(cmd, m_ColorTargets[i].SubResIndex);
-				if(EResourceState::Present == m_ColorTargets[i].Node->GetTargetState()) {
-					bPresent = true;
-				}
 			}
 			if (m_DepthTarget.Node) {
 				m_DepthTarget.Node->TransitionToTargetState(cmd, m_DepthTarget.SubResIndex);
@@ -130,7 +125,6 @@ namespace Render {
 		if (!m_Name.empty()) {
 			cmd->EndDebugLabel();
 		}
-		RHI::Instance()->SubmitCommandBuffers(cmd, EQueueType::Graphics, m_Fence, bPresent);
 	}
 
 	void RGComputeNode::ReadSRV(RGTextureNode* node) {
@@ -145,8 +139,7 @@ namespace Render {
 		RGNode::Connect(this, node);
 	}
 
-	void RGComputeNode::Run(ICmdAllocator* cmdAlloc) {
-		RHICommandBuffer* cmd = cmdAlloc->GetCmd(EQueueType::Compute);
+	void RGComputeNode::Run(RHICommandBuffer* cmd) {
 		if (!m_Name.empty()) {
 			cmd->BeginDebugLabel(m_Name.c_str(), nullptr);
 		}
@@ -174,7 +167,6 @@ namespace Render {
 		if (!m_Name.empty()) {
 			cmd->EndDebugLabel();
 		}
-		RHI::Instance()->SubmitCommandBuffers(cmd, EQueueType::Compute, m_Fence, false);
 	}
 
 	void RGTransferNode::CopyTexture(RGTextureNode* src, RGTextureNode* dst, RHITextureSubRes subRes) {
@@ -195,8 +187,7 @@ namespace Render {
 		CopyTexture(src, dst, src->GetDesc().GetDefaultSubRes());
 	}
 
-	void RGTransferNode::Run(ICmdAllocator* cmdAlloc) {
-		RHICommandBuffer* cmd = cmdAlloc->GetCmd(EQueueType::Graphics); // TODO Transfer queue is preferred
+	void RGTransferNode::Run(RHICommandBuffer* cmd) {
 		if(!m_Name.empty()) {
 			cmd->BeginDebugLabel(m_Name.c_str(), nullptr);
 		}
@@ -215,11 +206,9 @@ namespace Render {
 		if (!m_Name.empty()) {
 			cmd->EndDebugLabel();
 		}
-		RHI::Instance()->SubmitCommandBuffers(cmd, EQueueType::Graphics, m_Fence, false);
 	}
 
-	void RGPresentNode::SetPrevNode(RGTextureNode* node) {
-		m_PrevNode = node;
+	void RGPresentNode::Present(RGTextureNode* node) {
 		node->SetTargetState(EResourceState::Present);
 		RGNode::Connect(node, this);
 	}

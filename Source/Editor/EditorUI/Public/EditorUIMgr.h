@@ -12,8 +12,8 @@ namespace Editor {
 		SINGLETON_INSTANCE(EditorUIMgr);
 	public:
 		void Tick();
-		void AddMenuBar(const XString& barName);
-		void AddMenu(const XString& barName, const XString& name, Func<void()>&& func, bool* pToggle);
+		void AddMenuBar(const char* barName);
+		void AddMenu(const char* barName, const char* name, Func<void()>&& func, bool* pToggle);
 		EditorWndBase* AddWindow(const char* name, Func<void()>&& func, ImGuiWindowFlags flags = ImGuiWindowFlags_None);
 		void AddWindow(TUniquePtr<EditorWndBase>&& wndPtr);
 		RHITexture* GetSceneTexture() { return m_SceneTexture; }

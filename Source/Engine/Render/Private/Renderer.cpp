@@ -14,6 +14,17 @@ namespace Render {
 		return Cmds[AllocIndex++].Get();
 	}
 
+	void CmdPool::CmdArray::Reserve(uint32 size) {
+		const uint32 targetSize = AllocIndex + size;
+		Cmds.Reserve(targetSize);
+		if(Cmds.Size() < targetSize) {
+			const uint32 lackSize = targetSize - Cmds.Size();
+			for (uint32 i = 0; i < lackSize; ++i) {
+				Cmds.PushBack(RHI::Instance()->CreateCommandBuffer(QueueType));
+			}
+		}
+	}
+
 	void CmdPool::CmdArray::Reset() {
 		AllocIndex = 0;
 	}
@@ -37,6 +48,10 @@ namespace Render {
 		cmd->Reset();
 		return cmd;
 
+	}
+
+	void CmdPool::Reserve(EQueueType queue, uint32 size) {
+		m_CmdArrays[EnumCast(queue)].Reserve(size);
 	}
 
 	void CmdPool::Reset() {
@@ -70,7 +85,7 @@ namespace Render {
 		}
 
 		RHITexture* backBuffer = viewport->GetBackBuffer();
-		RenderGraph rg;
+		RenderGraph rg(m_RGViewDirty ? &m_RGView: nullptr);
 		// get back buffer
 		RGTextureNode* backBufferNode = rg.CreateTextureNode(backBuffer, "BackBuffer");
 		// render scene
@@ -78,12 +93,11 @@ namespace Render {
 			m_SceneRenderer->Render(rg, backBufferNode);
 		}
 		// fence after back buffer written
-		rg.InsertFence(fence, backBufferNode);
 		// present
 		RGPresentNode* presentNode = rg.CreatePresentNode();
-		presentNode->SetPrevNode(backBufferNode);
+		presentNode->Present(backBufferNode);
 		presentNode->SetTask([]() { RHI::Instance()->GetViewport()->Present(); });
-
+		presentNode->InsertFenceBefore(fence);
 		// ========= run the graph ==============
 		fence->Reset();
 		CmdPool* cmdPool = &m_CmdPools[frameIndex];
@@ -94,6 +108,8 @@ namespace Render {
 		// ========= wait next fence for beginning next frame ==============
 		RHIFence* nextFence = m_Fences[(frameIndex + 1) % RHI_FRAME_IN_FLIGHT_MAX].Get();
 		nextFence->Wait();
+
+		m_RGViewDirty = false;
 	}
 
 	void Renderer::WaitAllFence() {
@@ -109,7 +125,15 @@ namespace Render {
 		}
 	}
 
-	Renderer::Renderer() : m_SizeDirty(false) {
+	const RenderGraphView& Renderer::GetRenderGraphView() const {
+		return m_RGView;
+	}
+
+	void Renderer::RefreshRenderGraphView() {
+		m_RGViewDirty = true;
+	}
+
+	Renderer::Renderer() : m_SizeDirty(false), m_RGViewDirty(false) {
 		// Create fences
 		for (uint32 i = 0; i < RHI_FRAME_IN_FLIGHT_MAX; ++i) {
 			m_Fences[i] = RHI::Instance()->CreateFence(true);

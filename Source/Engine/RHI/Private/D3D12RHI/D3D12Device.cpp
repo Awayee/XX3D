@@ -7,10 +7,8 @@ D3D12DynamicBufferAllocator::D3D12DynamicBufferAllocator(ID3D12Device* device, u
 RHIDynamicBuffer D3D12DynamicBufferAllocator::Allocate(EBufferFlags flags, uint32 size, const void* data, uint32 stride) {
 	size = AlignConstantBufferSize(size);
 	ASSERT(size <= m_PageSize, "Dynamic allocation size is greater than page size!");
-	if (DX_INVALID_INDEX == m_AllocatedIndex || (m_PageSize - m_BufferChunks[m_AllocatedIndex].AllocatedSize) < size) {
-		m_AllocatedIndex = AllocateChunk();
-	}
-	BufferChunk& chunk = m_BufferChunks[m_AllocatedIndex];
+	const uint32 chunkIdx = PrepareChunk(size);
+	BufferChunk& chunk = m_BufferChunks[chunkIdx];
 	const uint32 offset = chunk.AllocatedSize;
 	chunk.AllocatedSize += size;
 	if (!chunk.MappedData) {
@@ -18,7 +16,7 @@ RHIDynamicBuffer D3D12DynamicBufferAllocator::Allocate(EBufferFlags flags, uint3
 	}
 	uint8* mappedPointer = (uint8*)chunk.MappedData + offset;
 	memcpy(mappedPointer, data, size);
-	return { m_AllocatedIndex, offset, size, stride };
+	return { chunkIdx, offset, size, stride };
 }
 
 ID3D12Resource* D3D12DynamicBufferAllocator::GetResource(uint32 bufferIndex) {
@@ -87,6 +85,25 @@ uint32 D3D12DynamicBufferAllocator::AllocateChunk() {
 	chunk.AllocatedSize = 0;
 	chunk.MappedData = nullptr;
 	return chunkIndex;
+}
+
+uint32 D3D12DynamicBufferAllocator::PrepareChunk(uint32 requiredSize) {
+	if (DX_INVALID_INDEX != m_AllocatedIndex) {
+		for (; m_AllocatedIndex < m_BufferChunks.Size(); ++m_AllocatedIndex) {
+			if (m_PageSize - m_BufferChunks[m_AllocatedIndex].AllocatedSize >= requiredSize) {
+				return m_AllocatedIndex;
+			}
+		}
+	}
+	// allocate
+	m_AllocatedIndex = m_BufferChunks.Size();
+	auto& chunk = m_BufferChunks.EmplaceBack();
+	auto d3d12Desc = CD3DX12_RESOURCE_DESC::Buffer(m_PageSize);
+	const CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_UPLOAD);
+	DX_CHECK(m_Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &d3d12Desc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(chunk.Buffer.Address())));
+	chunk.AllocatedSize = 0;
+	chunk.MappedData = nullptr;
+	return m_AllocatedIndex;
 }
 
 D3D12Device::D3D12Device(IDXGIAdapter* adapter) {

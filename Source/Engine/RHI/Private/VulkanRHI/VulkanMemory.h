@@ -86,5 +86,5 @@ private:
 	uint32 m_AllocatedIndex{ VK_INVALID_INDEX };
 	uint32 m_UniformAlignment{ 256 };
 	uint32 m_PageSize{ 1024 };
-	uint32 AllocateChunk();
+	uint32 PrepareChunk(uint32 requiredSize);
 };

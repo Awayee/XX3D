@@ -10,7 +10,6 @@ namespace Editor {
 	public:
 		WndAssetBrowser();
 		~WndAssetBrowser() override;
-		void Update() override;
 		void WndContent() override;
 		void SetCurrentFolder(FolderNode* node);
 

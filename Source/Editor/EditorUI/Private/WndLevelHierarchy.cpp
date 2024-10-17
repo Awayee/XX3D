@@ -46,13 +46,10 @@ namespace Editor {
 
 	WndLevelHierarchy::WndLevelHierarchy() : EditorWndBase("Hierarchy") {
 		EditorUIMgr::Instance()->AddMenu("Level", "Save Level", SaveLevel, nullptr);
-		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
+		EditorUIMgr::Instance()->AddMenu("Window", m_Name.c_str(), {}, &m_Enable);
 	}
 
 	WndLevelHierarchy::~WndLevelHierarchy() {
-	}
-
-	void WndLevelHierarchy::Update() {
 	}
 
 	void WndLevelHierarchy::WndContent() {

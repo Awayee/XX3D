@@ -22,6 +22,7 @@ namespace Render {
 	public:
 		virtual ~ICmdAllocator() = default;
 		virtual RHICommandBuffer* GetCmd(EQueueType queue) = 0;
+		virtual void Reserve(EQueueType queue, uint32 size) = 0;
 	};
 
 	class RGNode {
@@ -43,13 +44,16 @@ namespace Render {
 #pragma region PassNode
 	class RGPassNode: public RGNode {
 	public:
-		RGPassNode(RGNodeID nodeID) : RGNode(nodeID), m_Fence(nullptr) {}
+		RGPassNode(RGNodeID nodeID) : RGNode(nodeID), m_Fence(nullptr), m_EnableParallel(false){}
+		void InsertFenceBefore(RHIFence* fence) { m_Fence = fence; }
+		void EnableParallel() { m_EnableParallel = true; }
 	protected:
 		friend RenderGraph;
 		RHIFence* m_Fence;
+		bool m_EnableParallel;
 		ERGNodeType GetNodeType() const override { return ERGNodeType::Pass; }
-		virtual void Run(ICmdAllocator* cmdAlloc) = 0;
-		void InsertFence(RHIFence* fence) { m_Fence = fence; }
+		virtual EQueueType GetQueue() const = 0;
+		virtual void Run(RHICommandBuffer* cmd) = 0;
 	};
 
 	class RGRenderNode: public RGPassNode {
@@ -81,7 +85,8 @@ namespace Render {
 		TStaticArray<TargetInfo, RHI_COLOR_TARGET_MAX> m_ColorTargets;
 		Rect m_RenderArea;
 		RenderTask m_Task;
-		void Run(ICmdAllocator* cmdAlloc) override;
+		EQueueType GetQueue() const override { return EQueueType::Graphics; }
+		void Run(RHICommandBuffer* cmd) override;
 	};
 
 	class RGComputeNode: public RGPassNode {
@@ -96,7 +101,8 @@ namespace Render {
 		TArray<RGTextureNode*> m_SRVs;
 		TArray<RGTextureNode*> m_UAVs;
 		ComputeTask m_Task;
-		void Run(ICmdAllocator* cmdAlloc) override;
+		EQueueType GetQueue() const override { return EQueueType::Compute; }
+		void Run(RHICommandBuffer* cmd) override;
 	};
 
 	class RGTransferNode: public RGPassNode {
@@ -114,19 +120,21 @@ namespace Render {
 			uint8 DstSubResIndex;
 		};
 		TArray<CpyResourcePair> m_Cpy;
-		void Run(ICmdAllocator* cmdAlloc) override;
+		EQueueType GetQueue() const override { return EQueueType::Graphics; } // TODO Transfer queue is preferred, but transition state must in graphics queue
+		void Run(RHICommandBuffer* cmd) override;
 	};
 
 	class RGPresentNode: public RGNode {
 	public:
 		typedef Func<void()> PresentTask;
-		RGPresentNode(RGNodeID nodeID) : RGNode(nodeID), m_PrevNode(nullptr){}
+		RGPresentNode(RGNodeID nodeID) : RGNode(nodeID), m_Fence(nullptr) {}
 		~RGPresentNode() override = default;
-		void SetPrevNode(RGTextureNode* node);
+		void Present(RGTextureNode* node);
 		void SetTask(PresentTask&& task) { m_Task = MoveTemp(task); }
+		void InsertFenceBefore(RHIFence* fence) { m_Fence = fence; }
 	private:
 		friend RenderGraph;
-		RGTextureNode* m_PrevNode;
+		RHIFence* m_Fence;
 		PresentTask m_Task;
 		ERGNodeType GetNodeType() const override { return ERGNodeType::Present; }
 		void Run();

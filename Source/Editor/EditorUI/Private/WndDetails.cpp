@@ -45,10 +45,7 @@ namespace Editor {
 	REGISTER_LEVEL_EDIT_OnGUI(Object::SkyBoxComponent, SkyBoxGUI);
 
 	WndDetails::WndDetails() : EditorWndBase("Details") {
-		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
-	}
-
-	void WndDetails::Update() {
+		EditorUIMgr::Instance()->AddMenu("Window", m_Name.c_str(), {}, &m_Enable);
 	}
 
 	void WndDetails::WndContent() {

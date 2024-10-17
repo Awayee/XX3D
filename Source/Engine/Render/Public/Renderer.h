@@ -19,6 +19,7 @@ namespace Render {
 			uint32 AllocIndex{ 0 };
 			EQueueType QueueType{ EQueueType::Graphics };
 			RHICommandBuffer* Get();
+			void Reserve(uint32 size);
 			void Reset();
 			void GC();
 		};
@@ -28,6 +29,7 @@ namespace Render {
 		CmdPool();
 		~CmdPool() override = default;
 		RHICommandBuffer* GetCmd(EQueueType queue) override;
+		void Reserve(EQueueType queue, uint32 size) override;
 		void Reset();
 		void GC();
 	private:
@@ -42,12 +44,17 @@ namespace Render {
 		void WaitAllFence();
 		void OnWindowSizeChanged(uint32 w, uint32 h);
 		template <class T> void SetSceneRenderer() { m_SceneRenderer.Reset(new T); }
+
+		const RenderGraphView& GetRenderGraphView()const;
+		void RefreshRenderGraphView();
 	private:
 		TStaticArray<CmdPool, RHI_FRAME_IN_FLIGHT_MAX> m_CmdPools;
 		TStaticArray<RHIFencePtr, RHI_FRAME_IN_FLIGHT_MAX> m_Fences;
 		USize2D m_CacheWindowSize;
 		TUniquePtr<ISceneRenderer> m_SceneRenderer;
+		RenderGraphView m_RGView;
 		bool m_SizeDirty;
+		bool m_RGViewDirty;
 		Renderer();
 		~Renderer();
 		bool SizeValid() const;

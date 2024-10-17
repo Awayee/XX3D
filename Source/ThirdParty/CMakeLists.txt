@@ -9,6 +9,11 @@ if(NOT TARGET "imgui")
     set_target_properties("imgui" PROPERTIES FOLDER ${THIRD_PARTY_NAME})
 endif()
 
+if(NOT TARGET "imnodes")
+    include(imnodes.cmake)
+    set_target_properties("imnodes" PROPERTIES FOLDER ${THIRD_PARTY_NAME})
+endif()
+
 if(NOT TARGET "lz4")
     include(lz4.cmake)
     set_target_properties("lz4" PROPERTIES FOLDER ${THIRD_PARTY_NAME})

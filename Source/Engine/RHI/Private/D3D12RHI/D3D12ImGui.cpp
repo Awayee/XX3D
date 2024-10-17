@@ -8,6 +8,7 @@
 #include "Window/Public/EngineWindow.h"
 #include <backends/imgui_impl_win32.h>
 #include <backends/imgui_impl_dx12.h>
+#include <imnodes.h>
 
 D3D12ImGui::D3D12ImGui(void (* configInitializer)()) {
 	IMGUI_CHECKVERSION();
@@ -27,12 +28,14 @@ D3D12ImGui::D3D12ImGui(void (* configInitializer)()) {
 	if (configInitializer) {
 		configInitializer();
 	}
+	ImNodes::CreateContext();
 }
 
 D3D12ImGui::~D3D12ImGui() {
 	if (m_Context) {
 		ImGui_ImplDX12_Shutdown();
 		ImGui_ImplWin32_Shutdown();
+		ImNodes::DestroyContext();
 		ImGui::DestroyContext(m_Context);
 		m_Context = nullptr;
 	}

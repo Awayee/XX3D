@@ -12,7 +12,7 @@ namespace {
 
 	class AssetBuilderBase : public Editor::EditorWndBase {
 	public:
-		AssetBuilderBase(XString&& wndName, Editor::NodeID folderNode): EditorWndBase(MoveTemp(wndName), WINDOW_FLAGS), m_FolderNode(folderNode){
+		AssetBuilderBase(const char* name, Editor::NodeID folderNode): EditorWndBase(name, WINDOW_FLAGS), m_FolderNode(folderNode){
 			AutoDelete();
 			strcpy(m_DstFileName.Data(), "NewAsset");
 		}
@@ -218,9 +218,6 @@ namespace Editor {
 
 	WndAssetBrowser::~WndAssetBrowser() {
 		s_Instances.SwapRemove(this);
-	}
-
-	void WndAssetBrowser::Update() {
 	}
 
 	void WndAssetBrowser::WndContent() {

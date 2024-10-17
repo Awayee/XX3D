@@ -53,15 +53,14 @@ namespace Editor {
 				}
 				else {
 					++i;
-					wnd->Update();
-					wnd->Display();
+					wnd->Tick();
 				}
 			}
 		}
 		RHIImGui::Instance()->FrameEnd();
 	}
 
-	void EditorUIMgr::AddMenuBar(const XString& barName) {
+	void EditorUIMgr::AddMenuBar(const char* barName) {
 		for (auto& column : m_MenuBar) {
 			if (column.Name == barName) {
 				return;
@@ -70,7 +69,7 @@ namespace Editor {
 		m_MenuBar.PushBack({ barName, {} });
 	}
 
-	void EditorUIMgr::AddMenu(const XString& barName, const XString& name, Func<void()>&& func, bool* pToggle) {
+	void EditorUIMgr::AddMenu(const char* barName, const char* name, Func<void()>&& func, bool* pToggle) {
 		for(auto& column: m_MenuBar) {
 			if(column.Name == barName) {
 				column.Items.PushBack({name, func, pToggle });

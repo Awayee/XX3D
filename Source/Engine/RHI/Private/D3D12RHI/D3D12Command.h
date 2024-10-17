@@ -31,6 +31,7 @@ public:
 	D3D12CommandList(D3D12Device* device, ID3D12CommandAllocator* alloc, D3D12_COMMAND_LIST_TYPE type);
 	~D3D12CommandList() override = default;
 	void Reset() override;
+	void Close() override;
 	void BeginRendering(const RHIRenderPassInfo& info) override;
 	void EndRendering() override;
 	void BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) override;
@@ -66,7 +67,6 @@ private:
 	// call before draw/dispatch
 	TMap<D3D12Texture*, ResourceState> m_ResStates;
 	void PreDraw();
-	void OnSubmit();
 };
 
 class D3D12Queue {

@@ -219,13 +219,10 @@ void VulkanUploader::BeginFrame() {
 	}
 }
 
-VulkanCommandBuffer::VulkanCommandBuffer(VulkanCommandContext* context, VkCommandBuffer handle, VkSemaphore smp, EQueueType queue) :
+VulkanCommandBuffer::VulkanCommandBuffer(VulkanCommandContext* context, VkCommandBuffer handle, EQueueType queue) :
 m_Owner(context),
 m_Handle(handle),
-m_Semaphore(smp),
-m_QueueType(queue),
-// TODO stage mask would be reset
-m_StageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT){
+m_QueueType(queue){
 	m_PipelineDescriptorSetCache.Reset(new VulkanPipelineDescriptorSetCache(context->GetDevice()));
 }
 
@@ -237,9 +234,11 @@ VulkanCommandBuffer::~VulkanCommandBuffer() {
 void VulkanCommandBuffer::Reset() {
 	vkResetCommandBuffer(m_Handle, 0);
 	m_PipelineDescriptorSetCache->Reset();
-	m_ScissorDirty = true;
-	m_ViewportDirty = true;
 	CheckBegin();
+}
+
+void VulkanCommandBuffer::Close() {
+	CheckEnd();
 }
 
 void VulkanCommandBuffer::BeginRendering(const RHIRenderPassInfo& info) {
@@ -333,12 +332,10 @@ void VulkanCommandBuffer::BindIndexBuffer(RHIBuffer* buffer, uint64 offset) {
 
 void VulkanCommandBuffer::SetViewport(FRect rect, float minDepth, float maxDepth) {
 	m_Viewport = { rect.x, rect.y + rect.h, rect.w, -rect.h, minDepth, maxDepth };
-	m_ViewportDirty = true;
 }
 
 void VulkanCommandBuffer::SetScissor(Rect rect) {
 	m_Scissor = { {rect.x, rect.y}, {rect.w, rect.h} };
-	m_ScissorDirty = true;
 }
 
 void VulkanCommandBuffer::Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance) {
@@ -456,6 +453,13 @@ void VulkanCommandBuffer::CheckBegin() {
 		m_HasBegun = true;
 	}
 }
+void VulkanCommandBuffer::PrepareDraw(){
+	m_PipelineDescriptorSetCache->Bind(m_Handle);
+	if(VK_PIPELINE_BIND_POINT_GRAPHICS == m_PipelineDescriptorSetCache->GetVkPipelineBindPoint()) {
+		vkCmdSetViewport(m_Handle, 0, 1, &m_Viewport);
+		vkCmdSetScissor(m_Handle, 0, 1, &m_Scissor);
+	}
+}
 
 void VulkanCommandBuffer::CheckEnd() {
 	if(m_HasBegun) {
@@ -464,21 +468,32 @@ void VulkanCommandBuffer::CheckEnd() {
 	}
 }
 
-void VulkanCommandBuffer::PrepareDraw(){
-	m_PipelineDescriptorSetCache->Bind(m_Handle);
-	if(VK_PIPELINE_BIND_POINT_GRAPHICS == m_PipelineDescriptorSetCache->GetVkPipelineBindPoint()) {
-		if (m_ViewportDirty) {
-			vkCmdSetViewport(m_Handle, 0, 1, &m_Viewport);
-			m_ViewportDirty = false;
-		}
-		if (m_ScissorDirty) {
-			vkCmdSetScissor(m_Handle, 0, 1, &m_Scissor);
-			m_ScissorDirty = false;
-		}
+SemaphoreCache::~SemaphoreCache() {
+	for(VkSemaphore smp: m_Semaphores) {
+		vkDestroySemaphore(m_Device, smp, nullptr);
 	}
 }
 
-VulkanCommandContext::VulkanCommandContext(VulkanDevice* device) :m_Device(device) {
+VkSemaphore SemaphoreCache::Get() {
+	if(m_CurrentIdx >= m_Semaphores.Size()) {
+		VkSemaphoreCreateInfo info{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0 };
+		vkCreateSemaphore(m_Device, &info, nullptr, &m_Semaphores.EmplaceBack());
+	}
+	return m_Semaphores[m_CurrentIdx++];
+}
+
+void SemaphoreCache::Reset() {
+	m_CurrentIdx = 0;
+}
+
+void SemaphoreCache::GC() {
+	for(uint32 i=m_CurrentIdx; i<m_Semaphores.Size(); ++i) {
+		vkDestroySemaphore(m_Device, m_Semaphores[i], nullptr);
+	}
+	m_Semaphores.Resize(m_CurrentIdx);
+}
+
+VulkanCommandContext::VulkanCommandContext(VulkanDevice* device) :m_Device(device), m_SemaphoreCache(device->GetDevice()) {
 	VkDevice vkDevice = m_Device->GetDevice();
 	for(uint8 i=0; i<EnumCast(EQueueType::Count); ++i) {
 		VkCommandPoolCreateInfo commandPoolCreateInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr };
@@ -508,102 +523,65 @@ RHICommandBufferPtr VulkanCommandContext::AllocateCommandBuffer(EQueueType queue
 	allocateInfo.commandBufferCount = 1;
 	VkCommandBuffer handle;
 	VK_CHECK(vkAllocateCommandBuffers(m_Device->GetDevice(), &allocateInfo, &handle));
-	VkSemaphore smp;
-	VkSemaphoreCreateInfo semaphoreInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0 };
-	vkCreateSemaphore(m_Device->GetDevice(), &semaphoreInfo, nullptr, &smp);
-	return RHICommandBufferPtr(new VulkanCommandBuffer(this, handle, smp, queue));
+	return RHICommandBufferPtr(new VulkanCommandBuffer(this, handle, queue));
 }
 
 void VulkanCommandContext::FreeCommandBuffer(VulkanCommandBuffer* cmd) {
 	VkCommandPool pool = GetCommandPool(cmd->GetQueueType());
 	vkFreeCommandBuffers(m_Device->GetDevice(), pool, 1, &cmd->m_Handle);
-	vkDestroySemaphore(m_Device->GetDevice(), cmd->m_Semaphore, nullptr);
 }
 
 void VulkanCommandContext::SubmitCommandBuffers(TArrayView<VulkanCommandBuffer*> cmds, EQueueType queue, VkSemaphore waitSemaphore, VkFence fence) {
 	VkSubmitInfo info{ VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr };
 
 	// collect the wait semaphores
-	auto& lastSubmission = GetLastSubmission();
-	TArray<VkSemaphore> waitSemaphores; waitSemaphores.Reserve(lastSubmission.Size() + 1);
-	TArray<VkPipelineStageFlags> waitStageMasks; waitStageMasks.Reserve(lastSubmission.Size() + 1);
-	for(auto* cmd: lastSubmission) {
-		if(cmd->m_Semaphore) {
-			waitSemaphores.PushBack(cmd->m_Semaphore);
-			waitStageMasks.PushBack(cmd->m_StageMask);
-		}
-	}
-	// add the outer semaphore if need.
+	TStaticArray<VkSemaphore, 2> waitSemaphores;
+	TStaticArray<VkPipelineStageFlags, 2> waitStageMasks(VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+	uint32 waitSemaphoreCount = 0;
 	if(waitSemaphore) {
-		waitSemaphores.PushBack(waitSemaphore);
-		waitStageMasks.PushBack(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+		waitSemaphores[waitSemaphoreCount++] = waitSemaphore;
 	}
-
-	info.waitSemaphoreCount = waitSemaphores.Size();
-	info.pWaitSemaphores = waitSemaphores.Data();
-	info.pWaitDstStageMask = waitStageMasks.Data();
+	if(m_LastSemaphore) {
+		waitSemaphores[waitSemaphoreCount++] = m_LastSemaphore;
+	}
+	info.waitSemaphoreCount = waitSemaphoreCount;
+	info.pWaitSemaphores = waitSemaphoreCount ? waitSemaphores.Data() : nullptr;
+	info.pWaitDstStageMask = waitSemaphoreCount ? waitStageMasks.Data() : nullptr;
 	
 	// collect cmds and signal semaphores.
-	TArray<VkSemaphore> semaphores; semaphores.Reserve(cmds.Size());
-	TArray<VkPipelineStageFlags> pipelineStageMasks; pipelineStageMasks.Reserve(cmds.Size());
-	TArray<VulkanCommandBuffer*> recordCmds; recordCmds.Reserve(cmds.Size());
 	const uint32 cmdCount = cmds.Size();
 	TFixedArray<VkCommandBuffer> vkCmds(cmds.Size());
 	for(uint32 i=0; i<cmdCount; ++i) {
 		auto cmd = cmds[i];
 		cmd->CheckEnd();
 		vkCmds[i] = cmd->m_Handle;
-		if (cmd->m_Semaphore) {
-			semaphores.PushBack(cmd->m_Semaphore);
-			pipelineStageMasks.PushBack(cmd->m_StageMask);
-			recordCmds.PushBack(cmd);
-		}
 	}
+	VkSemaphore signalSemaphore = m_SemaphoreCache.Get();
 	info.commandBufferCount = cmdCount;
 	info.pCommandBuffers = vkCmds.Data();
-	info.signalSemaphoreCount = semaphores.Size();
-	info.pSignalSemaphores = semaphores.Data();
+	info.signalSemaphoreCount = 1;
+	info.pSignalSemaphores = &signalSemaphore;
 	vkQueueSubmit(m_Device->GetQueue(queue).Handle, 1, &info, fence);
 
 	// record cmds for the next submission or present
-	auto& submission = m_Submissions.EmplaceBack();
-	for(auto* cmd: cmds) {
-		if(cmd->m_Semaphore) {
-			submission.PushBack(cmd);
-		}
-	}
+	m_LastSemaphore = signalSemaphore;
 }
 
 void VulkanCommandContext::BeginFrame() {
 	// clear submission cache
-	m_Submissions.Reset();
+	m_LastSemaphore = VK_NULL_HANDLE;
+	m_SemaphoreCache.Reset();
 	// submit upload cmd if need.
 	for(uint8 i=0; i<EnumCast(EQueueType::Count); ++i) {
 		VulkanCommandBuffer* cmd = m_UploadCmds[i];
 		if(cmd->m_HasBegun) {
-			cmd->CheckEnd();
 			SubmitCommandBuffers({ cmd }, (EQueueType)i, VK_NULL_HANDLE, VK_NULL_HANDLE);
 		}
 	}
 }
 
-const VulkanCommandSubmission& VulkanCommandContext::GetLastSubmission() {
-	static VulkanCommandSubmission s_EmptySubmission{};
-	return m_Submissions.IsEmpty() ? s_EmptySubmission : m_Submissions.Back();
-}
-
-const void VulkanCommandContext::GetLastSubmissionSemaphores(TArray<VkSemaphore>& outSmps) {
-	outSmps.Reset();
-	auto& lastSubmissions = GetLastSubmission();
-	if(lastSubmissions.IsEmpty()) {
-		return;
-	}
-	outSmps.Reserve(lastSubmissions.Size());
-	for(auto* cmd: lastSubmissions) {
-		if(cmd->m_Semaphore) {
-			outSmps.PushBack(cmd->m_Semaphore);
-		}
-	}
+VkSemaphore VulkanCommandContext::GetLastSubmissionSemaphore() {
+	return m_LastSemaphore;
 }
 
 VulkanCommandBuffer* VulkanCommandContext::GetUploadCmd(EQueueType queue) {

@@ -9,7 +9,7 @@ namespace Editor {
 
 	WndDebugView::WndDebugView() :
 	EditorWndBase("Debug View", ImGuiWindowFlags_NoScrollbar, EWndUpdateOrder::Order1), m_ViewMode(DV_DIRECTIONAL_SHADOW), m_ShadowMapArrayIdx(0), m_CachedShadowMap(nullptr) {
-		EditorUIMgr::Instance()->AddMenu("Window", m_Name, {}, &m_Enable);
+		EditorUIMgr::Instance()->AddMenu("Window", m_Name.c_str(), {}, &m_Enable);
 		m_Enable = false;
 	}
 

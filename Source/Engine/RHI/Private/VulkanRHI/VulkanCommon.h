@@ -4,8 +4,7 @@
 #include "Core/Public/Defines.h"
 #include "Core/Public/Log.h"
 
-#define VK_ASSERT(x, s)\
-	ASSERT(VK_SUCCESS == (x), s)
+#define VK_ASSERT(x, s) ASSERT(VK_SUCCESS == (x), s)
 
 #define VK_CHECK(x) CHECK(VK_SUCCESS == (x))
 
@@ -28,7 +27,7 @@ constexpr uint32 VK_WAIT_MAX = UINT32_MAX;
 	macroName(PFN_vkCreateInstance                           , vkCreateInstance)\
 	macroName(PFN_vkEnumerateInstanceExtensionProperties     , vkEnumerateInstanceExtensionProperties)\
 	macroName(PFN_vkEnumerateInstanceLayerProperties         , vkEnumerateInstanceLayerProperties)\
-	macroName(PFN_vkEnumerateInstanceVersion                 , vkEnumerateInstanceVersion)\
+	macroName(PFN_vkEnumerateInstanceVersion                 , vkEnumerateInstanceVersion)
 
 #define ENUM_VULKAN_INSTANCE_FUNCTIONS(macroName) \
 	macroName(PFN_vkCreateDevice                             , vkCreateDevice)\
@@ -51,7 +50,7 @@ constexpr uint32 VK_WAIT_MAX = UINT32_MAX;
 	macroName(PFN_vkGetPhysicalDeviceFeatures                , vkGetPhysicalDeviceFeatures)\
 	macroName(PFN_vkGetPhysicalDeviceFeatures2               , vkGetPhysicalDeviceFeatures2)\
 	macroName(PFN_vkGetPhysicalDeviceSurfaceSupportKHR       , vkGetPhysicalDeviceSurfaceSupportKHR)\
-	macroName(PFN_vkDestroySurfaceKHR                        , vkDestroySurfaceKHR)\
+	macroName(PFN_vkDestroySurfaceKHR                        , vkDestroySurfaceKHR)
 
 #define ENUM_VULKAN_DEVICE_FUNCTIONS(macroName) \
 	macroName(PFN_vkCreateFence                              , vkCreateFence)\
@@ -89,6 +88,7 @@ constexpr uint32 VK_WAIT_MAX = UINT32_MAX;
 	macroName(PFN_vkCmdCopyBuffer                            , vkCmdCopyBuffer)\
 	macroName(PFN_vkCmdBeginDebugUtilsLabelEXT               , vkCmdBeginDebugUtilsLabelEXT)\
 	macroName(PFN_vkCmdEndDebugUtilsLabelEXT                 , vkCmdEndDebugUtilsLabelEXT)\
+	macroName(PFN_vkCmdExecuteCommands                       , vkCmdExecuteCommands)\
 	macroName(PFN_vkQueueSubmit                              , vkQueueSubmit)\
 	macroName(PFN_vkQueuePresentKHR                          , vkQueuePresentKHR)\
 	macroName(PFN_vkQueueWaitIdle                            , vkQueueWaitIdle)\
@@ -129,12 +129,13 @@ constexpr uint32 VK_WAIT_MAX = UINT32_MAX;
 	macroName(PFN_vkDestroyPipeline                          , vkDestroyPipeline)\
 	macroName(PFN_vkCreateShaderModule                       , vkCreateShaderModule)\
 	macroName(PFN_vkDestroyShaderModule                      , vkDestroyShaderModule)\
-	macroName(PFN_vkSetDebugUtilsObjectNameEXT               , vkSetDebugUtilsObjectNameEXT)\
+	macroName(PFN_vkSetDebugUtilsObjectNameEXT               , vkSetDebugUtilsObjectNameEXT)
 
 #define DECLARE_VULKAN_FUNCTION(type, name) extern type name;
-ENUM_VULKAN_LOADER_FUNCTIONS(DECLARE_VULKAN_FUNCTION)\
-ENUM_VULKAN_INSTANCE_FUNCTIONS(DECLARE_VULKAN_FUNCTION)\
-ENUM_VULKAN_DEVICE_FUNCTIONS(DECLARE_VULKAN_FUNCTION)\
+
+ENUM_VULKAN_LOADER_FUNCTIONS(DECLARE_VULKAN_FUNCTION)
+ENUM_VULKAN_INSTANCE_FUNCTIONS(DECLARE_VULKAN_FUNCTION)
+ENUM_VULKAN_DEVICE_FUNCTIONS(DECLARE_VULKAN_FUNCTION)
 
 bool InitializeInstanceProcAddr();
 void LoadInstanceFunctions(VkInstance instance);

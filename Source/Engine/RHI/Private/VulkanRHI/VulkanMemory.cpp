@@ -151,10 +151,8 @@ VulkanDynamicBufferAllocator::~VulkanDynamicBufferAllocator() {
 VulkanDynamicBufferAllocator::Allocation VulkanDynamicBufferAllocator::Allocate(VkBufferUsageFlags usage, uint32 size, const void* data) {
 	size = Aligned(size, m_UniformAlignment);
 	ASSERT(size <= m_PageSize, "Dynamic allocation size is greater than page size!");
-	if(VK_INVALID_INDEX == m_AllocatedIndex || (m_PageSize - m_BufferChunks[m_AllocatedIndex].AllocatedSize) < size) {
-		m_AllocatedIndex = AllocateChunk();
-	}
-	BufferChunk& chunk = m_BufferChunks[m_AllocatedIndex];
+	const uint32 chunkIdx = PrepareChunk(size);
+	BufferChunk& chunk = m_BufferChunks[chunkIdx];
 	const uint32 offset = chunk.AllocatedSize;
 	chunk.AllocatedSize += size;
 	if(!chunk.MappedData) {
@@ -162,7 +160,7 @@ VulkanDynamicBufferAllocator::Allocation VulkanDynamicBufferAllocator::Allocate(
 	}
 	uint8* mappedPointer = (uint8*)chunk.MappedData + offset;
 	memcpy(mappedPointer, data, size);
-	return { m_AllocatedIndex, offset, size };
+	return { chunkIdx, offset, size };
 }
 
 VkBuffer VulkanDynamicBufferAllocator::GetBufferHandle(uint32 bufferIndex) const {
@@ -180,24 +178,31 @@ void VulkanDynamicBufferAllocator::UnmapAllocations() {
 				bufferChunk.MappedData = nullptr;
 			}
 		}
+		m_AllocatedIndex = 0;
 	}
 }
 
 void VulkanDynamicBufferAllocator::GC() {
-	if(m_BufferChunks.Size()) {
-		for(uint32 i=m_BufferChunks.Size()-1; i>m_AllocatedIndex; --i) {
-			m_Allocator->FreeBufferMemory(m_BufferChunks[i].Allocation);
-			m_BufferChunks.PopBack();
-		}
+	for(; m_BufferChunks.Size() > m_AllocatedIndex+1; m_BufferChunks.PopBack()) {
+		m_Allocator->FreeBufferMemory(m_BufferChunks.Back().Allocation);
 	}
 }
 
-uint32 VulkanDynamicBufferAllocator::AllocateChunk() {
-	uint32 chunkIndex = m_BufferChunks.Size();
+uint32 VulkanDynamicBufferAllocator::PrepareChunk(uint32 requiredSize) {
+	if(VK_INVALID_INDEX != m_AllocatedIndex) {
+		for (; m_AllocatedIndex < m_BufferChunks.Size(); ++m_AllocatedIndex) {
+			if (m_PageSize - m_BufferChunks[m_AllocatedIndex].AllocatedSize >= requiredSize) {
+				return m_AllocatedIndex;
+			}
+		}
+	}
+	// allocate
+	m_AllocatedIndex = m_BufferChunks.Size();
 	auto& chunk = m_BufferChunks.EmplaceBack();
-	chunk.AllocatedSize = 0;
 	m_Allocator->AllocateBufferMemory(chunk.Allocation, m_PageSize,
 		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	return chunkIndex;
+	chunk.AllocatedSize = 0;
+	chunk.MappedData = nullptr;
+	return m_AllocatedIndex;
 }
