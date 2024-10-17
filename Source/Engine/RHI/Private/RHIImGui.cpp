@@ -2,6 +2,7 @@
 #include "VulkanRHI/VulkanImGui.h"
 #include "D3D12RHI/D3D12ImGui.h"
 #include "System/Public/Configuration.h"
+#include <imnodes.h>
 
 TUniquePtr<RHIImGui> RHIImGui::s_Instance;
 
@@ -24,4 +25,14 @@ void RHIImGui::Initialize(void(*configInitializer)()) {
 
 void RHIImGui::Release() {
 	s_Instance.Reset();
+}
+
+RHIImGui::RHIImGui() {
+	m_Context = ImGui::CreateContext();
+	ImNodes::CreateContext();
+}
+
+RHIImGui::~RHIImGui() {
+	ImNodes::DestroyContext();
+	ImGui::DestroyContext(m_Context);
 }

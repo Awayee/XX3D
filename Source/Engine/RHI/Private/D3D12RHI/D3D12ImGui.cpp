@@ -8,11 +8,9 @@
 #include "Window/Public/EngineWindow.h"
 #include <backends/imgui_impl_win32.h>
 #include <backends/imgui_impl_dx12.h>
-#include <imnodes.h>
 
-D3D12ImGui::D3D12ImGui(void (* configInitializer)()) {
+D3D12ImGui::D3D12ImGui(void (* configInitializer)()): RHIImGui() {
 	IMGUI_CHECKVERSION();
-	m_Context = ImGui::CreateContext();
 	WindowHandle windowHandle = Engine::EngineWindow::Instance()->GetWindowHandle();
 	D3D12RHI* d3d12RHI = (D3D12RHI*)RHI::Instance();
 	ImGui_ImplWin32_Init((HWND)windowHandle);
@@ -28,17 +26,11 @@ D3D12ImGui::D3D12ImGui(void (* configInitializer)()) {
 	if (configInitializer) {
 		configInitializer();
 	}
-	ImNodes::CreateContext();
 }
 
 D3D12ImGui::~D3D12ImGui() {
-	if (m_Context) {
-		ImGui_ImplDX12_Shutdown();
-		ImGui_ImplWin32_Shutdown();
-		ImNodes::DestroyContext();
-		ImGui::DestroyContext(m_Context);
-		m_Context = nullptr;
-	}
+	ImGui_ImplDX12_Shutdown();
+	ImGui_ImplWin32_Shutdown();
 }
 
 void D3D12ImGui::FrameBegin() {

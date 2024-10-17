@@ -10,6 +10,4 @@ public:
 	void RenderDrawData(RHICommandBuffer* cmd) override;
 	ImTextureID RegisterImGuiTexture(RHITexture* texture, RHITextureSubRes subRes, RHISampler* sampler) override;
 	void RemoveImGuiTexture(ImTextureID textureID) override;
-public:
-	ImGuiContext* m_Context{ nullptr };
 };

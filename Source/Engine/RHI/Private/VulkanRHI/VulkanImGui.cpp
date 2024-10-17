@@ -18,9 +18,8 @@ PFN_vkVoidFunction GetVkDeviceFunction(const char* name, void* userData) {
 	return func;
 }
 
-VulkanImGui::VulkanImGui(void(*configInitializer)()) {
+VulkanImGui::VulkanImGui(void(*configInitializer)()) : RHIImGui(){
 	IMGUI_CHECKVERSION();
-	m_Context = ImGui::CreateContext();
 	ImGui_ImplVulkan_LoadFunctions(GetVkDeviceFunction);
 	VulkanRHI* vkRHI = reinterpret_cast<VulkanRHI*>(RHI::Instance());
 	WindowHandle windowHandle = Engine::EngineWindow::Instance()->GetWindowHandle();
@@ -52,12 +51,8 @@ VulkanImGui::VulkanImGui(void(*configInitializer)()) {
 }
 
 VulkanImGui::~VulkanImGui() {
-	if (m_Context) {
-		ImGui_ImplVulkan_Shutdown();
-		ImGui_ImplGlfw_Shutdown();
-		ImGui::DestroyContext(m_Context); // todo solve
-		m_Context = nullptr;
-	}
+	ImGui_ImplVulkan_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
 }
 void VulkanImGui::FrameBegin() {
 	ImGui_ImplGlfw_NewFrame();

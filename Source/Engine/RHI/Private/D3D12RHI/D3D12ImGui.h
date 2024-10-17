@@ -14,7 +14,6 @@ public:
 	ImTextureID RegisterImGuiTexture(RHITexture* texture, RHITextureSubRes subRes, RHISampler* sampler) override;
 	void RemoveImGuiTexture(ImTextureID textureID) override;
 private:
-	ImGuiContext* m_Context;
 	ID3D12Device* m_Device;
 	TUniquePtr<StaticDescriptorAllocator> m_DescriptorAllocator;
 	StaticDescriptorHandle m_FontDescriptor;

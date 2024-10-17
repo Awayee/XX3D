@@ -241,7 +241,7 @@ namespace Editor {
 				ImNodes::SetNodeGridSpacePos((int)i, positions[i]);
 			}
 		}
-		ImNodes::MiniMap();
+		ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight);
 		ImNodes::EndNodeEditor();
 	}
 
