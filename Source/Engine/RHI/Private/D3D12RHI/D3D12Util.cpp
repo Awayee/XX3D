@@ -318,19 +318,6 @@ D3D12_DESCRIPTOR_RANGE_TYPE ToD3D12DescriptorRangeType(EBindingType type) {
     return D3D12_DESCRIPTOR_RANGE_TYPE_CBV; // error
 }
 
-uint32 GetD3D12PerArraySliceSize(ETextureDimension dimension) {
-    switch (dimension) {
-    case ETextureDimension::Tex2D:
-    case ETextureDimension::Tex3D:
-    case ETextureDimension::Tex2DArray: return 1;
-    case ETextureDimension::TexCube:
-    case ETextureDimension::TexCubeArray: return 6;
-    default:
-        LOG_ERROR("Invalid view dimension!");
-        return 1;
-    }
-}
-
 D3D12_RESOURCE_STATES ToD3D12ResourceState(EResourceState state) {
     switch (state) {
     case EResourceState::ColorTarget: return D3D12_RESOURCE_STATE_RENDER_TARGET;

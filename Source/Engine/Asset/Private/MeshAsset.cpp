@@ -55,13 +55,97 @@ namespace Asset {
 		}
 	};
 
-	void CalcAABB(TConstArrayView<AssetVertex> vertices, Math::FVector3& outMin, Math::FVector3& outMax) {
-		outMin = { FLT_MAX };
-		outMax = { -FLT_MAX };
-		for(auto& vertex: vertices) {
-			outMin = Math::FVector3::Min(vertex.Position, outMin);
-			outMax = Math::FVector3::Max(vertex.Position, outMax);
+	bool PrimitiveAsset::Load(File::PathStr filePath) {
+		File::ReadFile f(filePath, true);
+		if (!f.IsOpen()) {
+			LOG_WARNING("[PrimitiveAsset::Load] Failed to open file: %s", filePath);
+			return false;
 		}
+
+		uint32 vertexCount, indexCount;
+		f.Read(&vertexCount, sizeof(uint32));
+		f.Read(&indexCount, sizeof(uint32));
+		if (0 == vertexCount) {
+			LOG_WARNING("[PrimitiveAsset::Load] File is empty: %s", filePath);
+			return false;
+		}
+
+		EMeshCompressMode compressMode;
+		f.Read(&compressMode, sizeof(EMeshCompressMode));
+		uint32 dataByteSize = vertexCount * sizeof(FVertexPack) + indexCount * sizeof(IndexType);
+		TArray<char> data(dataByteSize);
+		if (compressMode == EMeshCompressMode::NONE) {
+			f.Read(data.Data(), dataByteSize);
+		}
+		else if (compressMode == EMeshCompressMode::LZ4) {
+			uint32 compressedByteSize;
+			f.Read(&compressedByteSize, sizeof(uint32));
+			TArray<char> compressedData(compressedByteSize);
+			f.Read(compressedData.Data(), compressedByteSize);
+			LZ4_decompress_safe(compressedData.Data(), data.Data(), (int)compressedByteSize, (int)dataByteSize);
+		}
+
+		// vertices
+		FVertexPack* vertexPtr = reinterpret_cast<FVertexPack*>(data.Data());
+		Vertices.Resize(vertexCount);
+		for (uint32 i = 0; i < vertexCount; ++i) {
+			vertexPtr[i].Unpack(Vertices[i]);
+		}
+		//indices
+		if (indexCount > 0) {
+			Indices.Resize(indexCount);
+			IndexType* indexPtr = reinterpret_cast<IndexType*>(data.Data() + sizeof(FVertexPack) * vertexCount);
+			memcpy(Indices.Data(), indexPtr, Indices.ByteSize());
+		}
+		return true;
+	}
+
+	bool PrimitiveAsset::Save(File::PathStr filePath) {
+		if (Vertices.Size() == 0) {
+			LOG_WARNING("null primitive!");
+			return false;
+		}
+		File::WriteFile f(filePath, true);
+		if (!f.IsOpen()) {
+			LOG_WARNING("Failed to open file: %s", filePath);
+			return false;
+		}
+		uint32 vertexCount = Vertices.Size();
+		uint32 indexCount = Indices.Size();
+		uint32 dataByteSize = sizeof(FVertexPack) * vertexCount + sizeof(IndexType) * indexCount;
+		//header
+		f.Write(&vertexCount, sizeof(uint32));
+		f.Write(&indexCount, sizeof(uint32));
+
+		//cpy Vertices and indices;
+		TArray<char> data(dataByteSize);
+		FVertexPack* vertexPtr = reinterpret_cast<FVertexPack*>(data.Data());
+		for (uint32 i = 0; i < vertexCount; ++i) {
+			vertexPtr[i].Pack(Vertices[i]);
+		}
+		if (indexCount > 0) {
+			IndexType* indexPtr = reinterpret_cast<IndexType*>(data.Data() + sizeof(FVertexPack) * vertexCount);
+			for (uint32 i = 0; i < indexCount; ++i) {
+				indexPtr[i] = Indices[i];
+			}
+		}
+		const EMeshCompressMode compressMode = CompressMode;
+		f.Write(&compressMode, sizeof(EMeshCompressMode));
+
+		// no pack
+		if (compressMode == EMeshCompressMode::NONE) {
+			f.Write(data.Data(), data.Size());
+		}
+		//lz4 pack
+		else if (compressMode == EMeshCompressMode::LZ4) {
+			uint64 compressBound = LZ4_compressBound(dataByteSize);
+			TArray<char> compressedData(compressBound);
+			uint32 compressedSize = LZ4_compress_default(data.Data(), compressedData.Data(), (int)data.Size(), (int)compressBound);
+			compressedData.Resize(compressedSize);
+			f.Write(&compressedSize, sizeof(uint32));
+			f.Write(compressedData.Data(), compressedData.Size());
+		}
+		return true;
 	}
 
 	bool MeshAsset::Load(File::PathStr filePath) {
@@ -83,10 +167,6 @@ namespace Asset {
 				if (v.HasMember("BinaryFile")) {
 					Primitives[i].BinaryFile = v["BinaryFile"].GetString();
 				}
-
-				//load primitive binary
-				MeshAsset::LoadPrimitiveFile(Primitives[i].BinaryFile.c_str(), Primitives[i].Vertices, Primitives[i].Indices);
-				CalcAABB(Primitives[i].Vertices, Primitives[i].AABB.Min, Primitives[i].AABB.Max);
 			}
 		}
 		return true;

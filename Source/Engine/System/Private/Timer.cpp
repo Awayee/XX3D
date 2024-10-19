@@ -14,15 +14,17 @@ namespace Engine {
 		// compute FPS
 		m_LastFrameDurationMs += m_DeltaTime;
 		++m_FrameCounter;
+		++m_DeltaFrame;
 		if (m_LastFrameDurationMs > 1000.0f) {
-			m_FPS = (float)m_FrameCounter / (m_LastFrameDurationMs * 0.001f);
-			m_FrameCounter = 0u;
+			m_FPS = (float)m_DeltaFrame / (m_LastFrameDurationMs * 0.001f);
+			m_DeltaFrame = 0u;
 			m_LastFrameDurationMs = 0.0f;
 		}
 	}
 
 	void Timer::Reset() {
 		m_FrameCounter = 0;
+		m_DeltaFrame = 0;
 		m_FPS = 0;
 		m_NowTime = NowTimePoint();
 	}

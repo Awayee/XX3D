@@ -5,20 +5,20 @@ struct VSInput {
     [[vk::location(2)]] float3 inTangent: TANGENT0;
     [[vk::location(3)]] float2 inUV: TEXCOORD0;
 #if defined(INSTANCED)
-    [[vk::location(4)]] float4 t0 : INSTANCE_TRANSFORM0;
-    [[vk::location(5)]] float4 t1 : INSTANCE_TRANSFORM1;
-    [[vk::location(6)]] float4 t2 : INSTANCE_TRANSFORM2;
-    [[vk::location(7)]] float4 t3 : INSTANCE_TRANSFORM3;
+    [[vk::location(4)]] half4 t0 : INSTANCE_TRANSFORM0;
+    [[vk::location(5)]] half4 t1 : INSTANCE_TRANSFORM1;
+    [[vk::location(6)]] half4 t2 : INSTANCE_TRANSFORM2;
+    [[vk::location(7)]] half4 t3 : INSTANCE_TRANSFORM3;
 
-	float4x4 GetInstanceTransform() {
-        return float4x4(
+	half4x4 GetInstanceTransform() {
+        return half4x4(
         t0.x, t1.x, t2.x, t3.x,
         t0.y, t1.y, t2.y, t3.y,
         t0.z, t1.z, t2.z, t3.z,
         t0.w, t1.w, t2.w, t3.w);
     }
-    float3x3 GetInstanceNormalTransform() {
-        return float3x3(
+    half3x3 GetInstanceNormalTransform() {
+        return half3x3(
         t0.x, t1.x, t2.x,
         t0.y, t1.y, t2.y,
         t0.z, t1.z, t2.z);

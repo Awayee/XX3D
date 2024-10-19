@@ -12,12 +12,13 @@ namespace Engine {
 		void Tick();
 		void Reset();
 	private:
+		static Timer s_Instance;
 		TimePoint m_NowTime{ NowTimePoint()};
 		uint32 m_FrameCounter{ 0U };
+		uint32 m_DeltaFrame{ 0U };
 		float m_DeltaTime{ 0.0f };
 		float m_LastFrameDurationMs{ 0.0f };
 		float m_FPS{ 0.0f };
-		static Timer s_Instance;
 		NON_COPYABLE(Timer);
 		NON_MOVEABLE(Timer);
 		Timer() = default;

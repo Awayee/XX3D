@@ -49,7 +49,7 @@ VulkanTextureImpl::VulkanTextureImpl(const RHITextureDesc& desc, VulkanDevice* d
 	imageInfo.format = ToVkFormat(desc.Format);
 	imageInfo.extent = { desc.Width, desc.Height, desc.Depth};
 	imageInfo.mipLevels = desc.MipSize;
-	imageInfo.arrayLayers = desc.ArraySize * GetImagePerLayerSize(desc.Dimension);
+	imageInfo.arrayLayers = desc.ArraySize * GetTextureDimension2DSize(desc.Dimension);
 	imageInfo.samples = ToVkMultiSampleCount(desc.Samples);
 	imageInfo.usage = ToImageUsage(desc.Flags);
 	VK_CHECK(vkCreateImage(m_Device->GetDevice(), &imageInfo, nullptr, &m_Image));
@@ -57,7 +57,7 @@ VulkanTextureImpl::VulkanTextureImpl(const RHITextureDesc& desc, VulkanDevice* d
 	VkMemoryPropertyFlags memoryProperty = ToImageMemoryProperty(desc.Flags);
 	CHECK(m_Device->GetMemoryAllocator()->AllocateImageMemory(m_Allocation, m_Image, memoryProperty));
 	// Reserve view size
-	m_Views.Resize(GetDesc().ArraySize);
+	m_Views.Resize(desc.Get2DArraySize());
 }
 
 VulkanTextureImpl::~VulkanTextureImpl() {

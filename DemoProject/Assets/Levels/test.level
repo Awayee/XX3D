@@ -66,7 +66,8 @@
                 },
                 {
                     "Name": "MeshComponent",
-                    "MeshFile": "Meshes/Cube.mesh"
+                    "MeshFile": "Meshes/Cube.mesh",
+                    "CastShadow": false
                 }
             ]
         },
@@ -93,7 +94,8 @@
                 },
                 {
                     "Name": "MeshComponent",
-                    "MeshFile": "keqing/keqing.mesh"
+                    "MeshFile": "keqing/keqing.mesh",
+                    "CastShadow": true
                 }
             ]
         },
@@ -120,7 +122,8 @@
                 },
                 {
                     "Name": "MeshComponent",
-                    "MeshFile": "keqing/keqing.mesh"
+                    "MeshFile": "keqing/keqing.mesh",
+                    "CastShadow": true
                 }
             ]
         },
@@ -147,7 +150,8 @@
                 },
                 {
                     "Name": "MeshComponent",
-                    "MeshFile": "keqing/keqing.mesh"
+                    "MeshFile": "keqing/keqing.mesh",
+                    "CastShadow": true
                 }
             ]
         },
@@ -174,7 +178,8 @@
                 },
                 {
                     "Name": "MeshComponent",
-                    "MeshFile": "Meshes/Sphere.mesh"
+                    "MeshFile": "Meshes/Sphere.mesh",
+                    "CastShadow": true
                 }
             ]
         },
@@ -183,11 +188,12 @@
             "Components": [
                 {
                     "Name": "MeshComponent",
-                    "MeshFile": "Plants/grass_medium_01_large_a_LOD0.mesh"
+                    "MeshFile": "Plants/grass_medium_01_large_a_LOD0.mesh",
+                    "CastShadow": true
                 },
                 {
                     "Name": "InstanceDataComponent",
-                    "InstanceFile": "Plants/grass_instances.instd"
+                    "InstanceFile": "Plants/grass_instances_10k.instd"
                 }
             ]
         }

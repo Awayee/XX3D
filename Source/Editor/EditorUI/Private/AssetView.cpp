@@ -10,29 +10,35 @@ namespace {
 	class TextureViewer : public Editor::EditorWndBase{
 	public:
 		TextureViewer(const XString& pathStr): EditorWndBase("TextureViewer", ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_HorizontalScrollbar), m_PathStr(pathStr) {
+			AutoDelete();
 			if(!Asset::AssetLoader::LoadProjectAsset(&m_Asset, m_PathStr.c_str())) {
 				return;
 			}
-			// TODO compatible with cubemap
-			RHITextureDesc desc = RHITextureDesc::Texture2D();
-			desc.Format = Object::TextureResource::ConvertTextureFormat(m_Asset.Type);
-			desc.Width = m_Asset.Width;
-			desc.Height = m_Asset.Height;
-			desc.Flags = ETextureFlags::SRV | ETextureFlags::CopyDst;
-			m_Texture = RHI::Instance()->CreateTexture(desc);
-			m_Texture->UpdateData(m_Asset.Pixels.Size(), m_Asset.Pixels.Data());
+			m_Texture = Object::StaticResourceMgr::CreateTextureFromAsset(m_Asset);
+			// create imgui texture id
+			auto& desc = m_Texture->GetDesc();
+			const uint32 arraySize = desc.Get2DArraySize();
+			m_TextureViewIDs.Resize(arraySize);
 			auto* sampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp);
-			m_TextureID = RHIImGui::Instance()->RegisterImGuiTexture(m_Texture.Get(), m_Texture->GetDesc().GetDefaultSubRes(), sampler);
-			AutoDelete();
+			for(uint32 i=0; i<arraySize; ++i) {
+				RHITextureSubRes subRes{ (uint16)i, 1, 0, 1, ETextureDimension::Tex2D, ETextureViewFlags::Color };
+				m_TextureViewIDs[i] = RHIImGui::Instance()->RegisterImGuiTexture(m_Texture.Get(), subRes, sampler);
+			}
+			m_ArrayIndex = 0;
 			// zoom to fit
 			const float w = (float)desc.Width, h = (float)desc.Height;
 			constexpr float uniformSize = 512.0f;
 			m_Zoom = Math::Min(ZOOM_MAX, uniformSize / Math::Max(w, h));
 		}
 		~TextureViewer() {
-			RHIImGui::Instance()->RemoveImGuiTexture(m_TextureID);
+			for(auto viewID: m_TextureViewIDs) {
+				RHIImGui::Instance()->RemoveImGuiTexture(viewID);
+			}
 		}
 		void WndContent() override {
+			if(m_TextureViewIDs.IsEmpty()) {
+				return;
+			}
 			const auto& desc = m_Texture->GetDesc();
 			const float w = (float)desc.Width, h = (float)desc.Height;
 			// zoom
@@ -40,11 +46,17 @@ namespace {
 			const float zoomMin = 2.0f / minSize;
 			// info
 			ImGui::Text("%u x %u", desc.Width, desc.Height);
-			ImGui::SliderFloat("Zoom", &m_Zoom, zoomMin, ZOOM_MAX);
+			if(m_TextureViewIDs.Size() == 1) {
+				m_ArrayIndex = 0;
+			}
+			else {
+				ImGui::SliderInt("Array Index", &m_ArrayIndex, 0, (int)m_TextureViewIDs.Size() - 1);
+			}
 			// image
+			ImGui::SliderFloat("Zoom", &m_Zoom, zoomMin, ZOOM_MAX);
 			ImGui::BeginChild("Preview", { 0.0f, 0.0f }, ImGuiChildFlags_Border, ImGuiWindowFlags_HorizontalScrollbar);
 			const ImVec2 textureSize{ m_Zoom * w, m_Zoom * h };
-			ImGui::Image(m_TextureID, textureSize);
+			ImGui::Image(m_TextureViewIDs[m_ArrayIndex], textureSize);
 			if(ImGui::IsWindowHovered()) {
 				// scroll zoom
 				Engine::EngineWindow* engineWindow = Engine::EngineWindow::Instance();
@@ -78,7 +90,8 @@ namespace {
 		XString m_PathStr;
 		Asset::TextureAsset m_Asset;
 		RHITexturePtr m_Texture;
-		ImTextureID m_TextureID;
+		TArray<ImTextureID> m_TextureViewIDs;
+		int m_ArrayIndex;
 		float m_Zoom = 512.0f;
 		bool m_Dragging = false;
 		static constexpr float ZOOM_MAX{ 4.0f };

@@ -12,6 +12,7 @@ inline TArray<const char*> GetDeviceExtensions(const VulkanContext* context) {
 	if(APIVersion < VK_API_VERSION_1_3) {
 		extensions.PushBack(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
 	}
+	extensions.PushBack(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
 	return extensions;
 }
 
@@ -91,15 +92,25 @@ void VulkanDevice::CreateDevice(const VulkanContext* context) {
 	uint32 graphicsQueueFamilyIdx{ VK_INVALID_INDEX }, computeQueueFamilyIdx{ VK_INVALID_INDEX }, transferQueueFamilyIdx{ VK_INVALID_INDEX };
 	for (uint32 i = 0; i < queueFamilyCount; ++i) {
 		const VkQueueFamilyProperties& prop = queueFamilyProperties[i];
-		if ((prop.queueFlags & VK_QUEUE_GRAPHICS_BIT) == VK_QUEUE_GRAPHICS_BIT && VK_INVALID_INDEX == graphicsQueueFamilyIdx) {
+		if ((prop.queueFlags & VK_QUEUE_GRAPHICS_BIT) && VK_INVALID_INDEX == graphicsQueueFamilyIdx) {
 			graphicsQueueFamilyIdx = i;
 		}
-		if ((prop.queueFlags & VK_QUEUE_COMPUTE_BIT) == VK_QUEUE_COMPUTE_BIT && VK_INVALID_INDEX == computeQueueFamilyIdx) {
+		if ((prop.queueFlags & VK_QUEUE_COMPUTE_BIT) && VK_INVALID_INDEX == computeQueueFamilyIdx && graphicsQueueFamilyIdx != i) {
 			computeQueueFamilyIdx = i;
 		}
-		if ((prop.queueFlags & VK_QUEUE_TRANSFER_BIT) == VK_QUEUE_TRANSFER_BIT && VK_INVALID_INDEX == transferQueueFamilyIdx) {
+		if ((prop.queueFlags & VK_QUEUE_TRANSFER_BIT) && VK_INVALID_INDEX == transferQueueFamilyIdx && graphicsQueueFamilyIdx != i && computeQueueFamilyIdx != i) {
 			transferQueueFamilyIdx = i;
 		}
+	}
+	// check if index not found, using shared queues
+	ASSERT(VK_INVALID_INDEX != graphicsQueueFamilyIdx, "Could not find graphics queue!");
+	if(VK_INVALID_INDEX == computeQueueFamilyIdx) {
+		ASSERT(queueFamilyProperties[graphicsQueueFamilyIdx].queueFlags & VK_QUEUE_COMPUTE_BIT, "Could not find compute queue!");
+		computeQueueFamilyIdx = graphicsQueueFamilyIdx;
+	}
+	if(VK_INVALID_INDEX == transferQueueFamilyIdx) {
+		ASSERT(queueFamilyProperties[computeQueueFamilyIdx].queueFlags & VK_QUEUE_TRANSFER_BIT, "Could not find transfer queue!");
+		transferQueueFamilyIdx = computeQueueFamilyIdx;
 	}
 
 	TSet<uint32> queueFamilyIndices{ graphicsQueueFamilyIdx, computeQueueFamilyIdx, transferQueueFamilyIdx };
@@ -127,7 +138,10 @@ void VulkanDevice::CreateDevice(const VulkanContext* context) {
 	VkPhysicalDeviceFeatures2 features2{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
 	VkPhysicalDeviceVulkan11Features features11{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
 	VkPhysicalDeviceVulkan12Features features12{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+	features12.shaderFloat16 = VK_TRUE;
+	features12.shaderInt8 = VK_TRUE;
 	VkPhysicalDeviceVulkan13Features features13{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
+	features13.dynamicRendering = VK_TRUE;
 	features2.pNext = &features11;
 	features11.pNext = &features12;
 	VkPhysicalDeviceFeatures& features = features2.features;
@@ -144,7 +158,6 @@ void VulkanDevice::CreateDevice(const VulkanContext* context) {
 		deviceCreateInfo.pNext = nullptr;
 	}
 	else {
-		features13.dynamicRendering = true;
 		features12.pNext = &features13;
 		deviceCreateInfo.pEnabledFeatures = nullptr;
 		deviceCreateInfo.pNext = &features2;

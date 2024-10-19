@@ -3,10 +3,10 @@
 
 namespace Asset {
 	enum class ETextureAssetType{
-		RGBA8_2D = 0,
+		RGBA8Srgb_2D = 0,
 		RG8_2D,
 		R8_2D,
-		RGBA8_Cube,
+		RGBA8Srgb_Cube,
 		MaxNum
 	};
 	enum class ETextureCompressMode : uint8 {

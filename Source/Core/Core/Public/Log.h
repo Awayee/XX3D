@@ -12,7 +12,7 @@
 #define ASSERT(x, s)\
 	do{\
 		if(!(x)){\
-			std::cerr<<"[ERROR] "<<__FILE__<<','<<__LINE__<<std::endl;\
+			std::cerr<<"[ERROR] " <<(s)<<__FILE__<<','<<__LINE__<<std::endl;\
 			std::abort();\
 		}\
 	} while (false)
@@ -27,4 +27,6 @@
 
 #define LOG_WARNING(x, ...) printf("\033[1;33m"##x##"\033[0m\n", ##__VA_ARGS__)
 
-#define LOG_ERROR(x, ...) printf("\033[1;31m"##x##"\033[0m\n", ##__VA_ARGS__); CHECK(0)
+#define LOG_ERROR(x, ...) printf("\033[1;31m"##x##"\033[0m\n", ##__VA_ARGS__)
+
+#define RAISE_ERROR(x, ...) printf("\033[1;31m"##x##"\033[0m\n", ##__VA_ARGS__); std::cerr<<__FILE__<<','<<__LINE__<<std::endl; std::abort()

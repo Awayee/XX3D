@@ -45,7 +45,7 @@ namespace {
         desc.DepthStencilFormat = RHI::Instance()->GetDepthFormat();
         desc.NumSamples = 1;
     }
-    static const uint32 s_DeferredLightingPSOID{ Object::StaticPipelineStateMgr::RegisterPSOInitializer(InitializeDeferredLightingPipelineDesc) };
+    static const uint32 s_DeferredLightingPSOID{ Object::StaticResourceMgr::RegisterPSOInitializer(InitializeDeferredLightingPipelineDesc) };
 }
 
 namespace Object {
@@ -66,7 +66,7 @@ namespace Object {
             func(this);
         }
         // get pso
-        m_DeferredLightingPSO = StaticPipelineStateMgr::Instance()->GetGraphicsPipelineState(s_DeferredLightingPSOID);
+        m_DeferredLightingPSO = StaticResourceMgr::Instance()->GetGraphicsPipelineState(s_DeferredLightingPSOID);
     	// create camera and lights
         m_DirectionalLight.Reset(new DirectionalLight);
         m_Camera.Reset(new RenderCamera());

@@ -17,6 +17,12 @@
 #include <assimp/postprocess.h>
 #include "Math/Public/Math.h"
 
+struct MeshPrimitiveTemp {
+	TArray<Asset::AssetVertex> Vertices;
+	TArray<Asset::IndexType> Indices;
+	XString Name;
+	TArray<XString> Textures;
+};
 
 uint32 GetPrimitiveCount(const tinygltf::Model& model, const tinygltf::Node& node) {
 	uint32 count = 0;
@@ -31,7 +37,7 @@ uint32 GetPrimitiveCount(const tinygltf::Model& model, const tinygltf::Node& nod
 	return count;
 }
 
-void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TArray<Asset::MeshAsset::SPrimitive>& primitives, uint32& index, float uniformScale) {
+void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TArray<MeshPrimitiveTemp>& primitives, uint32& index, float uniformScale) {
 	if (node.mesh > -1) {
 		const tinygltf::Mesh& mesh = model.meshes[node.mesh];
 		for (uint32 i = 0; i < mesh.primitives.size(); i++) {
@@ -115,7 +121,7 @@ void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TArr
 			// TODO textures
 			auto& attr = primitive.attributes;
 			if (primitive.material > -1) {
-				TArray<std::string>& textureNames = primitives[index].Textures;
+				auto& textureNames = primitives[index].Textures;
 				const tinygltf::Material& mat = model.materials[primitive.material];
 				if (mat.pbrMetallicRoughness.baseColorTexture.index < model.textures.size()) {
 					const tinygltf::Texture& tex = model.textures[mat.pbrMetallicRoughness.baseColorTexture.index];
@@ -123,7 +129,7 @@ void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TArr
 					textureNames.Resize(1);
 					uint32 typeIdx = img.mimeType.find('/');
 					const char* imgType = &img.mimeType[typeIdx + 1];
-					std::string imageFile = img.name + '.' + imgType;
+					XString imageFile = img.name + '.' + imgType;
 					textureNames[0] = "textures\\";
 					textureNames[0].append(imageFile);
 				}
@@ -171,7 +177,7 @@ uint32 GetPrimitiveCount(const aiScene* aScene, aiNode* aNode) {
 	return count;
 }
 
-void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TArray<Asset::MeshAsset::SPrimitive>& primitives, float uniformScale) {
+void LoadFbxNode(const aiScene* aScene, aiNode* aNode, TArray<MeshPrimitiveTemp>& primitives, float uniformScale) {
 	for (uint32 i = 0; i < aNode->mNumMeshes; i++) {
 		aiMesh* aMesh = aScene->mMeshes[aNode->mMeshes[i]];
 		TArray<Asset::AssetVertex>& vertices = primitives[i].Vertices;
@@ -274,7 +280,7 @@ bool LoadImageDataFunction(tinygltf::Image*, const int, std::string*,
 	return true;
 }
 
-bool ImportGLTF(const char* file, Asset::MeshAsset& asset, bool isBinary, float uniformScale) {
+bool ImportGLTF(const char* file, TArray<MeshPrimitiveTemp>& primitives, bool isBinary, float uniformScale) {
 	tinygltf::Model gltfModel;
 	tinygltf::TinyGLTF gltfContext;
 	gltfContext.SetImageLoader(LoadImageDataFunction, nullptr);
@@ -297,17 +303,16 @@ bool ImportGLTF(const char* file, Asset::MeshAsset& asset, bool isBinary, float 
 	for (auto& node : scene.nodes) {
 		primitiveCount += GetPrimitiveCount(gltfModel, gltfModel.nodes[node]);
 	}
-	asset.Primitives.Resize(primitiveCount);
+	primitives.Resize(primitiveCount);
 	primitiveCount = 0;
 	for (uint32 i = 0; i < scene.nodes.size(); i++) {
-		LoadGLTFNode(gltfModel, gltfModel.nodes[scene.nodes[i]], asset.Primitives, primitiveCount, uniformScale);
+		LoadGLTFNode(gltfModel, gltfModel.nodes[scene.nodes[i]], primitives, primitiveCount, uniformScale);
 	}
-	asset.Name = File::FPath(fullPath).stem().string();
 	LOG_INFO("Succeed to load GLTF mesh: %s", file);
 	return true;
 }
 
-bool ImportFBX(const char* file, Asset::MeshAsset& asset, float uniformScale) {
+bool ImportFBX(const char* file, TArray<MeshPrimitiveTemp>& primitives, float uniformScale) {
 	File::FPath fullPath(file);
 	Assimp::Importer importer;
 	const aiScene* aScene = importer.ReadFile(fullPath.string().c_str(), aiProcess_Triangulate | aiProcess_FlipUVs);
@@ -316,15 +321,15 @@ bool ImportFBX(const char* file, Asset::MeshAsset& asset, float uniformScale) {
 		return false;
 	}
 	uint32 primitiveCount = GetPrimitiveCount(aScene, aScene->mRootNode);
-	asset.Primitives.Resize(primitiveCount);
-	LoadFbxNode(aScene, aScene->mRootNode, asset.Primitives, uniformScale);
-	asset.Name = File::FPath(fullPath).stem().string();
+	primitives.Resize(primitiveCount);
+	LoadFbxNode(aScene, aScene->mRootNode, primitives, uniformScale);
 	LOG_INFO("Succeed to load GLTF mesh: %s", file);
 	return true;
 }
 
 bool ImportMeshAsset(const XString& srcFile, const XString& dstFile, float uniformScale) {
 	Asset::MeshAsset asset;
+	TArray<MeshPrimitiveTemp> primitives;
 	auto saveFile = dstFile;
 	bool r = false;
 	if (saveFile.empty()) {
@@ -333,13 +338,13 @@ bool ImportMeshAsset(const XString& srcFile, const XString& dstFile, float unifo
 		saveFile = relativePath.string();
 	}
 	if (StrEndsWith(srcFile.c_str(), ".glb")) {
-		r = ImportGLTF(srcFile.c_str(), asset, true, uniformScale);
+		r = ImportGLTF(srcFile.c_str(), primitives, true, uniformScale);
 	}
 	else if (StrEndsWith(srcFile.c_str(), ".gltf")) {
-		r = ImportGLTF(srcFile.c_str(), asset, false, uniformScale);
+		r = ImportGLTF(srcFile.c_str(), primitives, false, uniformScale);
 	}
 	else if (StrEndsWith(srcFile.c_str(), ".fbx")) {
-		r = ImportFBX(srcFile.c_str(), asset, uniformScale);
+		r = ImportFBX(srcFile.c_str(), primitives, uniformScale);
 	}
 	else {
 		LOG_WARNING("[ImportMeshAsset] Unsupported file type: %s", srcFile.c_str());
@@ -349,28 +354,26 @@ bool ImportMeshAsset(const XString& srcFile, const XString& dstFile, float unifo
 		LOG_WARNING("[ImportMeshAsset] Can not import mesh %s", srcFile.c_str());
 		return r;
 	}
-
-	// save
-	const File::FPath FullPath(saveFile.c_str());
-
-	//write primitives
-	TUnorderedSet<XString> usedNames;
+	// save primitives
+	const File::FPath savePath(saveFile.c_str());
+	TSet<XString> usedNames;
+	asset.Primitives.Resize(primitives.Size());
 	for (uint32 i = 0; i < asset.Primitives.Size(); ++i) {
 		auto& primitive = asset.Primitives[i];
-		//generate name if empty
-		if (primitive.Name.empty() || usedNames.find(primitive.Name) != usedNames.end()) {
-			primitive.Name = FullPath.stem().filename().string() + ToString<uint32>(i);
+		auto& srcPrimitive = primitives[i];
+		//generate name if empty)
+		if (srcPrimitive.Name.empty() || usedNames.find(primitive.Name) != usedNames.end()) {
+			primitive.Name = savePath.stem().filename().string() + ToString<uint32>(i);
 		}
-
-		File::FPath parentPath = FullPath.parent_path();
-		parentPath.append(primitive.Name);
-		parentPath.replace_extension(".primitive");
-		XString binaryFile = parentPath.string();
-		std::replace(binaryFile.begin(), binaryFile.end(), '\\', '/');
-
-		r |= Asset::MeshAsset::ExportPrimitiveFile(binaryFile.c_str(), primitive.Vertices, primitive.Indices, Asset::EMeshCompressMode::NONE);
-		primitive.BinaryFile.swap(binaryFile);
+		XString primitiveFile = savePath.parent_path().append(primitive.Name).replace_extension(".primitive").string();
+		std::replace(primitiveFile.begin(), primitiveFile.end(), '\\', '/');
+		Asset::PrimitiveAsset primitiveAsset;
+		primitiveAsset.Vertices.Swap(srcPrimitive.Vertices);
+		primitiveAsset.Indices.Swap(srcPrimitive.Indices);
+		Asset::AssetLoader::SaveProjectAsset(&primitiveAsset, primitiveFile.c_str());
+		primitive.BinaryFile.swap(primitiveFile);
 	}
+	// save mesh
 	r |= Asset::AssetLoader::SaveProjectAsset(&asset, saveFile.c_str());
 	return r;
 }
@@ -404,7 +407,7 @@ bool ImportTexture2DAsset(const XString& srcFile, const XString& dstFile, int do
 	}
 
 	Asset::TextureAsset asset;
-	asset.Type = Asset::ETextureAssetType::RGBA8_2D;
+	asset.Type = Asset::ETextureAssetType::RGBA8Srgb_2D;
 	asset.CompressMode = compressMode;
 	// downsize
 	if(downsize > 1) {
@@ -441,7 +444,7 @@ bool ImportTextureCubeAsset(TConstArrayView<XString> srcFiles, const XString& ds
 		saveFile = relativePath.string();
 	}
 	Asset::TextureAsset asset;
-	asset.Type = Asset::ETextureAssetType::RGBA8_Cube;
+	asset.Type = Asset::ETextureAssetType::RGBA8Srgb_Cube;
 	asset.CompressMode = compressMode;
 	// get the first slice for size
 	bool flag = false;

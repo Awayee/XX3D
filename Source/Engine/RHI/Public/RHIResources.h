@@ -11,6 +11,9 @@ public:
 	virtual ~RHIResource() = default;
 };
 
+uint32 GetRHIFormatPixelSize(ERHIFormat format);
+
+uint16 GetTextureDimension2DSize(ETextureDimension dimension);
 // swapchain
 
 class RHISwapchain {
@@ -82,6 +85,7 @@ struct RHITextureDesc {
 	RHITextureSubRes GetSubRes2DArray(ETextureViewFlags viewFlags) const;
 	uint32 GetMipLevelWidth(uint8 mipLevel) const;
 	uint32 GetMipLevelHeight(uint8 mipLevel) const;
+	uint16 Get2DArraySize() const;
 	void LimitSubRes(RHITextureSubRes& subRes) const; // correct the sub resource to limit its range.
 	bool IsAllSubRes(RHITextureSubRes subRes) const; // check sub resource is all resource
 	static RHITextureDesc Texture2D();

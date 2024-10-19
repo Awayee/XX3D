@@ -46,6 +46,12 @@ namespace Math {
 		void Merge(const BoundingSphere& bs);
 	};
 
+	enum class EGeometryTest : unsigned char{
+		Inner=0,
+		Intersected,
+		Outer
+	};
+
 	struct Plane {
 		FVector3 Normal {0.0f, 1.0f, 0.0f};
 		float Distance{ 0.0f };
@@ -56,12 +62,13 @@ namespace Math {
 		float SignedDistance(const FVector3& point) const;
 		bool IsOnOrForward(const AABB3& aabb) const;
 		bool IsOnOrForward(const BoundingSphere& bs)const;
+		EGeometryTest TestAABB(const AABB3& aabb) const;
 	};
 
 	struct Frustum {
 		Plane Near, Far, Left, Right, Bottom, Top;
-
-		bool Cull(const BoundingSphere& sphere) const;
-		bool Cull(const AABB3& aabb) const;
+		bool TestSphereSimple(const BoundingSphere& sphere) const; // return true if sphere in frustum otherwise false
+		bool TestAABBSimple(const AABB3& aabb) const;
+		EGeometryTest TestAABB(const AABB3& aabb) const;
 	};
 }

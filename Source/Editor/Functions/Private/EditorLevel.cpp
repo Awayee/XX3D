@@ -19,6 +19,7 @@ namespace Editor {
 	void MeshSave(Object::MeshComponent* component, Json::ValueWriter& val) {
 		const XString& meshFile = component->GetMeshFile();
 		val.AddString("MeshFile", meshFile);
+		val.AddMember("CastShadow", component->GetCastShadow());
 	}
 	REGISTER_LEVEL_EDIT_OnSave(Object::MeshComponent, MeshSave);
 

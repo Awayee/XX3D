@@ -8,6 +8,7 @@
 #include "Objects/Public/RenderScene.h"
 #include "Objects/Public/Level.h"
 #include "Objects/Public/InstanceDataMgr.h"
+#include "Objects/Public/RenderResource.h"
 
 namespace Object {
 	// The level components registered by REGISTER_LEVEL_COMPONENT handles game and editor logic;
@@ -42,16 +43,18 @@ namespace Object {
 
 	// static mesh
 	struct PrimitiveRenderData {
+		RHIBuffer* VertexBuffer;
+		RHIBuffer* IndexBuffer;
 		uint32 VertexCount;
 		uint32 IndexCount;
-		RHIBufferPtr VertexBuffer;
-		RHIBufferPtr IndexBuffer;
-		RHITexture* Texture;
 		Math::AABB3 AABB;
+		RHITexture* Texture;
+		void SetResource(const Object::PrimitiveResource& res);
 	};
 	struct MeshECSComponent {
 		TArray<PrimitiveRenderData> Primitives;
 		Math::AABB3 AABB;
+		bool CastShadow;
 		void BuildFromAsset(const Asset::MeshAsset& meshAsset);
 		REGISTER_ECS_COMPONENT(MeshECSComponent);
 	};
@@ -69,22 +72,28 @@ namespace Object {
 		void OnRemove() override;
 		void SetMeshFile(const XString& meshFile);
 		const XString& GetMeshFile() const { return m_MeshFile; }
+		void SetCastShadow(bool bCastShadow);
+		bool GetCastShadow() const { return m_CastShadow; }
 	private:
 		XString m_MeshFile;
+		bool m_CastShadow;
 		REGISTER_LEVEL_COMPONENT(MeshComponent);
 	};
 
 	// instanced static mesh
 	struct InstancedDataECSComponent{
-		InstanceDataMgr InstanceData;
+		InstanceDataMgr InstanceDatas;
 		void BuildInstances(const XString& instanceFile);
 		void BuildInstances(const Math::AABB3& resAABB, TArray<Math::FTransform>&& instances);
 		REGISTER_ECS_COMPONENT(InstancedDataECSComponent);
 	};
 
 	class InstancedMeshRenderSystem: public ECSSystem<MeshECSComponent, InstancedDataECSComponent> {
+	public:
+		static bool EnableGPUDriven;
 	private:
 		void Update(ECSScene* ecsScene, MeshECSComponent* meshCom, InstancedDataECSComponent* instanceCom) override;
+		void UpdateWithGPUDriven(ECSScene* ecsScene, MeshECSComponent* meshCom, InstancedDataECSComponent* instanceCom);
 		RENDER_SCENE_REGISTER_SYSTEM(InstancedMeshRenderSystem);
 	};
 

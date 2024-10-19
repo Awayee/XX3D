@@ -3,53 +3,85 @@
 #include "Render/Public/DefaultResource.h"
 
 namespace {
-	static constexpr ERHIFormat FORMAT = ERHIFormat::R8G8B8A8_SRGB;
-	static constexpr ETextureFlags USAGE = ETextureFlags::SRV | ETextureFlags::CopyDst;
-	static constexpr int CHANNELS = 4;
+	static constexpr ETextureFlags TEXTURE_RESOURCE_FLAGS = ETextureFlags::SRV | ETextureFlags::CopyDst;
+
+	TArray<Object::StaticResourceMgr::GraphicsPipelineInitializer>& GetGraphicsPSOInitializers() {
+		static TArray<Object::StaticResourceMgr::GraphicsPipelineInitializer> s_Initializers;
+		return s_Initializers;
+	}
+	TArray<Object::StaticResourceMgr::ComputePipelineInitializer>& GetComputePSOInitializers() {
+		static TArray<Object::StaticResourceMgr::ComputePipelineInitializer> s_Initializers;
+		return s_Initializers;
+	}
+
+	inline void CalcAABB(TConstArrayView<Asset::AssetVertex> vertices, Math::FVector3& outMin, Math::FVector3& outMax) {
+		outMin = { FLT_MAX };
+		outMax = { -FLT_MAX };
+		for (auto& vertex : vertices) {
+			outMin = Math::FVector3::Min(vertex.Position, outMin);
+			outMax = Math::FVector3::Max(vertex.Position, outMax);
+		}
+	}
+
+	inline RHITextureDesc ConvertAssetTypeToDesc(Asset::ETextureAssetType type) {
+		switch (type) {
+		case Asset::ETextureAssetType::R8_2D: {
+			auto desc = RHITextureDesc::Texture2D();
+			desc.Format = ERHIFormat::R8_UNORM;
+			return desc;
+		}
+		case Asset::ETextureAssetType::RG8_2D: {
+			auto desc = RHITextureDesc::Texture2D();
+			desc.Format = ERHIFormat::R8G8_UNORM;
+			return desc;
+		}
+		case Asset::ETextureAssetType::RGBA8Srgb_2D: {
+			auto desc = RHITextureDesc::Texture2D();
+			desc.Format = ERHIFormat::R8G8B8A8_SRGB;
+			return desc;
+		}
+		case Asset::ETextureAssetType::RGBA8Srgb_Cube:
+			auto desc = RHITextureDesc::TextureCube();
+			desc.Format = ERHIFormat::R8G8B8A8_SRGB;
+			return desc;
+		}
+		RAISE_ERROR("Unsupported texture asset!");
+	}
 }
 
 namespace Object {
-	TextureResource::TextureResource(const Asset::TextureAsset& asset) {
-		RHITextureDesc desc = RHITextureDesc::Texture2D();
-		desc.Format = ConvertTextureFormat(asset.Type);
-		desc.Flags = USAGE;
-		desc.Width = asset.Width;
-		desc.Height = asset.Height;
-		m_RHI = RHI::Instance()->CreateTexture(desc);
-		m_RHI->UpdateData(desc.Width * desc.Height * CHANNELS, asset.Pixels.Data());
-	}
 
-	TextureResource::TextureResource(TextureResource&& rhs) noexcept : m_RHI(MoveTemp(rhs.m_RHI)) {}
-
-	TextureResource& TextureResource::operator=(TextureResource&& rhs) noexcept {
-		m_RHI = MoveTemp(rhs.m_RHI);
-		return *this;
-	}
-
-	RHITexture* TextureResource::GetRHI() {
-		return m_RHI;
-	}
-
-	ERHIFormat TextureResource::ConvertTextureFormat(Asset::ETextureAssetType assetType) {
+	ERHIFormat TextureAssetTypeToRHIFormat(Asset::ETextureAssetType type) {
 		static TStaticArray<ERHIFormat, (uint32)Asset::ETextureAssetType::MaxNum> s_FormatMap{
 			ERHIFormat::R8G8B8A8_SRGB,
 			ERHIFormat::R8G8_UNORM,
 			ERHIFormat::R8_UNORM,
 			ERHIFormat::R8G8B8A8_UNORM,
 		};
-		return s_FormatMap[(uint32)assetType];
+		return s_FormatMap[EnumCast(type)];
 	}
 
-	RHITexture* TextureResourceMgr::GetTexture(const XString& fileName) {
-		if(!fileName.empty()) {
-			if (auto iter = m_All.find(fileName); iter != m_All.end()) {
-				return iter->second.GetRHI();
+
+	RHITexturePtr StaticResourceMgr::CreateTextureFromAsset(const Asset::TextureAsset& asset) {
+		RHITextureDesc desc = ConvertAssetTypeToDesc(asset.Type);
+		desc.Flags = TEXTURE_RESOURCE_FLAGS;
+		desc.Width = asset.Width;
+		desc.Height = asset.Height;
+		RHITexturePtr texture = RHI::Instance()->CreateTexture(desc);
+		texture->UpdateData(asset.Pixels.ByteSize(), asset.Pixels.Data());
+		return texture;
+	}
+
+	RHITexture* StaticResourceMgr::GetTexture(const XString& fileName) {
+		if (!fileName.empty()) {
+			if (auto iter = m_Textures.find(fileName); iter != m_Textures.end()) {
+				return iter->second.Get();
 			}
 			Asset::TextureAsset imageAsset;
 			if (Asset::AssetLoader::LoadProjectAsset(&imageAsset, fileName.c_str())) {
-				TextureResource texRes{ imageAsset };
-				auto* texRHI = texRes.GetRHI();
-				m_All.emplace(fileName, MoveTemp(texRes));
+				RHITexturePtr texturePtr = CreateTextureFromAsset(imageAsset);
+				auto* texRHI = texturePtr.Get();
+				m_Textures.emplace(fileName, MoveTemp(texturePtr));
 				return texRHI;
 			}
 			LOG_WARNING("Failed to load texture file: %s", fileName.c_str());
@@ -57,54 +89,71 @@ namespace Object {
 		return Render::DefaultResources::Instance()->GetDefaultTexture2D(Render::DefaultResources::TEX_WHITE);
 	}
 
-	TArray<StaticPipelineStateMgr::GraphicsPipelineInitializer>& GetGraphicsPSOInitializers() {
-		static TArray<StaticPipelineStateMgr::GraphicsPipelineInitializer> s_Initializers;
-		return s_Initializers;
-	}
-	TArray<StaticPipelineStateMgr::ComputePipelineInitializer>&  GetComputePSOInitializers() {
-		static TArray<StaticPipelineStateMgr::ComputePipelineInitializer> s_Initializers;
-		return s_Initializers;
+	PrimitiveResource StaticResourceMgr::GetPrimitive(const XString& fileName) {
+		if(!fileName.empty()) {
+			if(auto iter = m_Primitives.find(fileName); iter != m_Primitives.end()) {
+				return iter->second.GetOuter();
+			}
+			// create new resource
+			Asset::PrimitiveAsset asset;
+			if(Asset::AssetLoader::LoadProjectAsset(&asset, fileName.c_str())) {
+				auto& newPrimitive = m_Primitives.emplace(fileName, PrimitiveResourceInner{}).first->second;
+				const RHIBufferDesc vbDesc{ EBufferFlags::Vertex | EBufferFlags::CopyDst, asset.Vertices.ByteSize(), sizeof(Asset::AssetVertex) };
+				newPrimitive.VertexBuffer = RHI::Instance()->CreateBuffer(vbDesc);
+				newPrimitive.VertexBuffer->UpdateData(asset.Vertices.Data(), asset.Vertices.ByteSize(), 0);
+				if(asset.Indices.Size()) {
+					const RHIBufferDesc ivDesc{ EBufferFlags::Index | EBufferFlags::CopyDst, asset.Indices.ByteSize(), sizeof(Asset::IndexType) };
+					newPrimitive.IndexBuffer = RHI::Instance()->CreateBuffer(ivDesc);
+					newPrimitive.IndexBuffer->UpdateData(asset.Indices.Data(), asset.Indices.ByteSize(), 0);
+				}
+				newPrimitive.VertexCount = asset.Vertices.Size();
+				newPrimitive.IndexCount = asset.Indices.Size();
+				CalcAABB(asset.Vertices, newPrimitive.AABB.Min, newPrimitive.AABB.Max);
+				return newPrimitive.GetOuter();
+			}
+			LOG_WARNING("Failed to load primitive file: %s", fileName.c_str());
+		}
+		return PrimitiveResource{ nullptr, nullptr, 0, 0, {} };
 	}
 
-	uint32 StaticPipelineStateMgr::RegisterPSOInitializer(GraphicsPipelineInitializer func) {
+	uint32 StaticResourceMgr::RegisterPSOInitializer(GraphicsPipelineInitializer func) {
 		auto& psos = GetGraphicsPSOInitializers();
 		uint32 idx = psos.Size();
 		psos.PushBack(func);
 		return idx;
 	}
 
-	uint32 StaticPipelineStateMgr::RegisterPSOInitializer(ComputePipelineInitializer func) {
+	uint32 StaticResourceMgr::RegisterPSOInitializer(ComputePipelineInitializer func) {
 		auto& psos = GetComputePSOInitializers();
 		uint32 idx = psos.Size();
 		psos.PushBack(func);
 		return idx;
 	}
 
-	void StaticPipelineStateMgr::ReCreatePipelineState(uint32 psoID, const RHIGraphicsPipelineStateDesc& desc) {
-		CHECK(psoID < m_GraphicsPipelineStates.Size());
-		m_GraphicsPipelineStates[psoID] = RHI::Instance()->CreateGraphicsPipelineState(desc);
-	}
-
-	RHIGraphicsPipelineState* StaticPipelineStateMgr::GetGraphicsPipelineState(uint32 psoID) {
+	RHIGraphicsPipelineState* StaticResourceMgr::GetGraphicsPipelineState(uint32 psoID) {
 		return m_GraphicsPipelineStates[psoID].Get();
 	}
 
-	RHIComputePipelineState* StaticPipelineStateMgr::GetComputePipelineState(uint32 psoID) {
+	RHIComputePipelineState* StaticResourceMgr::GetComputePipelineState(uint32 psoID) {
 		return m_ComputePipelineStates[psoID].Get();
 	}
 
-	StaticPipelineStateMgr::StaticPipelineStateMgr() {
+	PrimitiveResource StaticResourceMgr::PrimitiveResourceInner::GetOuter() {
+		return PrimitiveResource{ VertexBuffer.Get(), IndexBuffer.Get(), VertexCount, IndexCount, AABB };
+	}
+
+	StaticResourceMgr::StaticResourceMgr() {
 		RHI* r = RHI::Instance();
 		auto& graphicsPSOs = GetGraphicsPSOInitializers();
 		m_GraphicsPipelineStates.Reserve(graphicsPSOs.Size());
-		for(auto& initializer: graphicsPSOs) {
+		for (auto& initializer : graphicsPSOs) {
 			RHIGraphicsPipelineStateDesc desc{};
 			initializer(desc);
 			m_GraphicsPipelineStates.PushBack(r->CreateGraphicsPipelineState(desc));
 		}
 		auto& computePSOs = GetComputePSOInitializers();
 		m_ComputePipelineStates.Reserve(computePSOs.Size());
-		for(auto& initializer: computePSOs) {
+		for (auto& initializer : computePSOs) {
 			RHIComputePipelineStateDesc desc{};
 			initializer(desc);
 			m_ComputePipelineStates.PushBack(r->CreateComputePipelineState(desc));

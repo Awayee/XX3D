@@ -353,6 +353,18 @@ void VulkanCommandBuffer::Dispatch(uint32 groupCountX, uint32 groupCountY, uint3
 	vkCmdDispatch(m_Handle, groupCountX, groupCountY, groupCountZ);
 }
 
+void VulkanCommandBuffer::DrawIndirect(const RHIDynamicBuffer& buffer, uint32 drawCount) {
+	PrepareDraw();
+	VkBuffer vkBuffer = m_Owner->GetDevice()->GetDynamicBufferAllocator()->GetBufferHandle(buffer.BufferIndex);
+	vkCmdDrawIndirect(m_Handle, vkBuffer, buffer.Offset, drawCount, buffer.Stride);
+}
+
+void VulkanCommandBuffer::DrawIndexedIndirect(const RHIDynamicBuffer& buffer, uint32 drawCount) {
+	PrepareDraw();
+	VkBuffer vkBuffer = m_Owner->GetDevice()->GetDynamicBufferAllocator()->GetBufferHandle(buffer.BufferIndex);
+	vkCmdDrawIndexedIndirect(m_Handle, vkBuffer, buffer.Offset, drawCount, buffer.Stride);
+}
+
 void VulkanCommandBuffer::ClearColorTarget(uint32 targetIndex, const float* color, const IRect& rect) {
 	VkClearAttachment clearAttachment;
 	clearAttachment.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;

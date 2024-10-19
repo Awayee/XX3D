@@ -168,7 +168,7 @@ void D3D12CommandList::CopyBufferToTexture(RHIBuffer* buffer, RHITexture* textur
 	const uint32 cpyWidth = texDesc.GetMipLevelWidth(mip), cpyHeight = texDesc.GetMipLevelHeight(mip);
 	const uint32 rowPitch = AlignTexturePitchSize(cpyWidth * texDesc.GetPixelByteSize());
 	const uint32 slicePitch = AlignTextureSliceSize(rowPitch * cpyHeight);
-	const uint32 perSliceSize = GetD3D12PerArraySliceSize(dstSubRes.Dimension);
+	const uint32 perSliceSize = GetTextureDimension2DSize(dstSubRes.Dimension);
 	const uint32 arrayIndex = dstSubRes.ArrayIndex * perSliceSize;
 	const uint32 arraySize = perSliceSize;
 	for(uint16 arr=0; arr<arraySize; ++arr) {
@@ -196,8 +196,8 @@ void D3D12CommandList::CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstT
 	const auto& srcSubRes = region.SrcSubRes, dstSubRes = region.DstSubRes;
 	const auto& srcOffset = region.SrcOffset, dstOffset = region.DstOffset;
 	const auto& extent = region.Extent;
-	const uint32 srcPerArraySize = GetD3D12PerArraySliceSize(srcSubRes.Dimension);
-	const uint32 dstPerArraySize = GetD3D12PerArraySliceSize(srcSubRes.Dimension);
+	const uint32 srcPerArraySize = GetTextureDimension2DSize(srcSubRes.Dimension);
+	const uint32 dstPerArraySize = GetTextureDimension2DSize(dstSubRes.Dimension);
 	const uint32 cpyArraySize = Math::Min<uint32>(srcSubRes.ArraySize * srcPerArraySize, dstSubRes.ArraySize * dstPerArraySize);
 	for(uint32 i = 0; i<cpyArraySize; ++i) {
 		D3D12_TEXTURE_COPY_LOCATION srcLocation{};

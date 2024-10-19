@@ -59,7 +59,6 @@ D3D12_DEPTH_STENCILOP_DESC ToD3D12DepthStencilOpDesc(const RHIDepthStencilState:
 D3D12_PRIMITIVE_TOPOLOGY_TYPE ToD3D12PrimitiveTopologyType(EPrimitiveTopology topology);
 D3D12_PRIMITIVE_TOPOLOGY ToD3D12PrimitiveTopology(EPrimitiveTopology topology);
 D3D12_DESCRIPTOR_RANGE_TYPE ToD3D12DescriptorRangeType(EBindingType type);
-uint32 GetD3D12PerArraySliceSize(ETextureDimension dimension);
 D3D12_RESOURCE_STATES ToD3D12ResourceState(EResourceState state);
 D3D12_DESCRIPTOR_HEAP_TYPE ToD3D12DescriptorHeapType(EBindingType type);
 uint32 AlignConstantBufferSize(uint32 byteSize);

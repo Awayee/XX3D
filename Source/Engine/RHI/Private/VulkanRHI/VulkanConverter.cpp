@@ -474,21 +474,10 @@ VkLogicOp ToVkLogicOp(ELogicOp op) {
 	}
 }
 
-uint32 GetImagePerLayerSize(ETextureDimension dimension) {
-	switch (dimension) {
-	case ETextureDimension::Tex2D:
-	case ETextureDimension::Tex3D:
-	case ETextureDimension::Tex2DArray: return 1;
-	case ETextureDimension::TexCube:
-	case ETextureDimension::TexCubeArray: return 6;
-	default: return 1;
-	}
-}
-
 void ToImageSubResourceLayers(RHITextureSubRes subRes, VkImageSubresourceLayers& out) {
 	out.aspectMask = ToImageAspectFlags(subRes.ViewFlags);
 	out.mipLevel = subRes.MipIndex;
-	const uint32 perLayerSize = GetImagePerLayerSize(subRes.Dimension);
+	const uint32 perLayerSize = GetTextureDimension2DSize(subRes.Dimension);
 	out.baseArrayLayer = subRes.ArrayIndex * perLayerSize;
 	out.layerCount = subRes.ArraySize * perLayerSize;
 }
@@ -497,7 +486,7 @@ void ToImageSubResourceRange(RHITextureSubRes subRes, VkImageSubresourceRange& o
 	out.aspectMask = ToImageAspectFlags(subRes.ViewFlags);
 	out.baseMipLevel = subRes.MipIndex;
 	out.levelCount = subRes.MipSize;
-	const uint32 perLayerSize = GetImagePerLayerSize(subRes.Dimension);
+	const uint32 perLayerSize = GetTextureDimension2DSize(subRes.Dimension);
 	out.baseArrayLayer = subRes.ArrayIndex * perLayerSize;
 	out.layerCount = subRes.ArraySize * perLayerSize;
 }

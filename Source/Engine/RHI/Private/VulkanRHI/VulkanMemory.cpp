@@ -200,7 +200,7 @@ uint32 VulkanDynamicBufferAllocator::PrepareChunk(uint32 requiredSize) {
 	m_AllocatedIndex = m_BufferChunks.Size();
 	auto& chunk = m_BufferChunks.EmplaceBack();
 	m_Allocator->AllocateBufferMemory(chunk.Allocation, m_PageSize,
-		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	chunk.AllocatedSize = 0;
 	chunk.MappedData = nullptr;

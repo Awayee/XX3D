@@ -181,7 +181,7 @@ D3D12TextureImpl::D3D12TextureImpl(const RHITextureDesc& desc, D3D12Device* devi
 		d3d12Desc.DepthOrArraySize = (uint16)desc.Depth;
 	}
 	else {
-		d3d12Desc.DepthOrArraySize = desc.ArraySize * (uint16)GetD3D12PerArraySliceSize(desc.Dimension);
+		d3d12Desc.DepthOrArraySize = desc.ArraySize * (uint16)GetTextureDimension2DSize(desc.Dimension);
 	}
 	d3d12Desc.MipLevels = desc.MipSize;
 	d3d12Desc.Format = ToD3D12Format(desc.Format);
@@ -202,7 +202,7 @@ D3D12TextureImpl::D3D12TextureImpl(const RHITextureDesc& desc, D3D12Device* devi
 	}
 	device->GetDevice()->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &d3d12Desc, initialState, pClearValue, IID_PPV_ARGS(m_Resource.Address()));
 	m_ResState.SetState(initialState);
-	uint32 arraySize = desc.ArraySize;
+	uint32 arraySize = desc.Get2DArraySize();
 	// reserve descriptor array
 	for (uint32 i = 0; i < EnumCast(ETexDescriptorType::Count); ++i) {
 		ETextureFlags needFlags = DescriptorTypeToFlags((ETexDescriptorType)i);
@@ -254,7 +254,7 @@ void D3D12TextureImpl::UpdateData(const void* data, uint32 byteSize, RHITextureS
 	const uint32 dstRowByteSize = AlignTexturePitchSize(srcRowByteSize);
 	const uint32 srcSliceByteSize = mipHeight * dstRowByteSize;
 	const uint32 dstSliceByteSize = AlignTextureSliceSize(srcSliceByteSize);
-	const uint32 bufferSize = dstSliceByteSize * subRes.ArraySize * GetD3D12PerArraySliceSize(subRes.Dimension);
+	const uint32 bufferSize = dstSliceByteSize * subRes.ArraySize * GetTextureDimension2DSize(subRes.Dimension);
 	D3D12Buffer* stagingBuffer = m_Device->GetUploader()->AllocateStaging(bufferSize);
 	// if data size is aligned, copy directly, otherwise copy row-by-row.
 	if (srcRowByteSize == dstRowByteSize && srcSliceByteSize == dstSliceByteSize) {
@@ -329,34 +329,56 @@ void D3D12TextureImpl::CreateSRV(RHITextureSubRes subRes, D3D12_CPU_DESCRIPTOR_H
 	desc.Format = ToD3D12ViewFormat(GetDesc().Format, subRes.ViewFlags);
 	const ETextureDimension texDimension = GetDesc().Dimension;
 	const ETextureDimension subDimension = subRes.Dimension;
-	if(subDimension == ETextureDimension::Tex2D && texDimension == ETextureDimension::Tex2D) {
-		desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		desc.Texture2D.MostDetailedMip = subRes.MipIndex;
-		desc.Texture2D.MipLevels = subRes.MipSize;
+	const uint16 subPerArraySize = GetTextureDimension2DSize(subDimension);
+	if(subDimension == ETextureDimension::Tex2D) {
+		if(texDimension == ETextureDimension::Tex2D) {
+			desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			desc.Texture2D.MostDetailedMip = subRes.MipIndex;
+			desc.Texture2D.MipLevels = subRes.MipSize;
+		}
+		else {
+			desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+			desc.Texture2DArray.FirstArraySlice = subRes.ArrayIndex;
+			desc.Texture2DArray.ArraySize = 1;
+			desc.Texture2DArray.MostDetailedMip = subRes.MipIndex;
+			desc.Texture2DArray.MipLevels = subRes.MipSize;
+		}
 	}
-	else if (subDimension == ETextureDimension::Tex2DArray || subDimension == ETextureDimension::Tex2D) {
+	else if(subDimension == ETextureDimension::Tex2DArray) {
 		desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
 		desc.Texture2DArray.FirstArraySlice = subRes.ArrayIndex;
 		desc.Texture2DArray.ArraySize = subRes.ArraySize;
 		desc.Texture2DArray.MostDetailedMip = subRes.MipIndex;
 		desc.Texture2DArray.MipLevels = subRes.MipSize;
 	}
-	if (subDimension == ETextureDimension::TexCube && texDimension == ETextureDimension::TexCube) {
-		desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
-		desc.TextureCube.MostDetailedMip = subRes.MipIndex;
-		desc.TextureCube.MipLevels = subRes.MipSize;
+	else if(subDimension == ETextureDimension::TexCube) {
+		if(texDimension == ETextureDimension::TexCube) {
+			desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+			desc.TextureCube.MostDetailedMip = subRes.MipIndex;
+			desc.TextureCube.MipLevels = subRes.MipSize;
+		}
+		else {
+			desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
+			desc.TextureCubeArray.First2DArrayFace = subRes.ArrayIndex * subPerArraySize;
+			desc.TextureCubeArray.NumCubes = 1;
+			desc.TextureCubeArray.MostDetailedMip = subRes.MipIndex;
+			desc.TextureCubeArray.MipLevels = subRes.MipSize;
+		}
 	}
-	else if (subDimension == ETextureDimension::TexCubeArray || subDimension == ETextureDimension::TexCube) {
+	else if (subDimension == ETextureDimension::TexCubeArray) {
 		desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
-		desc.TextureCubeArray.First2DArrayFace = subRes.ArrayIndex * 6;
+		desc.TextureCubeArray.First2DArrayFace = subRes.ArrayIndex * subPerArraySize;
 		desc.TextureCubeArray.NumCubes = subRes.ArraySize;
 		desc.TextureCubeArray.MostDetailedMip = subRes.MipIndex;
 		desc.TextureCubeArray.MipLevels = subRes.MipSize;
 	}
-	if(subDimension == ETextureDimension::Tex3D) {
+	else if (subDimension == ETextureDimension::Tex3D) {
 		desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
 		desc.Texture3D.MostDetailedMip = subRes.MipIndex;
 		desc.Texture3D.MipLevels = subRes.MipSize;
+	}
+	else {
+		RAISE_ERROR("[D3D12TextureImpl::CreateSRV] not supported!");
 	}
 	m_Device->GetDevice()->CreateShaderResourceView(m_Resource, &desc, descriptor);
 }
@@ -379,7 +401,7 @@ void D3D12TextureImpl::CreateUAV(RHITextureSubRes subRes, D3D12_CPU_DESCRIPTOR_H
 	}
 	else {
 		desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
-		uint32 perArraySize = GetD3D12PerArraySliceSize(subDimension);
+		uint32 perArraySize = GetTextureDimension2DSize(subDimension);
 		desc.Texture2DArray.FirstArraySlice = subRes.ArrayIndex * perArraySize;
 		desc.Texture2DArray.ArraySize = subRes.ArraySize * perArraySize;
 		desc.Texture2DArray.MipSlice = subRes.MipIndex;

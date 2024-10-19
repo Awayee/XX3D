@@ -3,6 +3,7 @@
 #include "System/Public/Configuration.h"
 #include "Render/Public/GlobalShader.h"
 #include "Objects/Public/RenderResource.h"
+#include "Objects/Public/InstanceDataMgr.h"
 
 namespace {
 	class DirectionalShadowVS : public Render::GlobalShader {
@@ -176,17 +177,19 @@ namespace Object {
 		// layout
 		desc.Layout = { { {EBindingType::UniformBuffer, EShaderStageFlags::Vertex} } };// camera
 		// vertex input
+		const ERHIFormat instanceRowFormat = Object::GetInstanceDataRowFormat();
+		const uint32 instanceRowSize = GetRHIFormatPixelSize(instanceRowFormat);
 		auto& vi = desc.VertexInput;
 		vi.Bindings = {
 			{0, sizeof(Asset::AssetVertex), false},
-			{1, sizeof(Math::FMatrix4x4), true} };
+			{1, instanceRowSize * 4, true} };
 		vi.Attributes = {
 			{POSITION(0), 0, 0, ERHIFormat::R32G32B32_SFLOAT, 0},
 			// instance transform
-			{ INSTANCE_TRANSFORM(0), 0, 1, ERHIFormat::R32G32B32A32_SFLOAT, 0 },
-			{INSTANCE_TRANSFORM(1), 1, 1, ERHIFormat::R32G32B32A32_SFLOAT, sizeof(Math::FVector4)},
-			{INSTANCE_TRANSFORM(2), 2, 1, ERHIFormat::R32G32B32A32_SFLOAT, sizeof(Math::FVector4) * 2},
-			{INSTANCE_TRANSFORM(3), 3, 1, ERHIFormat::R32G32B32A32_SFLOAT, sizeof(Math::FVector4) * 3}, };
+			{INSTANCE_TRANSFORM(0), 0, 1, instanceRowFormat, 0 },
+			{INSTANCE_TRANSFORM(1), 1, 1, instanceRowFormat, instanceRowSize},
+			{INSTANCE_TRANSFORM(2), 2, 1, instanceRowFormat, instanceRowSize * 2},
+			{INSTANCE_TRANSFORM(3), 3, 1, instanceRowFormat, instanceRowSize * 3}, };
 
 		desc.BlendDesc.BlendStates = { {false}, {false} };
 		desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Back, false, m_ShadowConfig.ShadowBiasConstant, m_ShadowConfig.ShadowBiasSlope };

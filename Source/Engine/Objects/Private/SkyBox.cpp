@@ -46,7 +46,7 @@ namespace {
 		desc.NumSamples = 1;
 	}
 
-	static const uint32 s_SkyBoxPSOID{ Object::StaticPipelineStateMgr::Instance()->RegisterPSOInitializer(CreateSkyBoxPSO) };
+	static const uint32 s_SkyBoxPSOID{ Object::StaticResourceMgr::Instance()->RegisterPSOInitializer(CreateSkyBoxPSO) };
 }
 
 namespace Object {
@@ -62,12 +62,11 @@ namespace Object {
 			return;
 		}
 		for (auto& p : meshAsset.Primitives) {
-			VertexCount = p.Vertices.Size();
-			IndexCount = p.Indices.Size();
-			VertexBuffer = RHI::Instance()->CreateBuffer({ EBufferFlags::Vertex | EBufferFlags::CopyDst, p.Vertices.ByteSize(), sizeof(Asset::AssetVertex) });
-			VertexBuffer->UpdateData(p.Vertices.Data(), p.Vertices.ByteSize(), 0);
-			IndexBuffer = RHI::Instance()->CreateBuffer({ EBufferFlags::Index | EBufferFlags::CopyDst, p.Indices.ByteSize(), sizeof(Asset::IndexType) });
-			IndexBuffer->UpdateData(p.Indices.Data(), p.Indices.ByteSize(), 0);
+			auto primitive = Object::StaticResourceMgr::Instance()->GetPrimitive(p.BinaryFile);
+			VertexBuffer = primitive.VertexBuffer;
+			IndexBuffer = primitive.IndexBuffer;
+			VertexCount = primitive.VertexCount;
+			IndexCount = primitive.IndexCount;
 			break;
 		}
 	}
@@ -82,7 +81,7 @@ namespace Object {
 			LOG_WARNING("Failed to load cube map file: %s", file.c_str());
 			return;
 		}
-		if (asset.Type != Asset::ETextureAssetType::RGBA8_Cube) {
+		if (asset.Type != Asset::ETextureAssetType::RGBA8Srgb_Cube) {
 			LOG_WARNING("Texture is not a cube map! %s", file.c_str());
 			return;
 		}
@@ -90,7 +89,7 @@ namespace Object {
 		RHITextureDesc desc = RHITextureDesc::TextureCube();
 		desc.Width = asset.Width;
 		desc.Height = asset.Height;
-		desc.Format = Object::TextureResource::ConvertTextureFormat(asset.Type);
+		desc.Format = Object::TextureAssetTypeToRHIFormat(asset.Type);
 		desc.Flags = (ETextureFlags::SRV | ETextureFlags::CopyDst);
 		CubeMap = RHI::Instance()->CreateTexture(desc);
 		CubeMap->UpdateData(asset.Pixels.Size(), asset.Pixels.Data());
@@ -120,7 +119,7 @@ namespace Object {
 		RenderScene* renderScene = (RenderScene*)scene;
 		Render::DrawCallQueue& queue = renderScene->GetLightingPassDrawCallQueue();
 		queue.PushDrawCall([renderScene, component](RHICommandBuffer* cmd) {
-			RHIGraphicsPipelineState* pso = StaticPipelineStateMgr::Instance()->GetGraphicsPipelineState(s_SkyBoxPSOID);
+			RHIGraphicsPipelineState* pso = StaticResourceMgr::Instance()->GetGraphicsPipelineState(s_SkyBoxPSOID);
 			cmd->BindGraphicsPipeline(pso);
 			cmd->BindVertexBuffer(component->VertexBuffer, 0, 0);
 			cmd->BindIndexBuffer(component->IndexBuffer, 0);

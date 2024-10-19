@@ -88,9 +88,10 @@ namespace {
 			a.Name = "Cube";
 			auto& primitive = a.Primitives.EmplaceBack();
 			primitive.BinaryFile = "Meshes/Cube.primitive";
-			primitive.Vertices.Swap(vertices);
-			primitive.Indices.Swap(indices);
-			a.ExportPrimitiveFile(primitive.BinaryFile.c_str(), primitive.Vertices, primitive.Indices);
+			Asset::PrimitiveAsset p;
+			p.Vertices.Swap(vertices);
+			p.Indices.Swap(indices);
+			Asset::AssetLoader::SaveProjectAsset(&p, primitive.BinaryFile.c_str());
 			Asset::AssetLoader::SaveProjectAsset(&a, "Meshes/Cube.mesh");
 		}
 
@@ -140,10 +141,11 @@ namespace {
 			a.Name = "Sphere";
 			auto& primitive = a.Primitives.EmplaceBack();
 			primitive.BinaryFile = "Meshes/Sphere.primitive";
-			primitive.Vertices.Swap(vertices);
-			primitive.Indices.Swap(indices);
-			a.ExportPrimitiveFile(primitive.BinaryFile.c_str(), primitive.Vertices, primitive.Indices);
-			Asset::AssetLoader::SaveProjectAsset(&a, "Meshes/Sphere.mesh");
+			Asset::PrimitiveAsset p;
+			p.Vertices.Swap(vertices);
+			p.Indices.Swap(indices);
+			Asset::AssetLoader::SaveProjectAsset(&p, primitive.BinaryFile.c_str());
+			Asset::AssetLoader::SaveProjectAsset(&a, "Meshes/Cube.mesh");
 
 		}
 	}

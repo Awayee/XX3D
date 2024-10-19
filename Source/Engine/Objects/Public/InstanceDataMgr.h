@@ -2,8 +2,30 @@
 #include "Math/Public/Transform.h"
 #include "Math/Public/Geometry.h"
 #include "Core/Public/TArray.h"
+#include "RHI/Public/RHI.h"
+#define INSTANCE_HALF_FLOAT
 
 namespace Object {
+	struct HalfMatrix4x4 {
+		uint16 Mat[4][4];
+		HalfMatrix4x4& operator=(const Math::FMatrix4x4& fMatrix);
+	};
+
+	ERHIFormat GetInstanceDataRowFormat();
+
+	struct InstanceData {
+#ifdef INSTANCE_HALF_FLOAT
+		HalfMatrix4x4 TransformMatrix;
+#else
+		Math::FMatrix4x4 TransformMatrix;
+#endif
+	};
+
+	struct InstanceDrawRange {
+		uint32 InstanceStart;
+		uint32 InstanceEnd;
+	};
+
 	class InstanceDataMgr {
 	public:
 		struct ClusterNode {
@@ -16,13 +38,20 @@ namespace Object {
 		};
 		InstanceDataMgr() = default;
 		~InstanceDataMgr() = default;
+		NON_COPYABLE(InstanceDataMgr);
+		InstanceDataMgr(InstanceDataMgr&& rhs) noexcept;
+		InstanceDataMgr& operator=(InstanceDataMgr&& rhs)noexcept;
 		void Reset();
 		void Build(const Math::AABB3& resAABB, TArray<Math::FTransform>&& transforms);
-		void Cull(const Math::Frustum& frustum, TArray<Math::FMatrix4x4>& outData);
+		RHIBuffer* GetInstanceBuffer();
+		void GenerateInstanceData(const Math::Frustum& frustum, TArray<InstanceData>& outData);
+		void GenerateDrawRanges(const Math::Frustum& frustum, TArray<InstanceDrawRange>& ranges);
 	private:
-		TArray<Math::FTransform> m_Transforms;
+		RHIBufferPtr m_InstanceBuffer;
+		TArray<InstanceData> m_Instances;
 		TArray<Math::AABB3> m_AABBs;
 		TArray<ClusterNode> m_ClusterNodes;
-		void RecursivelyCull(uint32 nodeIndex, const Math::Frustum& frustum, TArray<Math::FMatrix4x4>& outData);
+		void RecursivelyGenerateInstanceData(uint32 nodeIndex, const Math::Frustum& frustum, TArray<InstanceData>& outData);
+		void RecursivelyGenerateDrawRanges(uint32 nodeIndex, const Math::Frustum& frustum, TArray<InstanceDrawRange>& ranges);
 	};
 }

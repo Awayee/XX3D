@@ -25,6 +25,10 @@ namespace Editor {
 		if (ImGui::DraggableFileItemAssets("File##Mesh", file, "*.mesh")) {
 			com->SetMeshFile(file);
 		}
+		bool castShadow = com->GetCastShadow();
+		if (ImGui::Checkbox("Cast Shadow", &castShadow)) {
+			com->SetCastShadow(castShadow);
+		}
 	}
 	REGISTER_LEVEL_EDIT_OnGUI(Object::MeshComponent, MeshGUI);
 

@@ -9,8 +9,8 @@ namespace Object {
 	struct SkyBoxECSComp {
 		uint32 VertexCount;
 		uint32 IndexCount;
-		RHIBufferPtr VertexBuffer;
-		RHIBufferPtr IndexBuffer;
+		RHIBuffer* VertexBuffer;
+		RHIBuffer* IndexBuffer;
 		RHITexturePtr CubeMap;
 		SkyBoxECSComp();
 		void LoadCubeMap(const XString& file);

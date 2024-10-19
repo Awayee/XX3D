@@ -9,9 +9,9 @@ namespace Asset {
 	uint32 GetTextureByteSize(ETextureAssetType type, uint32 width, uint32 height) {
 		uint32 pixelSize = width * height;
 		switch(type) {
-		case ETextureAssetType::RGBA8_2D: return pixelSize * 4;
+		case ETextureAssetType::RGBA8Srgb_2D: return pixelSize * 4;
 		case ETextureAssetType::RG8_2D: return pixelSize * 2;
-		case ETextureAssetType::RGBA8_Cube: return pixelSize * 4 * 6;
+		case ETextureAssetType::RGBA8Srgb_Cube: return pixelSize * 4 * 6;
 		case ETextureAssetType::R8_2D: return pixelSize;
 		default:
 			LOG_ERROR("Texture type is not supported! %i", type);

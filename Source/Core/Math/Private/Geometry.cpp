@@ -168,7 +168,23 @@ namespace Math {
 		return SignedDistance(bs.Center) > -bs.Radius;
 	}
 
-	bool Frustum::Cull(const BoundingSphere& sphere) const {
+	EGeometryTest Plane::TestAABB(const AABB3& aabb) const {
+		const FVector3 aabbCenter = aabb.Center();
+		const FVector3 aabbExtent = aabb.Extent();
+		const float r = aabbExtent.X * Math::Abs(Normal.X) + aabbExtent.Y * Math::Abs(Normal.Y) + aabbExtent.Z * Math::Abs(Normal.Z);
+		const float signedInstance = SignedDistance(aabbCenter);
+		if(signedInstance < r && signedInstance > -r) {
+			return EGeometryTest::Intersected;
+		}
+		else if(signedInstance >= r) {
+			return EGeometryTest::Inner;
+		}
+		else {
+			return EGeometryTest::Outer;
+		}
+	}
+
+	bool Frustum::TestSphereSimple(const BoundingSphere& sphere) const {
 		return (
 			Near.IsOnOrForward(sphere) &&
 			Far.IsOnOrForward(sphere) &&
@@ -178,7 +194,7 @@ namespace Math {
 			Bottom.IsOnOrForward(sphere));
 	}
 
-	bool Frustum::Cull(const AABB3& aabb) const {
+	bool Frustum::TestAABBSimple(const AABB3& aabb) const {
 		return (
 			Near.IsOnOrForward(aabb) &&
 			Far.IsOnOrForward(aabb) &&
@@ -186,5 +202,24 @@ namespace Math {
 			Right.IsOnOrForward(aabb) &&
 			Top.IsOnOrForward(aabb) &&
 			Bottom.IsOnOrForward(aabb));
+	}
+
+	inline EGeometryTest TestBasedOn(const Plane& plane, const AABB3& aabb, EGeometryTest baseResult) {
+		if(baseResult == EGeometryTest::Outer) {
+			return baseResult;
+		}
+		const EGeometryTest planeResult = plane.TestAABB(aabb);
+		return Math::Max(baseResult, planeResult);
+	}
+
+	EGeometryTest Frustum::TestAABB(const AABB3& aabb) const {
+		EGeometryTest result = EGeometryTest::Inner;
+		result = TestBasedOn(Near, aabb, result);
+		result = TestBasedOn(Far, aabb, result);
+		result = TestBasedOn(Left, aabb, result);
+		result = TestBasedOn(Right, aabb, result);
+		result = TestBasedOn(Top, aabb, result);
+		result = TestBasedOn(Bottom, aabb, result);
+		return result;
 	}
 }

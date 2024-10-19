@@ -2,13 +2,13 @@
 struct VSInput {
     [[vk::location(0)]] float3 inPosition : POSITION0;
 #if defined(INSTANCED)
-    [[vk::location(1)]] float4 t0 : INSTANCE_TRANSFORM0;
-    [[vk::location(2)]] float4 t1 : INSTANCE_TRANSFORM1;
-    [[vk::location(3)]] float4 t2 : INSTANCE_TRANSFORM2;
-    [[vk::location(4)]] float4 t3 : INSTANCE_TRANSFORM3;
+    [[vk::location(1)]] half4 t0 : INSTANCE_TRANSFORM0;
+    [[vk::location(2)]] half4 t1 : INSTANCE_TRANSFORM1;
+    [[vk::location(3)]] half4 t2 : INSTANCE_TRANSFORM2;
+    [[vk::location(4)]] half4 t3 : INSTANCE_TRANSFORM3;
 
-    float4x4 GetInstanceTransform() {
-        return float4x4(
+    half4x4 GetInstanceTransform() {
+        return half4x4(
         t0.x, t1.x, t2.x, t3.x,
         t0.y, t1.y, t2.y, t3.y,
         t0.z, t1.z, t2.z, t3.z,

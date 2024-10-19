@@ -15,6 +15,13 @@ namespace Asset {
 		LZ4,
 	};
 
+	struct PrimitiveAsset: public AssetBase {
+		TArray<AssetVertex> Vertices;
+		TArray<IndexType> Indices;
+		inline static constexpr EMeshCompressMode CompressMode{ EMeshCompressMode::LZ4 };
+		bool Load(File::PathStr filePath) override;
+		bool Save(File::PathStr filePath) override;
+	};
 
 	struct MeshAsset : public AssetBase {
 		XString Name;
@@ -22,10 +29,7 @@ namespace Asset {
 			XString BinaryFile;
 			XString MaterialFile;
 			XString Name;
-			Math::AABB3 AABB;
 			TArray<XString> Textures;
-			TArray<AssetVertex> Vertices;
-			TArray<IndexType> Indices;
 		};
 		TArray<SPrimitive> Primitives;
 

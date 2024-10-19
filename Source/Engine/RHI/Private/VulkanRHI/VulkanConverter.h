@@ -33,7 +33,6 @@ VkAttachmentStoreOp ToVkAttachmentStoreOp(ERTStoreOption op);
 VkImageLayout ToImageLayout(EResourceState state);
 VkIndexType ToIndexType(ERHIFormat format);
 VkLogicOp ToVkLogicOp(ELogicOp op);
-uint32 GetImagePerLayerSize(ETextureDimension dimension);
 void ToImageSubResourceLayers(RHITextureSubRes subRes, VkImageSubresourceLayers& out);
 void ToImageSubResourceRange(RHITextureSubRes subRes, VkImageSubresourceRange& out);
 VkPipelineBindPoint ToVkPipelineBindPoint(EPipelineType type);

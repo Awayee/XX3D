@@ -3,7 +3,6 @@
 #include "Asset/Public/AssetLoader.h"
 #include "Objects/Public/StaticMesh.h"
 #include "Objects/Public/DirectionalLight.h"
-#include "Objects/Public/SkyBox.h"
 
 namespace Object {
 	RenderScene* LevelComponent::GetScene() {

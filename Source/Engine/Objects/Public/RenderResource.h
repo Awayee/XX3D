@@ -3,47 +3,52 @@
 #include "Core/Public/COntainer.h"
 #include "Core/Public/String.h"
 #include "Asset/Public/TextureAsset.h"
+#include "Asset/Public/MeshAsset.h"
 #include "RHI/Public/RHI.h"
 
 namespace Object {
-	class TextureResource {
-	public:
-		NON_COPYABLE(TextureResource);
-		TextureResource(const Asset::TextureAsset& asset);
-		~TextureResource() = default;
-		TextureResource(TextureResource&& rhs) noexcept;
-		TextureResource& operator=(TextureResource&& rhs) noexcept;
-		RHITexture* GetRHI();
-		static ERHIFormat ConvertTextureFormat(Asset::ETextureAssetType assetType);
-	private:
-		RHITexturePtr m_RHI;
+
+	ERHIFormat TextureAssetTypeToRHIFormat(Asset::ETextureAssetType type);
+
+	struct PrimitiveResource {
+		RHIBuffer* VertexBuffer;
+		RHIBuffer* IndexBuffer;
+		uint32 VertexCount;
+		uint32 IndexCount;
+		Math::AABB3 AABB;
 	};
 
-	class TextureResourceMgr {
-		SINGLETON_INSTANCE(TextureResourceMgr);
+	class StaticResourceMgr {
+		SINGLETON_INSTANCE(StaticResourceMgr);
 	public:
+
+		// texture
+		static RHITexturePtr CreateTextureFromAsset(const Asset::TextureAsset& asset);
 		RHITexture* GetTexture(const XString& fileName);
-	private:
-		TMap<XString, TextureResource> m_All;
-		TextureResourceMgr() = default;
-		~TextureResourceMgr() = default;
-	};
 
-	// pre-initialized pipeline states
-	class StaticPipelineStateMgr {
-		SINGLETON_INSTANCE(StaticPipelineStateMgr);
-	public:
+		// primitive
+		PrimitiveResource GetPrimitive(const XString& fileName);
+
+		// pipeline state
 		typedef void(*ComputePipelineInitializer)(RHIComputePipelineStateDesc&);
 		typedef void(*GraphicsPipelineInitializer)(RHIGraphicsPipelineStateDesc& desc);
 		static uint32 RegisterPSOInitializer(GraphicsPipelineInitializer func);
 		static uint32 RegisterPSOInitializer(ComputePipelineInitializer func);
-		void ReCreatePipelineState(uint32 psoID, const RHIGraphicsPipelineStateDesc& desc);
 		RHIGraphicsPipelineState* GetGraphicsPipelineState(uint32 psoID);
 		RHIComputePipelineState* GetComputePipelineState(uint32 psoID);
 	private:
+		struct PrimitiveResourceInner {
+			RHIBufferPtr VertexBuffer;
+			RHIBufferPtr IndexBuffer;
+			uint32 VertexCount;
+			uint32 IndexCount;
+			Math::AABB3 AABB;
+			PrimitiveResource GetOuter();
+		};
+		TMap<XString, PrimitiveResourceInner> m_Primitives;
+		TMap<XString, RHITexturePtr> m_Textures;
 		TArray<RHIGraphicsPipelineStatePtr> m_GraphicsPipelineStates;
 		TArray<RHIComputePipelineStatePtr> m_ComputePipelineStates;
-		StaticPipelineStateMgr();
-		~StaticPipelineStateMgr() = default;
+		StaticResourceMgr();
 	};
 }

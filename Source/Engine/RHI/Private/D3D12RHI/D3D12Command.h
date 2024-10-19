@@ -45,6 +45,8 @@ public:
 	void Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance) override;
 	void DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance) override;
 	void Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ) override;
+	void DrawIndirect(const RHIDynamicBuffer& buffer, uint32 drawCount) override {/* TODO */ }
+	void DrawIndexedIndirect(const RHIDynamicBuffer& buffer, uint32 drawCount) override {/* TODO*/ }
 	void ClearColorTarget(uint32 targetIndex, const float* color, const IRect& rect) override;
 	void CopyBufferToTexture(RHIBuffer* buffer, RHITexture* texture, RHITextureSubRes dstSubRes, IOffset3D dstOffset) override;
 	void CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RHITextureCopyRegion& region) override;

@@ -23,8 +23,7 @@ namespace Engine {
 		Render::DefaultResources::Initialize();
 		Render::GlobalShaderMap::Initialize();
 		Render::Renderer::Initialize();
-		Object::TextureResourceMgr::Initialize();
-		Object::StaticPipelineStateMgr::Initialize();
+		Object::StaticResourceMgr::Initialize();
 		Object::RenderScene::Initialize();
 		s_RunningEngine = this;
 	}
@@ -33,8 +32,7 @@ namespace Engine {
 		// wait renderer
 		Render::Renderer::Release();
 		Object::RenderScene::Release();
-		Object::StaticPipelineStateMgr::Release();
-		Object::TextureResourceMgr::Release();
+		Object::StaticResourceMgr::Release();
 		Render::GlobalShaderMap::Release();
 		Render::DefaultResources::Release();
 		RHIImGui::Release();
