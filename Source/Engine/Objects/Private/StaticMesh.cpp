@@ -172,7 +172,12 @@ namespace Object {
 		for(auto& srcPrimitive: meshAsset.Primitives) {
 			auto& primitive = Primitives.EmplaceBack();
 			primitive.SetResource(Object::StaticResourceMgr::Instance()->GetPrimitive(srcPrimitive.BinaryFile));
-			primitive.Texture = StaticResourceMgr::Instance()->GetTexture(srcPrimitive.MaterialFile);
+			if(RHITexture* tex = StaticResourceMgr::Instance()->GetTexture(srcPrimitive.MaterialFile)) {
+				primitive.Texture = tex;
+			}
+			else {
+				primitive.Texture = Render::DefaultResources::Instance()->GetDefaultTexture2D(Render::DefaultResources::TEX_WHITE);
+			}
 		}
 		// calc aabb
 		if(Primitives.Size()) {

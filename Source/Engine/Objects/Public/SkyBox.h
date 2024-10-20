@@ -11,7 +11,7 @@ namespace Object {
 		uint32 IndexCount;
 		RHIBuffer* VertexBuffer;
 		RHIBuffer* IndexBuffer;
-		RHITexturePtr CubeMap;
+		RHITexture* CubeMap;
 		SkyBoxECSComp();
 		void LoadCubeMap(const XString& file);
 		REGISTER_ECS_COMPONENT(SkyBoxECSComp);

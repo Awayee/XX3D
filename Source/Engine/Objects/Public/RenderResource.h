@@ -8,8 +8,6 @@
 
 namespace Object {
 
-	ERHIFormat TextureAssetTypeToRHIFormat(Asset::ETextureAssetType type);
-
 	struct PrimitiveResource {
 		RHIBuffer* VertexBuffer;
 		RHIBuffer* IndexBuffer;

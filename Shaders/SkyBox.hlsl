@@ -38,6 +38,8 @@ struct PSOutput{
 PSOutput MainPS(VSOutput pIn) {
     PSOutput pOut = (PSOutput) 0;
     float3 color = inSkyBoxMap.Sample(inSampler, pIn.UV).rgb;
+	//gama correction
+    color = pow(color, 1.0 / 2.2);
     pOut.OutColor = float4(color, 1.0);
     return pOut;
 }

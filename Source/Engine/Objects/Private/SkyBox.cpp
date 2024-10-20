@@ -72,27 +72,12 @@ namespace Object {
 	}
 
 	void SkyBoxECSComp::LoadCubeMap(const XString& file) {
-		CubeMap.Reset();
-		if (file.empty()) {
-			return;
+		if(RHITexture* tex = StaticResourceMgr::Instance()->GetTexture(file)) {
+			CubeMap = tex;
 		}
-		Asset::TextureAsset asset;
-		if (!Asset::AssetLoader::LoadProjectAsset(&asset, file.c_str())) {
-			LOG_WARNING("Failed to load cube map file: %s", file.c_str());
-			return;
+		else {
+			CubeMap = Render::DefaultResources::Instance()->GetDefaultTextureCube(Render::DefaultResources::TEX_WHITE);
 		}
-		if (asset.Type != Asset::ETextureAssetType::RGBA8Srgb_Cube) {
-			LOG_WARNING("Texture is not a cube map! %s", file.c_str());
-			return;
-		}
-
-		RHITextureDesc desc = RHITextureDesc::TextureCube();
-		desc.Width = asset.Width;
-		desc.Height = asset.Height;
-		desc.Format = Object::TextureAssetTypeToRHIFormat(asset.Type);
-		desc.Flags = (ETextureFlags::SRV | ETextureFlags::CopyDst);
-		CubeMap = RHI::Instance()->CreateTexture(desc);
-		CubeMap->UpdateData(asset.Pixels.Size(), asset.Pixels.Data());
 	}
 
 	void SkyBoxComponent::OnLoad(const Json::Value& val) {
@@ -124,11 +109,7 @@ namespace Object {
 			cmd->BindVertexBuffer(component->VertexBuffer, 0, 0);
 			cmd->BindIndexBuffer(component->IndexBuffer, 0);
 			cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(renderScene->GetMainCamera()->GetUniformBuffer()));
-			RHITexture* cubeTex = component->CubeMap.Get();
-			if (!cubeTex) {
-				cubeTex = Render::DefaultResources::Instance()->GetDefaultTextureCube(Render::DefaultResources::TEX_WHITE);
-			}
-			cmd->SetShaderParam(0, 1, RHIShaderParam::Texture(cubeTex));
+			cmd->SetShaderParam(0, 1, RHIShaderParam::Texture(component->CubeMap));
 			auto sampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp);
 			cmd->SetShaderParam(0, 2, RHIShaderParam::Sampler(sampler));
 			cmd->DrawIndexed(component->IndexCount, 1, 0, 0, 0);

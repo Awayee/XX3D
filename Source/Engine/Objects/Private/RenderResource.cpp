@@ -51,17 +51,6 @@ namespace {
 
 namespace Object {
 
-	ERHIFormat TextureAssetTypeToRHIFormat(Asset::ETextureAssetType type) {
-		static TStaticArray<ERHIFormat, (uint32)Asset::ETextureAssetType::MaxNum> s_FormatMap{
-			ERHIFormat::R8G8B8A8_SRGB,
-			ERHIFormat::R8G8_UNORM,
-			ERHIFormat::R8_UNORM,
-			ERHIFormat::R8G8B8A8_UNORM,
-		};
-		return s_FormatMap[EnumCast(type)];
-	}
-
-
 	RHITexturePtr StaticResourceMgr::CreateTextureFromAsset(const Asset::TextureAsset& asset) {
 		RHITextureDesc desc = ConvertAssetTypeToDesc(asset.Type);
 		desc.Flags = TEXTURE_RESOURCE_FLAGS;
@@ -86,7 +75,7 @@ namespace Object {
 			}
 			LOG_WARNING("Failed to load texture file: %s", fileName.c_str());
 		}
-		return Render::DefaultResources::Instance()->GetDefaultTexture2D(Render::DefaultResources::TEX_WHITE);
+		return nullptr;
 	}
 
 	PrimitiveResource StaticResourceMgr::GetPrimitive(const XString& fileName) {
