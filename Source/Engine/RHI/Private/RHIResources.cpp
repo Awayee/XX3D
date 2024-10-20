@@ -56,6 +56,18 @@ uint32 GetRHIFormatPixelSize(ERHIFormat format) {
     return g_FormatPixelByteSize[EnumCast(format)].PixelByteSize;
 }
 
+uint16 GetTextureDimension2DSize(ETextureDimension dimension) {
+    switch (dimension) {
+    case ETextureDimension::Tex2D:
+    case ETextureDimension::Tex3D:
+    case ETextureDimension::Tex2DArray: return 1;
+    case ETextureDimension::TexCube:
+    case ETextureDimension::TexCubeArray: return 6;
+    default:
+        return 1;
+    }
+}
+
 uint32 RHITextureDesc::GetPixelByteSize() const {
     return GetRHIFormatPixelSize(Format);
 }

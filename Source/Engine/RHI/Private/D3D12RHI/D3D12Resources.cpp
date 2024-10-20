@@ -378,7 +378,7 @@ void D3D12TextureImpl::CreateSRV(RHITextureSubRes subRes, D3D12_CPU_DESCRIPTOR_H
 		desc.Texture3D.MipLevels = subRes.MipSize;
 	}
 	else {
-		RAISE_ERROR("[D3D12TextureImpl::CreateSRV] not supported!");
+		LOG_FATAL("[D3D12TextureImpl::CreateSRV] not supported!");
 	}
 	m_Device->GetDevice()->CreateShaderResourceView(m_Resource, &desc, descriptor);
 }

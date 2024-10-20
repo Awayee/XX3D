@@ -45,7 +45,7 @@ namespace {
 			desc.Format = ERHIFormat::R8G8B8A8_SRGB;
 			return desc;
 		}
-		RAISE_ERROR("Unsupported texture asset!");
+		LOG_FATAL("Unsupported texture asset!");
 	}
 }
 

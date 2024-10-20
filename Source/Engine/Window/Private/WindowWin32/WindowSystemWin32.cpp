@@ -35,7 +35,7 @@ namespace Engine {
 		wc.lpszMenuName = 0;
 		wc.lpszClassName = initInfo.Title.c_str();
 		if (!RegisterClass(&wc)) {
-			LOG_ERROR("RegisterClass Failed.");
+			LOG_FATAL("RegisterClass Failed.");
 		}
 		LONG dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
 		if(initInfo.Resizeable) {
@@ -48,7 +48,7 @@ namespace Engine {
 		m_HWnd = CreateWindow(initInfo.Title.c_str(), initInfo.Title.c_str(),
 			dwStyle, CW_USEDEFAULT, CW_USEDEFAULT, width, height, 0, 0, m_HAppInst, 0);
 		if (!m_HWnd) {
-			LOG_ERROR("CreateWindow Failed.");
+			LOG_FATAL("CreateWindow Failed.");
 		}
 		// handle dpi scale
 		BOOL result = SetProcessDPIAware();

@@ -14,7 +14,7 @@ namespace Asset {
 		case ETextureAssetType::RGBA8Srgb_Cube: return pixelSize * 4 * 6;
 		case ETextureAssetType::R8_2D: return pixelSize;
 		default:
-			LOG_ERROR("Texture type is not supported! %i", type);
+			LOG_FATAL("Texture type is not supported! %i", type);
 		}
 	}
 

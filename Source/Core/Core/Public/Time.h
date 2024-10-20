@@ -4,11 +4,21 @@
 
 typedef std::chrono::steady_clock::time_point TimePoint;
 
+using Duration = std::chrono::nanoseconds;
+
 template<typename T>
 using DurationMill = std::chrono::duration<T, std::milli>;
 
 template<typename T>
-using DurationSec = std::chrono::duration<T, std::milli>;
+using DurationSec = std::chrono::duration<T>;
+
+template<typename T>
+using DurationMinutes = std::chrono::duration<T, std::ratio<60>>;
+
+template<typename T>
+using DurationHour = std::chrono::duration<T, std::ratio<3600>>;
+
+Duration DurationSceneLaunch();
 
 inline TimePoint NowTimePoint() {
 	return std::chrono::steady_clock::now();

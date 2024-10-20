@@ -159,7 +159,7 @@ namespace Object {
 				}
 				return m_ComponentContainerMgr.AddComponent<T>(entityID);
 			}
-			LOG_ERROR("[ECSScene::AddComponent] Invalid entity ID! %u", entityID);
+			LOG_FATAL("[ECSScene::AddComponent] Invalid entity ID! %u", entityID);
 			return nullptr;
 		}
 
@@ -176,7 +176,7 @@ namespace Object {
 				m_ComponentContainerMgr.RemoveComponent<T>(entityID);
 			}
 			else {
-				LOG_ERROR("[ECSScene::RemoveComponent] Invalid entity ID! %u", entityID);
+				LOG_FATAL("[ECSScene::RemoveComponent] Invalid entity ID! %u", entityID);
 			}
 		}
 

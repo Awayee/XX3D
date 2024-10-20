@@ -1,32 +1,46 @@
 #pragma once
 #include <iostream>
 
+namespace Log {
+	enum class ELogLevel {
+		Debug,
+		Info,
+		Warning,
+		Error,
+		Fatal
+	};
+
+	void Output(ELogLevel level, const char* fmt, ...);
+	void OutputWithTime(ELogLevel level, const char* fmt, ...);
+}
+
+#define ABORT std::cerr << __FILE__ << ',' << __LINE__ << std::endl; std::abort()
+
 #define CHECK(x)\
 	do{\
 		if(!(x)){\
-			std::cerr<<"[ERROR] "<<__FILE__<<','<<__LINE__<<std::endl;\
-			std::abort();\
+			ABORT;\
 		}\
 	}while (false)
 
 #define ASSERT(x, s)\
 	do{\
 		if(!(x)){\
-			std::cerr<<"[ERROR] " <<(s)<<__FILE__<<','<<__LINE__<<std::endl;\
-			std::abort();\
+			Log::OutputWithTime(Log::ELogLevel::Fatal, s);\
+			ABORT;\
 		}\
 	} while (false)
 
 #ifdef _DEBUG
-#define LOG_DEBUG(x, ...) printf("\033[1;34m"##x##"\033[0m\n", ##__VA_ARGS__)
+#define LOG_DEBUG(x, ...) Log::OutputWithTime(Log::ELogLevel::Debug, x, ##__VA_ARGS__)
 #else
 #define LOG_DEBUG(x, ...)
 #endif
 
-#define LOG_INFO(x, ...) printf(x##"\n", ##__VA_ARGS__)
+#define LOG_INFO(x, ...) Log::OutputWithTime(Log::ELogLevel::Info, x, ##__VA_ARGS__)
 
-#define LOG_WARNING(x, ...) printf("\033[1;33m"##x##"\033[0m\n", ##__VA_ARGS__)
+#define LOG_WARNING(x, ...) Log::OutputWithTime(Log::ELogLevel::Warning, x, ##__VA_ARGS__)
 
-#define LOG_ERROR(x, ...) printf("\033[1;31m"##x##"\033[0m\n", ##__VA_ARGS__)
+#define LOG_ERROR(x, ...) Log::OutputWithTime(Log::ELogLevel::Error, x, ##__VA_ARGS__)
 
-#define RAISE_ERROR(x, ...) printf("\033[1;31m"##x##"\033[0m\n", ##__VA_ARGS__); std::cerr<<__FILE__<<','<<__LINE__<<std::endl; std::abort()
+#define LOG_FATAL(x, ...) Log::OutputWithTime(Log::ELogLevel::Fatal, x, ##__VA_ARGS__); ABORT

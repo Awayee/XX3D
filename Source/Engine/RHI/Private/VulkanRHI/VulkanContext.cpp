@@ -61,13 +61,13 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityF
 	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 	void* data){
 	if(VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT == severity) {
-		LOG_WARNING("[Vulkan Warning] %s", pCallbackData->pMessage);
+		LOG_WARNING(pCallbackData->pMessage);
 	}
 	else if (VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT == severity) {
-		LOG_ERROR("[Vulkan Error] %s", pCallbackData->pMessage);
+		LOG_ERROR(pCallbackData->pMessage);
 	}
 	else {
-		LOG_DEBUG("%s", pCallbackData->pMessage);
+		LOG_DEBUG(pCallbackData->pMessage);
 	}
 	return VK_FALSE;
 }
