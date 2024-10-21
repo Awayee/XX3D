@@ -83,6 +83,16 @@ namespace File {
 		std::filesystem::create_directory(path);
 	}
 
+	inline bool Rename(const FPath& path, const FPath& newPath) {
+		try {
+			std::filesystem::rename(path, newPath);
+		}
+		catch(const std::filesystem::filesystem_error&) {
+			return false;
+		}
+		return true;
+	}
+
 	typedef std::function<void(const DirEntry&)> FForEachPathFunc;
 	void ForeachPath(const char* folder, FForEachPathFunc&& func, bool recursively = false);
 	void ForeachPath(const DirEntry& path, FForEachPathFunc&& func, bool recursively = false);

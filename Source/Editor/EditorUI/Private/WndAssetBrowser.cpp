@@ -129,69 +129,20 @@ namespace {
 		}
 	};
 
-	class InstanceDataBuilder: public AssetBuilderBase {
-	public:
-		InstanceDataBuilder(Editor::NodeID folderNode) : AssetBuilderBase("Instance Data Builder", folderNode){}
-	private:
-		Math::FVector2 m_BatchStartPos{ 0, 0 };
-		Math::FVector2 m_BatchEndPos{ 128.0f, 128.0f };
-		Math::IVector2 m_BatchDensity{ 128, 128 };
-		float m_BatchUniformHeight{ 0.0f };
-		int m_InstanceSize{ 0 };
-		int m_InstanceEditIndex{ 0 };
-		bool m_RandomXZ{ true };
-		TArray<Math::FTransform> m_Instances;
-		
-		void WndContent() override {
-			ImGui::Text("Build to %s", GetPathStr().c_str());
-			ImGui::InputText("Dst File Name", m_DstFileName.Data(), m_DstFileName.ByteSize());
-			if(ImGui::TreeNode("Random Instance")) {
-				ImGui::DragFloatRange2("X Range", &m_BatchStartPos.X, &m_BatchEndPos.X, -9999.0f, 9999.0f);
-				ImGui::DragFloatRange2("Y Range", &m_BatchStartPos.Y, &m_BatchEndPos.Y, -9999.0f, 9999.0f);
-				ImGui::DragInt2("Density", m_BatchDensity.Data(), 1, 1, 9999);
-				ImGui::DragFloat("Height", &m_BatchUniformHeight);
-				ImGui::Checkbox("Random XZ", &m_RandomXZ);
-				if(ImGui::Button("Generate")) {
-					m_InstanceSize = m_BatchDensity.X * m_BatchDensity.Y;
-					m_Instances.Resize((uint32)m_InstanceSize, Math::FTransform::IDENTITY);
-					const Math::FVector2 delta{ (m_BatchEndPos.X - m_BatchStartPos.X) / (float)m_BatchDensity.X, (m_BatchEndPos.Y - m_BatchStartPos.Y) / (float)m_BatchDensity.Y };
-					for (int dy = 0; dy < m_BatchDensity.Y; ++dy) {
-						for (int dx = 0; dx < m_BatchDensity.X; ++dx) {
-							Math::FVector2 pos = m_BatchStartPos + delta * Math::FVector2{ (float)dx, (float)dy };
-							if(m_RandomXZ) {
-								pos += Math::FVector2{Util::RandomF(0.0f, delta.X), Util::RandomF(0.0f, delta.Y)};
-							}
-							m_Instances[dy * m_BatchDensity.X + dx].Position = {pos.X, m_BatchUniformHeight, pos.Y};
-						}
-					}
-				}
-				ImGui::TreePop();
-			}
-			if(m_InstanceSize) {
-				ImGui::SliderInt("Instance Edit Index", &m_InstanceEditIndex, 0, (int)m_Instances.Size()-1);
-				if (m_InstanceEditIndex < m_InstanceSize) {
-					Math::FTransform& transform = m_Instances[m_InstanceEditIndex];
-					ImGui::DragFloat3("Position", transform.Position.Data(), 0.1f);
-					Math::FVector3 euler = transform.Rotation.ToEuler();
-					if (ImGui::DragFloat3("Rotation", euler.Data(), 0.1f)) {
-						transform.Rotation = Math::FQuaternion::Euler(euler);
-					}
-					ImGui::DragFloat3("Scale", transform.Scale.Data(), 0.1f, 0.001f, 1000.0f);
-				}
-			}
-			if(ImGui::Button("Create")) {
-				File::FPath filePath = GetPath(); filePath.append(m_DstFileName.Data()).replace_extension(".instd");
-				if(Asset::InstancedMeshAsset::SaveInstanceFile(filePath.string().c_str(), m_Instances)) {
-					LOG_INFO("Instance file created: %s", m_DstFileName.Data());
-					RefreshNode(MoveTemp(filePath));
-					Close();
-				}
-				else {
-					LOG_WARNING("Failed to create instance file: %s", m_DstFileName.Data());
-				}
+	bool CreateDefaultInstanceData(const XString& pathStr) {
+		Asset::InstanceDataAsset asset;
+		constexpr uint32 instanceSize = 32;
+		asset.Instances.Reserve(instanceSize);
+		for(uint32 i=0; i<instanceSize; ++i) {
+			for(uint32 j=0; j<instanceSize; ++j) {
+				auto& instance = asset.Instances.EmplaceBack();
+				instance.Rotation = Math::FQuaternion::IDENTITY;
+				instance.Scale = Math::FVector3::ONE;
+				instance.Position = { (float)i, 0.0f, (float)j };
 			}
 		}
-	};
+		return Asset::AssetLoader::SaveProjectAsset(&asset, pathStr.c_str());
+	}
 }
 
 namespace Editor {
@@ -312,34 +263,71 @@ namespace Editor {
 		}
 
 		ImGui::BeginChild("Assets");
+		uint32 mouseOnIdx = INVALID_INDEX;
 		for (uint32 i = 0; i < m_Contents.Size(); ++i) {
 			auto& item = m_Contents[i];
 
-			if (ImGui::Selectable(item->GetName().c_str(), m_SelectedItem == i, ImGuiSelectableFlags_AllowDoubleClick)) {
-				m_SelectedItem = i;
-				if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-					if (item->IsFolder()) {
-						SetCurrentFolder(Browser()->GetFolderNode(item->m_ID));
+			if(m_RenamingIdx == i) {
+				ImGui::SetKeyboardFocusHere();
+				if (ImGui::InputText("##", m_RenameStr.Data(), m_RenameStr.Size(), ImGuiInputTextFlags_EnterReturnsTrue)) {
+					item->Rename(m_RenameStr.Data());
+					ExitRename();
+				}
+			}
+			else {
+				if (ImGui::Selectable(item->GetName().c_str(), m_SelectedIdx == i, ImGuiSelectableFlags_AllowDoubleClick)) {
+					m_SelectedIdx = i;
+					if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+						if (item->IsFolder()) {
+							SetCurrentFolder(Browser()->GetFolderNode(item->m_ID));
+						}
+						else {
+							item->Open();
+						}
 					}
-					else {
-						item->Open();
-					}
+				}
+				if (ImGui::BeginDragDropSource()) {
+					ImGui::Text(item->GetName().c_str());
+					item->OnDrag();
+					ImGui::EndDragDropSource();
 				}
 			}
 
-			if (ImGui::BeginDragDropSource()) {
-				ImGui::Text(item->GetName().c_str());
-				item->OnDrag();
-				ImGui::EndDragDropSource();
+			if (ImGui::IsItemHovered()) {
+				mouseOnIdx = i;
 			}
 		}
 
-		if (ImGui::BeginPopupContextWindow("ContextMenu", ImGuiPopupFlags_MouseButtonRight)) {
+		// right click to select
+		if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
+			m_SelectedIdx = mouseOnIdx;
+		}
+
+		if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+			if (m_RenamingIdx != mouseOnIdx) {
+				ExitRename();
+			}
+		}
+		if (ImGui::IsKeyReleased(ImGuiKey_Escape)) {
+			ExitRename();
+		}
+
+		if (ImGui::BeginPopupContextWindow("ContextMenu_Asset", ImGuiPopupFlags_MouseButtonRight)) {
+			ExitRename();
 			const NodeID folderNode = m_CurrentFolder->GetID();
 			Editor::EditorUIMgr* uiMgr = Editor::EditorUIMgr::Instance();
 			if(ImGui::BeginMenu("New")) {
 				if(ImGui::MenuItem("Instance Data")) {
-					uiMgr->AddWindow(TUniquePtr(new InstanceDataBuilder(folderNode)));
+					XString filePath = GenerateNewFilePath(".instd");
+					if(CreateDefaultInstanceData(filePath)) {
+						const NodeID newNodeID = Editor::ProjectAssetMgr::Instance()->CreateFile(MoveTemp(filePath), m_CurrentFolder->GetID());
+						if(INVALID_NODE != newNodeID) {
+							EnterRenameByNodeID(newNodeID);
+						}
+					}
+				}
+				if(ImGui::MenuItem("Material")) {
+					
 				}
 				ImGui::EndMenu();
 			}
@@ -359,8 +347,53 @@ namespace Editor {
 				File::FPath fullPath = m_CurrentFolder->GetFullPath();
 				ImGui::OpenFileExplorer(fullPath.string().c_str());
 			}
+			if(ImGui::MenuItem("Rename")) {
+				EnterRenameByIdx(m_SelectedIdx);
+			}
 			ImGui::EndPopup();
 		}
 		ImGui::EndChild();
+	}
+
+	void WndAssetBrowser::EnterRenameByIdx(uint32 idx) {
+		if(m_RenamingIdx != idx) {
+			AssetViewBase* view = m_Contents[idx].Get();
+			if(view->IsFolder()) {
+				FolderNode* folderNode = Browser()->GetFolderNode(view->m_ID);
+				strcpy(m_RenameStr.Data(), folderNode->GetName().c_str());
+			}
+			else {
+				FileNode* fileNode = Browser()->GetFileNode(view->m_ID);
+				const XString nameWithoutExt = fileNode->GetNameWithoutExt();
+				strcpy(m_RenameStr.Data(), nameWithoutExt.c_str());
+			}
+			m_RenamingIdx = idx;
+		}
+	}
+
+	void WndAssetBrowser::EnterRenameByNodeID(NodeID nodeID) {
+		for(uint32 i=0; i<m_Contents.Size(); ++i) {
+			if(m_Contents[i]->m_ID == nodeID) {
+				EnterRenameByIdx(i);
+				break;
+			}
+		}
+	}
+
+	void WndAssetBrowser::ExitRename() {
+		m_RenamingIdx = INVALID_INDEX;
+	}
+
+	XString WndAssetBrowser::GenerateNewFilePath(const char* ext) {
+		uint32 identityNum = 0;
+		File::FPath fileFullPath = m_CurrentFolder->GetFullPath(); fileFullPath.append("NewAsset");
+		fileFullPath.replace_extension(ext);
+		while(File::Exist(fileFullPath)) {
+			XString fileName = StringFormat("NewAsset%u", identityNum++);
+			fileFullPath = m_CurrentFolder->GetFullPath();
+			fileFullPath.append(fileName);
+			fileFullPath.replace_extension(ext);
+		}
+		return fileFullPath.string();
 	}
 }

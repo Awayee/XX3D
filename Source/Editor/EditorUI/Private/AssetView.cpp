@@ -4,6 +4,7 @@
 #include "EditorUI/Public/EditorUIMgr.h"
 #include "Render/Public/DefaultResource.h"
 #include "Objects/Public/RenderResource.h"
+#include "Util/Public/Random.h"
 #include "Window/Public/EngineWindow.h"
 
 namespace {
@@ -100,6 +101,7 @@ namespace {
 	class MeshViewer: public Editor::EditorWndBase {
 	public:
 		MeshViewer(const XString& pathStr): EditorWndBase("MeshViewer", ImGuiWindowFlags_NoDocking), m_PathStr(pathStr) {
+			AutoDelete();
 			Asset::AssetLoader::LoadProjectAsset(&m_Asset, m_PathStr.c_str());
 		}
 	private:
@@ -116,6 +118,63 @@ namespace {
 			}
 		}
 	};
+
+	class InstanceDataViewer : public Editor::EditorWndBase {
+	public:
+		InstanceDataViewer(const XString& pathStr) : EditorWndBase("Instance Data Viewer", ImGuiWindowFlags_NoDocking), m_PathStr(pathStr) {
+			AutoDelete();
+			Asset::AssetLoader::LoadProjectAsset(&m_Asset, pathStr.c_str());
+		}
+	private:
+		XString m_PathStr;
+		Asset::InstanceDataAsset m_Asset;
+		Math::FVector2 m_BatchStartPos{ 0, 0 };
+		Math::FVector2 m_BatchEndPos{ 128.0f, 128.0f };
+		Math::IVector2 m_BatchDensity{ 128, 128 };
+		float m_BatchUniformHeight{ 0.0f };
+		int m_InstanceEditIndex{ 0 };
+		bool m_RandomXZ{ true };
+
+		void WndContent() override {
+			auto& instances = m_Asset.Instances;
+			if (ImGui::TreeNode("Random Instance")) {
+				ImGui::DragFloatRange2("X Range", &m_BatchStartPos.X, &m_BatchEndPos.X, -9999.0f, 9999.0f);
+				ImGui::DragFloatRange2("Y Range", &m_BatchStartPos.Y, &m_BatchEndPos.Y, -9999.0f, 9999.0f);
+				ImGui::DragInt2("Density", m_BatchDensity.Data(), 1, 1, 9999);
+				ImGui::DragFloat("Height", &m_BatchUniformHeight);
+				ImGui::Checkbox("Random XZ", &m_RandomXZ);
+				if (ImGui::Button("Generate")) {
+					instances.Resize((uint32)(m_BatchDensity.X * m_BatchDensity.Y), Math::FTransform::IDENTITY);
+					const Math::FVector2 delta{ (m_BatchEndPos.X - m_BatchStartPos.X) / (float)m_BatchDensity.X, (m_BatchEndPos.Y - m_BatchStartPos.Y) / (float)m_BatchDensity.Y };
+					for (int dy = 0; dy < m_BatchDensity.Y; ++dy) {
+						for (int dx = 0; dx < m_BatchDensity.X; ++dx) {
+							Math::FVector2 pos = m_BatchStartPos + delta * Math::FVector2{ (float)dx, (float)dy };
+							if (m_RandomXZ) {
+								pos += Math::FVector2{ Util::RandomF(0.0f, delta.X), Util::RandomF(0.0f, delta.Y) };
+							}
+							instances[dy * m_BatchDensity.X + dx].Position = { pos.X, m_BatchUniformHeight, pos.Y };
+						}
+					}
+				}
+				ImGui::TreePop();
+			}
+			if (instances.Size()) {
+				ImGui::SliderInt("Instance Edit Index", &m_InstanceEditIndex, 0, (int)instances.Size() - 1);
+				Math::FTransform& transform = instances[m_InstanceEditIndex];
+				ImGui::DragFloat3("Position", transform.Position.Data(), 0.1f);
+				Math::FVector3 euler = transform.Rotation.ToEuler();
+				if (ImGui::DragFloat3("Rotation", euler.Data(), 0.1f)) {
+					transform.Rotation = Math::FQuaternion::Euler(euler);
+				}
+				ImGui::DragFloat3("Scale", transform.Scale.Data(), 0.1f, 0.001f, 1000.0f);
+			}
+			if (ImGui::Button("Save")) {
+				if (Asset::AssetLoader::SaveProjectAsset(&m_Asset, m_PathStr.c_str())) {
+					LOG_INFO("Instance data saved: %s", m_PathStr.c_str());
+				}
+			}
+		}
+	};
 }
 
 namespace Editor {
@@ -125,6 +184,10 @@ namespace Editor {
 
 	const XString& FolderAssetView::GetName() {
 		return m_Node->GetName();
+	}
+
+	void FolderAssetView::Rename(const char* newName) {
+		m_Node->Rename(newName);
 	}
 
 	bool FolderAssetView::IsFolder() {
@@ -149,6 +212,10 @@ namespace Editor {
 		return m_Node->GetName();
 	}
 
+	void FileAssetView::Rename(const char* newName) {
+		m_Node->RenameWithoutExt(newName);
+	}
+
 	bool FileAssetView::IsFolder() {
 		return false;
 	}
@@ -169,6 +236,10 @@ namespace Editor {
 		EditorLevelMgr::Instance()->LoadLevel(m_Node->GetPathStr().c_str());
 	}
 
+	void InstanceDataAssetView::Open() {
+		EditorUIMgr::Instance()->AddWindow(TUniquePtr(new InstanceDataViewer(m_Node->GetPathStr())));
+	}
+
 	TUniquePtr<AssetViewBase> CreateAssetView(FileNode* node) {
 		const XString& ext = node->GetPath().extension().string();
 		if (ext == ".mesh") {
@@ -179,6 +250,9 @@ namespace Editor {
 		}
 		if (ext == ".level") {
 			return TUniquePtr(new LevelAssetView(node));
+		}
+		if (ext == ".instd") {
+			return TUniquePtr(new InstanceDataAssetView(node));
 		}
 		return TUniquePtr(new FileAssetView(node));
 	}

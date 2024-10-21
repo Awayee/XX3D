@@ -43,11 +43,8 @@ namespace Asset {
 		static bool ExportPrimitiveFile(const char* file, const TArray<AssetVertex>& vertices, const TArray<IndexType>& indices, EMeshCompressMode packMode = EMeshCompressMode::NONE);
 	};
 
-	struct InstancedMeshAsset: public AssetBase {
-		XString MeshFile;
-		XString InstanceFile;
-		static bool LoadInstanceFile(const char* file, TArray<Math::FTransform>& instances);
-		static bool SaveInstanceFile(const char* file, TConstArrayView<Math::FTransform> instances);
+	struct InstanceDataAsset: public AssetBase {
+		TArray<Math::FTransform> Instances;
 		bool Load(File::PathStr filePath) override;
 		bool Save(File::PathStr filePath) override;
 	};

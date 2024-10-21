@@ -302,10 +302,10 @@ namespace Object {
 			LOG_WARNING("[InstanceDataComponent::SetInstanceFile] Mesh not found!");
 			return;
 		}
-		TArray<Math::FTransform> instances;
-		Asset::InstancedMeshAsset::LoadInstanceFile(m_InstanceFile.c_str(), instances);
+		Asset::InstanceDataAsset instanceAsset;
+		Asset::AssetLoader::LoadProjectAsset(&instanceAsset, m_InstanceFile.c_str());
 		auto* dataCom = GetScene()->GetComponent<InstancedDataECSComponent>(GetEntityID());
-		dataCom->BuildInstances(meshCom->AABB, MoveTemp(instances));
+		dataCom->BuildInstances(meshCom->AABB, MoveTemp(instanceAsset.Instances));
 	}
 
 	bool InstancedMeshRenderSystem::EnableGPUDriven{ false };

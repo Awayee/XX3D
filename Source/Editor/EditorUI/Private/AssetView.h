@@ -12,7 +12,9 @@ namespace Editor {
 		NodeID m_ID;
 	public:
 		virtual ~AssetViewBase() {}
+		NodeID GetNodeID() const { return m_ID; }
 		virtual const XString& GetName() = 0;
+		virtual void Rename(const char* newName) = 0;
 		virtual bool IsFolder() = 0;
 		virtual void Open() = 0;
 		virtual void Save() = 0;
@@ -25,6 +27,7 @@ namespace Editor {
 	public:
 		FolderAssetView(FolderNode* node);
 		const XString& GetName() override;
+		void Rename(const char* newName) override;
 		bool IsFolder() override;
 		void Open() override;
 		void Save() override;
@@ -37,6 +40,7 @@ namespace Editor {
 	public:
 		FileAssetView(FileNode* node);
 		const XString& GetName() override;
+		void Rename(const char* newName) override;
 		bool IsFolder() override;
 		virtual void Open() override {}
 		virtual void Save() override {}
@@ -57,6 +61,12 @@ namespace Editor {
 	};
 
 	class LevelAssetView: public FileAssetView {
+	public:
+		using FileAssetView::FileAssetView;
+		void Open() override;
+	};
+
+	class InstanceDataAssetView: public FileAssetView {
 	public:
 		using FileAssetView::FileAssetView;
 		void Open() override;

@@ -159,19 +159,42 @@ namespace Editor {
 		m_RelativePathStr = m_RelativePath.string();
 		std::replace(m_RelativePathStr.begin(), m_RelativePathStr.end(), '\\', '/');
 		m_Name = m_RelativePath.filename().string();
-		m_Ext = m_RelativePath.has_extension() ? m_RelativePath.extension().string() : "";
 	}
 
 	File::FPath PathNode::GetFullPath() const {
 		return Asset::AssetLoader::GetAbsolutePath(m_RelativePathStr.c_str());
 	}
 
-
 	bool FolderNode::Contains(const FolderNode* folderNode) const {
 		if(m_ID == folderNode->m_ID) {
 			return false;
 		}
 		return File::IsSubPathOf(folderNode->m_RelativePath, m_RelativePath);
+	}
+
+	void FolderNode::Rename(const char* newName) {
+		if(m_Name != newName) {
+			const File::FPath fullPath = GetFullPath();
+			const File::FPath newFullPath = fullPath.parent_path().append(newName);
+			if(!File::Rename(fullPath, newFullPath)) {
+				LOG_ERROR("Failed to rename to %s", newName);
+				return;
+			}
+			m_Name = newName;
+		}
+	}
+
+	void FileNode::RenameWithoutExt(const char* newName) {
+		if (const XString nameWithoutExt = m_RelativePath.stem().string(); nameWithoutExt != newName) {
+			const File::FPath fullPath = GetFullPath();
+			XString newNameWithExt(newName); newNameWithExt.append(GetExt());
+			const File::FPath newFullPath = fullPath.parent_path().append(newNameWithExt);
+			if (!File::Rename(fullPath, newFullPath)) {
+				LOG_ERROR("Failed to rename to %s", newName);
+				return;
+			}
+			m_Name = newNameWithExt;
+		}
 	}
 
 	AssetManager::AssetManager(File::FPath&& rootPath) {

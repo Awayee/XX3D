@@ -27,14 +27,12 @@ namespace Editor {
 		File::FPath m_RelativePath;//relative path
 		XString m_RelativePathStr;
 		XString m_Name;
-		XString m_Ext;
 		friend class AssetManager;
 	public:
 		PathNode(const AssetManager* owner, NodeID id) : m_Owner(owner), m_ID(id) {}
 		void ResetPath(File::FPath&& relativePath, NodeID parent);
-		const XString& GetName() const { return m_Name; }
+		const XString& GetName() const { return m_Name; } // name with ext
 		const File::FPath& GetPath() const { return m_RelativePath; }
-		XString GetExt() const { return m_Ext; }
 		File::FPath GetFullPath() const;
 		const XString& GetPathStr() const { return m_RelativePathStr; }
 		NodeID GetID() const { return m_ID; }
@@ -52,6 +50,7 @@ namespace Editor {
 		const TArray<NodeID>& GetChildFolders() const { return m_Folders; }
 		const TArray<NodeID>& GetChildFiles() const { return m_Files; }
 		bool Contains(const FolderNode* folderNode) const;
+		void Rename(const char* newName);
 	};
 
 	//file
@@ -61,6 +60,9 @@ namespace Editor {
 		friend class AssetManager;
 	public:
 		FileNode(const AssetManager* owner, NodeID id): PathNode(owner, id){}
+		XString GetExt() const { return m_RelativePath.extension().string(); }
+		XString GetNameWithoutExt() const { return m_RelativePath.stem().string(); }
+		void RenameWithoutExt(const char* newName);
 	};
 
 	class AssetManager {

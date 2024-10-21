@@ -286,31 +286,9 @@ namespace Asset {
 		return true;
 	}
 
-	bool InstancedMeshAsset::Load(File::PathStr filePath) {
-		Json::Document doc;
-		if (!Json::ReadFile(filePath, doc, false)) {
-			return false;
-		}
-		if (doc.HasMember("MeshFile")) {
-			MeshFile = doc["MeshFile"].GetString();
-		}
-		if (doc.HasMember("InstanceFile")) {
-			InstanceFile = doc["InstanceFile"].GetString();
-		}
-		return true;
-	}
-
-	bool InstancedMeshAsset::Save(File::PathStr filePath) {
-		Json::Document doc(Json::Type::kObjectType);
-		Json::AddStringMember(doc, "MeshFile", MeshFile, doc.GetAllocator());
-		Json::AddStringMember(doc, "InstanceFile", InstanceFile, doc.GetAllocator());
-		return Json::WriteFile(filePath, doc, false);
-	}
-
-	bool InstancedMeshAsset::LoadInstanceFile(const char* file, TArray<Math::FTransform>& instances) {
-		const XString fileFullPath = AssetLoader::AssetPath().append(file).string();
-		instances.Reset();
-		if(File::ReadFileWithSize f(fileFullPath, true); f.IsOpen()) {
+	bool InstanceDataAsset::Load(File::PathStr filePath) {
+		Instances.Reset();
+		if (File::ReadFileWithSize f(filePath, true); f.IsOpen()) {
 			// load meta data size
 			uint32 instanceSize;
 			f.Read(&instanceSize, sizeof(instanceSize));
@@ -321,38 +299,37 @@ namespace Asset {
 			f.Read(compressedData.Data(), compressedByteSize);
 			LZ4_decompress_safe(compressedData.Data(), (char*)packedTransforms.Data(), (int)compressedByteSize, (int)packedTransforms.ByteSize());
 			// unpack
-			instances.Reserve(instanceSize);
-			for(auto& packedTransform: packedTransforms) {
-				packedTransform.Unpack(instances.EmplaceBack());
+			Instances.Reserve(instanceSize);
+			for (auto& packedTransform : packedTransforms) {
+				packedTransform.Unpack(Instances.EmplaceBack());
 			}
 			return true;
 		}
-		LOG_WARNING("[InstancedMeshAsset::LoadInstanceFile] Failed to load File: %s!", file);
+		LOG_WARNING("[InstancedMeshAsset::LoadInstanceFile] Failed to load File: %s!", filePath);
 		return false;
 	}
 
-	bool InstancedMeshAsset::SaveInstanceFile(const char* file, TConstArrayView<Math::FTransform> instances) {
-		if(!instances.Size()) {
+	bool InstanceDataAsset::Save(File::PathStr filePath) {
+		if (!Instances.Size()) {
 			LOG_WARNING("[InstancedMeshAsset::SaveInstanceFile] no instances!");
 			return false;
 		}
-		const XString fileFullPath = AssetLoader::AssetPath().append(file).string();
-		const uint32 instanceSize = instances.Size();
+		const uint32 instanceSize = Instances.Size();
 		TArray<char> packedData(sizeof(PackedFTransform) * instanceSize);
 		PackedFTransform* packedDataPtr = (PackedFTransform*)packedData.Data();
 		for(uint32 i=0; i< instanceSize; ++i) {
-			packedDataPtr[i].Pack(instances[i]);
+			packedDataPtr[i].Pack(Instances[i]);
 		}
 		const uint32 compressBound = LZ4_compressBound((int)packedData.ByteSize());
 		TArray<char> compressedData(compressBound);
 		const uint32 compressedSize = LZ4_compress_default(packedData.Data(), compressedData.Data(), (int)packedData.Size(), (int)compressBound);
 		compressedData.Resize(compressedSize);
-		if (File::WriteFile f(fileFullPath, true); f.IsOpen()) {
+		if (File::WriteFile f(filePath, true); f.IsOpen()) {
 			f.Write(&instanceSize, sizeof(instanceSize));
 			f.Write(compressedData.Data(), compressedData.ByteSize());
 			return true;
 		}
-		LOG_WARNING("[InstancedMeshAsset::SaveInstanceFile] Failed to load File: %s!", file);
+		LOG_WARNING("[InstancedMeshAsset::SaveInstanceFile] Failed to load File: %s!", filePath);
 		return false;
 	}
 }
