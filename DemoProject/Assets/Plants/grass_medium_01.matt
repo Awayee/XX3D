@@ -2,7 +2,7 @@
     "TransparencyMode": 0,
     "Scalars": [
         0.17000000178813934,
-        0.0
+        0.10000000149011612
     ],
     "Vectors": [
         0.0,
@@ -12,7 +12,7 @@
     ],
     "Textures": [
         "Plants/grass_medium_01_diff.texture",
-        0
+        1
     ],
     "Parameters": [
         "BaseColor",

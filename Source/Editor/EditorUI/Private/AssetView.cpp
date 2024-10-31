@@ -114,7 +114,7 @@ namespace {
 			for (auto& primitive : m_Asset.Primitives) {
 				File::FPath primitivePath = primitive.BinaryFile;
 				const XString primitiveName = File::FPath{ primitive.BinaryFile }.stem().string();
-				ImGui::DraggableFileItemAssets(primitiveName.c_str(), primitive.MaterialFile, ".texture");
+				ImGui::DraggableFileItemAssets(primitiveName.c_str(), primitive.MaterialFile, "*.matt;*.mati");
 			}
 			if (ImGui::Button("Save")) {
 				Asset::AssetLoader::SaveProjectAsset(&m_Asset, m_PathStr.c_str());

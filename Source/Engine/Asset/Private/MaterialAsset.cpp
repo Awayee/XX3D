@@ -162,6 +162,7 @@ namespace Asset {
 			for(float value: ScalarOverrides) {
 				scalarWriter.PushBack(value);
 			}
+			scalarWriter.Write("Scalars");
 		}
 		if (VectorOverrides.Size()) {
 			Json::ValueWriter vectorWriter(Json::Type::kArrayType, doc);
@@ -186,7 +187,7 @@ namespace Asset {
 	bool MaterialAsset::CheckAndFixParameters(const MaterialTemplateAsset& templateAsset) {
 		if(ScalarOverrides.Size() == templateAsset.Scalars.Size() &&
 			VectorOverrides.Size() == templateAsset.Vectors.Size() &&
-			TextureOverrides.Size() == templateAsset.Vectors.Size() ) {
+			TextureOverrides.Size() == templateAsset.Textures.Size() ) {
 			return true;
 		}
 		const auto& templateScalars = templateAsset.Scalars;
@@ -199,7 +200,7 @@ namespace Asset {
 		const auto& templateVectors = templateAsset.Vectors;
 		if (const uint32 targetSize = VectorOverrides.Size(); targetSize != templateVectors.Size()) {
 			VectorOverrides.Resize(templateVectors.Size());
-			for (uint32 i = targetSize; i < templateScalars.Size(); ++i) {
+			for (uint32 i = targetSize; i < templateVectors.Size(); ++i) {
 				VectorOverrides[i] = templateVectors[i];
 			}
 		}

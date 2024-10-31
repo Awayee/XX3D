@@ -1,5 +1,9 @@
 {
     "Template": "keqing/mat/keqing.matt",
+    "Scalars": [
+        0.28999999165534973,
+        0.10000000298023224
+    ],
     "Vectors": [
         0.0,
         0.0,
