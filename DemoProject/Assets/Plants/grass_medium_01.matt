@@ -1,0 +1,39 @@
+{
+    "TransparencyMode": 0,
+    "Scalars": [
+        0.17000000178813934,
+        0.0
+    ],
+    "Vectors": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+    ],
+    "Textures": [
+        "Plants/grass_medium_01_diff.texture",
+        0
+    ],
+    "Parameters": [
+        "BaseColor",
+        2,
+        0,
+        2,
+        0,
+        "Normal",
+        1,
+        1,
+        2,
+        0,
+        "Roughness",
+        0,
+        0,
+        0,
+        0,
+        "Metallic",
+        0,
+        0,
+        0,
+        1
+    ]
+}

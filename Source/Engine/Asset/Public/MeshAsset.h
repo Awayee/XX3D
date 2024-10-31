@@ -29,7 +29,6 @@ namespace Asset {
 			XString BinaryFile;
 			XString MaterialFile;
 			XString Name;
-			TArray<XString> Textures;
 		};
 		TArray<SPrimitive> Primitives;
 
@@ -47,5 +46,6 @@ namespace Asset {
 		TArray<Math::FTransform> Instances;
 		bool Load(File::PathStr filePath) override;
 		bool Save(File::PathStr filePath) override;
+		static void InitDefault(InstanceDataAsset& asset);
 	};
 }

@@ -39,7 +39,7 @@ namespace Object {
 		Json::Document doc;
 		XString fullPath = Asset::AssetLoader::GetAbsolutePath(file).string();
 		if(!Json::ReadFile(fullPath.c_str(), doc, false)) {
-			LOG_WARNING("Failed to load level: %s", file);
+			LOG_ERROR("Failed to load level: %s", file);
 			return false;
 		}
 		if(doc.HasMember("Camera")) {
@@ -61,12 +61,13 @@ namespace Object {
 		}
 		if (doc.HasMember("DirectionalLight")) {
 			const rapidjson::Value& directionalLightParam = doc["DirectionalLight"].GetObject();
-			Math::FVector3 rotation, color;
+			Math::FVector3 rotation;
 			Json::LoadFloatArray(directionalLightParam["Rotation"], rotation.Data(), 3);
-			Json::LoadFloatArray(directionalLightParam["Color"], color.Data(), 3);
+			Math::FVector4 color4;
+			Json::LoadFloatArray(directionalLightParam["Color"], color4.Data(), 4);
 			Object::DirectionalLight* directionalLight = m_Scene->GetDirectionalLight();
 			directionalLight->SetRotation(rotation);
-			directionalLight->SetColor(color);
+			directionalLight->SetColor(color4);
 		}
 
 		m_Actors.Reset();

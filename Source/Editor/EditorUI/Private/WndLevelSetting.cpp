@@ -23,15 +23,17 @@ namespace Editor {
 		if (!scene) {
 			return;
 		}
-		if(ImGui::CollapsingHeader("DirectionalLight", ImGuiTreeNodeFlags_DefaultOpen)) {
+		if (ImGui::CollapsingHeader("DirectionalLight", ImGuiTreeNodeFlags_DefaultOpen)) {
 			Object::DirectionalLight* light = scene->GetDirectionalLight();
 			Math::FVector3 lightRotation = light->GetRotation();
-			if(ImGui::DragFloat3("Rotation", lightRotation.Data(), 0.01f, -Math::PI * 2.0f, Math::PI * 2.0f)) {
+			if (ImGui::DragFloat3("Rotation", lightRotation.Data(), 0.01f, -Math::PI * 2.0f, Math::PI * 2.0f)) {
 				light->SetRotation(lightRotation);
 			}
-			Math::FVector3 lightColor = light->GetColor();
-			if(ImGui::ColorPicker3("Color", lightColor.Data(), ImGuiColorEditFlags_None)) {
-				light->SetColor(lightColor);
+			Math::FVector4 color4 = light->GetColor();
+			bool colorDirty = ImGui::ColorEdit3("Color", color4.Data(), ImGuiColorEditFlags_None);
+			colorDirty |= ImGui::DragFloat("Intensity", &color4.W, 0.01f, 0.0f, 9999.0f);
+			if(colorDirty) {
+				light->SetColor(color4);
 			}
 			Object::DirectionalShadowConfig config = light->GetShadowConfig();
 			bool isDirty{ false };

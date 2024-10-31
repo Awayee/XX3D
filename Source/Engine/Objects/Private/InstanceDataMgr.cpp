@@ -212,7 +212,7 @@ namespace Object {
 		m_InstanceBuffer.Reset();
 	}
 
-	void InstanceDataMgr::Build(const Math::AABB3& resAABB, TArray<Math::FTransform>&& transforms) {
+	void InstanceDataMgr::Build(const Math::AABB3& resAABB, const TArray<Math::FTransform>& transforms) {
 		Reset();
 		m_AABBs.Reserve(transforms.Size());
 		m_Instances.Reserve(transforms.Size());

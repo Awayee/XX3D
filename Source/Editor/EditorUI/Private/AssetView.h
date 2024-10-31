@@ -70,6 +70,20 @@ namespace Editor {
 	public:
 		using FileAssetView::FileAssetView;
 		void Open() override;
+		static NodeID NewDefault(uint32 folderNode);
+	};
+
+	class MaterialTemplateAssetView: public FileAssetView {
+	public:
+		using FileAssetView::FileAssetView;
+		void Open() override;
+		static NodeID NewDefault(uint32 folderNode);
+	};
+
+	class MaterialInstanceAssetView: public FileAssetView {
+	public:
+		using FileAssetView::FileAssetView;
+		void Open() override;
 	};
 
 	TUniquePtr<AssetViewBase> CreateAssetView(FileNode* node);

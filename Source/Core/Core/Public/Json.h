@@ -23,6 +23,12 @@ namespace Json {
 		void AddMember(const char* name, ValueWriter& val);
 		void AddString(const char* name, const XString& str);
 		void AddFloatArray(const char* name, const float* pData, uint32 count);
+		template<typename T>
+		void PushBack(T val) {
+			m_Value.PushBack(val, m_Document.GetAllocator());
+		}
+
+		void PushBack(const XString& str);
 		void PushBack(ValueWriter& val);
 		void Write(const char* name);
 	private:
@@ -35,7 +41,5 @@ namespace Json {
 
 	void AddStringMember(Document& doc, const char* name, const XString& str, Document::AllocatorType& a);
 	void AddString(Value& obj, const char* name, const XString& str, Document::AllocatorType& a);
-
-	void AddFloatArray(Value& obj, const char* name, const float* pData, uint32 count, Document::AllocatorType& a);
 	void LoadFloatArray(const Value& obj, float* pData, uint32 count);
 }	

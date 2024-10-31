@@ -194,6 +194,14 @@ bool RHIDynamicBuffer::operator==(const RHIDynamicBuffer& rhs) const {
     return BufferIndex == rhs.BufferIndex && Offset == rhs.Offset && Size == rhs.Size && Stride == rhs.Stride;
 }
 
+bool RHIDynamicBuffer::IsValid() const {
+    return INVALID_INDEX != BufferIndex;
+}
+
+RHIDynamicBuffer::RHIDynamicBuffer(): BufferIndex(INVALID_INDEX), Offset(0), Size(0), Stride(0) {}
+
+RHIDynamicBuffer::RHIDynamicBuffer(uint32 bufferIndex, uint32 offset, uint32 size, uint32 stride): BufferIndex(bufferIndex), Offset(offset), Size(size), Stride(stride){}
+
 bool RHITextureSubRes::operator==(const RHITextureSubRes& rhs) const {
     return ViewFlags == rhs.ViewFlags && Dimension == rhs.Dimension &&
         MipIndex == rhs.MipIndex && MipSize == rhs.MipSize && ArrayIndex == rhs.ArrayIndex && ArraySize == rhs.ArraySize;

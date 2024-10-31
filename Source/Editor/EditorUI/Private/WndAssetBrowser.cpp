@@ -131,16 +131,7 @@ namespace {
 
 	bool CreateDefaultInstanceData(const XString& pathStr) {
 		Asset::InstanceDataAsset asset;
-		constexpr uint32 instanceSize = 32;
-		asset.Instances.Reserve(instanceSize);
-		for(uint32 i=0; i<instanceSize; ++i) {
-			for(uint32 j=0; j<instanceSize; ++j) {
-				auto& instance = asset.Instances.EmplaceBack();
-				instance.Rotation = Math::FQuaternion::IDENTITY;
-				instance.Scale = Math::FVector3::ONE;
-				instance.Position = { (float)i, 0.0f, (float)j };
-			}
-		}
+		Asset::InstanceDataAsset::InitDefault(asset);
 		return Asset::AssetLoader::SaveProjectAsset(&asset, pathStr.c_str());
 	}
 }
@@ -317,17 +308,15 @@ namespace Editor {
 			const NodeID folderNode = m_CurrentFolder->GetID();
 			Editor::EditorUIMgr* uiMgr = Editor::EditorUIMgr::Instance();
 			if(ImGui::BeginMenu("New")) {
+				NodeID newNodeID = INVALID_NODE;
 				if(ImGui::MenuItem("Instance Data")) {
-					XString filePath = GenerateNewFilePath(".instd");
-					if(CreateDefaultInstanceData(filePath)) {
-						const NodeID newNodeID = Editor::ProjectAssetMgr::Instance()->CreateFile(MoveTemp(filePath), m_CurrentFolder->GetID());
-						if(INVALID_NODE != newNodeID) {
-							EnterRenameByNodeID(newNodeID);
-						}
-					}
+					newNodeID = InstanceDataAssetView::NewDefault(folderNode);
 				}
-				if(ImGui::MenuItem("Material")) {
-					
+				if(ImGui::MenuItem("Material Template")) {
+					newNodeID = MaterialTemplateAssetView::NewDefault(folderNode);
+				}
+				if(INVALID_NODE != newNodeID) {
+					EnterRenameByNodeID(newNodeID);
 				}
 				ImGui::EndMenu();
 			}
@@ -382,18 +371,5 @@ namespace Editor {
 
 	void WndAssetBrowser::ExitRename() {
 		m_RenamingIdx = INVALID_INDEX;
-	}
-
-	XString WndAssetBrowser::GenerateNewFilePath(const char* ext) {
-		uint32 identityNum = 0;
-		File::FPath fileFullPath = m_CurrentFolder->GetFullPath(); fileFullPath.append("NewAsset");
-		fileFullPath.replace_extension(ext);
-		while(File::Exist(fileFullPath)) {
-			XString fileName = StringFormat("NewAsset%u", identityNum++);
-			fileFullPath = m_CurrentFolder->GetFullPath();
-			fileFullPath.append(fileName);
-			fileFullPath.replace_extension(ext);
-		}
-		return fileFullPath.string();
 	}
 }

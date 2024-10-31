@@ -117,4 +117,8 @@ namespace Math {
 		constexpr double e = 1e-6;
 		return Abs(val) < e;
 	}
+
+	inline unsigned int AlignUp(unsigned int value, unsigned int alignment) {
+		return (value + alignment - 1) & ~(alignment - 1);
+	}
 }

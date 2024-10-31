@@ -42,7 +42,6 @@ add_subdirectory("Source/Core")
 add_subdirectory("Source/Engine")
 add_subdirectory("Source/Editor")
 add_subdirectory("Source/Runtime")
-add_subdirectory("Source/ShaderCompiler")
 add_subdirectory("Source/ThirdParty")
 add_subdirectory("Shaders")
 

@@ -6,6 +6,9 @@
 #include "Objects/Public/RenderResource.h"
 #include "Util/Public/Random.h"
 #include "Window/Public/EngineWindow.h"
+#include "Asset/Public/MaterialAsset.h"
+#include "Objects/Public/Material.h"
+#include <imnodes.h>
 
 namespace {
 	class TextureViewer : public Editor::EditorWndBase{
@@ -175,9 +178,213 @@ namespace {
 			}
 		}
 	};
+
+	class MaterialTemplateEditor : public Editor::EditorWndBase {
+	public:
+		MaterialTemplateEditor(const XString& pathStr) : EditorWndBase("Material Template Editor", ImGuiWindowFlags_NoDocking), m_PathStr(pathStr), m_FistDisplay(true) {
+			AutoDelete();
+			Asset::AssetLoader::LoadProjectAsset(&m_Asset, m_PathStr.c_str());
+		}
+		void WndContent() override {
+			ImGui::TextUnformatted(m_PathStr.c_str());
+			if (ImGui::Button("Save")) {
+				Object::MaterialMgr::Instance()->ReloadMaterialTemplate(m_PathStr, m_Asset);
+				if (Asset::AssetLoader::SaveProjectAsset(&m_Asset, m_PathStr.c_str())) {
+					LOG_INFO("Material template saved: %s", m_PathStr.c_str());
+				}
+			}
+			bool bParamTypeDirty = false;
+			constexpr float itemWidth = 128.0f;
+			int uniqueID = 0;
+			// material params
+			ImNodes::BeginNodeEditor();
+			for(int i=0; i<(int)m_Asset.Parameters.Size(); ++i) {
+				auto& param = m_Asset.Parameters[i];
+				const uint32 paramOffset = param.Offset;
+				const Asset::EMaterialParamType paramType = param.ParamType;
+				ImNodes::BeginNode(i);
+				ImGui::TextUnformatted(param.Name.c_str());
+				ImGui::PushID(uniqueID++);
+				ImGui::SameLine();
+				ImGui::SetNextItemWidth(itemWidth);
+				int iParamType = (int)paramType;
+				if (ImGui::Combo("##", &iParamType, "Scalar\0Vector\0Texture")) {
+					bParamTypeDirty = true;
+					param.ParamType = (Asset::EMaterialParamType)iParamType;
+					param.Offset = INVALID_INDEX;
+				}
+				ImGui::PopID();
+
+				switch (paramType) {
+				case Asset::EMaterialParamType::Scalar: {
+					ImGui::PushID(uniqueID++);
+					ImGui::SetNextItemWidth(itemWidth);
+					ImGui::DragFloat("##", &m_Asset.Scalars[paramOffset], 0.01f, 0.0f, 1.0f);
+					ImGui::PopID();
+				}break;
+				case Asset::EMaterialParamType::Vector: {
+					ImGui::PushID(uniqueID++);
+					ImGui::SetNextItemWidth(itemWidth * 2);
+					ImGui::ColorEdit4("##", m_Asset.Vectors[paramOffset].Data());
+					ImGui::PopID();
+				}break;
+				case Asset::EMaterialParamType::Texture: {
+					auto& texInfo = m_Asset.Textures[paramOffset];
+					XString& texRef = texInfo.Texture;
+					ImGui::PushID(uniqueID++);
+					ImGui::SetNextItemWidth(itemWidth * 2);
+					ImGui::DraggableFileItemAssets("##", texRef, "*.texture");
+					ImGui::PopID();
+					// sampler
+					Object::MaterialSamplerCode samplerCode = texInfo.SamplerCode;
+					int filter = (int)samplerCode.Filter;
+					int addressMode = (int)samplerCode.AddressMode;
+
+					ImGui::PushID(uniqueID++);
+					ImGui::SetNextItemWidth(itemWidth);
+					bool samplerDirty = ImGui::Combo("Filter", &filter, "Point\0Bilinear\0AnisotropicPoint\0AnisotropicLinear");
+					ImGui::PopID();
+
+					ImGui::PushID(uniqueID++);
+					ImGui::SetNextItemWidth(itemWidth);
+					samplerDirty |= ImGui::Combo("AddressMode", &addressMode, "Warp\0Clamp\0Mirror\0Border");
+					ImGui::PopID();
+					if (samplerDirty) {
+						samplerCode.Filter = (ESamplerFilter)filter;
+						samplerCode.AddressMode = (ESamplerAddressMode)addressMode;
+						texInfo.SamplerCode = samplerCode.Code;
+					}
+				}break;
+				}
+				ImNodes::EndNode();
+			}
+
+			// align node pos when first tick
+			if(m_FistDisplay) {
+				float x = 0.0f, y = 0.0f;
+				constexpr float nodeSpace = 16.0f;
+				for(int i=0; i<(int)m_Asset.Parameters.Size(); ++i) {
+					ImNodes::SetNodeGridSpacePos(i, { x, y });
+					ImVec2 nodeSize = ImNodes::GetNodeDimensions(i);
+					y += nodeSize.y + nodeSpace;
+				}
+				m_FistDisplay = false;
+			}
+			ImNodes::EndNodeEditor();
+
+			if(bParamTypeDirty) {
+				RebuildParams();
+			}
+		}
+	private:
+		XString m_PathStr;
+		Asset::MaterialTemplateAsset m_Asset;
+		bool m_FistDisplay;
+		void RebuildParams() {
+			TArray<float> scalars;
+			TArray<Math::FVector4> vectors;
+			TArray<Asset::MaterialTemplateAsset::TextureParameter> textures;
+			// parse texture and vectors
+			for(auto& param: m_Asset.Parameters) {
+				if(Asset::EMaterialParamType::Scalar == param.ParamType) {
+					const uint32 newOffset = scalars.Size();
+					scalars.PushBack(0.0f);
+					if(INVALID_INDEX != param.Offset) {
+						scalars[newOffset] = m_Asset.Scalars[param.Offset];
+					}
+					param.Offset = newOffset;
+				}
+				else if(Asset::EMaterialParamType::Texture == param.ParamType) {
+					const uint32 newOffset = textures.Size();
+					textures.PushBack({"", 0u});
+					if(INVALID_INDEX != param.Offset) {
+						textures[newOffset] = m_Asset.Textures[param.Offset];
+					}
+					param.Offset = newOffset;
+				}
+				else if (Asset::EMaterialParamType::Vector == param.ParamType) {
+					const uint32 newOffset = vectors.Size();
+					vectors.PushBack(Math::FVector4::ZERO);
+					if(INVALID_INDEX != param.Offset) {
+						vectors[newOffset] = m_Asset.Vectors[param.Offset];
+					}
+					param.Offset = newOffset;
+				}
+			}
+			m_Asset.Scalars.Swap(scalars);
+			m_Asset.Vectors.Swap(vectors);
+			m_Asset.Textures.Swap(textures);
+		}
+	};
+
+	class MaterialInstanceEditor: public Editor::EditorWndBase {
+	public:
+		MaterialInstanceEditor(const XString& pathStr) : EditorWndBase("Material Editor", ImGuiWindowFlags_NoDocking), m_PathStr(pathStr), m_PreviewInScene(false){
+			AutoDelete();
+			Asset::AssetLoader::LoadProjectAsset(&m_Asset, m_PathStr.c_str());
+			Asset::AssetLoader::LoadProjectAsset(&m_ParentAsset, m_Asset.Template.c_str());
+			// verify parameters
+			if(!m_Asset.CheckAndFixParameters(m_ParentAsset)) {
+				LOG_WARNING("Material instance \"%s\" dose not match its template, fixed.", m_PathStr.c_str());
+			}
+		}
+		void WndContent() override {
+			ImGui::TextUnformatted(m_PathStr.c_str());
+			ImGui::Checkbox("Preview in Scene", &m_PreviewInScene);
+			bool isDirty = false;
+			for(auto& param: m_ParentAsset.Parameters) {
+				const char* nameStr = param.Name.c_str();
+				switch (param.ParamType) {
+				case Asset::EMaterialParamType::Scalar: {
+					isDirty |= ImGui::DragFloat(nameStr, &m_Asset.ScalarOverrides[param.Offset], 0.01f, 0.0f, 1.0f);
+				}break;
+				case Asset::EMaterialParamType::Vector: {
+					Math::FVector4& vecRef = m_Asset.VectorOverrides[param.Offset];
+					isDirty |= ImGui::ColorEdit4(nameStr, vecRef.Data());
+				}break;
+				case Asset::EMaterialParamType::Texture: {
+					XString& texRef = m_Asset.TextureOverrides[param.Offset];
+					isDirty |= ImGui::DraggableFileItemAssets(nameStr, texRef, "*.texture");
+				}break;
+				}
+			}
+			isDirty &= m_PreviewInScene;
+			if (ImGui::Button("Save")) {
+				isDirty = true;
+				if (Asset::AssetLoader::SaveProjectAsset(&m_Asset, m_PathStr.c_str())) {
+					LOG_INFO("Material instance saved: %s", m_PathStr.c_str());
+				}
+			}
+			if(isDirty) {
+				Object::MaterialMgr::Instance()->ReloadMaterialInstance(m_PathStr, m_Asset);
+			}
+		}
+	private:
+		XString m_PathStr;
+		Asset::MaterialAsset m_Asset;
+		Asset::MaterialTemplateAsset m_ParentAsset;
+		bool m_PreviewInScene;
+	};
 }
 
 namespace Editor {
+
+	inline XString GenerateUniqueAssetName(FolderNode* folderNode, const char* ext) {
+		uint32 identityNum = 0;
+		const File::FPath dirFullPath = folderNode->GetFullPath();
+		File::FPath fileFullPath = dirFullPath;
+		XString fileName = "NewAsset";
+		fileFullPath.append(fileName).replace_extension(ext);
+		while (File::Exist(fileFullPath)) {
+			fileName = StringFormat("NewAsset%u", identityNum++);
+			fileFullPath = dirFullPath;
+			fileFullPath.append(fileName).replace_extension(ext);
+		}
+		File::FPath filePath = folderNode->GetPath();
+		filePath.append(fileName).replace_extension(ext);
+		return filePath.string();
+	}
+
 	FolderAssetView::FolderAssetView(FolderNode* node): m_Node(node) {
 		m_ID = m_Node->GetID();
 	}
@@ -240,6 +447,36 @@ namespace Editor {
 		EditorUIMgr::Instance()->AddWindow(TUniquePtr(new InstanceDataViewer(m_Node->GetPathStr())));
 	}
 
+	NodeID InstanceDataAssetView::NewDefault(uint32 folderNode) {
+		FolderNode* folder = Editor::ProjectAssetMgr::Instance()->GetFolderNode(folderNode);
+		XString filePathStr = GenerateUniqueAssetName(folder, ".instd");
+		Asset::InstanceDataAsset asset;
+		Asset::InstanceDataAsset::InitDefault(asset);
+		if(Asset::AssetLoader::SaveProjectAsset(&asset, filePathStr.c_str())) {
+			return Editor::ProjectAssetMgr::Instance()->CreateFile(filePathStr, folderNode);
+		}
+		return INVALID_NODE;
+	}
+
+	void MaterialTemplateAssetView::Open() {
+		EditorUIMgr::Instance()->AddWindow(TUniquePtr(new MaterialTemplateEditor(m_Node->GetPathStr())));
+	}
+
+	NodeID MaterialTemplateAssetView::NewDefault(uint32 folderNode) {
+		FolderNode* folder = Editor::ProjectAssetMgr::Instance()->GetFolderNode(folderNode);
+		XString filePathStr = GenerateUniqueAssetName(folder, ".matt");
+		Asset::MaterialTemplateAsset asset;
+		Asset::MaterialTemplateAsset::InitDefault(asset);
+		if (Asset::AssetLoader::SaveProjectAsset(&asset, filePathStr.c_str())) {
+			return Editor::ProjectAssetMgr::Instance()->CreateFile(filePathStr, folderNode);
+		}
+		return INVALID_NODE;
+	}
+
+	void MaterialInstanceAssetView::Open() {
+		EditorUIMgr::Instance()->AddWindow(TUniquePtr(new MaterialInstanceEditor(m_Node->GetPathStr())));
+	}
+
 	TUniquePtr<AssetViewBase> CreateAssetView(FileNode* node) {
 		const XString& ext = node->GetPath().extension().string();
 		if (ext == ".mesh") {
@@ -253,6 +490,12 @@ namespace Editor {
 		}
 		if (ext == ".instd") {
 			return TUniquePtr(new InstanceDataAssetView(node));
+		}
+		if (ext == ".matt") {
+			return TUniquePtr(new MaterialTemplateAssetView(node));
+		}
+		if (ext == ".mati") {
+			return TUniquePtr(new MaterialInstanceAssetView(node));
 		}
 		return TUniquePtr(new FileAssetView(node));
 	}

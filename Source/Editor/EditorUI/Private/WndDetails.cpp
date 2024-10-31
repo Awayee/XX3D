@@ -13,7 +13,11 @@ namespace Editor {
 		auto& transform = com->Transform;
 		bool dirty = ImGui::DragFloat3("Position", transform.Position.Data(), 0.1f);
 		dirty |= ImGui::DragFloat3("Scale", transform.Scale.Data(), 0.01f);
-		dirty |= ImGui::DragFloat3("Rotation", transform.Rotation.Data(), 0.01f);
+		Math::FVector3 euler = transform.Rotation.ToEuler();
+		if(ImGui::DragFloat3("Rotation", euler.Data(), 0.01f)) {
+			dirty = true;
+			transform.Rotation = Math::FQuaternion::Euler(euler);
+		}
 		if (dirty) {
 			com->TransformUpdated();
 		}

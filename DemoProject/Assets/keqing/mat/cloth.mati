@@ -1,0 +1,12 @@
+{
+    "Template": "keqing/mat/keqing.matt",
+    "Vectors": [
+        0.0,
+        0.019607843831181526,
+        0.0,
+        0.0
+    ],
+    "Textures": [
+        "keqing/tex/cloth.texture"
+    ]
+}

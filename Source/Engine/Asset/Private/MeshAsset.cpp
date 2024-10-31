@@ -332,4 +332,17 @@ namespace Asset {
 		LOG_WARNING("[InstancedMeshAsset::SaveInstanceFile] Failed to load File: %s!", filePath);
 		return false;
 	}
+
+	void InstanceDataAsset::InitDefault(InstanceDataAsset& asset) {
+		constexpr uint32 instanceSize = 32;
+		asset.Instances.Reserve(instanceSize);
+		for (uint32 i = 0; i < instanceSize; ++i) {
+			for (uint32 j = 0; j < instanceSize; ++j) {
+				auto& instance = asset.Instances.EmplaceBack();
+				instance.Rotation = Math::FQuaternion::IDENTITY;
+				instance.Scale = Math::FVector3::ONE;
+				instance.Position = { (float)i, 0.0f, (float)j };
+			}
+		}
+	}
 }

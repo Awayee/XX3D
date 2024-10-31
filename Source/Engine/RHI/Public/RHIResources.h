@@ -46,7 +46,11 @@ struct RHIDynamicBuffer {
 	uint32 Offset;
 	uint32 Size;
 	uint32 Stride;
+	RHIDynamicBuffer();
+	RHIDynamicBuffer(uint32 bufferIndex, uint32 offset, uint32 size, uint32 stride);
+	RHIDynamicBuffer(const RHIDynamicBuffer& rhs) = default;
 	bool operator==(const RHIDynamicBuffer& rhs) const;
+	bool IsValid() const;
 };
 
 // texture sub resource
@@ -229,7 +233,7 @@ struct RHIBlendState {
 
 struct RHIBlendDesc {
 	TStaticArray<RHIBlendState, RHI_COLOR_TARGET_MAX> BlendStates;
-	bool LogicOpEnable;
+	bool LogicOpEnable{ false };
 	ELogicOp LogicOp;
 	float BlendConst[4];
 };

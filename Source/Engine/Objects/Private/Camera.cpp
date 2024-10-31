@@ -210,7 +210,7 @@ namespace Object {
 		m_Uniform = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(CameraUBO), &cameraUBO, 0);
 	}
 
-	const RHIDynamicBuffer& RenderCamera::GetUniformBuffer() {
+	const RHIDynamicBuffer& RenderCamera::GetUniformBuffer() const {
 		return m_Uniform;
 	}
 

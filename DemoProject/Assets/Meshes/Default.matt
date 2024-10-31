@@ -1,0 +1,12 @@
+{
+    "TransparencyMode": 0,
+    "Scalars": [1.0, 0.0, 0.5, 0.5],
+    "Vectors": [],
+    "Textures": [],
+    "Parameters": [
+        "BaseColor", 0, 0, 2, 0,
+        "Normal", 0, 1, 2, 1,
+        "Roughness", 0, 0, 0, 2,
+        "Metallic", 0, 0, 0, 3
+    ]
+}

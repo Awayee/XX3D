@@ -2,83 +2,83 @@
     "Name": "keqing",
     "Primitives": [
         {
-            "Material": "keqing/tex/face.texture",
+            "Material": "keqing/mat/face.mati",
             "BinaryFile": "keqing/keqing0.primitive"
         },
         {
-            "Material": "keqing/tex/emoj.texture",
+            "Material": "keqing/mat/emoj.mati",
             "BinaryFile": "keqing/keqing1.primitive"
         },
         {
-            "Material": "keqing/tex/face.texture",
+            "Material": "keqing/mat/face.mati",
             "BinaryFile": "keqing/keqing2.primitive"
         },
         {
-            "Material": "keqing/tex/hair.texture",
+            "Material": "keqing/mat/hair.mati",
             "BinaryFile": "keqing/keqing3.primitive"
         },
         {
-            "Material": "keqing/tex/hair.texture",
+            "Material": "keqing/mat/hair.mati",
             "BinaryFile": "keqing/keqing4.primitive"
         },
         {
-            "Material": "keqing/tex/hair.texture",
+            "Material": "keqing/mat/hair.mati",
             "BinaryFile": "keqing/keqing5.primitive"
         },
         {
-            "Material": "keqing/tex/hair.texture",
+            "Material": "keqing/mat/hair.mati",
             "BinaryFile": "keqing/keqing6.primitive"
         },
         {
-            "Material": "keqing/tex/hair.texture",
+            "Material": "keqing/mat/hair.mati",
             "BinaryFile": "keqing/keqing7.primitive"
         },
         {
-            "Material": "keqing/tex/hair.texture",
+            "Material": "keqing/mat/hair.mati",
             "BinaryFile": "keqing/keqing8.primitive"
         },
         {
-            "Material": "keqing/tex/hair.texture",
+            "Material": "keqing/mat/hair.mati",
             "BinaryFile": "keqing/keqing9.primitive"
         },
         {
-            "Material": "keqing/tex/hair.texture",
+            "Material": "keqing/mat/hair.mati",
             "BinaryFile": "keqing/keqing10.primitive"
         },
         {
-            "Material": "keqing/tex/cloth.texture",
+            "Material": "keqing/mat/cloth.mati",
             "BinaryFile": "keqing/keqing11.primitive"
         },
         {
-            "Material": "keqing/tex/cloth.texture",
+            "Material": "keqing/mat/cloth.mati",
             "BinaryFile": "keqing/keqing12.primitive"
         },
         {
-            "Material": "keqing/tex/cloth.texture",
+            "Material": "keqing/mat/cloth.mati",
             "BinaryFile": "keqing/keqing13.primitive"
         },
         {
-            "Material": "keqing/tex/cloth.texture",
+            "Material": "keqing/mat/cloth.mati",
             "BinaryFile": "keqing/keqing14.primitive"
         },
         {
-            "Material": "keqing/tex/cloth.texture",
+            "Material": "keqing/mat/cloth.mati",
             "BinaryFile": "keqing/keqing15.primitive"
         },
         {
-            "Material": "keqing/tex/cloth.texture",
+            "Material": "keqing/mat/cloth.mati",
             "BinaryFile": "keqing/keqing16.primitive"
         },
         {
-            "Material": "keqing/tex/skin.texture",
+            "Material": "keqing/mat/skin.mati",
             "BinaryFile": "keqing/keqing17.primitive"
         },
         {
-            "Material": "keqing/tex/cloth.texture",
+            "Material": "keqing/mat/cloth.mati",
             "BinaryFile": "keqing/keqing18.primitive"
         },
         {
-            "Material": "keqing/tex/skin.texture",
+            "Material": "keqing/mat/skin.mati",
             "BinaryFile": "keqing/keqing19.primitive"
         }
     ]

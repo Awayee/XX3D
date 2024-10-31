@@ -10,7 +10,6 @@
 #include "WndDebugView.h"
 #include "WndRenderGraph.h"
 #include "System/Public/Configuration.h"
-#include "Objects/Public/StaticMesh.h"
 
 namespace Editor {
 	void SetImGuiStyle() {
@@ -139,7 +138,6 @@ namespace Editor {
 		uiMgr->AddMenu("Menu", "Save Layout", SaveLayout, nullptr);
 		uiMgr->AddMenu("Menu", "Exit", EditorExit, nullptr);
 		uiMgr->AddMenu("Render", "Capture Frame", []() {RHI::Instance()->CaptureFrame(); }, nullptr);
-		uiMgr->AddMenu("Render", "Enable GPU Driven", {}, &Object::InstancedMeshRenderSystem::EnableGPUDriven);
 	}
 
 	UIController::~UIController() {

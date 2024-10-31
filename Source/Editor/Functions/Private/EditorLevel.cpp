@@ -62,7 +62,7 @@ namespace Editor {
 		Object::DirectionalLight* dLight = m_Scene->GetDirectionalLight();
 		Json::ValueWriter dLightVal(Json::Type::kObjectType, doc);
 		dLightVal.AddFloatArray("Rotation", dLight->GetRotation().Data(), 3);
-		dLightVal.AddFloatArray("Color", dLight->GetColor().Data(), 3);
+		dLightVal.AddFloatArray("Color", dLight->GetColor().Data(), 4);
 		dLightVal.Write("DirectionalLight");
 		// Actors
 		Json::ValueWriter actorValues(Json::Type::kArrayType, doc);

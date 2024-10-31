@@ -42,7 +42,7 @@ namespace Object {
 		InstanceDataMgr(InstanceDataMgr&& rhs) noexcept;
 		InstanceDataMgr& operator=(InstanceDataMgr&& rhs)noexcept;
 		void Reset();
-		void Build(const Math::AABB3& resAABB, TArray<Math::FTransform>&& transforms);
+		void Build(const Math::AABB3& resAABB, const TArray<Math::FTransform>& transforms);
 		RHIBuffer* GetInstanceBuffer();
 		void GenerateInstanceData(const Math::Frustum& frustum, TArray<InstanceData>& outData);
 		void GenerateDrawRanges(const Math::Frustum& frustum, TArray<InstanceDrawRange>& ranges);

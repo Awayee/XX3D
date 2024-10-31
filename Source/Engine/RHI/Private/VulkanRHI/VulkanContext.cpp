@@ -64,7 +64,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityF
 		LOG_WARNING(pCallbackData->pMessage);
 	}
 	else if (VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT == severity) {
-		LOG_ERROR(pCallbackData->pMessage);
+		LOG_FATAL(pCallbackData->pMessage);
 	}
 	else {
 		LOG_DEBUG(pCallbackData->pMessage);

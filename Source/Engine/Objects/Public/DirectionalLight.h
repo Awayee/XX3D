@@ -4,6 +4,7 @@
 #include "Objects/Public/Camera.h"
 
 namespace Object {
+	class MeshRenderInterface;
 
 	struct DirectionalShadowConfig {
 		bool EnableShadow{ true };
@@ -20,8 +21,8 @@ namespace Object {
 		DirectionalLight();
 		void SetRotation(const Math::FVector3& euler); // rotation relative to DEFAULT_DIR;
 		const Math::FVector3& GetRotation()const { return m_LightEuler; }
-		void SetColor(const Math::FVector3& color) { m_LightColor = color; }
-		const Math::FVector3& GetColor() const { return m_LightColor; }
+		void SetColor(const Math::FVector4& color) { m_LightColor = color; }
+		const Math::FVector4& GetColor() const { return m_LightColor; }
 
 		// for shadow map
 		const DirectionalShadowConfig& GetShadowConfig() const { return m_ShadowConfig; }
@@ -29,6 +30,7 @@ namespace Object {
 		bool GetEnableShadow() const { return m_ShadowConfig.EnableShadow; }
 		RHITexture* GetShadowMap() { return m_ShadowMapTexture.Get(); }
 		Render::DrawCallQueue& GetDrawCallQueue(uint32 i);
+		MeshRenderInterface* GetMeshRenderer(uint32 i);
 		const Math::Frustum& GetFrustum(uint32 i);
 		void Update(Object::RenderCamera* renderCamera);
 		static uint32 GetCascadeNum() { return CASCADE_NUM; }
@@ -46,7 +48,7 @@ namespace Object {
 		inline static const Math::FVector3 DEFAULT_DIR {0, 0, 1};
 		Math::FVector3 m_LightDir;
 		Math::FVector3 m_LightEuler;
-		Math::FVector3 m_LightColor{0.7f,0.8f,0.8f};
+		Math::FVector4 m_LightColor{0.7f,0.8f,0.8f, 1.0f};
 		RHIDynamicBuffer m_Uniform;
 
 		// for shadow
@@ -56,6 +58,7 @@ namespace Object {
 		RHIGraphicsPipelineStatePtr m_CSMInstancedRenderPSO;// lazy create
 		TStaticArray<Object::Camera, CASCADE_NUM> m_CascadeCameras;
 		TStaticArray<Render::DrawCallQueue, CASCADE_NUM> m_DrawCallQueues;
+		TStaticArray<TUniquePtr<MeshRenderInterface>, CASCADE_NUM> m_MeshRenderers;
 		TStaticArray<float, CASCADE_NUM> m_FarDistances;
 		TStaticArray<Math::FMatrix4x4, CASCADE_NUM> m_VPMats;
 		TStaticArray<RHIDynamicBuffer, CASCADE_NUM> m_ShadowUniforms;// for shadow map

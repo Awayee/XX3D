@@ -79,7 +79,9 @@ namespace Object {
 		}
 		void RemoveEntity(EntityID entityID) {
 			for(auto& container: m_Containers) {
-				container->Remove(entityID);
+				if(container) {
+					container->Remove(entityID);
+				}
 			}
 		}
 	private:
@@ -117,7 +119,6 @@ namespace Object {
 		friend ECSScene;
 		TArray<EntityID> m_Entities;
 		TMap<EntityID, uint32> m_Entity2Indices;
-		virtual void PreUpdate(ECSScene* ecsScene) {/*Do nothing*/ }
 		virtual void UpdateEntry(ECSScene* ecsScene, ECSComponentContainerMgr& mgr) = 0;
 	};
 
@@ -194,7 +195,6 @@ namespace Object {
 
 		void SystemUpdate() {
 			for(auto&[comMask, sys]: m_Systems) {
-				sys->PreUpdate(this);
 				sys->UpdateEntry(this, m_ComponentContainerMgr);
 			}
 		}

@@ -30,7 +30,6 @@ namespace Editor {
 		void EnterRenameByIdx(uint32 idx);
 		void EnterRenameByNodeID(NodeID nodeID);
 		void ExitRename();
-		XString GenerateNewFilePath(const char* ext);
 	};
 	
 }

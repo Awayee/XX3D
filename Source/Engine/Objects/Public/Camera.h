@@ -84,7 +84,7 @@ namespace Object {
 		const Math::FMatrix4x4& GetViewProjectMatrix() { return m_ViewProjectMatrix; }
 		const Math::FMatrix4x4& GetInvViewProjectMatrix() { return m_InvViewProjectMatrix; }
 		void UpdateBuffer();
-		const RHIDynamicBuffer& GetUniformBuffer();
+		const RHIDynamicBuffer& GetUniformBuffer() const;
 		~RenderCamera();
 	private:
 		float m_Aspect;

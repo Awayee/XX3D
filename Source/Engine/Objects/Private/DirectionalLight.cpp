@@ -3,7 +3,7 @@
 #include "System/Public/Configuration.h"
 #include "Render/Public/GlobalShader.h"
 #include "Objects/Public/RenderResource.h"
-#include "Objects/Public/InstanceDataMgr.h"
+#include "Objects/Public/MeshRenderer.h"
 
 namespace {
 	class DirectionalShadowVS : public Render::GlobalShader {
@@ -22,7 +22,7 @@ namespace {
 namespace Object {
 	struct LightUBO {
 		Math::FVector3 Dir; float _Padding0;
-		Math::FVector3 Color; float _Padding1;
+		Math::FVector4 Color;
 		float FarDistances[4]; // means supports cascades up to 4
 		Math::FMatrix4x4 VPMats[4];
 		Math::FVector4 ShadowDebug;
@@ -62,6 +62,9 @@ namespace Object {
 	DirectionalLight::DirectionalLight() {
 		// load shadow map size
 		m_ShadowConfig.ShadowMapSize = Engine::ProjectConfig::Instance().DefaultShadowMapSize;
+		for(uint32 i=0; i<CASCADE_NUM; ++i) {
+			m_MeshRenderers[i].Reset(new DirectionalLightMehRenderer());
+		}
 	}
 
 	void DirectionalLight::SetRotation(const Math::FVector3& euler) {
@@ -73,6 +76,11 @@ namespace Object {
 	Render::DrawCallQueue& DirectionalLight::GetDrawCallQueue(uint32 i) {
 		CHECK(i < CASCADE_NUM);
 		return m_DrawCallQueues[i];
+	}
+
+	MeshRenderInterface* DirectionalLight::GetMeshRenderer(uint32 i) {
+		CHECK(i < CASCADE_NUM);
+		return m_MeshRenderers[i];
 	}
 
 	const Math::Frustum& DirectionalLight::GetFrustum(uint32 i) {
@@ -116,6 +124,12 @@ namespace Object {
 			if(!IsPSODepthBiasMatch(m_CSMInstancedRenderPSO, biasConst, biasSlope)) {
 				CreateCSMInstancedRenderingPSO();
 			}
+		}
+
+		for (uint32 i = 0; i < CASCADE_NUM; ++i) {
+			((DirectionalLightMehRenderer*)m_MeshRenderers[i].Get())->SetPSO(m_CSMRenderingPSO.Get(), m_CSMInstancedRenderPSO.Get());
+			m_MeshRenderers[i]->GenerateDrawCall(m_ShadowUniforms[i], m_DrawCallQueues[i]);
+			m_MeshRenderers[i]->Reset();
 		}
 	}
 

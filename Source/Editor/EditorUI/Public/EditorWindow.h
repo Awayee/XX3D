@@ -23,7 +23,6 @@ namespace Editor {
 	protected:
 		enum : uint32 {
 			NAME_SIZE = 64,
-			INVALID_INDEX = UINT32_MAX,
 		};
 		friend EditorUIMgr;
 		XString m_Name;

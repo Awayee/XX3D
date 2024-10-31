@@ -73,20 +73,20 @@ namespace Object {
 				m_Textures.emplace(fileName, MoveTemp(texturePtr));
 				return texRHI;
 			}
-			LOG_WARNING("Failed to load texture file: %s", fileName.c_str());
+			LOG_ERROR("Failed to load texture file: %s", fileName.c_str());
 		}
 		return nullptr;
 	}
 
-	PrimitiveResource StaticResourceMgr::GetPrimitive(const XString& fileName) {
+	PrimitiveResource* StaticResourceMgr::GetPrimitive(const XString& fileName) {
 		if(!fileName.empty()) {
 			if(auto iter = m_Primitives.find(fileName); iter != m_Primitives.end()) {
-				return iter->second.GetOuter();
+				return &iter->second;
 			}
 			// create new resource
 			Asset::PrimitiveAsset asset;
 			if(Asset::AssetLoader::LoadProjectAsset(&asset, fileName.c_str())) {
-				auto& newPrimitive = m_Primitives.emplace(fileName, PrimitiveResourceInner{}).first->second;
+				auto& newPrimitive = m_Primitives.emplace(fileName, PrimitiveResource{}).first->second;
 				const RHIBufferDesc vbDesc{ EBufferFlags::Vertex | EBufferFlags::CopyDst, asset.Vertices.ByteSize(), sizeof(Asset::AssetVertex) };
 				newPrimitive.VertexBuffer = RHI::Instance()->CreateBuffer(vbDesc);
 				newPrimitive.VertexBuffer->UpdateData(asset.Vertices.Data(), asset.Vertices.ByteSize(), 0);
@@ -98,11 +98,11 @@ namespace Object {
 				newPrimitive.VertexCount = asset.Vertices.Size();
 				newPrimitive.IndexCount = asset.Indices.Size();
 				CalcAABB(asset.Vertices, newPrimitive.AABB.Min, newPrimitive.AABB.Max);
-				return newPrimitive.GetOuter();
+				return &newPrimitive;
 			}
-			LOG_WARNING("Failed to load primitive file: %s", fileName.c_str());
+			LOG_ERROR("Failed to load primitive file: %s", fileName.c_str());
 		}
-		return PrimitiveResource{ nullptr, nullptr, 0, 0, {} };
+		return nullptr;
 	}
 
 	uint32 StaticResourceMgr::RegisterPSOInitializer(GraphicsPipelineInitializer func) {
@@ -125,10 +125,6 @@ namespace Object {
 
 	RHIComputePipelineState* StaticResourceMgr::GetComputePipelineState(uint32 psoID) {
 		return m_ComputePipelineStates[psoID].Get();
-	}
-
-	PrimitiveResource StaticResourceMgr::PrimitiveResourceInner::GetOuter() {
-		return PrimitiveResource{ VertexBuffer.Get(), IndexBuffer.Get(), VertexCount, IndexCount, AABB };
 	}
 
 	StaticResourceMgr::StaticResourceMgr() {

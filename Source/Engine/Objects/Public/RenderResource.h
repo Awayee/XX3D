@@ -4,13 +4,14 @@
 #include "Core/Public/String.h"
 #include "Asset/Public/TextureAsset.h"
 #include "Asset/Public/MeshAsset.h"
+#include "Asset/Public/MaterialAsset.h"
 #include "RHI/Public/RHI.h"
 
 namespace Object {
 
 	struct PrimitiveResource {
-		RHIBuffer* VertexBuffer;
-		RHIBuffer* IndexBuffer;
+		RHIBufferPtr VertexBuffer;
+		RHIBufferPtr IndexBuffer;
 		uint32 VertexCount;
 		uint32 IndexCount;
 		Math::AABB3 AABB;
@@ -25,7 +26,7 @@ namespace Object {
 		RHITexture* GetTexture(const XString& fileName);
 
 		// primitive
-		PrimitiveResource GetPrimitive(const XString& fileName);
+		PrimitiveResource* GetPrimitive(const XString& fileName);
 
 		// pipeline state
 		typedef void(*ComputePipelineInitializer)(RHIComputePipelineStateDesc&);
@@ -35,15 +36,7 @@ namespace Object {
 		RHIGraphicsPipelineState* GetGraphicsPipelineState(uint32 psoID);
 		RHIComputePipelineState* GetComputePipelineState(uint32 psoID);
 	private:
-		struct PrimitiveResourceInner {
-			RHIBufferPtr VertexBuffer;
-			RHIBufferPtr IndexBuffer;
-			uint32 VertexCount;
-			uint32 IndexCount;
-			Math::AABB3 AABB;
-			PrimitiveResource GetOuter();
-		};
-		TMap<XString, PrimitiveResourceInner> m_Primitives;
+		TMap<XString, PrimitiveResource> m_Primitives;
 		TMap<XString, RHITexturePtr> m_Textures;
 		TArray<RHIGraphicsPipelineStatePtr> m_GraphicsPipelineStates;
 		TArray<RHIComputePipelineStatePtr> m_ComputePipelineStates;

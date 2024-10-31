@@ -4,13 +4,11 @@
 #include "Objects/Public/RenderScene.h"
 #include "Objects/Public/Camera.h"
 #include "Objects/Public/Level.h"
+#include "Objects/Public/RenderResource.h"
 
 namespace Object {
 	struct SkyBoxECSComp {
-		uint32 VertexCount;
-		uint32 IndexCount;
-		RHIBuffer* VertexBuffer;
-		RHIBuffer* IndexBuffer;
+		PrimitiveResource* Primitive;
 		RHITexture* CubeMap;
 		SkyBoxECSComp();
 		void LoadCubeMap(const XString& file);

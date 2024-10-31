@@ -36,6 +36,10 @@ namespace Json {
 		m_Value.AddMember(Document::StringRefType(name), arrayVal, m_Document.GetAllocator());
 	}
 
+	void ValueWriter::PushBack(const XString& str) {
+		m_Value.PushBack(Document::StringRefType(str.c_str()), m_Document.GetAllocator());
+	}
+
 	void ValueWriter::PushBack(ValueWriter& val) {
 		CHECK(m_Document == val.m_Document);
 		m_Value.PushBack(val.m_Value, m_Document.GetAllocator());
@@ -51,7 +55,7 @@ namespace Json {
 			f.Read(content.data(), f.ByteSize());
 			auto& parse = doc.Parse(content.c_str());
 			if(parse.HasParseError()) {
-				LOG_WARNING("Json::ReadFile has parse error: %d", parse.GetParseError());
+				LOG_ERROR("Json::ReadFile has parse error: %d", parse.GetParseError());
 				return false;
 			}
 			return true;

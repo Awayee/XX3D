@@ -1,0 +1,39 @@
+{
+    "TransparencyMode": 0,
+    "Scalars": [
+        0.4000000059604645,
+        0.5
+    ],
+    "Vectors": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+    ],
+    "Textures": [
+        "keqing/tex/cloth.texture",
+        0
+    ],
+    "Parameters": [
+        "BaseColor",
+        2,
+        0,
+        2,
+        0,
+        "Normal",
+        1,
+        1,
+        2,
+        0,
+        "Roughness",
+        0,
+        0,
+        0,
+        0,
+        "Metallic",
+        0,
+        0,
+        0,
+        1
+    ]
+}

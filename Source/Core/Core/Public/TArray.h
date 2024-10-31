@@ -6,6 +6,8 @@
 #include <initializer_list>
 #include <vector>
 
+constexpr uint32 INVALID_INDEX = UINT32_MAX;
+
 // a simple array just contains data
 template<typename T, typename SizeType=uint32>
 class TFixedArray {
@@ -531,7 +533,9 @@ public:
 	}
 
 	void SwapRemoveAt(uint32 i) {
-		std::swap(Base::at(i), Base::back());
+		if(i < Size() - 1) {
+			std::swap(Base::at(i), Base::back());
+		}
 		Base::pop_back();
 	}
 

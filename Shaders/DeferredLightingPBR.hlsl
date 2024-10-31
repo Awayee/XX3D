@@ -1,4 +1,5 @@
 #include "ShadowCommon.hlsli"
+#include "GBufferCommon.hlsli"
 
 struct VSOutput {
 	float4 Position:SV_POSITION;
@@ -42,8 +43,8 @@ struct LightUBO {
 [[vk::binding(0, 0)]] cbuffer uCamera { ShadowCameraUBO uCamera; };
 [[vk::binding(1, 0)]] cbuffer uLight { LightUBO uLight; };
 [[vk::binding(2, 0)]] Texture2DArray<float> inShadowMap;
-[[vk::binding(3, 0)]] Texture2D<float4> inNormal;
-[[vk::binding(4, 0)]] Texture2D<float4> inAlbedo;
+[[vk::binding(3, 0)]] Texture2D<float4> inGBuffer0;
+[[vk::binding(4, 0)]] Texture2D<float4> inGBuffer1;
 [[vk::binding(5, 0)]] Texture2D<float> inDepth;
 [[vk::binding(6, 0)]] SamplerState inPointSampler;
 [[vk::binding(7, 0)]] SamplerState inLinearSampler;
@@ -64,11 +65,6 @@ float3 RebuildWorldPos(float2 uv) {
 }
 
 static float PI = 3.14159265359;
-static float ROUGHNESS = 0.5;
-static float METALIC = 0.1;
-static float LIGHT_STRENGTH = 3.0;
-static float GLOSS = 16.0;
-static float3 AMBIENT = float3(0.1, 0.1, 0.1);
 
 // Normal distribution
 float DistributionGGX(float3 N, float3 H, float roughness) {
@@ -93,13 +89,13 @@ float3 fresnelSchlick(float3 H, float3 V, float3 F0) {
 	return F0 + (1.0 - F0) * pow(1.0 - HdotV, 5.0);
 }
 
-float3 PBRDirectLight(float3 V, float3 L, float3 N, float3 albedo, float3 irradiance) {
+float3 PBRDirectLight(float3 V, float3 L, float3 N, float3 albedo, float3 irradiance, float roughness, float metal) {
 	float3 F0 = float3(0.04, 0.04, 0.04);
 	float3 H = normalize(L + V);
-	float NDF = DistributionGGX(N, H, ROUGHNESS);
-	float G = GeometrySmith(N, V, L, ROUGHNESS);
+    float NDF = DistributionGGX(N, H, roughness);
+    float G = GeometrySmith(N, V, L, roughness);
 	float3 F = fresnelSchlick(H, V, F0);
-	float3 Kd = (float3(1.0, 1.0, 1.0) - F) * (1.0 - METALIC);
+    float3 Kd = (float3(1.0, 1.0, 1.0) - F) * (1.0 - metal);
 	float3 nominator = NDF * G * F;
 	float denominator = 4.0 * max(0, dot(N, V)) * max(0, dot(N, L)) + 0.001;
 	float3 Fs = nominator / denominator;
@@ -149,19 +145,21 @@ float3 ComputeCascadeShadow(float3 worldPos, float3 sceneColor){
 }
 
 PSOutput MainPS(VSOutput pIn){
-	float4 gNormal = inNormal.Sample(inPointSampler, pIn.UV).rgba;
-	float4 gAlbedo = inAlbedo.Sample(inPointSampler, pIn.UV).rgba;
-	float3 lightColor = uLight.Color.xyz;
+    float4 gBuffer0 = inGBuffer0.Sample(inPointSampler, pIn.UV).rgba;
+    float4 gBuffer1 = inGBuffer1.Sample(inPointSampler, pIn.UV).rgba;
+    GBufferData data = (GBufferData)0;
+    DecodeGBuffer(gBuffer0, gBuffer1, data);
+	float3 lightColor = uLight.Color.xyz * uLight.Color.w;
 	float3 worldPos = RebuildWorldPos(pIn.UV);
 	float3 V = normalize(uCamera.Pos.xyz - worldPos);
 	float3 L = normalize(-uLight.Dir.xyz);
-	float3 N = normalize(gNormal.xyz * 2.0 - 1.0);
-	float3 albedo = gAlbedo.rgb;
+	float3 N = normalize(data.Normal * 2.0 - 1.0);
+	float3 albedo = data.BaseColor;
 
 	float3 Lo = float3(0.0, 0.0, 0.0);
 	float attenuation = 1.0;
-	float3 irradiance = LIGHT_STRENGTH * lightColor * attenuation;
-	Lo += PBRDirectLight(V, L, N, albedo, irradiance);
+	float3 irradiance = lightColor * attenuation;
+	Lo += PBRDirectLight(V, L, N, albedo, irradiance, data.Roughness, data.Metallic);
 
 	//ambient
 	float3 ambient = albedo * lightColor * 0.01;

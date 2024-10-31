@@ -2,7 +2,7 @@
     "Name": "Sphere",
     "Primitives": [
         {
-            "Material": "",
+            "Material": "Meshes/Default.matt",
             "BinaryFile": "Meshes/Sphere.primitive"
         }
     ]

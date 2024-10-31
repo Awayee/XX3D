@@ -9,6 +9,7 @@
 #include "System/Public/Timer.h"
 #include "Objects/Public/RenderResource.h"
 #include "Objects/Public/RenderScene.h"
+#include "Objects/Public/Material.h"
 
 namespace Engine {
 
@@ -24,6 +25,7 @@ namespace Engine {
 		Render::GlobalShaderMap::Initialize();
 		Render::Renderer::Initialize();
 		Object::StaticResourceMgr::Initialize();
+		Object::MaterialMgr::Initialize();
 		Object::RenderScene::Initialize();
 		s_RunningEngine = this;
 	}
@@ -32,6 +34,7 @@ namespace Engine {
 		// wait renderer
 		Render::Renderer::Release();
 		Object::RenderScene::Release();
+		Object::MaterialMgr::Release();
 		Object::StaticResourceMgr::Release();
 		Render::GlobalShaderMap::Release();
 		Render::DefaultResources::Release();

@@ -1,12 +1,14 @@
-#include "Core/Public/Concurrency.h"
 #include "Objects/Public/RenderScene.h"
+#include "Core/Public/Concurrency.h"
 #include "Objects/Public/Camera.h"
 #include "Objects/Public/DirectionalLight.h"
 #include "Objects/Public/SkyBox.h"
 #include "Window/Public/EngineWindow.h"
 #include "Render/public/DefaultResource.h"
 #include "Objects/Public/RenderResource.h"
+#include "Objects/Public/MeshRenderer.h"
 #include "Render/Public/GlobalShader.h"
+
 namespace {
     class DeferredLightingVS : public Render::GlobalShader {
         GLOBAL_SHADER_IMPLEMENT(DeferredLightingVS, "DeferredLightingPBR.hlsl", "MainVS", EShaderStageFlags::Vertex);
@@ -45,7 +47,6 @@ namespace {
         desc.DepthStencilFormat = RHI::Instance()->GetDepthFormat();
         desc.NumSamples = 1;
     }
-    static const uint32 s_DeferredLightingPSOID{ Object::StaticResourceMgr::RegisterPSOInitializer(InitializeDeferredLightingPipelineDesc) };
 }
 
 namespace Object {
@@ -66,24 +67,29 @@ namespace Object {
             func(this);
         }
         // get pso
-        m_DeferredLightingPSO = StaticResourceMgr::Instance()->GetGraphicsPipelineState(s_DeferredLightingPSOID);
+        RHIGraphicsPipelineStateDesc desc;
+        InitializeDeferredLightingPipelineDesc(desc);
+        m_DeferredLightingPSO = RHI::Instance()->CreateGraphicsPipelineState(desc);
     	// create camera and lights
         m_DirectionalLight.Reset(new DirectionalLight);
         m_Camera.Reset(new RenderCamera());
         m_Camera->SetView({ { 0, 4, -4 }, { 0, 2, 0 }, { 0, 1, 0 } });
+        m_MeshRenderer2.Reset(new MeshRenderer2(&m_MaterialContainer));
     }
 
     RenderScene::~RenderScene() {
     }
 
     void RenderScene::Update() {
-        // draw call
+        // clear draw calls
         m_Camera->UpdateBuffer();
         m_DirectionalLight->Update(m_Camera);
         m_BasePassDrawCallQueue.Reset();
         m_LightingPassDrawCallQueue.Reset();
         CreateDeferredLightingDrawCall();
         SystemUpdate();
+        m_MeshRenderer2->GenerateDrawCall(m_Camera->GetUniformBuffer(), m_BasePassDrawCallQueue);
+        m_MeshRenderer2->Reset();
     }
 
     void RenderScene::Render(Render::RenderGraph& rg, Render::RGTextureNode* targetNode) {

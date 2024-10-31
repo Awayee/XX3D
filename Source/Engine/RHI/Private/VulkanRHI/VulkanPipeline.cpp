@@ -8,7 +8,7 @@
 
 inline uint64 GetLayoutHash(const RHIShaderParamSetLayout& bindingLayout) {
 	const uint32* dataU32 = reinterpret_cast<const uint32*>(bindingLayout.Data());
-	return DataArrayHash(dataU32, bindingLayout.Size());
+	return DataArrayHash64(dataU32, bindingLayout.Size());
 }
 
 inline bool BindingIsBuffer(EBindingType type) {
@@ -363,7 +363,9 @@ bool VulkanDescriptorSetParamCache::SetParam(const VulkanDynamicBufferAllocator*
 		uint32 offset, range;
 		if (param.IsDynamicBuffer) {
 			const RHIDynamicBuffer& dBuffer = param.Data.DynamicBuffer;
+			CHECK(dBuffer.IsValid());
 			bufferHandle = allocator->GetBufferHandle(param.Data.DynamicBuffer.BufferIndex);
+			CHECK(bufferHandle);
 			offset = dBuffer.Offset;
 			range = dBuffer.Size;
 		}

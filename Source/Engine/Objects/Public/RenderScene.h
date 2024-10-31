@@ -4,10 +4,13 @@
 #include "Core/Public/Defines.h"
 #include "RHI/Public/RHI.h"
 #include "Render/Public/Renderer.h"
+#include "Objects/Public/Material.h"
 
 namespace Object {
 	class RenderCamera;
 	class DirectionalLight;
+	class MeshRenderer;
+	class MeshRenderer2;
 
 	class RenderScene: public ECSScene{
 	public:
@@ -18,6 +21,8 @@ namespace Object {
 		~RenderScene();
 		RenderCamera* GetMainCamera() { return m_Camera.Get(); }
 		DirectionalLight* GetDirectionalLight() { return m_DirectionalLight.Get(); }
+		MaterialContainer& GetMaterialContainer() { return m_MaterialContainer; }
+		MeshRenderer2* GetMeshRenderer2() { return m_MeshRenderer2.Get(); }
 		Render::DrawCallQueue& GetBasePasDrawCallQueue() { return m_BasePassDrawCallQueue; }
 		Render::DrawCallQueue& GetLightingPassDrawCallQueue() { return m_LightingPassDrawCallQueue; }
 		void Update();
@@ -32,6 +37,8 @@ namespace Object {
 		static TUniquePtr<RenderScene> s_Default;
 		TUniquePtr<DirectionalLight> m_DirectionalLight;
 		TUniquePtr<RenderCamera> m_Camera;
+		TUniquePtr<MeshRenderer2> m_MeshRenderer2;
+		MaterialContainer m_MaterialContainer;
 		Render::DrawCallQueue m_BasePassDrawCallQueue;
 		Render::DrawCallQueue m_LightingPassDrawCallQueue;
 		// fo gBuffer
@@ -41,7 +48,7 @@ namespace Object {
 		RHITexturePtr m_Depth;
 		RHITexturePtr m_DepthSRV;
 		// for deferred lighting
-		RHIGraphicsPipelineState* m_DeferredLightingPSO;
+		TUniquePtr<RHIGraphicsPipelineState> m_DeferredLightingPSO;
 
 		void CreateDeferredLightingDrawCall();
 		void CreateTextureResources();

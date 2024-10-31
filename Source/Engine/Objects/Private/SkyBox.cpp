@@ -53,7 +53,7 @@ namespace Object {
 
 	static const XString BOX_FILE = "Meshes/Cube.mesh";
 
-	SkyBoxECSComp::SkyBoxECSComp() : VertexCount(0), IndexCount(0){
+	SkyBoxECSComp::SkyBoxECSComp(): Primitive(nullptr){
 
 		// Build primitive
 		Asset::MeshAsset meshAsset;
@@ -62,11 +62,7 @@ namespace Object {
 			return;
 		}
 		for (auto& p : meshAsset.Primitives) {
-			auto primitive = Object::StaticResourceMgr::Instance()->GetPrimitive(p.BinaryFile);
-			VertexBuffer = primitive.VertexBuffer;
-			IndexBuffer = primitive.IndexBuffer;
-			VertexCount = primitive.VertexCount;
-			IndexCount = primitive.IndexCount;
+			Primitive = Object::StaticResourceMgr::Instance()->GetPrimitive(p.BinaryFile);
 			break;
 		}
 	}
@@ -103,16 +99,16 @@ namespace Object {
 	void SkyBoxSystem::Update(ECSScene* scene, SkyBoxECSComp* component) {
 		RenderScene* renderScene = (RenderScene*)scene;
 		Render::DrawCallQueue& queue = renderScene->GetLightingPassDrawCallQueue();
-		queue.PushDrawCall([renderScene, component](RHICommandBuffer* cmd) {
+		queue.PushDrawCall([renderScene, primitive=component->Primitive, cubemap=component->CubeMap](RHICommandBuffer* cmd) {
 			RHIGraphicsPipelineState* pso = StaticResourceMgr::Instance()->GetGraphicsPipelineState(s_SkyBoxPSOID);
 			cmd->BindGraphicsPipeline(pso);
-			cmd->BindVertexBuffer(component->VertexBuffer, 0, 0);
-			cmd->BindIndexBuffer(component->IndexBuffer, 0);
+			cmd->BindVertexBuffer(primitive->VertexBuffer, 0, 0);
+			cmd->BindIndexBuffer(primitive->IndexBuffer, 0);
 			cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(renderScene->GetMainCamera()->GetUniformBuffer()));
-			cmd->SetShaderParam(0, 1, RHIShaderParam::Texture(component->CubeMap));
+			cmd->SetShaderParam(0, 1, RHIShaderParam::Texture(cubemap));
 			auto sampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp);
 			cmd->SetShaderParam(0, 2, RHIShaderParam::Sampler(sampler));
-			cmd->DrawIndexed(component->IndexCount, 1, 0, 0, 0);
+			cmd->DrawIndexed(primitive->IndexCount, 1, 0, 0, 0);
 		});
 	}
 }
