@@ -194,6 +194,8 @@ namespace Editor {
 				return;
 			}
 			m_Name = newNameWithExt;
+			m_RelativePath.replace_filename(newNameWithExt);
+			m_RelativePathStr = m_RelativePath.string();
 		}
 	}
 
@@ -237,7 +239,7 @@ namespace Editor {
 				break;
 			}
 		}
-		LOG_WARNING("AssetManager::GetFileNode failed: %s", path.string().c_str());
+		LOG_WARNING("AssetManager::GetFileNode failed: \"%s\"", path.string().c_str());
 		return nullptr;
 	}
 

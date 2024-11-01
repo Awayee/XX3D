@@ -53,7 +53,7 @@ namespace Object {
 
 	static const XString BOX_FILE = "Meshes/Cube.mesh";
 
-	SkyBoxECSComp::SkyBoxECSComp(): Primitive(nullptr){
+	SkyBoxECSComp::SkyBoxECSComp(): Primitive(nullptr), CubeMap(nullptr){
 
 		// Build primitive
 		Asset::MeshAsset meshAsset;
@@ -97,6 +97,9 @@ namespace Object {
 	}
 
 	void SkyBoxSystem::Update(ECSScene* scene, SkyBoxECSComp* component) {
+		if(nullptr == component->CubeMap) {
+			return;
+		}
 		RenderScene* renderScene = (RenderScene*)scene;
 		Render::DrawCallQueue& queue = renderScene->GetLightingPassDrawCallQueue();
 		queue.PushDrawCall([renderScene, primitive=component->Primitive, cubemap=component->CubeMap](RHICommandBuffer* cmd) {

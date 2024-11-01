@@ -58,14 +58,14 @@ namespace Editor {
 			return;
 		}
 		uint32 idx = inst->GetSelected();
-		if(idx == UINT32_MAX) {
+		if(idx == INVALID_INDEX) {
 			return;
 		}
 		Object::LevelActor* actor = level->GetActor(idx);
-		TArrayView<Object::LevelComponent*> components = actor->GetComponents();
+		TArrayView<Object::LevelComponentBase*> components = actor->GetComponents();
 		uint32 mouseOnIdx = INVALID_INDEX;
 		for (uint32 i = 0; i<components.Size(); ++i) {
-			Object::LevelComponent* com = components[i];
+			Object::LevelComponentBase* com = components[i];
 			if(ImGui::CollapsingHeader(Object::LevelComponentFactory::Instance().GetTypeInfo(com)->GetTypeName().c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
 				if (ImGui::IsItemHovered()) {
 					mouseOnIdx = i;

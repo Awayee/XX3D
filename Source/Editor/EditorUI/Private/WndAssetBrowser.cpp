@@ -309,6 +309,9 @@ namespace Editor {
 			Editor::EditorUIMgr* uiMgr = Editor::EditorUIMgr::Instance();
 			if(ImGui::BeginMenu("New")) {
 				NodeID newNodeID = INVALID_NODE;
+				if(ImGui::MenuItem("Level")) {
+					newNodeID = LevelAssetView::NewDefault(folderNode);
+				}
 				if(ImGui::MenuItem("Instance Data")) {
 					newNodeID = InstanceDataAssetView::NewDefault(folderNode);
 				}

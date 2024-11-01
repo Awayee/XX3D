@@ -1,12 +1,36 @@
 #include "Functions/Public/EditorLevel.h"
-#include "Objects/Public/Camera.h"
 #include "Functions/Public/AssetManager.h"
-#include "Objects/Public/DirectionalLight.h"
 #include "Objects/Public/SkyBox.h"
 #include "Objects/Public/StaticMesh.h"
+#include "Objects/Public/LevelComponents.h"
 #include "System/Public/Configuration.h"
 
 namespace Editor {
+
+	void CameraSave(Object::CameraComponent* com, Json::ValueWriter& val) {
+		val.AddFloatArray("Eye", com->Eye.Data(), 3);
+		val.AddFloatArray("At", com->At.Data(), 3);
+		val.AddFloatArray("Up", com->Up.Data(), 3);
+		val.AddMember("ProjType", (int)com->ProjType);
+		val.AddMember("Near", com->Near);
+		val.AddMember("Far", com->Far);
+		val.AddMember("Fov", com->Fov);
+		val.AddMember("HalfHeight", com->HalfHeight);
+	}
+	REGISTER_LEVEL_EDIT_OnSave(Object::CameraComponent, CameraSave);
+
+	void DirectionalLightSave(Object::DirectionalLightComponent* com, Json::ValueWriter& val) {
+		val.AddFloatArray("Rotation", com->Rotation.Data(), 3);
+		val.AddFloatArray("Color", com->Color.Data(), 4);
+		val.AddMember("EnableShadow", com->EnableShadow);
+		val.AddMember("ShadowDistance", com->ShadowDistance);
+		val.AddMember("ShadowLogDistribution", com->ShadowLogDistribution);
+		val.AddMember("ShadowMapSize", com->ShadowMapSize);
+		val.AddMember("ShadowBiasConst", com->ShadowBiasConst);
+		val.AddMember("ShadowBiasSlope", com->ShadowBiasSlope);
+	}
+	REGISTER_LEVEL_EDIT_OnSave(Object::DirectionalLightComponent, DirectionalLightSave);
+
 	void TransformSave(Object::TransformComponent* com, Json::ValueWriter& val) {
 		val.AddFloatArray("Position", com->Position.Data(), 3);
 		val.AddFloatArray("Scale", com->Scale.Data(), 3);
@@ -42,26 +66,15 @@ namespace Editor {
 
 	bool EditorLevel::SaveFile(const char* file) {
 		Json::Document doc(Json::Type::kObjectType);
-		// camera
-		Object::RenderCamera* camera = m_Scene->GetMainCamera();
-		auto& view = camera->GetView();
-		auto& projection = camera->GetProjectionData();
-		Json::ValueWriter cameraVal(Json::Type::kObjectType, doc);
-		cameraVal.AddFloatArray("Eye", view.Eye.Data(), 3);
-		cameraVal.AddFloatArray("At", view.At.Data(), 3);
-		cameraVal.AddFloatArray("Up", view.Up.Data(), 3);
-		cameraVal.AddMember("ProjType", (int)projection.ProjType);
-		cameraVal.AddMember("Near", projection.Near);
-		cameraVal.AddMember("Far", projection.Far);
-		cameraVal.AddMember("Fov", projection.Fov);
-		cameraVal.AddMember("HalfHeight", projection.HalfHeight);
-		cameraVal.Write("Camera");
-		// directional 
-		Object::DirectionalLight* dLight = m_Scene->GetDirectionalLight();
-		Json::ValueWriter dLightVal(Json::Type::kObjectType, doc);
-		dLightVal.AddFloatArray("Rotation", dLight->GetRotation().Data(), 3);
-		dLightVal.AddFloatArray("Color", dLight->GetColor().Data(), 4);
-		dLightVal.Write("DirectionalLight");
+		// scene components
+		Json::ValueWriter levelComponentValues(Json::Type::kArrayType, doc);
+		for(auto* component: GetComponents()) {
+			Json::ValueWriter levelComponentValue(Json::Type::kObjectType, doc);
+			levelComponentValue.AddString("Name", Object::LevelComponentFactory::Instance().GetTypeInfo(component)->GetTypeName());
+			LevelComponentEditProxyFactory::Instance().GetProxy(component).OnSave(component, levelComponentValue);
+			levelComponentValues.PushBack(levelComponentValue);
+		}
+		levelComponentValues.Write("Components");
 		// Actors
 		Json::ValueWriter actorValues(Json::Type::kArrayType, doc);
 		for(auto& actor: m_Actors) {
@@ -90,6 +103,13 @@ namespace Editor {
 		return m_Actors[actorID];
 	}
 
+	void EditorLevel::InitDefault(EditorLevel& level) {
+		level.m_Actors.Reset();
+		level.m_Components.Reset();
+		auto* cameraCom = level.AddComponent<Object::CameraComponent>();
+		auto* directionalLightCom = level.AddComponent<Object::DirectionalLightComponent>();
+	}
+
 	void EditorLevelMgr::LoadLevel(File::PathStr levelFile) {
 		m_Level->LoadFile(levelFile);
 		m_LevelFile = levelFile;
@@ -108,6 +128,7 @@ namespace Editor {
 			m_LevelFile.clear();
 			m_Level->Empty();
 		}
+		m_SelectIndex = INVALID_INDEX;
 	}
 
 	bool EditorLevelMgr::SaveLevel() {
@@ -129,6 +150,9 @@ namespace Editor {
 		if (auto node = ProjectAssetMgr::Instance()->GetFileNode(path)) {
 			LoadLevel(node->GetPathStr().c_str());
 		}
+		else {
+			LOG_ERROR("Could not load start level: \"%s\"", path.string().c_str());
+		}
 	}
 
 	void LevelComponentEditProxyFactory::Initialize() {
@@ -138,7 +162,7 @@ namespace Editor {
 		m_InitializerArray.Reset();
 	}
 
-	const LevelComponentEditProxyFactory::LevelComponentEditProxy& LevelComponentEditProxyFactory::GetProxy(Object::LevelComponent* c) {
+	const LevelComponentEditProxyFactory::LevelComponentEditProxy& LevelComponentEditProxyFactory::GetProxy(Object::LevelComponentBase* c) {
 		const uint32 typeID = c->GetTypeID();
 		CHECK(typeID < m_EditProxies.Size());
 		return m_EditProxies[typeID];

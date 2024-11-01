@@ -2,6 +2,7 @@
 #include "Core/Public/TArray.h"
 #include "Core/Public/Container.h"
 #include "Core/Public/TUniquePtr.h"
+#include "Core/Public/Defines.h"
 
 namespace Object {
 	//  A simple ECS framework, reference: https://austinmorlan.com/posts/entity_component_system/
@@ -9,6 +10,7 @@ namespace Object {
 	typedef uint32 EntityID;
 	typedef uint8 ComponentID;
 	typedef uint32 ComponentMask;
+	constexpr uint32 INVALID_ENTITY = UINT32_MAX;
 
 
 	//  ================ component ====================

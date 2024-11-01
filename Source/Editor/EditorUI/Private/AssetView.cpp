@@ -332,6 +332,7 @@ namespace {
 			ImGui::TextUnformatted(m_PathStr.c_str());
 			ImGui::Checkbox("Preview in Scene", &m_PreviewInScene);
 			bool isDirty = false;
+			isDirty |= ImGui::DraggableFileItemAssets("Template", m_Asset.Template, "*.matt");
 			for(auto& param: m_ParentAsset.Parameters) {
 				const char* nameStr = param.Name.c_str();
 				switch (param.ParamType) {
@@ -441,6 +442,17 @@ namespace Editor {
 
 	void LevelAssetView::Open() {
 		EditorLevelMgr::Instance()->LoadLevel(m_Node->GetPathStr().c_str());
+	}
+
+	NodeID LevelAssetView::NewDefault(uint32 folderNode) {
+		FolderNode* folder = Editor::ProjectAssetMgr::Instance()->GetFolderNode(folderNode);
+		XString filePathStr = GenerateUniqueAssetName(folder, ".level");
+		Editor::EditorLevel level(nullptr);
+		Editor::EditorLevel::InitDefault(level);
+		if(level.SaveFile(filePathStr.c_str())) {
+			return Editor::ProjectAssetMgr::Instance()->CreateFile(filePathStr, folderNode);
+		}
+		return INVALID_NODE;
 	}
 
 	void InstanceDataAssetView::Open() {

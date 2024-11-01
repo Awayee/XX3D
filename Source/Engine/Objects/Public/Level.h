@@ -1,34 +1,31 @@
 #pragma once
 #include "Objects/Public/RenderScene.h"
+#include "Objects/Public/Camera.h"
 #include "Core/Public/Json.h"
 
 namespace Object {
+	class LevelComponentContainer;
 	class LevelActor;
 	class Level;
 
-	class LevelComponent {
+	class LevelComponentBase {
 	public:
-		LevelComponent(LevelActor* owner): m_Owner(owner){}
-		virtual ~LevelComponent() = default;
+		virtual ~LevelComponentBase() = default;
 		virtual void OnLoad(const Json::Value& val) = 0;
 		virtual void OnAdd() {/*Do nothing*/ }
 		virtual void OnRemove() {/*Do nothing*/ }
 		virtual uint32 GetTypeID() = 0;
 		template<class T> bool Is() { return T::TypeID == GetTypeID(); }
-		LevelActor* GetOwner() { return m_Owner; }
-		RenderScene* GetScene();
-		Object::EntityID GetEntityID();
-	private:
-		LevelActor* m_Owner;
 	};
 
-	class LevelActor {
+	// LevelComponentContainer must be used with derived class, so has not virtual destructor.
+	class LevelComponentContainer {
 	public:
-		LevelActor(RenderScene* scene, XString&& name);
-		~LevelActor();
+		LevelComponentContainer() = default;
+		~LevelComponentContainer() = default;
 		template<class T> T* GetComponent() {
-			for (auto& com : m_Components) {
-				if (com->Is<T>()) {
+			for(auto& com: m_Components) {
+				if(com->Is<T>()) {
 					return (T*)com.Get();
 				}
 			}
@@ -43,25 +40,54 @@ namespace Object {
 			ptr->OnAdd();
 			return (T*)ptr.Get();
 		}
-		void RemoveComponent(LevelComponent* component);
+
+		TArrayView<LevelComponentBase*> GetComponents();
+
+		void RemoveComponent(LevelComponentBase* component);
+
+	protected:
+		TArray<TUniquePtr<LevelComponentBase>> m_Components;
+	};
+
+	class ActorComponent: public LevelComponentBase {
+	public:
+		explicit ActorComponent(LevelComponentContainer* actor);
+		LevelActor* GetActor() { return m_Actor; }
+		RenderScene* GetScene();
+		uint32 GetEntityID();
+	private:
+		LevelActor* m_Actor;
+	};
+
+	class LevelComponent: public LevelComponentBase {
+	public:
+		explicit LevelComponent(LevelComponentContainer* level);
+		Level* GetLevel() { return m_Level; }
+		RenderScene* GetScene();
+	private:
+		Level* m_Level;
+	};
+
+	class LevelActor: public LevelComponentContainer {
+	public:
+		LevelActor(Level* level, XString&& name);
+		~LevelActor();
 		const XString& GetName() const { return m_Name; }
 		void SetName(const XString& name) { m_Name = name; }
 		Object::EntityID GetEntityID() const { return m_EntityID; }
-		Object::RenderScene* GetScene() const { return m_Scene; }
-		TArrayView<LevelComponent*> GetComponents();
+		Object::RenderScene* GetScene() const;
 	private:
-		friend class Level;
+		friend Level;
 		static constexpr uint32 INVALID_INDEX{ UINT32_MAX };
-		Object::RenderScene* m_Scene;
+		Level* m_Level;
 		XString m_Name;
 		Object::EntityID m_EntityID;
-		TArray<TUniquePtr<LevelComponent>> m_Components;
 		uint32 m_ArrayIndex{ INVALID_INDEX };
 	};
 
-	class Level {
+	class Level : public LevelComponentContainer{
 	public:
-		Level(RenderScene* scene) : m_Scene(scene) {}
+		Level(RenderScene* scene);
 		~Level() = default;
 		RenderScene* GetScene() const { return m_Scene; }
 		bool LoadFile(const char* file);
@@ -78,7 +104,7 @@ namespace Object {
 	public:
 		TypeInfoBase(const char* typeName): m_TypeName(typeName) {}
 		virtual ~TypeInfoBase() = default;
-		virtual LevelComponent* AddComponent(LevelActor* actor) = 0;
+		virtual LevelComponentBase* AddComponent(LevelComponentContainer* owner) = 0;
 		const XString& GetTypeName() { return m_TypeName; }
 	private:
 		XString m_TypeName;
@@ -87,8 +113,8 @@ namespace Object {
 	template<class T> class TypeInfo: public TypeInfoBase {
 	public:
 		using TypeInfoBase::TypeInfoBase;
-		LevelComponent* AddComponent(LevelActor* actor) override {
-			return actor->AddComponent<T>();
+		LevelComponentBase* AddComponent(LevelComponentContainer* owner) override {
+			return owner->AddComponent<T>();
 		}
 	};
 
@@ -99,7 +125,7 @@ namespace Object {
 		uint32 GetTypeSize();
 		TypeInfoBase* GetTypeInfo(uint32 typeID);
 		TypeInfoBase* GetTypeInfo(const char* name);
-		TypeInfoBase* GetTypeInfo(LevelComponent* component);
+		TypeInfoBase* GetTypeInfo(LevelComponentBase* component);
 	private:
 		TArray<TUniquePtr<TypeInfoBase>> m_TypeInfos;
 		TMap<XString, uint32> m_MapTypeNameID;
@@ -108,14 +134,24 @@ namespace Object {
 		LevelComponentFactory() = default;
 		~LevelComponentFactory() = default;
 	};
+#define REGISTER_ACTOR_COMPONENT(cls) public:\
+	using ActorComponent::ActorComponent;\
+	uint32 GetTypeID() override { return TypeID; }\
+	inline static uint32 TypeID{ LevelComponentFactory::Instance().RegisterTypeInfo(TUniquePtr<TypeInfoBase>(new TypeInfo<cls>(#cls))) }
+
+
 #define REGISTER_LEVEL_COMPONENT(cls) public:\
 	using LevelComponent::LevelComponent;\
 	uint32 GetTypeID() override { return TypeID; }\
 	inline static uint32 TypeID{ LevelComponentFactory::Instance().RegisterTypeInfo(TUniquePtr<TypeInfoBase>(new TypeInfo<cls>(#cls))) }
-
 #if 0
-	class Transform: public LevelComponent {
-		REGISTER_LEVEL_COMPONENT(Transform);
+	class Transform: public Object::ActorComponent {
+		REGISTER_ACTOR_COMPONENT(Transform);
 	};
+
+	class Camera: public Object::LevelComponent {
+		REGISTER_LEVEL_COMPONENT(camera);
+	};
+
 #endif
 }

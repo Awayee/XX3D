@@ -15,7 +15,7 @@ namespace Object {
 		REGISTER_ECS_COMPONENT(SkyBoxECSComp);
 	};
 
-	class SkyBoxComponent: public LevelComponent {
+	class SkyBoxComponent: public ActorComponent {
 	public:
 		void OnLoad(const Json::Value& val) override;
 		void OnAdd() override;
@@ -24,7 +24,7 @@ namespace Object {
 		const XString& GetCubeMapFile() const { return m_CubeMapFile; }
 	private:
 		XString m_CubeMapFile;
-		REGISTER_LEVEL_COMPONENT(SkyBoxComponent);
+		REGISTER_ACTOR_COMPONENT(SkyBoxComponent);
 	};
 
 	class SkyBoxSystem : public ECSSystem<SkyBoxECSComp> {

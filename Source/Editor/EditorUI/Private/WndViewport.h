@@ -1,9 +1,8 @@
 #pragma once
 #include "EditorUI/Public/EditorWindow.h"
-#include "Math/Public/Math.h"
 
 namespace Object {
-	class RenderCamera;
+	class CameraComponent;
 }
 
 namespace Editor {
@@ -20,7 +19,7 @@ namespace Editor {
 		bool m_MouseDown{ false };
 		bool m_ViewportShow{ false };
 
-		void CameraControl(Object::RenderCamera* camera);
+		void CameraControl(Object::CameraComponent* camera);
 		void WndContent() override;
 		void SetupRenderTarget();
 	};

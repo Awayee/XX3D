@@ -2,18 +2,17 @@
 #include "EditorUI/Public/EditorUIMgr.h"
 #include "Functions/Public/EditorLevel.h"
 #include "Functions/Public/EditorConfig.h"
-#include "Objects/Public/RenderScene.h"
-#include "Objects/Public/Camera.h"
 #include "Render/Public/DefaultResource.h"
 #include "System/Public/Timer.h"
 #include "Window/Public/EngineWindow.h"
+#include "Objects/Public/LevelComponents.h"
 
 namespace Editor {
 
-	void MoveCamera(Object::RenderCamera* camera, float x, float y, float z, bool local) {
-		Math::FVector3 eye = camera->GetView().Eye;
-		Math::FVector3 at = camera->GetView().At;
-		Math::FVector3 up = camera->GetView().Up;
+	void MoveCamera(Object::CameraComponent* camera, float x, float y, float z, bool local) {
+		Math::FVector3 eye = camera->Eye;
+		Math::FVector3 at = camera->At;
+		Math::FVector3 up = camera->Up;
 		Math::FVector3 delta;
 		if (local) {
 			Math::FVector3 forward = at - eye;
@@ -25,13 +24,16 @@ namespace Editor {
 		}
 		eye += delta;
 		at += delta;
-		camera->SetView({eye, at, up});
+		camera->Eye = eye;
+		camera->At = at;
+		Object::CameraComponent::DirtyFlags dirty; dirty.View = true;
+		camera->SyncData(dirty);
 	}
 
-	void RotateCamera(Object::RenderCamera* camera, float x, float y, float z, bool localSpace) {
-		Math::FVector3 eye = camera->GetView().Eye;
-		Math::FVector3 at = camera->GetView().At;
-		Math::FVector3 tempUp = camera->GetView().Up;
+	void RotateCamera(Object::CameraComponent* camera, float x, float y, float z, bool localSpace) {
+		Math::FVector3 eye = camera->Eye;
+		Math::FVector3 at = camera->At;
+		Math::FVector3 tempUp = camera->Up;
 		if (localSpace) {
 			Math::FVector3 forward = at - eye;
 			forward.NormalizeSelf();
@@ -47,7 +49,10 @@ namespace Editor {
 		}
 		else {
 		}
-		camera->SetView({eye, at, tempUp});
+		camera->Eye = eye;
+		camera->At = at;
+		Object::CameraComponent::DirtyFlags dirty; dirty.View = true;
+		camera->SyncData(dirty);
 	}
 
 	WndViewport::WndViewport() : EditorWndBase("Viewport", ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse) {
@@ -60,7 +65,7 @@ namespace Editor {
 		}
 	}
 
-	void WndViewport::CameraControl(Object::RenderCamera* camera) {
+	void WndViewport::CameraControl(Object::CameraComponent* camera) {
 		if(!ImGui::IsWindowFocused()) {
 			return;
 		}
@@ -122,7 +127,8 @@ namespace Editor {
 		}
 
 		EditorLevel* level = Editor::EditorLevelMgr::Instance()->GetLevel();
-		if(!level) {
+		Object::CameraComponent* cameraComponent = level->GetComponent<Object::CameraComponent>();
+		if(!cameraComponent) {
 			return;
 		}
 		Object::RenderScene* scene = level->GetScene();
@@ -130,7 +136,7 @@ namespace Editor {
 			return;
 		}
 		Object::RenderCamera* camera = scene->GetMainCamera();
-		CameraControl(camera);
+		CameraControl(cameraComponent);
 
 		// check render size;
 		auto size = ImGui::GetWindowSize();

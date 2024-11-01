@@ -64,6 +64,7 @@ namespace Editor {
 	public:
 		using FileAssetView::FileAssetView;
 		void Open() override;
+		static NodeID NewDefault(uint32 folderNode);
 	};
 
 	class InstanceDataAssetView: public FileAssetView {

@@ -14,6 +14,9 @@ namespace Math {
 
         T* Data() { return &X; }
         const T* Data() const { return &X; }
+        constexpr unsigned int Size() const {
+            return 2;
+        }
 
         T operator[](unsigned int i) const { return (i == 0 ? X : Y); }
         T& operator[](unsigned int i) { return (i == 0 ? X : Y); }
@@ -176,6 +179,10 @@ namespace Math {
         const T* Data() const {
 	        return &X;
         }
+        constexpr unsigned int Size() const {
+            return 3;
+        }
+
         T operator[](unsigned int i) const {
 	        return *(&X + i);
         }
@@ -362,6 +369,9 @@ namespace Math {
         }
         const T* Data() const {
 	        return &X;
+        }
+        constexpr unsigned int Size() const {
+            return 4;
         }
 
         T operator[](unsigned int i) const {

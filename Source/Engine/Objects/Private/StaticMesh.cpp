@@ -13,6 +13,9 @@ namespace Object {
 	}
 
 	void TransformComponent::OnAdd() {
+		Position = { 0,0,0 };
+		Scale = { 1,1,1 };
+		Euler = { 0,0,0 };
 		GetScene()->AddComponent<TransformECSComponent>(GetEntityID());
 	}
 
@@ -45,7 +48,7 @@ namespace Object {
 	}
 
 	void MeshComponent::OnAdd() {
-		GetScene()->AddComponent<MeshECSComponent>(GetEntityID());
+		MeshECSComponent* ecsCom = GetScene()->AddComponent<MeshECSComponent>(GetEntityID());
 	}
 
 	void MeshComponent::OnRemove() {
@@ -77,6 +80,8 @@ namespace Object {
 			else {
 				component->AABB = {};
 			}
+			// set cast shadow
+			component->CastShadow = m_CastShadow;
 		}
 	}
 

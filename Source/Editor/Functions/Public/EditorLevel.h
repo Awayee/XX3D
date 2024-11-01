@@ -9,6 +9,7 @@ namespace Editor {
 		bool SaveFile(const char* file);
 		uint32 GetActorSize();
 		Object::LevelActor* GetActor(uint32 actorID);
+		static void InitDefault(EditorLevel& level);
 	};
 
 	class EditorLevelMgr {
@@ -34,26 +35,26 @@ namespace Editor {
 	class LevelComponentEditProxyFactory {
 	public:
 		struct LevelComponentEditProxy {
-			Func<void(Object::LevelComponent*, Json::ValueWriter&)> OnSave{ nullptr };
-			Func<void(Object::LevelComponent*)> OnGUI{ nullptr };
+			Func<void(Object::LevelComponentBase*, Json::ValueWriter&)> OnSave{ nullptr };
+			Func<void(Object::LevelComponentBase*)> OnGUI{ nullptr };
 		};
 		template<class T>
 		bool RegisterOnSave(void(*func)(T*, Json::ValueWriter& val)) {
 			m_InitializerArray.PushBack([func](LevelComponentEditProxyFactory* f) {
-				f->GetProxy(T::TypeID).OnSave = [func](Object::LevelComponent* c, Json::ValueWriter& v) { func((T*)c, v); };
+				f->GetProxy(T::TypeID).OnSave = [func](Object::LevelComponentBase* c, Json::ValueWriter& v) { func((T*)c, v); };
 				});
 			return true;
 		}
 		template<class T>
 		bool RegisterOnGUI(void(*func)(T*)) {
 			m_InitializerArray.PushBack([func](LevelComponentEditProxyFactory* f) {
-				f->GetProxy(T::TypeID).OnGUI = [func](Object::LevelComponent* c) { func((T*)c); };
+				f->GetProxy(T::TypeID).OnGUI = [func](Object::LevelComponentBase* c) { func((T*)c); };
 				});
 			return true;
 		}
 
 		void Initialize();
-		const LevelComponentEditProxy& GetProxy(Object::LevelComponent* c);
+		const LevelComponentEditProxy& GetProxy(Object::LevelComponentBase* c);
 		static LevelComponentEditProxyFactory& Instance();
 	private:
 		TArray<Func<void(LevelComponentEditProxyFactory*)>> m_InitializerArray;
