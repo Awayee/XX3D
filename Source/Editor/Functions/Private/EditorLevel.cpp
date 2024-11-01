@@ -8,11 +8,9 @@
 
 namespace Editor {
 	void TransformSave(Object::TransformComponent* com, Json::ValueWriter& val) {
-		auto& transform = com->Transform;
-		val.AddFloatArray("Position", transform.Position.Data(), 3);
-		val.AddFloatArray("Scale", transform.Scale.Data(), 3);
-		Math::FVector3 euler = transform.Rotation.ToEuler();
-		val.AddFloatArray("Rotation", euler.Data(), 3);
+		val.AddFloatArray("Position", com->Position.Data(), 3);
+		val.AddFloatArray("Scale", com->Scale.Data(), 3);
+		val.AddFloatArray("Rotation", com->Euler.Data(), 3);
 	}
 	REGISTER_LEVEL_EDIT_OnSave(Object::TransformComponent, TransformSave);
 

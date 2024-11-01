@@ -6,11 +6,9 @@
 namespace Object {
 
 	void TransformComponent::OnLoad(const Json::Value& val) {
-		Json::LoadFloatArray(val["Position"], Transform.Position.Data(), 3);
-		Json::LoadFloatArray(val["Scale"], Transform.Scale.Data(), 3);
-		Math::FVector3 euler;
-		Json::LoadFloatArray(val["Rotation"], euler.Data(), 3);
-		Transform.Rotation = Math::FQuaternion::Euler(euler);
+		Json::LoadFloatArray(val["Position"], Position.Data(), 3);
+		Json::LoadFloatArray(val["Scale"], Scale.Data(), 3);
+		Json::LoadFloatArray(val["Rotation"], Euler.Data(), 3);
 		TransformUpdated();
 	}
 
@@ -23,8 +21,12 @@ namespace Object {
 	}
 
 	void TransformComponent::TransformUpdated() {
+		Math::FTransform transform;
+		transform.Position = Position;
+		transform.Rotation = Math::FQuaternion::Euler(Euler);
+		transform.Scale = Scale;
 		TransformECSComponent* component = GetScene()->GetComponent<TransformECSComponent>(GetEntityID());
-		component->SetTransform(Transform);
+		component->SetTransform(transform);
 	}
 
 	void MeshComponent::OnLoad(const Json::Value& val) {

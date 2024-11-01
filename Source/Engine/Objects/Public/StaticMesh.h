@@ -10,7 +10,9 @@ namespace Object {
 
 	class TransformComponent: public LevelComponent {
 	public:
-		Math::FTransform Transform;
+		Math::FVector3 Position;
+		Math::FVector3 Euler;
+		Math::FVector3 Scale;
 		void OnLoad(const Json::Value& val) override;
 		void OnAdd() override;
 		void OnRemove() override;

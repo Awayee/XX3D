@@ -10,14 +10,9 @@
 namespace Editor {
 
 	void TransformGUI(Object::TransformComponent* com) {
-		auto& transform = com->Transform;
-		bool dirty = ImGui::DragFloat3("Position", transform.Position.Data(), 0.1f);
-		dirty |= ImGui::DragFloat3("Scale", transform.Scale.Data(), 0.01f);
-		Math::FVector3 euler = transform.Rotation.ToEuler();
-		if(ImGui::DragFloat3("Rotation", euler.Data(), 0.01f)) {
-			dirty = true;
-			transform.Rotation = Math::FQuaternion::Euler(euler);
-		}
+		bool dirty = ImGui::DragFloat3("Position", com->Position.Data(), 0.1f);
+		dirty |= ImGui::DragFloat3("Scale", com->Scale.Data(), 0.01f);
+		dirty |= ImGui::DragFloat3("Rotation", com->Euler.Data(), 0.01f);
 		if (dirty) {
 			com->TransformUpdated();
 		}
