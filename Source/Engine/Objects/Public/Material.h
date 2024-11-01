@@ -108,7 +108,7 @@ namespace Object {
 	// a array of materials in a scene or render pass.
 	class MaterialContainer {
 	public:
-		uint32 FindOrCreateMaterial(const XString& filename);// create material by .material or .materialt file, return material id
+		uint32 FindOrCreateMaterial(const XString& filename);// create material by .mati or .matt file, return material id
 		MaterialInterface* GetMaterial(uint32 materialIndex);
 	private:
 		TIDMapContainer<MaterialInterface*> m_Materials;

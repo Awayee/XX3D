@@ -37,7 +37,7 @@ namespace Object {
 		return bInstanced ? 1 : 2;
 	}
 
-	MaterialTemplate::MaterialTemplate(const Asset::MaterialTemplateAsset& asset) {
+	MaterialTemplate::MaterialTemplate(const Asset::MaterialTemplateAsset& asset) : m_Hash(0) {
 		Reload(asset);
 	}
 
@@ -173,11 +173,6 @@ namespace Object {
 		for (uint32 samplerCode : samplersCode) {
 			m_Samplers.PushBack(MaterialSamplerCode{ samplerCode });
 		}
-		// calculate hash
-		m_Hash = 0;
-		m_Hash = GetTypeHash32BasedOn(m_Textures.Size(), m_Hash);
-		m_Hash = GetTypeHash32BasedOn(m_Vectors.Size(), m_Hash);
-		m_Hash = GetTypeHash32BasedOn(m_Samplers.Size(), m_Hash);
 
 		// outputs
 		for (const auto& srcParam : asset.Parameters) {
@@ -193,10 +188,21 @@ namespace Object {
 			m_MaterialCB = RHI::Instance()->CreateBuffer({ EBufferFlags::Uniform, m_Vectors.ByteSize(), 0 });
 		}
 		m_MaterialCB->UpdateData(m_Vectors.Data(), m_Vectors.ByteSize(), 0);
-		m_Shader.PS.Reset();
-		m_Shader.VS.Reset();
-		m_InstancedShader.PS.Reset();
-		m_InstancedShader.VS.Reset();
+
+
+		// calculate hash
+		uint32 hash = 0;
+		hash = GetTypeHash32BasedOn(m_Textures.Size(), hash);
+		hash = GetTypeHash32BasedOn(m_Vectors.Size(), hash);
+		hash = GetTypeHash32BasedOn(m_Samplers.Size(), hash);
+		// need rebuild shader if hash modified
+		if(hash != m_Hash) {
+			m_Shader.PS.Reset();
+			m_Shader.VS.Reset();
+			m_InstancedShader.PS.Reset();
+			m_InstancedShader.VS.Reset();
+			m_Hash = hash;
+		}
 	}
 
 	MaterialTemplate::MaterialShader& MaterialTemplate::GetOrCreateShader(bool bInstanced) {
@@ -378,6 +384,7 @@ namespace Object {
 				m_TextureOverrides[i] = templateTextures[i].Texture;
 			}
 		}
+		m_CacheHash = m_Template->m_Hash;
 		return false;
 	}
 

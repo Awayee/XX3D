@@ -181,7 +181,10 @@ namespace {
 
 	class MaterialTemplateEditor : public Editor::EditorWndBase {
 	public:
-		MaterialTemplateEditor(const XString& pathStr) : EditorWndBase("Material Template Editor", ImGuiWindowFlags_NoDocking), m_PathStr(pathStr), m_FistDisplay(true) {
+		MaterialTemplateEditor(const XString& pathStr) : EditorWndBase("Material Template Editor", ImGuiWindowFlags_NoDocking),
+		m_PathStr(pathStr),
+		m_FistDisplay(true),
+		m_PreviewInScene(false) {
 			AutoDelete();
 			Asset::AssetLoader::LoadProjectAsset(&m_Asset, m_PathStr.c_str());
 		}
@@ -193,12 +196,18 @@ namespace {
 					LOG_INFO("Material template saved: %s", m_PathStr.c_str());
 				}
 			}
+			ImGui::SameLine();
+			ImGui::Checkbox("Preview In Scene", &m_PreviewInScene);
+
 			bool bParamTypeDirty = false;
+			bool bParamDirty = false;
 			constexpr float itemWidth = 128.0f;
 			int uniqueID = 0;
 			// material params
+			ImNodes::PushStyleVar(ImNodesStyleVar_PinCircleRadius, 4.0f);
 			ImNodes::BeginNodeEditor();
-			for(int i=0; i<(int)m_Asset.Parameters.Size(); ++i) {
+			const int paramSize = (int)m_Asset.Parameters.Size();
+			for(int i=0; i<paramSize; ++i) {
 				auto& param = m_Asset.Parameters[i];
 				const uint32 paramOffset = param.Offset;
 				const Asset::EMaterialParamType paramType = param.ParamType;
@@ -219,13 +228,13 @@ namespace {
 				case Asset::EMaterialParamType::Scalar: {
 					ImGui::PushID(uniqueID++);
 					ImGui::SetNextItemWidth(itemWidth);
-					ImGui::DragFloat("##", &m_Asset.Scalars[paramOffset], 0.01f, 0.0f, 1.0f);
+					bParamDirty |= ImGui::DragFloat("##", &m_Asset.Scalars[paramOffset], 0.01f, 0.0f, 1.0f);
 					ImGui::PopID();
 				}break;
 				case Asset::EMaterialParamType::Vector: {
 					ImGui::PushID(uniqueID++);
 					ImGui::SetNextItemWidth(itemWidth * 2);
-					ImGui::ColorEdit4("##", m_Asset.Vectors[paramOffset].Data());
+					bParamDirty |= ImGui::ColorEdit4("##", m_Asset.Vectors[paramOffset].Data());
 					ImGui::PopID();
 				}break;
 				case Asset::EMaterialParamType::Texture: {
@@ -233,7 +242,7 @@ namespace {
 					XString& texRef = texInfo.Texture;
 					ImGui::PushID(uniqueID++);
 					ImGui::SetNextItemWidth(itemWidth * 2);
-					ImGui::DraggableFileItemAssets("##", texRef, "*.texture");
+					bParamDirty |= ImGui::DraggableFileItemAssets("##", texRef, "*.texture");
 					ImGui::PopID();
 					// sampler
 					Object::MaterialSamplerCode samplerCode = texInfo.SamplerCode;
@@ -254,32 +263,62 @@ namespace {
 						samplerCode.AddressMode = (ESamplerAddressMode)addressMode;
 						texInfo.SamplerCode = samplerCode.Code;
 					}
+					bParamDirty |= samplerDirty;
 				}break;
 				}
+				ImNodes::BeginOutputAttribute(i);
+				ImNodes::EndOutputAttribute();
 				ImNodes::EndNode();
 			}
 
+			// display output node
+			TArray<TPair<int, int>> links;
+			links.Reserve(paramSize);
+			ImNodes::BeginNode(paramSize);
+			ImGui::TextUnformatted("Output");
+			for(int i=0; i< paramSize; ++i) {
+				const auto& param = m_Asset.Parameters[i];
+				ImNodes::BeginInputAttribute(paramSize + i);
+				ImGui::TextUnformatted(param.Name.c_str());
+				ImNodes::EndInputAttribute();
+				links.PushBack({i, paramSize + i});
+			}
+			ImNodes::EndNode();
 			// align node pos when first tick
 			if(m_FistDisplay) {
-				float x = 0.0f, y = 0.0f;
+				constexpr float xStart=64.0f, yStart = 64.0f;
+				float y = yStart;
+				float maxWidth = 0.0f;
 				constexpr float nodeSpace = 16.0f;
-				for(int i=0; i<(int)m_Asset.Parameters.Size(); ++i) {
-					ImNodes::SetNodeGridSpacePos(i, { x, y });
+				for(int i=0; i< paramSize; ++i) {
+					ImNodes::SetNodeGridSpacePos(i, { xStart, y });
 					ImVec2 nodeSize = ImNodes::GetNodeDimensions(i);
 					y += nodeSize.y + nodeSpace;
+					maxWidth = Math::Max(nodeSize.x, maxWidth);
 				}
+				ImNodes::SetNodeGridSpacePos(paramSize, { xStart + maxWidth + nodeSpace, (yStart + y) * 0.5f });
 				m_FistDisplay = false;
 			}
+			// links
+			for(auto link: links) {
+				ImNodes::Link(uniqueID++, link.first, link.second);
+			}
 			ImNodes::EndNodeEditor();
+			ImNodes::PopStyleVar();
 
 			if(bParamTypeDirty) {
 				RebuildParams();
+			}
+			bParamDirty |= bParamTypeDirty;
+			if(bParamDirty && m_PreviewInScene) {
+				Object::MaterialMgr::Instance()->ReloadMaterialTemplate(m_PathStr, m_Asset);
 			}
 		}
 	private:
 		XString m_PathStr;
 		Asset::MaterialTemplateAsset m_Asset;
 		bool m_FistDisplay;
+		bool m_PreviewInScene;
 		void RebuildParams() {
 			TArray<float> scalars;
 			TArray<Math::FVector4> vectors;
