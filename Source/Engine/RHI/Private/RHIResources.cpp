@@ -207,6 +207,10 @@ bool RHITextureSubRes::operator==(const RHITextureSubRes& rhs) const {
         MipIndex == rhs.MipIndex && MipSize == rhs.MipSize && ArrayIndex == rhs.ArrayIndex && ArraySize == rhs.ArraySize;
 }
 
+bool RHITextureSubRes::operator!=(const RHITextureSubRes& rhs) const {
+    return !(*this == rhs);
+}
+
 RHITextureSubRes RHITextureSubRes::Tex2D(uint16 arrayIndex, ETextureViewFlags viewFlags) {
     return { arrayIndex, 1, 0, 1, ETextureDimension::Tex2D, viewFlags };
 }
@@ -280,6 +284,14 @@ RHIShaderParam RHIShaderParam::StorageBuffer(const RHIDynamicBuffer& dynamicBuff
 RHIShaderParam RHIShaderParam::Texture(RHITexture* texture, RHITextureSubRes textureSub) {
     RHIShaderParam parameter{};
     parameter.Type = EBindingType::Texture;
+    parameter.Data.Texture = texture;
+    parameter.Data.SubRes = textureSub;
+    return parameter;
+}
+
+RHIShaderParam RHIShaderParam::TextureUAV(RHITexture* texture, RHITextureSubRes textureSub) {
+    RHIShaderParam parameter{};
+    parameter.Type = EBindingType::StorageTexture;
     parameter.Data.Texture = texture;
     parameter.Data.SubRes = textureSub;
     return parameter;

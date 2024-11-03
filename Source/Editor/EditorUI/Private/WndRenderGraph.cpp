@@ -39,18 +39,22 @@ namespace Editor {
 	class RGNodeViewLayoutBuilder {
 	public:
 		TArray<ImVec2> Positions;
-		RGNodeViewLayoutBuilder(const TArray<RGViewNode>& nodes, Render::RGNodeID targetID) : m_RefNodes(nodes) {
-			if(m_RefNodes.IsEmpty() || Render::RG_INVALID_NODE == targetID) {
+		RGNodeViewLayoutBuilder(const TArray<RGViewNode>& nodes, TConstArrayView<Render::RGNodeID> outputIDs) : m_RefNodes(nodes) {
+			if(m_RefNodes.IsEmpty() || !outputIDs.Size()) {
 				return;
 			}
 			Positions.Resize(nodes.Size());
 			m_TempNodes.Resize(nodes.Size());
 			// dfs to get layers of nodes
 			m_Visited.Resize(nodes.Size(), false);
-			RecursivelyBuildNodeLayers(targetID, 0);
+			for(auto targetID: outputIDs) {
+				RecursivelyBuildNodeLayers(targetID, 0);
+			}
 			// again to get y pos of nodes
 			m_Visited.Reset(); m_Visited.Resize(nodes.Size(), false);
-			RecursivelyBuildNode(targetID,0.0f);
+			for(auto targetID : outputIDs) {
+				RecursivelyBuildNode(targetID, 0.0f);
+			}
 			// build positions
 			TArray<float> layerPosXs(m_LayerMaxWidths.Size(), 0.0f);
 			for(int i=(int)layerPosXs.Size()-2; i>-1; --i) {
@@ -167,7 +171,9 @@ namespace Editor {
 			if (nodes.Size()) {
 				TArray<bool> visited(nodes.Size(), false);
 				int uniqueID = 0;
-				RecursivelyBuildPinLinks(nodes, rgView.LastID, m_NodePins, m_NodeLines, visited, uniqueID);
+				for(Render::RGNodeID nodeID : rgView.OutputIDs) {
+					RecursivelyBuildPinLinks(nodes, nodeID, m_NodePins, m_NodeLines, visited, uniqueID);
+				}
 			}
 			m_UpdateFrame = rgView.UpdateFrame;
 		}
@@ -235,7 +241,7 @@ namespace Editor {
 		}
 		// check rebuild
 		if (needRebuild) {
-			RGNodeViewLayoutBuilder builder(nodes, rgView.LastID);
+			RGNodeViewLayoutBuilder builder(nodes, rgView.OutputIDs);
 			auto& positions = builder.Positions;
 			for (uint32 i = 0; i < positions.Size(); ++i) {
 				ImNodes::SetNodeGridSpacePos((int)i, positions[i]);

@@ -17,14 +17,17 @@ namespace Render {
 		RenderGraph(RenderGraphView* view=nullptr);
 		RGRenderNode* CreateRenderNode(XString&& name);
 		RGTransferNode* CreateTransferNode(XString&& name);
+		RGComputeNode* CreateComputeNode(XString&& name);
 		RGBufferNode* CreateBufferNode(RHIBuffer* buffer, XString&& name);
 		RGTextureNode* CreateTextureNode(RHITexture* texture, XString&& name);
 		RGTextureNode* CopyTextureNode(RGTextureNode* textureNode, XString&& name);
-		RGPresentNode* CreatePresentNode();
+		RGOutputNode* CreateOutputNode(RGTextureNode* prevNode, XString&& name);
+		RGPresentNode* CreatePresentNode(RGTextureNode* prevNode, XString&& name);
 		void Run(ICmdAllocator* cmdAlloc);
 	private:
 		TArray<TUniquePtr<RGNode>> m_Nodes;
 		TArray<bool> m_NodesSolved;
+		TArray<RGNodeID> m_Outputs;
 		RGNodeID m_PresentNodeID;
 		RenderGraphView* m_View;
 		TArray<RGNodeID> GetPrevPassNodes(RGNode* node);// the last pass node before the node
@@ -39,7 +42,7 @@ namespace Render {
 			XString Name;
 			TArray<RGNodeID> PrevNodes;
 		};
-		RGNodeID LastID{RG_INVALID_NODE};
+		TArray<RGNodeID> OutputIDs;
 		TArray<Node> Nodes;
 		uint32 UpdateFrame;
 	};

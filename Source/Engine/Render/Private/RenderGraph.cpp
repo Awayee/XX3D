@@ -22,6 +22,12 @@ namespace Render {
 		return node;
 	}
 
+	RGComputeNode* RenderGraph::CreateComputeNode(XString&& name) {
+		RGComputeNode* node = (RGComputeNode*)m_Nodes.EmplaceBack(new RGComputeNode(m_Nodes.Size())).Get();
+		node->SetName(MoveTemp(name));
+		return node;
+	}
+
 	RGBufferNode* RenderGraph::CreateBufferNode(RHIBuffer* buffer, XString&& name) {
 		buffer->SetName(name.c_str());
 		RGBufferNode* node = (RGBufferNode*)m_Nodes.EmplaceBack(new RGBufferNode(m_Nodes.Size(), buffer)).Get();
@@ -42,33 +48,48 @@ namespace Render {
 		return node;
 	}
 
-	RGPresentNode* RenderGraph::CreatePresentNode() {
-		if(RG_INVALID_NODE == m_PresentNodeID) {
-			m_PresentNodeID = m_Nodes.Size();
-			m_Nodes.EmplaceBack(new RGPresentNode(m_PresentNodeID))->SetName("Present");
-		}
-		return (RGPresentNode*)m_Nodes[m_PresentNodeID].Get();
+	RGOutputNode* RenderGraph::CreateOutputNode(RGTextureNode* prevNode, XString&& name) {
+		RGNodeID nodeID = m_Nodes.Size();
+		RGOutputNode* node = (RGOutputNode*)m_Nodes.EmplaceBack(new RGOutputNode(nodeID)).Get();
+		node->SetName(MoveTemp(name));
+		RGNode::Connect(prevNode, node);
+		m_Outputs.PushBack(nodeID);
+		return node;
+	}
+
+	RGPresentNode* RenderGraph::CreatePresentNode(RGTextureNode* prevNode, XString&& name) {
+		CHECK(RG_INVALID_NODE == m_PresentNodeID); // num of present node is up to 1
+		RGNodeID nodeID = m_Nodes.Size();
+		RGPresentNode* node = (RGPresentNode*)m_Nodes.EmplaceBack(new RGPresentNode(nodeID)).Get();
+		node->SetName(MoveTemp(name));
+		RGNode::Connect(prevNode, node);
+		prevNode->SetTargetState(EResourceState::Present);
+		m_Outputs.PushBack(nodeID);
+		m_PresentNodeID = nodeID;
+		return node;
 	}
 
 	void RenderGraph::Run(ICmdAllocator* cmdAlloc) {
 		ASSERT(RG_INVALID_NODE != m_PresentNodeID, "[RenderGraph::Run] No present node!");
 		// run prev nodes and mark
 		m_NodesSolved.Resize(m_Nodes.Size(), false);
-		// run present node
-		RGNode* presentNode = m_Nodes[m_PresentNodeID].Get();
-		CHECK(ERGNodeType::Present == presentNode->GetNodeType());
-		if(ParrallelNodes) {
-			RecursivelyRunPrevNodesParallel(presentNode, cmdAlloc);
+		// run output nodes
+		for(RGNodeID outputID: m_Outputs) {
+			RGNode* node = m_Nodes[outputID].Get();
+			CHECK(ERGNodeType::Output == node->GetNodeType());
+			if(ParrallelNodes) {
+				RecursivelyRunPrevNodesParallel(node, cmdAlloc);
+			}
+			else {
+				RecursivelyRunPrevNodes(node, cmdAlloc);
+			}
+			((RGOutputNode*)node)->Run();
 		}
-		else {
-			RecursivelyRunPrevNodes(presentNode, cmdAlloc);
-		}
-		((RGPresentNode*)presentNode)->Run();
 
 		// record view
 		if(m_View) {
 			m_View->UpdateFrame = Engine::Timer::GetFrame();
-			m_View->LastID = m_PresentNodeID;
+			m_View->OutputIDs = m_Outputs;
 			auto& nodeViews = m_View->Nodes;
 			nodeViews.Reset();
 			nodeViews.Reserve(m_Nodes.Size());
@@ -103,7 +124,7 @@ namespace Render {
 		if (ERGNodeType::Pass == node->GetNodeType()) {
 			return ((RGPassNode*)node)->m_Fence;
 		}
-		if (ERGNodeType::Present == node->GetNodeType()) {
+		if (ERGNodeType::Output == node->GetNodeType()) {
 			return ((RGPresentNode*)node)->m_Fence;
 		}
 		return nullptr;
@@ -112,7 +133,7 @@ namespace Render {
 	void RenderGraph::RecursivelyRunPrevNodes(RGNode* node, ICmdAllocator* cmdAlloc) {
 		// get fence
 		RHIFence* fence = GetNodeFence(node);
-		bool isPresent = ERGNodeType::Present == node->GetNodeType();
+		bool isPresent = node->m_NodeID == m_PresentNodeID;
 		// execute prev nodes
 		const TArray<RGNodeID> prevPassIDs = GetPrevPassNodes(node);
 		for(const RGNodeID prevPassID: prevPassIDs) {
@@ -120,6 +141,7 @@ namespace Render {
 				CHECK(ERGNodeType::Pass == m_Nodes[prevPassID]->GetNodeType());
 				RGPassNode* prevPassNode = (RGPassNode*)m_Nodes[prevPassID].Get();
 				RecursivelyRunPrevNodes(prevPassNode, cmdAlloc);
+				NodeCmdCollector cmdCollector;
 				const EQueueType queueType = prevPassNode->GetQueue();
 				RHICommandBuffer* cmd = cmdAlloc->GetCmd(queueType);
 				prevPassNode->Run(cmd);
@@ -131,24 +153,24 @@ namespace Render {
 
 	void RenderGraph::RecursivelyRunPrevNodesParallel(RGNode* node, ICmdAllocator* cmdAlloc) {
 		RHIFence* fence = GetNodeFence(node);
-		bool bPresent = ERGNodeType::Present == node->GetNodeType();
+		bool bPresent = node->m_NodeID == m_PresentNodeID;
 		// execute prev nodes
 		const TArray<RGNodeID> prevPassIDs = GetPrevPassNodes(node);
-		TStaticArray<uint32, EnumCast(EQueueType::Count)> cmdCounts(0);
 
-		// pre-allocate cmd // TODO because of error in d3d12 when allocating command before last command executed.
-		{
-			for(const RGNodeID prevPassID: prevPassIDs) {
-				if(!m_NodesSolved[prevPassID]) {
-					CHECK(ERGNodeType::Pass == m_Nodes[prevPassID]->GetNodeType());
-					RGPassNode* prevPassNode = (RGPassNode*)m_Nodes[prevPassID].Get();
-					++cmdCounts[EnumCast(prevPassNode->GetQueue())];
-				}
-			}
-			for(uint32 i=0; i<cmdCounts.Size(); ++i) {
-				cmdAlloc->Reserve((EQueueType)i, cmdCounts[i]);
-			}
-		}
+		//// pre-allocate cmd // TODO because of error in d3d12 when allocating command before last command executed.
+		//{
+		//	TStaticArray<uint32, EnumCast(EQueueType::Count)> cmdCounts(0);
+		//	for(const RGNodeID prevPassID: prevPassIDs) {
+		//		if(!m_NodesSolved[prevPassID]) {
+		//			CHECK(ERGNodeType::Pass == m_Nodes[prevPassID]->GetNodeType());
+		//			RGPassNode* prevPassNode = (RGPassNode*)m_Nodes[prevPassID].Get();
+		//			++cmdCounts[EnumCast(prevPassNode->GetQueue())];
+		//		}
+		//	}
+		//	for(uint32 i=0; i<cmdCounts.Size(); ++i) {
+		//		cmdAlloc->Reserve((EQueueType)i, cmdCounts[i]);
+		//	}
+		//}
 
 		TStaticArray<TArray<RHICommandBuffer*>, EnumCast(EQueueType::Count)> cmdArrays;
 		for(const RGNodeID prevPassID: prevPassIDs) {

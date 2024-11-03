@@ -1,4 +1,5 @@
 #pragma once
+#include "RenderGraphNode.h"
 #include "RHI/Public/RHI.h"
 #include "Core/Public/Defines.h"
 #include "Core/Public/Func.h"
@@ -12,7 +13,7 @@ namespace Render {
 	enum class ERGNodeType {
 		Pass,
 		Resource,
-		Present
+		Output
 	};
 	typedef uint32 RGNodeID;
 	constexpr RGNodeID RG_INVALID_NODE = UINT32_MAX;
@@ -23,6 +24,16 @@ namespace Render {
 		virtual ~ICmdAllocator() = default;
 		virtual RHICommandBuffer* GetCmd(EQueueType queue) = 0;
 		virtual void Reserve(EQueueType queue, uint32 size) = 0;
+	};
+
+	class NodeCmdCollector {
+	public:
+		NodeCmdCollector() = default;
+		~NodeCmdCollector() = default;
+		void AddCommand(EQueueType queue, RHICommandBuffer* cmd);
+	private:
+		friend RenderGraph;
+		TStaticArray<TArray<RHICommandBuffer*>, EnumCast(EQueueType::Count)> m_CmdArrays;
 	};
 
 	class RGNode {
@@ -94,14 +105,20 @@ namespace Render {
 		typedef Func<void(RHICommandBuffer*)> ComputeTask;
 		RGComputeNode(uint32 nodeID) :RGPassNode(nodeID) {}
 		~RGComputeNode() override = default;
+		void ReadSRV(RGTextureNode* node, RHITextureSubRes subRes);
 		void ReadSRV(RGTextureNode* node);
+		void WriteUAV(RGTextureNode* node, RHITextureSubRes subRes);
 		void WriteUAV(RGTextureNode* node);
 		void SetTask(ComputeTask&& f) { m_Task = MoveTemp(f); }
 	private:
-		TArray<RGTextureNode*> m_SRVs;
-		TArray<RGTextureNode*> m_UAVs;
+		struct TextureResInfo {
+			RGTextureNode* Node;
+			uint8 SubResIndex;
+		};
+		TArray<TextureResInfo> m_SRVs;
+		TArray<TextureResInfo> m_UAVs;
 		ComputeTask m_Task;
-		EQueueType GetQueue() const override { return EQueueType::Compute; }
+		EQueueType GetQueue() const override { return EQueueType::Graphics; }  // TODO Compute queue is preferred, but transition state must in graphics queue
 		void Run(RHICommandBuffer* cmd) override;
 	};
 
@@ -124,20 +141,27 @@ namespace Render {
 		void Run(RHICommandBuffer* cmd) override;
 	};
 
-	class RGPresentNode: public RGNode {
+	// output nodes marks the previous resource is to output.
+	class RGOutputNode : public RGNode {
 	public:
-		typedef Func<void()> PresentTask;
-		RGPresentNode(RGNodeID nodeID) : RGNode(nodeID), m_Fence(nullptr) {}
-		~RGPresentNode() override = default;
-		void Present(RGTextureNode* node);
-		void SetTask(PresentTask&& task) { m_Task = MoveTemp(task); }
+		RGOutputNode(RGNodeID nodeID) : RGNode(nodeID), m_Fence(nullptr){}
+		~RGOutputNode() override = default;
+		ERGNodeType GetNodeType() const override { return ERGNodeType::Output; }
 		void InsertFenceBefore(RHIFence* fence) { m_Fence = fence; }
 	private:
 		friend RenderGraph;
 		RHIFence* m_Fence;
-		PresentTask m_Task;
-		ERGNodeType GetNodeType() const override { return ERGNodeType::Present; }
-		void Run();
+		virtual void Run() {/*Do nothing*/ }
+	};
+
+	// present is treated as a special unique RGOutputNode
+	class RGPresentNode: public RGOutputNode {
+	public:
+		RGPresentNode(RGNodeID nodeID) : RGOutputNode(nodeID) {}
+		~RGPresentNode() override = default;
+	private:
+		friend RenderGraph;
+		void Run() override;
 	};
 
 #pragma endregion
@@ -168,19 +192,21 @@ namespace Render {
 		explicit RGTextureNode(uint32 nodeID, const RGTextureNode* rhs) : RGResourceNode(nodeID), m_Desc(rhs->m_Desc), m_RHI(rhs->m_RHI) {}
 		const RHITextureDesc& GetDesc() const { return m_Desc; }
 		RHITexture* GetRHI();
-		void SetTargetState(EResourceState targetState) { m_TargetState = targetState; }
-		EResourceState GetTargetState() const { return m_TargetState; }
+		void SetTargetState(EResourceState targetState);
+		void SetSubResTargetState(uint8 subResIdx, EResourceState targetState);
 		uint8 RegisterSubRes(RHITextureSubRes subRes); // register sub resource for connected node, return the index of m_SubResStates
-		void TransitionToState(RHICommandBuffer* cmd, EResourceState dstState, uint8 subResIdx);
+		void TransitionSubResToState(RHICommandBuffer* cmd, EResourceState dstState, uint8 subResIdx);
+		void TransitionSubResToTargetState(RHICommandBuffer* cmd, uint8 subResIdx);
 		void TransitionToState(RHICommandBuffer* cmd, EResourceState dstState);
-		void TransitionToTargetState(RHICommandBuffer* cmd, uint8 subResIdx);
 		void TransitionToTargetState(RHICommandBuffer* cmd);
-	private:
+	protected:
+		static constexpr uint8 DEFAULT_SUB_RES = UINT8_MAX;
 		RHITextureDesc m_Desc;
 		RHITexture* m_RHI;
 		struct SubResState {
 			RHITextureSubRes SubRes{};
-			EResourceState State{EResourceState::Unknown};
+			EResourceState CurrentState{EResourceState::Unknown};
+			EResourceState TargetState{ EResourceState::Unknown };
 		};
 		TArray<SubResState> m_SubResStates;
 		EResourceState m_CurrentState{ EResourceState::Unknown };

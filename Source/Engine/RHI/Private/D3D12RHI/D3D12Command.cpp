@@ -249,7 +249,7 @@ void D3D12CommandList::TransitionTextureState(RHITexture* texture, EResourceStat
 	}
 	else {
 		const uint32 barrierCount = subRes.ArraySize * subRes.MipSize;
-		TArray<D3D12_RESOURCE_BARRIER> barriers(barrierCount);
+		TArray<D3D12_RESOURCE_BARRIER> barriers; barriers.Reserve(barrierCount);
 		for (uint32 arr = 0; arr < subRes.ArraySize; ++arr) {
 			for (uint32 mip = 0; mip < subRes.MipSize; ++mip) {
 				const uint32 arrayIndex = subRes.ArrayIndex + arr;
@@ -257,12 +257,14 @@ void D3D12CommandList::TransitionTextureState(RHITexture* texture, EResourceStat
 				const uint32 subResIndex = D3D12CalcSubresource(mipIndex, arrayIndex, 0, texDesc.MipSize, texDesc.ArraySize);
 				d3d12StateBefore = resState->GetSubResState(subResIndex);
 				if(d3d12StateBefore != d3d12StateAfter) {
-					barriers[arr * subRes.MipSize + mip] = CD3DX12_RESOURCE_BARRIER::Transition(resource, d3d12StateBefore, d3d12StateAfter, subResIndex);
+					barriers.PushBack(CD3DX12_RESOURCE_BARRIER::Transition(resource, d3d12StateBefore, d3d12StateAfter, subResIndex));
 					resState->SetSubResState(subResIndex, d3d12StateAfter);
 				}
 			}
 		}
-		m_CommandList->ResourceBarrier(barrierCount, barriers.Data());
+		if(barriers.Size()) {
+			m_CommandList->ResourceBarrier(barriers.Size(), barriers.Data());
+		}
 	}
 }
 

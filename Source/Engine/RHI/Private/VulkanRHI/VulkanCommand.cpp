@@ -73,6 +73,27 @@ namespace {
 			srcStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 			dstStage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
 		}
+		// unknown to srv
+		else if(oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL){
+			srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+			dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			srcStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+			dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		}
+		// unknown to uav
+		else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_GENERAL) {
+			srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+			dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			srcStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+			dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		}
+		// uav to srv
+		else if (oldLayout == VK_IMAGE_LAYOUT_GENERAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+			srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+			dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			srcStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+			dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		}
 		// for swapchain present.
 		else if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
 			srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
@@ -82,7 +103,7 @@ namespace {
 		}
 		else
 		{
-			LOG_ERROR("unsupported layout transition!");
+			LOG_FATAL("unsupported layout transition!");
 		}
 	}
 

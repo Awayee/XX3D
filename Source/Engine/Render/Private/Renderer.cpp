@@ -94,11 +94,10 @@ namespace Render {
 		}
 		// fence after back buffer written
 		// present
-		RGPresentNode* presentNode = rg.CreatePresentNode();
-		presentNode->Present(backBufferNode);
-		presentNode->SetTask([]() { RHI::Instance()->GetViewport()->Present(); });
+		RGPresentNode* presentNode = rg.CreatePresentNode(backBufferNode, "Present");
 		presentNode->InsertFenceBefore(fence);
 		// ========= run the graph ==============
+		RHI::Instance()->BeginRendering();
 		fence->Reset();
 		CmdPool* cmdPool = &m_CmdPools[frameIndex];
 		cmdPool->Reset();

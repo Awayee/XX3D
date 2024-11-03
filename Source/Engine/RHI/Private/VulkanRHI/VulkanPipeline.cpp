@@ -382,7 +382,16 @@ bool VulkanDescriptorSetParamCache::SetParam(const VulkanDynamicBufferAllocator*
 		bufferInfo.offset = offset;
 		bufferInfo.range = range;
 	}break;
-	case EBindingType::Texture:
+	case EBindingType::Texture: {
+		VulkanRHITexture* texture = (VulkanRHITexture*)(param.Data.Texture);
+		auto& imageInfo = const_cast<VkDescriptorImageInfo*>(write.pImageInfo)[param.ArrayIndex];
+		VkImageView targetView = texture->GetView(param.Data.SubRes);
+		if (imageInfo.imageView == targetView) {
+			return false;
+		}
+		imageInfo.imageView = texture->GetView(param.Data.SubRes);
+		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	}break;
 	case EBindingType::StorageTexture: {
 		VulkanRHITexture* texture = (VulkanRHITexture*)(param.Data.Texture);
 		auto& imageInfo = const_cast<VkDescriptorImageInfo*>(write.pImageInfo)[param.ArrayIndex];
@@ -390,8 +399,8 @@ bool VulkanDescriptorSetParamCache::SetParam(const VulkanDynamicBufferAllocator*
 		if(imageInfo.imageView == targetView) {
 			return false;
 		}
-		imageInfo.imageView = texture->GetView(param.Data.SubRes); // TODO more view types
-		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imageInfo.imageView = texture->GetView(param.Data.SubRes);
+		imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	}break;
 	case EBindingType::Sampler: {
 		auto& imageInfo = const_cast<VkDescriptorImageInfo*>(write.pImageInfo)[param.ArrayIndex];

@@ -5,11 +5,11 @@
 #include "RHI/Public/RHI.h"
 #include "Render/Public/Renderer.h"
 #include "Objects/Public/Material.h"
+#include "Render/Public/HZBBuilder.h"
 
 namespace Object {
 	class RenderCamera;
 	class DirectionalLight;
-	class MeshRenderer;
 	class MeshRenderer2;
 
 	class RenderScene: public ECSScene{
@@ -49,6 +49,8 @@ namespace Object {
 		RHITexturePtr m_DepthSRV;
 		// for deferred lighting
 		TUniquePtr<RHIGraphicsPipelineState> m_DeferredLightingPSO;
+		// for hzb
+		Render::HZBBuilder m_HzbBuilder;
 
 		void CreateDeferredLightingDrawCall();
 		void CreateTextureResources();

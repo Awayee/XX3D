@@ -3,6 +3,10 @@
 
 namespace Render {
 
+	void NodeCmdCollector::AddCommand(EQueueType queue, RHICommandBuffer* cmd) {
+		m_CmdArrays[EnumCast(queue)].PushBack(cmd);
+	}
+
 	void RGNode::Connect(RGNode* prevNode, RGNode* nextNode) {
 		++prevNode->m_RefCount;
 		++nextNode->m_RefCount;
@@ -73,10 +77,10 @@ namespace Render {
 				if (!m_ColorTargets[i].Node) {
 					break;
 				}
-				m_ColorTargets[i].Node->TransitionToState(cmd, EResourceState::ColorTarget, m_ColorTargets[i].SubResIndex);
+				m_ColorTargets[i].Node->TransitionSubResToState(cmd, EResourceState::ColorTarget, m_ColorTargets[i].SubResIndex);
 			}
 			if (m_DepthTarget.Node) {
-				m_DepthTarget.Node->TransitionToState(cmd, EResourceState::DepthStencil, m_DepthTarget.SubResIndex);
+				m_DepthTarget.Node->TransitionSubResToState(cmd, EResourceState::DepthStencil, m_DepthTarget.SubResIndex);
 			}
 		}
 
@@ -116,10 +120,10 @@ namespace Render {
 				if (!m_ColorTargets[i].Node) {
 					break;
 				}
-				m_ColorTargets[i].Node->TransitionToTargetState(cmd, m_ColorTargets[i].SubResIndex);
+				m_ColorTargets[i].Node->TransitionSubResToTargetState(cmd, m_ColorTargets[i].SubResIndex);
 			}
 			if (m_DepthTarget.Node) {
-				m_DepthTarget.Node->TransitionToTargetState(cmd, m_DepthTarget.SubResIndex);
+				m_DepthTarget.Node->TransitionSubResToTargetState(cmd, m_DepthTarget.SubResIndex);
 			}
 		}
 		if (!m_Name.empty()) {
@@ -127,16 +131,26 @@ namespace Render {
 		}
 	}
 
-	void RGComputeNode::ReadSRV(RGTextureNode* node) {
-		m_SRVs.PushBack(node);
-		node->SetTargetState(EResourceState::ShaderResourceView);
+	void RGComputeNode::ReadSRV(RGTextureNode* node, RHITextureSubRes subRes) {
+		const uint8 subResIdx = node->RegisterSubRes(subRes);
+		m_SRVs.PushBack({node, subResIdx});
+		node->SetSubResTargetState(subResIdx, EResourceState::ShaderResourceView);
 		RGNode::Connect(node, this);
 	}
 
-	void RGComputeNode::WriteUAV(RGTextureNode* node) {
-		m_UAVs.PushBack(node);
-		node->SetTargetState(EResourceState::UnorderedAccessView);
+	void RGComputeNode::ReadSRV(RGTextureNode* node) {
+		ReadSRV(node, node->GetDesc().GetDefaultSubRes());
+	}
+
+	void RGComputeNode::WriteUAV(RGTextureNode* node, RHITextureSubRes subRes) {
+		const uint8 subResIdx = node->RegisterSubRes(subRes);
+		m_UAVs.PushBack({ node, subResIdx });
+		node->SetSubResTargetState(subResIdx, EResourceState::ShaderResourceView);
 		RGNode::Connect(this, node);
+	}
+
+	void RGComputeNode::WriteUAV(RGTextureNode* node) {
+		WriteUAV(node, node->GetDesc().GetDefaultSubRes());
 	}
 
 	void RGComputeNode::Run(RHICommandBuffer* cmd) {
@@ -145,23 +159,23 @@ namespace Render {
 		}
 		// state transition before dispatch
 		{
-			for(auto& srv: m_SRVs) {
-				srv->TransitionToState(cmd, EResourceState::ShaderResourceView);
+			for (auto& srv : m_SRVs) {
+				srv.Node->TransitionSubResToState(cmd, EResourceState::ShaderResourceView, srv.SubResIndex);
 			}
-			for(auto& uav: m_UAVs) {
-				uav->TransitionToState(cmd, EResourceState::UnorderedAccessView);
+			for (auto& uav : m_UAVs) {
+				uav.Node->TransitionSubResToState(cmd, EResourceState::UnorderedAccessView, uav.SubResIndex);
 			}
 		}
-		if(m_Task) {
+		if (m_Task) {
 			m_Task(cmd);
 		}
 		// state transition after dispatch
 		{
 			for (auto& srv : m_SRVs) {
-				srv->TransitionToTargetState(cmd);
+				srv.Node->TransitionSubResToTargetState(cmd, srv.SubResIndex);
 			}
 			for (auto& uav : m_UAVs) {
-				uav->TransitionToTargetState(cmd);
+				uav.Node->TransitionSubResToTargetState(cmd, uav.SubResIndex);
 			}
 		}
 		if (!m_Name.empty()) {
@@ -193,30 +207,23 @@ namespace Render {
 		}
 		for(auto& cpyPair: m_Cpy) {
 			// transition state
-			cpyPair.Src->TransitionToState(cmd, EResourceState::TransferSrc, cpyPair.SrcSubResIndex);
-			cpyPair.Dst->TransitionToState(cmd, EResourceState::TransferDst, cpyPair.DstSubResIndex);
+			cpyPair.Src->TransitionSubResToState(cmd, EResourceState::TransferSrc, cpyPair.SrcSubResIndex);
+			cpyPair.Dst->TransitionSubResToState(cmd, EResourceState::TransferDst, cpyPair.DstSubResIndex);
 			RHITextureCopyRegion region{};
 			region.DstSubRes = region.SrcSubRes = cpyPair.SubRes;
 			region.SrcOffset = region.DstOffset = { 0, 0, 0 };
 			region.Extent = { cpyPair.CpySize.w, cpyPair.CpySize.h, 1 };
 			cmd->CopyTextureToTexture(cpyPair.Src->GetRHI(), cpyPair.Dst->GetRHI(), region);
-			cpyPair.Src->TransitionToTargetState(cmd, cpyPair.SrcSubResIndex);
-			cpyPair.Dst->TransitionToTargetState(cmd, cpyPair.DstSubResIndex);
+			cpyPair.Src->TransitionSubResToTargetState(cmd, cpyPair.SrcSubResIndex);
+			cpyPair.Dst->TransitionSubResToTargetState(cmd, cpyPair.DstSubResIndex);
 		}
 		if (!m_Name.empty()) {
 			cmd->EndDebugLabel();
 		}
 	}
 
-	void RGPresentNode::Present(RGTextureNode* node) {
-		node->SetTargetState(EResourceState::Present);
-		RGNode::Connect(node, this);
-	}
-
 	void RGPresentNode::Run() {
-		if(m_Task) {
-			m_Task();
-		}
+		RHI::Instance()->GetViewport()->Present();
 	}
 
 	RHIBuffer* RGBufferNode::GetRHI() {
@@ -233,34 +240,64 @@ namespace Render {
 		return m_RHI;
 	}
 
+	void RGTextureNode::SetTargetState(EResourceState targetState) {
+		m_TargetState = targetState;
+	}
+
+	void RGTextureNode::SetSubResTargetState(uint8 subResIdx, EResourceState targetState) {
+		if(DEFAULT_SUB_RES == subResIdx) {
+			SetTargetState(targetState);
+			return;
+		}
+		m_SubResStates[subResIdx].TargetState = targetState;
+	}
+
 	uint8 RGTextureNode::RegisterSubRes(RHITextureSubRes subRes) {
+		if(subRes == m_Desc.GetDefaultSubRes()) {
+			return DEFAULT_SUB_RES;
+		}
 		for(uint32 i=0; i< m_SubResStates.Size(); ++i) {
 			if(m_SubResStates[i].SubRes == subRes) {
 				return (uint8)i;
 			}
 		}
 		const uint8 index = (uint8)m_SubResStates.Size();
-		m_SubResStates.PushBack({ subRes, EResourceState::Unknown });
+		m_SubResStates.PushBack({ subRes, m_TargetState });
 		return index;
 	}
 
-	void RGTextureNode::TransitionToState(RHICommandBuffer* cmd, EResourceState dstState, uint8 subResIdx) {
-		if(dstState != EResourceState::Unknown && m_SubResStates[subResIdx].State != dstState) {
-			cmd->TransitionTextureState(m_RHI, m_SubResStates[subResIdx].State, dstState, m_SubResStates[subResIdx].SubRes);
-			m_SubResStates[subResIdx].State = dstState;
+	void RGTextureNode::TransitionSubResToState(RHICommandBuffer* cmd, EResourceState dstState, uint8 subResIdx) {
+		if(DEFAULT_SUB_RES == subResIdx) {
+			TransitionToState(cmd, dstState);
+			return;
+		}
+		if(dstState != EResourceState::Unknown && m_SubResStates[subResIdx].CurrentState != dstState) {
+			cmd->TransitionTextureState(m_RHI, m_SubResStates[subResIdx].CurrentState, dstState, m_SubResStates[subResIdx].SubRes);
+			m_SubResStates[subResIdx].CurrentState = dstState;
+		}
+	}
+
+	void RGTextureNode::TransitionSubResToTargetState(RHICommandBuffer* cmd, uint8 subResIdx) {
+		if(DEFAULT_SUB_RES == subResIdx) {
+			TransitionToTargetState(cmd);
+			return;
+		}
+		auto& subResState = m_SubResStates[subResIdx];
+		const EResourceState dstState = subResState.TargetState != EResourceState::Unknown ? subResState.TargetState : m_TargetState;
+		if(EResourceState::Unknown != dstState && subResState.CurrentState != dstState) {
+			cmd->TransitionTextureState(m_RHI, subResState.CurrentState, dstState, subResState.SubRes);
+			subResState.CurrentState = dstState;
 		}
 	}
 
 	void RGTextureNode::TransitionToState(RHICommandBuffer* cmd, EResourceState dstState) {
-		if(dstState != EResourceState::Unknown && m_TargetState != dstState) {
+		if(dstState != EResourceState::Unknown && m_CurrentState != dstState) {
 			cmd->TransitionTextureState(m_RHI, m_CurrentState, dstState, m_Desc.GetDefaultSubRes());
+			for(auto& subResState: m_SubResStates) {
+				subResState.CurrentState = dstState;
+			}
 			m_CurrentState = dstState;
 		}
-	}
-
-
-	void RGTextureNode::TransitionToTargetState(RHICommandBuffer* cmd, uint8 subResIdx) {
-		TransitionToState(cmd, m_TargetState, subResIdx);
 	}
 
 	void RGTextureNode::TransitionToTargetState(RHICommandBuffer* cmd) {

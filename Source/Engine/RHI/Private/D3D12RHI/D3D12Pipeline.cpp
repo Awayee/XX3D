@@ -283,7 +283,7 @@ void D3D12GraphicsPipelineState::SetName(const char* name) {
 
 D3D12ComputePipelineState::D3D12ComputePipelineState(const RHIComputePipelineStateDesc& desc, D3D12Device* device): RHIComputePipelineState(desc) {
 	CHECK(m_Layout.InitLayout(desc.Layout, device->GetDevice()));
-	D3D12_COMPUTE_PIPELINE_STATE_DESC d3d12Desc;
+	D3D12_COMPUTE_PIPELINE_STATE_DESC d3d12Desc{};
 	d3d12Desc.pRootSignature = m_Layout.GetRootSignature();
 	auto bytes = ((D3D12Shader*)desc.Shader)->GetBytes();
 	d3d12Desc.CS = { bytes.Data(), bytes.Size() };

@@ -360,6 +360,7 @@ namespace Math {
         static const Vector4<T> ZERO;
 
         Vector4() = default;
+        Vector4(T scalar): X{scalar}, Y{scalar}, Z{scalar}, W{scalar} {}
         Vector4(T _x, T _y, T _z, T _w) : X{ _x }, Y{ _y }, Z{ _z }, W{ _w } {}
         Vector4(const Vector3<T>& v3, T w_) : X{ v3.X }, Y{ v3.Y }, Z{ v3.Z }, W{ w_ } {}
         explicit Vector4(T* coords) : X{ coords[0] }, Y{ coords[1] }, Z{ coords[2] }, W{ coords[3] } {}

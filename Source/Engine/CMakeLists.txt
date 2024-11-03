@@ -43,6 +43,9 @@ target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/Vulkan/include)
 # vma
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/VulkanMemoryAllocator/include)
 
+# dxc
+target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/DirectXShaderCompiler/include)
+
 # imgui
 target_link_libraries(${TARGET_NAME} PUBLIC "imgui")
 

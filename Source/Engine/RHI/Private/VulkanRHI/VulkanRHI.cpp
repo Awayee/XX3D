@@ -34,9 +34,12 @@ void VulkanRHI::BeginFrame() {
 	m_Device->GetCommandContext()->BeginFrame();
 	m_Device->GetUploader()->BeginFrame();
 	m_Device->GetDescriptorMgr()->BeginFrame();
+	// If last frame was not rendered, clear dynamic buffer here.
+	m_Device->GetDynamicBufferAllocator()->UnmapAllocations();
 }
 
 void VulkanRHI::BeginRendering() {
+	// Reset dynamic buffers.
 	m_Device->GetDynamicBufferAllocator()->GC();
 	m_Device->GetDynamicBufferAllocator()->UnmapAllocations();
 }

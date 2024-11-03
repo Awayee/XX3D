@@ -87,8 +87,12 @@ namespace Math {
 		return *(const float*)&result;
 	}
 
-	template<typename T> T UpperExp2(T x) {
-		if (!(x & (x - 1))) {
+	template<typename T> bool IsPowerOf2(T x) {
+		return x & (x - 1) == 0;
+	}
+
+	template<typename T> T UpperPowerOf2(T x) {
+		if (IsPowerOf2(x)) {
 			return x;
 		}
 		x |= x >> 1;
@@ -99,11 +103,11 @@ namespace Math {
 		return x + 1;
 	}
 
-	template<typename T> T LowerExp2(T x) {
-		if (!(x & (x - 1))) {
+	template<typename T> T LowerPowerOf2(T x) {
+		if (IsPowerOf2(x)) {
 			return x;
 		}
-		return UpperExp2<T>(x >> 1);
+		return UpperPowerOf2<T>(x >> 1);
 	}
 
 	template<typename T> bool IsNearlyZero(T val) { return val == (T)0; }

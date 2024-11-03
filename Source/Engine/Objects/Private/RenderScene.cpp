@@ -124,6 +124,11 @@ namespace Object {
         Render::RGTransferNode* depthCpyNode = rg.CreateTransferNode("CopyDepthToSRV");
         depthCpyNode->CopyTexture(depthNode, depthSRVNode);
 
+        // build hzb
+        if(Render::RGTextureNode* hzbNode =m_HzbBuilder.BuildFurthest(m_DepthSRV.Get(), depthSRVNode, rg)) {
+            rg.CreateOutputNode(hzbNode, "HZBOutput");
+        }
+
         // directional shadow
         RHITexture* directionalShadowMap = m_DirectionalLight->GetShadowMap();
         Render::RGTextureNode* shadowMapNode = rg.CreateTextureNode(directionalShadowMap, "DirectionalShadowMap");

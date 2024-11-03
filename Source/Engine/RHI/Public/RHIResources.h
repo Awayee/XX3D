@@ -62,6 +62,7 @@ struct RHITextureSubRes {
 	ETextureDimension Dimension{ ETextureDimension::Tex2D };
 	ETextureViewFlags ViewFlags{ ETextureViewFlags::Color };
 	bool operator ==(const RHITextureSubRes& rhs) const;
+	bool operator !=(const RHITextureSubRes& rhs) const;
 	static RHITextureSubRes Tex2D(uint16 arrayIndex, ETextureViewFlags viewFlags);
 };
 
@@ -339,6 +340,7 @@ struct RHIShaderParam {
 	static RHIShaderParam UniformBuffer(const RHIDynamicBuffer& dynamicBuffer);
 	static RHIShaderParam StorageBuffer(const RHIDynamicBuffer& dynamicBuffer);
 	static RHIShaderParam Texture(RHITexture* texture, RHITextureSubRes textureSub);
+	static RHIShaderParam TextureUAV(RHITexture* texture, RHITextureSubRes textureSub);
 	static RHIShaderParam Texture(RHITexture* texture);
 	static RHIShaderParam Sampler(RHISampler* sampler);
 };

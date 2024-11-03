@@ -39,10 +39,10 @@ void CALLBACK DebugOutputCallback(
 		LOG_WARNING("[D3D12 Warning] %s", pDescription);
 	}
 	else if (D3D12_MESSAGE_SEVERITY_ERROR == Severity) {
-		LOG_ERROR("[D3D12 Error] %s", pDescription);
+		LOG_FATAL("[D3D12 Error] %s", pDescription);
 	}
 	else if (D3D12_MESSAGE_SEVERITY_CORRUPTION == Severity) {
-		LOG_ERROR("[D3D12 Corruption] %s", pDescription);
+		LOG_FATAL("[D3D12 Corruption] %s", pDescription);
 	}
 }
 
@@ -83,9 +83,12 @@ void D3D12RHI::BeginFrame() {
 	m_Device->GetCommandMgr()->BeginFrame();
 	m_Device->GetUploader()->BeginFrame();
 	m_Device->GetDescriptorMgr()->BeginFrame();
+	// If last frame was not rendered, reset dynamic buffers here.
+	m_Device->GetDynamicMemoryAllocator()->UnmapAllocations();
 }
 
 void D3D12RHI::BeginRendering() {
+	// Reset dynamic buffers.
 	m_Device->GetDynamicMemoryAllocator()->UnmapAllocations();
 }
 
