@@ -10,4 +10,4 @@ file(GLOB sources_ CONFIGURE_DEPENDS
 )
 add_library("lz4" STATIC ${sources_})
 
-target_include_directories(imgui PUBLIC $<BUILD_INTERFACE:${SOURCE_SIR_}>)
+target_include_directories(lz4 PUBLIC $<BUILD_INTERFACE:${SOURCE_SIR_}>)

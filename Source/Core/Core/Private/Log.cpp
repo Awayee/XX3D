@@ -2,63 +2,56 @@
 #include "Core/Public/Time.h"
 #include <cstdarg>
 
-#define LOG_COLOR_RED     "\033[1;31m"
-#define LOG_COLOR_YELLOW  "\033[1;33m"
-#define LOG_COLOR_BLUE    "\033[1;34m"
-#define LOG_COLOR_WHITE   "\033[1;37m"
-#define LOG_COLOR_END     "\033[0m"
+#define LOG_COLOR_RED     "1;31m"
+#define LOG_COLOR_YELLOW  "1;33m"
+#define LOG_COLOR_BLUE    "1;34m"
+#define LOG_COLOR_WHITE   "1;37m"
+constexpr int CHAR_BUFFER_NUM = 256;
 
 namespace Log {
 
-	inline void PrintTime(Duration duration) {
-		auto minites = std::chrono::duration_cast<DurationMinutes<int>>(duration);
-		duration -= minites;
-		auto seconds = std::chrono::duration_cast<DurationSec<int>>(duration);
-		duration -= seconds;
-		auto mill = std::chrono::duration_cast<DurationMill<int>>(duration);
-		std::printf("[%02d:%02d.%03d]", minites.count(), seconds.count(), mill.count());
-	}
-
-	inline void BeginLog(ELogLevel level) {
+	inline const char* GetLogColor(ELogLevel level) {
 		switch (level) {
 		case ELogLevel::Debug:
-			std::cout <<   LOG_COLOR_BLUE "[DEBUG] ";
-			break;
+			return LOG_COLOR_BLUE "[DEBUG] ";
 		case ELogLevel::Info:
-			std::cout <<  LOG_COLOR_WHITE "[INFO] ";
-			break;
+			return LOG_COLOR_WHITE "[INFO] ";
 		case ELogLevel::Warning:
-			std::cout << LOG_COLOR_YELLOW "[WARNING] ";
-			break;
+			return LOG_COLOR_YELLOW "[WARNING] ";
 		case ELogLevel::Error:
-			std::cout <<    LOG_COLOR_RED "[ERROR] ";
-			break;
+			return LOG_COLOR_RED "[ERROR] ";
 		case ELogLevel::Fatal:
-			std::cout <<    LOG_COLOR_RED "[FATAL] ";
-			break;
+			return LOG_COLOR_RED "[FATAL] ";
 		}
-	}
-
-	inline void EndLog() {
-		std::cout << LOG_COLOR_END << std::endl;
+		return LOG_COLOR_WHITE;
 	}
 
 	void Output(ELogLevel level, const char* fmt, ...) {
-		BeginLog(level);
+		char buf[CHAR_BUFFER_NUM];
 		std::va_list args;
 		va_start(args, fmt);
-		std::vprintf(fmt, args);
+		std::vsprintf(buf, fmt, args);
 		va_end(args);
-		EndLog();
+		const char* color = GetLogColor(level);
+		std::printf("\033[%s%s\033[0m\n", color, buf);
 	}
 
 	void OutputWithTime(ELogLevel level, const char* fmt, ...) {
-		PrintTime(DurationSceneLaunch());
-		BeginLog(level);
+		Duration duration = DurationSceneLaunch();
+		char buf[CHAR_BUFFER_NUM];
 		std::va_list args;
 		va_start(args, fmt);
-		std::vprintf(fmt, args);
+		std::vsprintf(buf, fmt, args);
 		va_end(args);
-		EndLog();
+
+		// get time format by xx:xx:xxx
+		const auto minutes = std::chrono::duration_cast<DurationMinutes<int>>(duration);
+		duration -= minutes;
+		const auto seconds = std::chrono::duration_cast<DurationSec<int>>(duration);
+		duration -= seconds;
+		const auto mill = std::chrono::duration_cast<DurationMill<int>>(duration);
+
+		const char* color = GetLogColor(level);
+		std::printf("[%02d:%02d.%03d]\033[%s%s\033[0m\n", minutes.count(), seconds.count(), mill.count(), color, buf);
 	}
 }
