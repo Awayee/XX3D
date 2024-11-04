@@ -22,7 +22,7 @@ Setup the `ProjectPath` in the `EngineConfig.ini`, ensure the path exists.
 **Build and Run**
 
 Open the generated .sln file with VS, there are several projects in the solution:
-- `Core` is a library project, including math, containers, filesystem and ohter core functions.
+- `Core` is a library project, including math, containers, filesystem and other core functions.
 - `Engine` is a library project with engine features.
 - `Editor` is a executable project with editor UI and functions.
 - `Runtime` is a executable project with game running dependencies. 
@@ -37,7 +37,7 @@ You can also switch to `Runtime` to lauch your game.
 - `Source`: Cpp code.
 - `DemoProject`: A example project, will be removed.
 
-# Current Feature Overview
+# Current Features Overview
 - RHI supported with D3D12 and Vulkan, configurated by `RHIType` in `ProjectConfig.ini` in your project directory.
 - Asset manager, with importing, creating.
   ![image](https://github.com/user-attachments/assets/69995458-f29e-418b-a1b8-72792db7dff0)
