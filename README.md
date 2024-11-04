@@ -39,7 +39,7 @@ You can also switch to `Runtime` to lauch your game.
 
 # Current Feature Overview
 - RHI supported with D3D12 and Vulkan, configurated by `RHIType` in `ProjectConfig.ini` in your project directory.
-- Asset nanager, with importing, creating.
+- Asset manager, with importing, creating.
   ![image](https://github.com/user-attachments/assets/69995458-f29e-418b-a1b8-72792db7dff0)
   Just drag your mesh file or image file to Mesh Importer or Texture Importer, and "Import"
   ![image](https://github.com/user-attachments/assets/a9cc3bca-a523-47aa-b1a5-462fa35c30d0)
@@ -51,8 +51,7 @@ You can also switch to `Runtime` to lauch your game.
 - Foliage renering system with massive instances.
   ![image](https://github.com/user-attachments/assets/3b28116b-957d-4838-a9e0-b892c03183ca)
 - Materail system with material template and material instance.
-
-  ![image](https://github.com/user-attachments/assets/4fd11cb1-0411-4687-8255-efafac7605ef)![image](https://github.com/user-attachments/assets/0b68c001-02a1-4167-b457-9d6a6b10a05a)
+- ![image](https://github.com/user-attachments/assets/dc4bd0ed-fe28-4324-9287-724c452c6bb8)
 - A ECS drived omponent system: combine components to determin the feature of an actor.
 
 # Future Supportings
