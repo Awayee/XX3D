@@ -40,16 +40,20 @@ inline bool StrEqual(const char* s0, const char* s1) {
 
 template <unsigned int Num=128, typename ...T>
 XString StringFormat(const char* str, T ...args) {
-	char strBuf[Num];
-	sprintf_s<Num>(strBuf, str, args...);
-	return XString(strBuf);
+	XString strBuf;
+	strBuf.resize(Num);
+	const int strLen = sprintf_s(strBuf.data(), Num, str, args...);
+	strBuf.resize(strLen);
+	return strBuf;
 }
 
-template<unsigned int Num=64, typename ...T>
+template<unsigned int Num=128, typename ...T>
 XWString WStringFormat(const wchar_t* str, T...args) {
-	wchar_t strBuf[Num];
-	swprintf_s<Num>(strBuf, str, args...);
-	return XWString(strBuf);
+	XWString strBuf;
+	strBuf.resize(Num);
+	const int strLen = swprintf_s(strBuf.data(), Num, str, args...);
+	strBuf.resize(strLen);
+	return strBuf;
 }
 
 template<typename T>
