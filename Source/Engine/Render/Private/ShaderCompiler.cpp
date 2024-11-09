@@ -85,39 +85,21 @@ namespace {
 		) override {
 			XWString fullPath = Engine::EngineConfig::Instance().GetShaderDir().append(pFilename);
 			uint32_t codePage = DXC_CP_ACP;
-			auto& code = m_Codes.EmplaceBack();
+			TDXCPtr<IDxcBlobEncoding> code;
 			HRESULT r = m_Utils->LoadFile(fullPath.c_str(), &codePage, code.Address());
 			if(SUCCEEDED(r)) {
-				*ppIncludeSource = code.Get();
+				m_Utils->CreateBlobFromBlob(code.Get(), 0, code->GetBufferSize(), ppIncludeSource);
 			}
 			else {
 				*ppIncludeSource = nullptr;
 			}
 			return r;
 		}
-		HRESULT QueryInterface(const IID& riid, void** ppvObject) override {
-			if (riid == __uuidof(IUnknown) || riid == __uuidof(IDxcIncludeHandler)) {
-				*ppvObject = static_cast<IDxcIncludeHandler*>(this);
-				AddRef();
-				return S_OK;
-			}
-			*ppvObject = nullptr;
-			return E_NOINTERFACE;
-		}
-		ULONG AddRef() override {
-			return InterlockedIncrement(&m_RefCount);
-		}
-		ULONG Release() override {
-			ULONG refCount = InterlockedDecrement(&m_RefCount);
-			if (refCount == 0) {
-				delete this;
-			}
-			return refCount;
-		}
+		HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, _COM_Outptr_ void __RPC_FAR* __RPC_FAR* ppvObject) override { return E_NOINTERFACE; }
+		ULONG STDMETHODCALLTYPE AddRef(void) override { return 1; }
+		ULONG STDMETHODCALLTYPE Release(void) override { return 1; }
 	private:
-		ULONG m_RefCount;
 		IDxcUtils* m_Utils;
-		TArray<TDXCPtr<IDxcBlobEncoding>> m_Codes;
 	};
 
 	class DXCompiler {
@@ -264,9 +246,9 @@ namespace {
 			m_Utils->BuildArguments(nullptr, entryPointW.c_str(), shaderModel, m_PreArgs.Data(), m_PreArgs.Size(), dxcDefines.Data(), dxcDefines.Size(), args.Address());
 
 			// include handler
-			TDXCPtr<IncludeHandler> includeHandler(new IncludeHandler(m_Utils.Get()));
+			TUniquePtr<IncludeHandler> includeHandler(new IncludeHandler(m_Utils.Get())); // IncludeHandler has no destruction logic in Release, so use default deleter.
 
-			r = m_Compiler->Compile(&codeBuffer, args->GetArguments(), args->GetCount(), includeHandler, IID_PPV_ARGS(m_Result.Address()));
+			r = m_Compiler->Compile(&codeBuffer, args->GetArguments(), args->GetCount(), includeHandler.Get(), IID_PPV_ARGS(m_Result.Address()));
 			if (SUCCEEDED(r)) {
 				m_Result->GetStatus(&r);
 			}
