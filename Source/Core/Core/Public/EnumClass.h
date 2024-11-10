@@ -38,3 +38,18 @@ void EnumRemoveFlags(Enum& Flags, Enum FlagsToRemove){
 	using UnderlyingType = __underlying_type(Enum);
 	Flags = (Enum)((UnderlyingType)Flags & ~(UnderlyingType)FlagsToRemove);
 }
+
+template<typename Enum>
+struct TEnumFlag {
+	using UnderlyingType = __underlying_type(Enum);
+	UnderlyingType Value;
+	void AddFlag(Enum e) {
+		Value = Value | (1 << (UnderlyingType)e);
+	}
+	void RemoveFlag(Enum e) {
+		Value = Value & ~(1 << (UnderlyingType)e);
+	}
+	bool HasFlag(Enum e) {
+		return Value & (UnderlyingType)e != 0;
+	}
+};

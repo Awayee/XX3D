@@ -64,19 +64,14 @@ namespace Object {
 	// cached the matices for rendering
 	class RenderCamera {
 	public:
-		struct ProjectionData {
-			EProjType ProjType;
-			float Near, Far, Fov, HalfHeight;
-		};
 		RenderCamera();
 		RenderCamera(const RenderCamera&) = default;
 		RenderCamera(RenderCamera&&) noexcept = default;
+		const Camera& GetCamera() const { return m_Camera; }
 		void  SetView(const CameraView& view);
 		const CameraView& GetView() const { return m_Camera.View; }
 		void  SetProjection(const CameraProjection& projection);
 		const CameraProjection& GetProjection() const { return m_Camera.Projection; }
-		void  SetProjectionData(const ProjectionData& data);
-		const ProjectionData& GetProjectionData() const { return m_ProjectionData; }
 		void  SetAspect(float aspect);
 		const Math::Frustum& GetFrustum()const { return m_Camera.Frustum; }
 		const Math::FMatrix4x4& GetViewMatrix() { return m_ViewMatrix; }
@@ -88,7 +83,6 @@ namespace Object {
 		~RenderCamera();
 	private:
 		float m_Aspect;
-		ProjectionData m_ProjectionData;
 		Camera m_Camera;
 		Math::FMatrix4x4 m_ViewMatrix;
 		Math::FMatrix4x4 m_ProjectMatrix;

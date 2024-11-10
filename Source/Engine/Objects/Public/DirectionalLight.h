@@ -29,8 +29,8 @@ namespace Object {
 		void SetShadowConfig(const DirectionalShadowConfig& config) { m_ShadowConfig = config; }
 		bool GetEnableShadow() const { return m_ShadowConfig.EnableShadow; }
 		RHITexture* GetShadowMap() { return m_ShadowMapTexture.Get(); }
-		Render::DrawCallQueue& GetDrawCallQueue(uint32 i);
-		MeshRenderInterface* GetMeshRenderer(uint32 i);
+		Render::DrawCallQueue& GetRenderingDrawCallQueue(uint32 i);
+		Render::DrawCallQueue& GetCullingDrawCallQueue(uint32 i);
 		const Math::Frustum& GetFrustum(uint32 i);
 		void Update(Object::RenderCamera* renderCamera);
 		static uint32 GetCascadeNum() { return CASCADE_NUM; }
@@ -57,8 +57,8 @@ namespace Object {
 		RHIGraphicsPipelineStatePtr m_CSMRenderingPSO;// lazy create
 		RHIGraphicsPipelineStatePtr m_CSMInstancedRenderPSO;// lazy create
 		TStaticArray<Object::Camera, CASCADE_NUM> m_CascadeCameras;
-		TStaticArray<Render::DrawCallQueue, CASCADE_NUM> m_DrawCallQueues;
-		TStaticArray<TUniquePtr<MeshRenderInterface>, CASCADE_NUM> m_MeshRenderers;
+		TStaticArray<Render::DrawCallQueue, CASCADE_NUM> m_RenderingDrawCallQueues;
+		TStaticArray<Render::DrawCallQueue, CASCADE_NUM> m_CullingDrawCallQueues;
 		TStaticArray<float, CASCADE_NUM> m_FarDistances;
 		TStaticArray<Math::FMatrix4x4, CASCADE_NUM> m_VPMats;
 		TStaticArray<RHIDynamicBuffer, CASCADE_NUM> m_ShadowUniforms;// for shadow map

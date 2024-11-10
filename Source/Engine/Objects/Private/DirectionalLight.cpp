@@ -62,9 +62,6 @@ namespace Object {
 	DirectionalLight::DirectionalLight() {
 		// load shadow map size
 		m_ShadowConfig.ShadowMapSize = Engine::ProjectConfig::Instance().DefaultShadowMapSize;
-		for(uint32 i=0; i<CASCADE_NUM; ++i) {
-			m_MeshRenderers[i].Reset(new DirectionalLightMehRenderer());
-		}
 	}
 
 	void DirectionalLight::SetRotation(const Math::FVector3& euler) {
@@ -73,14 +70,14 @@ namespace Object {
 		m_LightEuler = euler;
 	}
 
-	Render::DrawCallQueue& DirectionalLight::GetDrawCallQueue(uint32 i) {
+	Render::DrawCallQueue& DirectionalLight::GetRenderingDrawCallQueue(uint32 i) {
 		CHECK(i < CASCADE_NUM);
-		return m_DrawCallQueues[i];
+		return m_RenderingDrawCallQueues[i];
 	}
 
-	MeshRenderInterface* DirectionalLight::GetMeshRenderer(uint32 i) {
+	Render::DrawCallQueue& DirectionalLight::GetCullingDrawCallQueue(uint32 i) {
 		CHECK(i < CASCADE_NUM);
-		return m_MeshRenderers[i];
+		return m_CullingDrawCallQueues[i];
 	}
 
 	const Math::Frustum& DirectionalLight::GetFrustum(uint32 i) {
@@ -90,7 +87,7 @@ namespace Object {
 
 	void DirectionalLight::Update(Object::RenderCamera* renderCamera) {
 		// clear draw call
-		for (auto& queue : m_DrawCallQueues) {
+		for (auto& queue : m_RenderingDrawCallQueues) {
 			queue.Reset();
 		}
 		// split the frustum of render camera
@@ -124,12 +121,6 @@ namespace Object {
 			if(!IsPSODepthBiasMatch(m_CSMInstancedRenderPSO, biasConst, biasSlope)) {
 				CreateCSMInstancedRenderingPSO();
 			}
-		}
-
-		for (uint32 i = 0; i < CASCADE_NUM; ++i) {
-			((DirectionalLightMehRenderer*)m_MeshRenderers[i].Get())->SetPSO(m_CSMRenderingPSO.Get(), m_CSMInstancedRenderPSO.Get());
-			m_MeshRenderers[i]->GenerateDrawCall(m_ShadowUniforms[i], m_DrawCallQueues[i]);
-			m_MeshRenderers[i]->Reset();
 		}
 	}
 

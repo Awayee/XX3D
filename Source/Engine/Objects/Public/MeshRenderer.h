@@ -9,17 +9,15 @@
 
 
 namespace Object {
-	// MeshRenderer is responsible for data organization of mesh and transform, and generating draw calls.
-	// It can be treated as a pseudo ECS framework with only 3 components.
 
-	struct PrimitiveRenderData {
-		PrimitiveResource* Primitive;
-		MaterialInterface* Material;
-		uint32 BasePassBatchIndex;
-		uint32 BasePassInstancedBatchIndex;
+	enum class ERenderPassType {
+		PrePass = 0,
+		BasePass,
+		DirectionalShadow,
+		MaxNum
 	};
 
-	struct TransformData {
+	struct ObjectTransformData {
 		Math::FMatrix4x4 ObjectMatrix;
 		Math::FMatrix4x4 ObjectInvMatrix;
 		void SetTransform(const Math::FTransform& transform);
@@ -27,27 +25,23 @@ namespace Object {
 
 	struct PrimitiveRenderData2 {
 		PrimitiveResource* Primitive;
-		uint32 MaterialIndex;
+		MaterialInterface* Material;
+		uint32 MaterialIndex{ INVALID_INDEX };
 	};
 
 	// static mesh
 	struct MeshECSComponent {
 		TArray<PrimitiveRenderData2> Primitives;
 		Math::AABB3 AABB;
-		bool CastShadow;
+		TEnumFlag<ERenderPassType> RenderFlags;
 		REGISTER_ECS_COMPONENT(MeshECSComponent);
 	};
 
 	// transform
 	struct TransformECSComponent {
-		struct MatrixData {
-			Math::FMatrix4x4 Transform{ Math::FMatrix4x4::IDENTITY };
-			Math::FMatrix4x4 InverseTransform{ Math::FMatrix4x4::IDENTITY };
-		};
+		ObjectTransformData TransformData;
+		Math::FTransform Transform;
 		void SetTransform(const Math::FTransform& transform);
-		const MatrixData& GetMatrixData() const { return m_MatrixData; }
-	protected:
-		MatrixData m_MatrixData;
 		REGISTER_ECS_COMPONENT(TransformECSComponent);
 	};
 
@@ -69,70 +63,104 @@ namespace Object {
 		RENDER_SCENE_REGISTER_SYSTEM(InstancedMeshRenderSystem);
 	};
 
-
-	// A mesh renderer with primitive data organization in a pass, just for generating draw calls. TODO for test
-	class MeshRenderInterface {
+	// Manage all materials and pipeline states with reference counter, the pso with no reference will be removed.
+	class MaterialPSOCache {
 	public:
-		virtual ~MeshRenderInterface() = default;
-		virtual void AddPrimitiveDrawData(const PrimitiveRenderData2& primitive, const RHIDynamicBuffer& transformBuffer) = 0;
-		virtual void AdInstancedPrimitiveDrawData(const PrimitiveRenderData2& primitive, const RHIDynamicBuffer& instanceBuffer, uint32 instanceCount) = 0;
-		virtual void GenerateDrawCall(const RHIDynamicBuffer& cameraBuffer, Render::DrawCallQueue& queue) = 0;
-		virtual void Reset() = 0;
-	protected:
-		struct PrimitiveDrawData {
-			RHIDynamicBuffer TransformBuffer;
-			PrimitiveResource* Primitive;
-			uint32 MaterialIndex;
-		};
+		uint32 FindOrAddMaterial(MaterialInterface* material);
+		MaterialInterface* GetMaterial(uint32 materialIndex) const;
+		uint32 GetPSOIndex(uint32 materialIndex, bool bInstanced);
+		RHIGraphicsPipelineState* GetPSO(uint32 materialIndex, bool bInstanced);
+		// Reset all data
+		void Reset();
+		// clean materials and pipelines with no reference, and reset counter. called after rendering.
+		void Clean();
 
-		struct InstancedPrimitiveDrawData {
-			RHIDynamicBuffer InstanceBuffer;
-			PrimitiveResource* Primitive;
-			uint32 MaterialIndex;
-			uint32 InstanceCount;
-		};
-	};
-
-	class MeshRenderer2: public MeshRenderInterface {
-	public:
-		MeshRenderer2(MaterialContainer* materialContainer): m_MaterialContainer(materialContainer){}
-		~MeshRenderer2() override = default;
-		// add batch draw primitive
-		void AddPrimitiveDrawData(const PrimitiveRenderData2& primitive, const RHIDynamicBuffer& transformBuffer) override;
-		void AdInstancedPrimitiveDrawData(const PrimitiveRenderData2& primitive, const RHIDynamicBuffer& instanceBuffer, uint32 instanceCount) override;
-		// generate draw call
-		void GenerateDrawCall(const RHIDynamicBuffer& cameraBuffer, Render::DrawCallQueue& basePassQueue) override;
-		// clean
-		void Reset() override;
 	private:
-		template<class T> struct BassPassPSOBatch {
-			uint32 PSOIndex{ INVALID_INDEX };
-			TArray<T> Primitives;
-		};
-		MaterialContainer* m_MaterialContainer;
-		struct PSOData {
+		struct PSOCache {
 			RHIGraphicsPipelineStatePtr PSO;
 			uint32 MaterialHash;
+			uint32 RefCounter;
 		};
-		TIDMapContainer<PSOData> m_PSOs;
-		TArray<BassPassPSOBatch<PrimitiveDrawData>> m_BasePassPSOBatches;
-		TArray<BassPassPSOBatch<InstancedPrimitiveDrawData>> m_BasePassInstancedBatches;
-		uint32 FindOrCreatePSO(MaterialInterface* material, bool bInstanced);
+
+		struct MaterialCache {
+			MaterialInterface* Material;
+			uint32 RefCounter;
+			TStaticArray<uint32, 2> PSOIndex;
+		};
+
+		TIDMapContainer<PSOCache> m_PSOCaches;
+		TArray<MaterialCache> m_MaterialCaches;
+		TMap<MaterialInterface*, uint32> m_MapMaterialIndex;
 	};
 
-	class DirectionalLightMehRenderer: public MeshRenderInterface {
+	// Collects all primitives in a render scene with all passes
+	class PrimitiveRenderer {
 	public:
-		DirectionalLightMehRenderer(): m_StaticPSO(nullptr), m_StaticPSOInstanced(nullptr){}
-		~DirectionalLightMehRenderer() override = default;
-		void SetPSO(RHIGraphicsPipelineState* pso, RHIGraphicsPipelineState* instancedPSO);
-		void AddPrimitiveDrawData(const PrimitiveRenderData2& primitive, const RHIDynamicBuffer& transformBuffer) override;
-		void AdInstancedPrimitiveDrawData(const PrimitiveRenderData2& primitive, const RHIDynamicBuffer& instanceBuffer, uint32 instanceCount) override;
-		void GenerateDrawCall(const RHIDynamicBuffer& cameraBuffer, Render::DrawCallQueue& queue) override;
-		void Reset() override;
+		PrimitiveRenderer(MaterialPSOCache* materialPSOCache) : m_MaterialPSOCache(materialPSOCache) {}
+		virtual ~PrimitiveRenderer() = default;
+		virtual void AddPrimitive(const ObjectTransformData& transform, TArrayView<PrimitiveRenderData2> primitives, TEnumFlag<ERenderPassType> passFlag) = 0;
+		virtual void AddInstancedPrimitive(InstanceDataMgr* instanceDataMgr, TArrayView<PrimitiveRenderData2> primitives, TEnumFlag<ERenderPassType> passFlag) = 0;
+
+		virtual void GenerateBasePassDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer,
+			Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue) = 0;
+
+		virtual void GenerateDirectionalShadowDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer,
+			Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue,
+			RHIGraphicsPipelineState* pso, RHIGraphicsPipelineState* instancedPSO) = 0;
+
+		virtual void Clean() = 0;
+	protected:
+		MaterialPSOCache* m_MaterialPSOCache;
+	};
+
+	class PrimitiveRendererCPUDriven: public PrimitiveRenderer {
+	public:
+		using PrimitiveRenderer::PrimitiveRenderer;
+		~PrimitiveRendererCPUDriven() override = default;
+		void AddPrimitive(const ObjectTransformData& transform, TArrayView<PrimitiveRenderData2> primitives, TEnumFlag<ERenderPassType> passFlag) override;
+		void AddInstancedPrimitive(InstanceDataMgr* instanceDataMgr, TArrayView<PrimitiveRenderData2> primitives, TEnumFlag<ERenderPassType> passFlag) override;
+
+		void GenerateBasePassDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer,
+			Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue) override;
+
+		void GenerateDirectionalShadowDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer,
+			Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue,
+			RHIGraphicsPipelineState* pso, RHIGraphicsPipelineState* instancedPSO) override;
+
+		void Clean() override;
 	private:
-		TArray<PrimitiveDrawData> m_BatchPrimitives;
-		TArray<InstancedPrimitiveDrawData> m_InstancedBatchPrimitives;
-		RHIGraphicsPipelineState* m_StaticPSO;
-		RHIGraphicsPipelineState* m_StaticPSOInstanced;
+		// may multi primitives share one transform or one instanced data mgr.
+		TArray<ObjectTransformData> m_Transforms;
+		TArray<InstanceDataMgr*> m_InstanceDataMgrs;
+
+		// unbatched primitives
+		struct PrimitiveCache {
+			PrimitiveResource* Primitive;
+			uint32 MaterialIndex;
+			uint32 TransformIndex;
+		};
+		TArray<PrimitiveCache> m_PrimitiveCaches;
+		// aabbs of primitives
+		TArray<Math::AABB3> m_PrimitiveAABBs;
+
+		// instanced primitives
+		struct InstancedPrimitiveCache {
+			PrimitiveResource* Primitive;
+			uint32 MaterialIndex;
+			uint32 InstanceDataIndex;
+		};
+		TArray<InstancedPrimitiveCache> m_InstancedPrimitiveCaches;
+
+		// get the corrected index of material in primitive
+		void CorrectPrimitiveMaterialIndex(PrimitiveRenderData2* primitive);
+
+		// frustum cull, and generate transform buffer for primitives
+		struct PrimitiveCullResult {
+			TArray<uint32> Primitives;
+			TArray<RHIDynamicBuffer> TransformBuffers;
+			TArray<TPair<uint32, uint32>> InstancedPrimitives; // the indices and counts of primitives
+			TArray<RHIDynamicBuffer> InstanceBuffers;
+		};
+		void FrustumCull(const Math::Frustum& frustum, PrimitiveCullResult& outResult);
 	};
 }

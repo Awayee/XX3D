@@ -37,7 +37,15 @@ namespace Object {
 				camera->SetView({ Eye, At, Up });
 			}
 			if(flags.Proj) {
-				camera->SetProjectionData({ ProjType, Near, Far, Fov, HalfHeight });
+				float aspect = camera->GetProjection().Aspect;
+				if (EProjType::Ortho == ProjType) {
+					const float halfHeight = HalfHeight;
+					const float halfWidth = halfHeight * aspect;
+					camera->SetProjection(CameraProjection::Orthographic(-halfWidth, halfWidth, -halfHeight, halfHeight, Near, Far));
+				}
+				else if (EProjType::Perspective == ProjType) {
+					camera->SetProjection(CameraProjection::Perspective(Fov, aspect, Near, Far));
+				}
 			}
 		}
 	}

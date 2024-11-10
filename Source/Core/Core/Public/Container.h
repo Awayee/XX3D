@@ -154,20 +154,34 @@ public:
 		}
 		const uint32 idx = m_Array.Size();
 		m_Array.EmplaceBack();
+		m_IDs.PushBack(ID);
 		m_IDMap[ID] = idx;
 		return idx;
 	}
 
 	uint32 RemoveID(uint32 ID) {
 		if(const uint32 idx = FindIdx(ID); idx != INVALID_INDEX) {
-			m_Array.SwapRemoveAt(idx);
-			return idx;
+			SwapRemoveByIndex(idx);
 		}
 		return INVALID_INDEX;
 	}
 
+	void SwapRemoveByIndex(uint32 idx) {
+		m_Array.SwapRemoveAt(idx);
+		m_IDs.SwapRemoveAt(idx);
+		if(idx < m_Array.Size()) {
+			m_IDMap[m_IDs[idx]] = idx;
+		}
+	}
+
 	uint32 Size() {
 		return m_Array.Size();
+	}
+
+	void Reset() {
+		m_Array.Reset();
+		m_IDs.Reset();
+		m_IDMap.clear();
 	}
 
 	// for-each loop
@@ -181,5 +195,6 @@ public:
 
 private:
 	TArray<T> m_Array;
+	TArray<uint32> m_IDs;
 	TMap<uint32, uint32> m_IDMap;
 };

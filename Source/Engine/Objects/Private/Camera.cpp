@@ -188,12 +188,6 @@ namespace Object {
 		UpdateProjectMatrix();
 	}
 
-	void RenderCamera::SetProjectionData(const ProjectionData& data) {
-		m_ProjectionData = data;
-		UpdateProjection();
-		UpdateProjectMatrix();
-	}
-
 	void RenderCamera::SetAspect(float aspect) {
 		m_Aspect = aspect;
 		UpdateProjection();
@@ -217,9 +211,9 @@ namespace Object {
 	RenderCamera::~RenderCamera(){}
 
 	void RenderCamera::UpdateProjection() {
-		const auto& data = m_ProjectionData;
+		const CameraProjection& data = m_Camera.Projection;
 		if (EProjType::Ortho == data.ProjType) {
-			const float halfHeight = data.HalfHeight;
+			const float halfHeight = (data.Top - data.Bottom) * 0.5f;
 			const float halfWidth = halfHeight * m_Aspect;
 			m_Camera.SetProjection(CameraProjection::Orthographic(-halfWidth, halfWidth, -halfHeight, halfHeight, data.Near, data.Far));
 		}

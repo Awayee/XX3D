@@ -1,6 +1,7 @@
 #include "Objects/Public/StaticMesh.h"
 #include "Objects/Public/RenderScene.h"
 #include "Asset/Public/AssetLoader.h"
+#include "Objects/Public/Material.h"
 #include "Objects/Public/MeshRenderer.h"
 
 namespace Object {
@@ -59,7 +60,6 @@ namespace Object {
 		m_MeshFile = meshFile;
 		Asset::MeshAsset asset;
 		if(Asset::AssetLoader::LoadProjectAsset(&asset, m_MeshFile.c_str())) {
-			MaterialContainer& materialContainer = GetScene()->GetMaterialContainer();
 			MeshECSComponent* component = GetScene()->GetComponent<MeshECSComponent>(GetEntityID());
 			auto& Primitives = component->Primitives;
 			Primitives.Reset();
@@ -67,7 +67,7 @@ namespace Object {
 			for (auto& srcPrimitive : asset.Primitives) {
 				auto& primitive = Primitives.EmplaceBack();
 				primitive.Primitive = Object::StaticResourceMgr::Instance()->GetPrimitive(srcPrimitive.BinaryFile);
-				primitive.MaterialIndex = materialContainer.FindOrCreateMaterial(srcPrimitive.MaterialFile);
+				primitive.Material = Object::MaterialMgr::Instance()->GetMaterialInterface(srcPrimitive.MaterialFile);
 			}
 			// calc aabb
 			if (Primitives.Size()) {
@@ -81,14 +81,23 @@ namespace Object {
 				component->AABB = {};
 			}
 			// set cast shadow
-			component->CastShadow = m_CastShadow;
+			component->RenderFlags.AddFlag(ERenderPassType::BasePass);
+			if(m_CastShadow) {
+				component->RenderFlags.AddFlag(ERenderPassType::DirectionalShadow);
+			}
 		}
 	}
 
 	void MeshComponent::SetCastShadow(bool bCastShadow) {
 		m_CastShadow = bCastShadow;
 		MeshECSComponent* component = GetScene()->GetComponent<MeshECSComponent>(GetEntityID());
-		component->CastShadow = bCastShadow;
+		auto& renderFlags = component->RenderFlags;
+		if(bCastShadow) {
+			renderFlags.AddFlag(ERenderPassType::DirectionalShadow);
+		}
+		else {
+			renderFlags.RemoveFlag(ERenderPassType::DirectionalShadow);
+		}
 	}
 
 	void InstanceDataComponent::OnLoad(const Json::Value& val) {

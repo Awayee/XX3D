@@ -19,245 +19,199 @@ namespace {
 
 namespace Object {
 
-	void TransformData::SetTransform(const Math::FTransform& transform) {
+	void ObjectTransformData::SetTransform(const Math::FTransform& transform) {
 		transform.BuildMatrix(ObjectMatrix);
 		transform.BuildInverseMatrix(ObjectInvMatrix);
 	}
 
 	void TransformECSComponent::SetTransform(const Math::FTransform& transform) {
-		transform.BuildMatrix(m_MatrixData.Transform);
-		transform.BuildInverseMatrix(m_MatrixData.InverseTransform);
+		Transform = transform;
+		TransformData.SetTransform(transform);
 	}
 
-	void MeshRenderSystem::Update(ECSScene* ecsScene, TransformECSComponent* transform, MeshECSComponent* meshCom) {
-		// update uniform
-		RHIDynamicBuffer transformBuffer = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(TransformECSComponent::MatrixData), &transform->GetMatrixData(), 0);
-		// create draw call
-		Object::RenderScene* scene = (Object::RenderScene*)ecsScene;
-		Object::MeshRenderer2* renderer = scene->GetMeshRenderer2();
-		Object::RenderCamera* camera = scene->GetMainCamera();
-		Object::DirectionalLight* light = scene->GetDirectionalLight();
-		for (auto& primitive : meshCom->Primitives) {
-			if(INVALID_INDEX == primitive.MaterialIndex) {
-				continue;
-			}
-			const Math::AABB3 aabb = primitive.Primitive->AABB.Transform(transform->GetMatrixData().Transform);
-			if (Math::EGeometryTest::Outer != camera->GetFrustum().TestAABB(aabb)) {
-				renderer->AddPrimitiveDrawData(primitive, transformBuffer);
-			}
-			if(light->GetEnableShadow() && meshCom->CastShadow) {
-				for (uint32 i = 0; i < light->GetCascadeNum(); ++i) {
-					if (Math::EGeometryTest::Outer != light->GetFrustum(i).TestAABB(aabb)) {
-						light->GetMeshRenderer(i)->AddPrimitiveDrawData(primitive, transformBuffer);
-					}
-				}
-			}
-		}
+	void MeshRenderSystem:: Update(ECSScene* ecsScene, TransformECSComponent* transform, MeshECSComponent* meshCom) {
+		PrimitiveRenderer* primitiveRenderer = ((RenderScene*)ecsScene)->GetPrimitiveRenderer();
+		primitiveRenderer->AddPrimitive(transform->TransformData, meshCom->Primitives, meshCom->RenderFlags);
 	}
 
 	void InstancedMeshRenderSystem::Update(ECSScene* ecsScene, MeshECSComponent* meshCom, InstancedDataECSComponent* instanceCom) {
 		// create draw call
-		Object::RenderScene* scene = (Object::RenderScene*)ecsScene;
-		Object::MeshRenderer2* renderer = scene->GetMeshRenderer2();
-		Object::RenderCamera* camera = scene->GetMainCamera();
-		Object::DirectionalLight* light = scene->GetDirectionalLight();
-		// main camera
-		{
-			TArray<InstanceData> instances;
-			instanceCom->InstanceData.GenerateInstanceData(camera->GetFrustum(), instances);
-			if (const uint32 instanceCount = instances.Size()) {
-				const RHIDynamicBuffer instanceBuffer = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Vertex, instances.ByteSize(), instances.Data(), sizeof(InstanceData));
-				for(auto& primitive : meshCom->Primitives) {
-					if (INVALID_INDEX == primitive.MaterialIndex) {
-						continue;
-					}
-					renderer->AdInstancedPrimitiveDrawData(primitive, instanceBuffer, instanceCount);
-				}
+		PrimitiveRenderer* primitiveRenderer = ((RenderScene*)ecsScene)->GetPrimitiveRenderer();
+		primitiveRenderer->AddInstancedPrimitive(&instanceCom->InstanceData, meshCom->Primitives, meshCom->RenderFlags);
+	}
+
+	uint32 MaterialPSOCache::FindOrAddMaterial(MaterialInterface* material) {
+		if(auto iter = m_MapMaterialIndex.find(material); iter!=m_MapMaterialIndex.end()) {
+			return iter->second;
+		}
+		uint32 materialIndex = m_MaterialCaches.Size();
+		m_MaterialCaches.PushBack({ material, 0, {INVALID_INDEX, INVALID_INDEX} });
+		m_MapMaterialIndex.try_emplace(material, materialIndex);
+		return materialIndex;
+	}
+
+	MaterialInterface* MaterialPSOCache::GetMaterial(uint32 materialIndex) const {
+		if(materialIndex < m_MaterialCaches.Size()) {
+			return m_MaterialCaches[materialIndex].Material;
+		}
+		return nullptr;
+	}
+
+	uint32 MaterialPSOCache::GetPSOIndex(uint32 materialIndex, bool bInstanced) {
+		MaterialCache& materialCache = m_MaterialCaches[materialIndex];
+		return m_MaterialCaches[materialIndex].PSOIndex[bInstanced];
+	}
+
+	RHIGraphicsPipelineState* MaterialPSOCache::GetPSO(uint32 materialIndex, bool bInstanced) {
+		auto& materialCache = m_MaterialCaches[materialIndex];
+		++materialCache.RefCounter;
+		uint32& indexRef = materialCache.PSOIndex[bInstanced];
+		const uint32 hs = materialCache.Material->GetHash(bInstanced);
+		if(INVALID_INDEX == indexRef || indexRef >= m_PSOCaches.Size() || m_PSOCaches[indexRef].MaterialHash != hs) {
+			indexRef = m_PSOCaches.FindIdx(hs);
+			if(INVALID_INDEX == indexRef) {
+				indexRef = m_PSOCaches.FindOrAddID(hs);
+				RHIGraphicsPipelineStateDesc desc;
+				materialCache.Material->FillBasePassPSODesc(desc, bInstanced);
+				FillScenePSORenderTargets(desc);
+				m_PSOCaches[indexRef].PSO = RHI::Instance()->CreateGraphicsPipelineState(desc);
+				m_PSOCaches[indexRef].MaterialHash = hs;
 			}
 		}
-		// cascade shadow
-		if (light->GetEnableShadow() && meshCom->CastShadow) {
-			for (uint32 i = 0; i < light->GetCascadeNum(); ++i) {
-				TArray<InstanceData> instances;
-				instanceCom->InstanceData.GenerateInstanceData(light->GetFrustum(i), instances);
-				if (const uint32 instanceCount = instances.Size()) {
-					RHIDynamicBuffer instanceBuffer = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Vertex, instances.ByteSize(), instances.Data(), sizeof(InstanceData));
-					for (auto& primitive : meshCom->Primitives) {
-						if (INVALID_INDEX == primitive.MaterialIndex) {
-							continue;
-						}
-						light->GetMeshRenderer(i)->AdInstancedPrimitiveDrawData(primitive, instanceBuffer, instanceCount);
-					}
+		auto& psoCache = m_PSOCaches[indexRef];
+		++psoCache.RefCounter;
+		return psoCache.PSO.Get();
+	}
+
+	void MaterialPSOCache::Reset() {
+		m_MaterialCaches.Reset();
+		m_MapMaterialIndex.clear();
+		m_PSOCaches.Reset();
+	}
+
+	void MaterialPSOCache::Clean() {
+		for(uint32 i=0; i<m_MaterialCaches.Size();) {
+			if(m_MaterialCaches[i].RefCounter == 0) {
+				m_MapMaterialIndex.erase(m_MaterialCaches[i].Material);
+				if(i != m_MaterialCaches.Size() - 1) {
+					m_MapMaterialIndex[m_MaterialCaches.Back().Material] = i;
 				}
+				m_MaterialCaches.SwapRemoveAt(i);
+			}
+			else {
+				++i;
 			}
 		}
+		// clean objects with no references
+		for(auto& materialCache: m_MaterialCaches) {
+			materialCache.RefCounter = 0;
+		}
+		for(auto& psoCache: m_PSOCaches) {
+			psoCache.RefCounter = 0;
+		}
 	}
 
-	void MeshRenderer2::AddPrimitiveDrawData(const PrimitiveRenderData2& primitive, const RHIDynamicBuffer& transformBuffer) {
-		const uint32 materialIndex = primitive.MaterialIndex;
-		MaterialInterface* material = m_MaterialContainer->GetMaterial(materialIndex);
-		if(m_BasePassPSOBatches.Size() <= materialIndex) {
-			m_BasePassPSOBatches.Resize(materialIndex + 1);
+	void PrimitiveRendererCPUDriven::AddPrimitive(const ObjectTransformData& transform, TArrayView<PrimitiveRenderData2> primitives, TEnumFlag<ERenderPassType> passFlag) {
+		const uint32 transformIndex = m_Transforms.Size();
+		m_Transforms.PushBack(transform);
+		for(PrimitiveRenderData2& primitive: primitives) {
+			CorrectPrimitiveMaterialIndex(&primitive);
+			PrimitiveCache& primitiveCache = m_PrimitiveCaches.EmplaceBack();
+			primitiveCache.Primitive = primitive.Primitive;
+			primitiveCache.MaterialIndex = primitive.MaterialIndex;
+			primitiveCache.TransformIndex = transformIndex;
+			const Math::AABB3 aabb = primitive.Primitive->AABB.Transform(transform.ObjectMatrix);
+			m_PrimitiveAABBs.PushBack(aabb);
 		}
-		auto& batch = m_BasePassPSOBatches[materialIndex];
-		const uint32 psoIndex = batch.PSOIndex;
-		if(INVALID_INDEX == psoIndex || m_PSOs[psoIndex].MaterialHash != material->GetHash(false)) {
-			batch.PSOIndex = FindOrCreatePSO(material, false);
-		}
-		auto& p = m_BasePassPSOBatches[materialIndex].Primitives.EmplaceBack();
-		p.Primitive = primitive.Primitive;
-		p.MaterialIndex = primitive.MaterialIndex;
-		p.TransformBuffer = transformBuffer;
+		CHECK(m_PrimitiveAABBs.Size() == m_PrimitiveCaches.Size());
 	}
 
-	void MeshRenderer2::AdInstancedPrimitiveDrawData(const PrimitiveRenderData2& primitive, const RHIDynamicBuffer& instanceBuffer, uint32 instanceCount) {
-		const uint32 materialIndex = primitive.MaterialIndex;
-		MaterialInterface* material = m_MaterialContainer->GetMaterial(materialIndex);
-		if (m_BasePassInstancedBatches.Size() <= materialIndex) {
-			m_BasePassInstancedBatches.Resize(materialIndex + 1);
+	void PrimitiveRendererCPUDriven::AddInstancedPrimitive(InstanceDataMgr* instanceDataMgr, TArrayView<PrimitiveRenderData2> primitives, TEnumFlag<ERenderPassType> passFlag) {
+		const uint32 instanceDataIndex = m_InstanceDataMgrs.Size();
+		m_InstanceDataMgrs.PushBack(instanceDataMgr);
+		for(PrimitiveRenderData2& primitive: primitives) {
+			CorrectPrimitiveMaterialIndex(&primitive);
+			InstancedPrimitiveCache& primitiveCache = m_InstancedPrimitiveCaches.EmplaceBack();
+			primitiveCache.Primitive = primitive.Primitive;
+			primitiveCache.MaterialIndex = primitive.MaterialIndex;
+			primitiveCache.InstanceDataIndex = instanceDataIndex;
 		}
-		auto& batch = m_BasePassInstancedBatches[materialIndex];
-		const uint32 psoIndex = batch.PSOIndex;
-		if (INVALID_INDEX == psoIndex || m_PSOs[psoIndex].MaterialHash != material->GetHash(true)) {
-			batch.PSOIndex = FindOrCreatePSO(material, true);
-		}
-		auto& p = m_BasePassInstancedBatches[materialIndex].Primitives.EmplaceBack();
-		p.Primitive = primitive.Primitive;
-		p.MaterialIndex = primitive.MaterialIndex;
-		p.InstanceBuffer = instanceBuffer;
-		p.InstanceCount = instanceCount;
 	}
 
-	void MeshRenderer2::GenerateDrawCall(const RHIDynamicBuffer& cameraBuffer, Render::DrawCallQueue& basePassQueue) {
+	void PrimitiveRendererCPUDriven::GenerateBasePassDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer,
+		Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue) {
+		PrimitiveCullResult result;
+		FrustumCull(frustum, result);
 		// transforms
-		{
-			for (auto& batch : m_BasePassPSOBatches) {
-				if(INVALID_INDEX == batch.PSOIndex) {
-					continue;
-				}
-				RHIGraphicsPipelineState* pso = m_PSOs[batch.PSOIndex].PSO.Get();
-				// bind pso
-				basePassQueue.PushDrawCall([pso](RHICommandBuffer* cmd) { cmd->BindGraphicsPipeline(pso); });
-				for (auto& p : batch.Primitives) {
-					if(INVALID_INDEX == p.MaterialIndex) {
-						continue;
-					}
-					const RHIDynamicBuffer transformBuffer = p.TransformBuffer;
-					PrimitiveResource* primitive = p.Primitive;
-					MaterialInterface* material = m_MaterialContainer->GetMaterial(p.MaterialIndex);
-					basePassQueue.PushDrawCall([cameraBuffer, transformBuffer, primitive, material](RHICommandBuffer* cmd) {
-						cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(cameraBuffer));
-						cmd->SetShaderParam(1, 0, RHIShaderParam::UniformBuffer(transformBuffer));
-						material->BindBasePassShaderPrams(cmd, false);
-						cmd->BindVertexBuffer(primitive->VertexBuffer.Get(), 0, 0);
-						cmd->BindIndexBuffer(primitive->IndexBuffer, 0);
-						cmd->DrawIndexed(primitive->IndexCount, 1, 0, 0, 0);
-					});
-				}
-			}
+		for(uint32 primitiveIndex: result.Primitives) {
+			const PrimitiveCache& cache = m_PrimitiveCaches[primitiveIndex];
+			const RHIDynamicBuffer& transformBuffer = result.TransformBuffers[cache.TransformIndex];
+			CHECK(transformBuffer.IsValid());
+			RHIGraphicsPipelineState* pso = m_MaterialPSOCache->GetPSO(cache.MaterialIndex, false);
+			CHECK(pso);
+			MaterialInterface* material = m_MaterialPSOCache->GetMaterial(cache.MaterialIndex);
+			PrimitiveResource* primitive = cache.Primitive;
+			renderingQueue.PushDrawCall([pso, transformBuffer, material, primitive, cameraBuffer](RHICommandBuffer* cmd) {
+				cmd->BindGraphicsPipeline(pso);
+				cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(cameraBuffer));
+				cmd->SetShaderParam(1, 0, RHIShaderParam::UniformBuffer(transformBuffer));
+				material->BindBasePassShaderPrams(cmd, false);
+				cmd->BindVertexBuffer(primitive->VertexBuffer.Get(), 0, 0);
+				cmd->BindIndexBuffer(primitive->IndexBuffer.Get(), 0);
+				cmd->DrawIndexed(primitive->IndexCount, 1, 0, 0, 0);
+			});
 		}
 
 		// instances
-		{
-			for(auto& batch: m_BasePassInstancedBatches) {
-				if(INVALID_INDEX == batch.PSOIndex) {
-					continue;
-				}
-				RHIGraphicsPipelineState* pso = m_PSOs[batch.PSOIndex].PSO.Get();
-				// bind pso
-				basePassQueue.PushDrawCall([pso](RHICommandBuffer* cmd) {cmd->BindGraphicsPipeline(pso); });
-				for(auto& p : batch.Primitives) {
-					if (INVALID_INDEX == p.MaterialIndex) {
-						continue;
-					}
-					const RHIDynamicBuffer& instanceBuffer = p.InstanceBuffer;
-					PrimitiveResource* primitive = p.Primitive;
-					MaterialInterface* material = m_MaterialContainer->GetMaterial(p.MaterialIndex);
-					uint32 instanceCount = p.InstanceCount;
-					basePassQueue.PushDrawCall([cameraBuffer, instanceBuffer, primitive, material, instanceCount](RHICommandBuffer* cmd) {
-						cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(cameraBuffer));
-						material->BindBasePassShaderPrams(cmd, true);
-						cmd->BindVertexBuffer(primitive->VertexBuffer, 0, 0);
-						cmd->BindVertexBuffer(instanceBuffer, 1, 0);
-						cmd->BindIndexBuffer(primitive->IndexBuffer, 0);
-						cmd->DrawIndexed(primitive->IndexCount, instanceCount, 0, 0, 0);
-					});
-				}
-			}
+		for(auto[primitiveIndex, instanceCount]: result.InstancedPrimitives) {
+			const InstancedPrimitiveCache& cache = m_InstancedPrimitiveCaches[primitiveIndex];
+			RHIDynamicBuffer& instanceBuffer = result.InstanceBuffers[cache.InstanceDataIndex];
+			MaterialInterface* material = m_MaterialPSOCache->GetMaterial(cache.MaterialIndex);
+			RHIGraphicsPipelineState* pso = m_MaterialPSOCache->GetPSO(cache.MaterialIndex, true);
+			PrimitiveResource* primitive = cache.Primitive;
+			renderingQueue.PushDrawCall([pso, cameraBuffer, instanceBuffer, primitive, material, instanceCount=instanceCount](RHICommandBuffer* cmd) {
+				cmd->BindGraphicsPipeline(pso);
+				cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(cameraBuffer));
+				material->BindBasePassShaderPrams(cmd, true);
+				cmd->BindVertexBuffer(primitive->VertexBuffer, 0, 0);
+				cmd->BindVertexBuffer(instanceBuffer, 1, 0);
+				cmd->BindIndexBuffer(primitive->IndexBuffer, 0);
+				cmd->DrawIndexed(primitive->IndexCount, instanceCount, 0, 0, 0);
+			});
 		}
 	}
 
-	void MeshRenderer2::Reset() {
-		for (auto& batch : m_BasePassPSOBatches) {
-			batch.Primitives.Reset();
-		}
-		for (auto& batch : m_BasePassInstancedBatches) {
-			batch.Primitives.Reset();
-		}
-	}
-
-	uint32 MeshRenderer2::FindOrCreatePSO(MaterialInterface* material, bool bInstanced) {
-		if(nullptr == material) {
-			return INVALID_INDEX;
-		}
-		const uint32 materialHs = material->GetHash(bInstanced);
-		uint32 psoIndex = m_PSOs.FindIdx(materialHs);
-		if(INVALID_INDEX == psoIndex) {
-			psoIndex = m_PSOs.FindOrAddID(materialHs);
-			RHIGraphicsPipelineStateDesc desc;
-			material->FillBasePassPSODesc(desc, bInstanced);
-			FillScenePSORenderTargets(desc);
-			m_PSOs[psoIndex].PSO = RHI::Instance()->CreateGraphicsPipelineState(desc);
-			m_PSOs[psoIndex].MaterialHash = materialHs;
-		}
-		return psoIndex;
-	}
-
-	void DirectionalLightMehRenderer::SetPSO(RHIGraphicsPipelineState* pso, RHIGraphicsPipelineState* instancedPSO) {
-		m_StaticPSO = pso;
-		m_StaticPSOInstanced = instancedPSO;
-	}
-
-	void DirectionalLightMehRenderer::AddPrimitiveDrawData(const PrimitiveRenderData2& primitive, const RHIDynamicBuffer& transformBuffer) {
-		auto& p = m_BatchPrimitives.EmplaceBack();
-		p.Primitive = primitive.Primitive;
-		p.MaterialIndex = primitive.MaterialIndex;
-		p.TransformBuffer = transformBuffer;
-	}
-
-	void DirectionalLightMehRenderer::AdInstancedPrimitiveDrawData(const PrimitiveRenderData2& primitive, const RHIDynamicBuffer& instanceBuffer, uint32 instanceCount) {
-		auto& p = m_InstancedBatchPrimitives.EmplaceBack();
-		p.Primitive = primitive.Primitive;
-		p.MaterialIndex = primitive.MaterialIndex;
-		p.InstanceBuffer = instanceBuffer;
-		p.InstanceCount = instanceCount;
-	}
-
-	void DirectionalLightMehRenderer::GenerateDrawCall(const RHIDynamicBuffer& cameraBuffer, Render::DrawCallQueue& queue) {
+	void PrimitiveRendererCPUDriven::GenerateDirectionalShadowDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer,
+		Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue,
+		RHIGraphicsPipelineState* pso, RHIGraphicsPipelineState* instancedPSO){
+		PrimitiveCullResult result;
+		FrustumCull(frustum, result);
 		// transforms
-		{
-			queue.PushDrawCall([pso = m_StaticPSO](RHICommandBuffer* cmd) { cmd->BindGraphicsPipeline(pso); });
-			for (auto& p: m_BatchPrimitives) {
-				const RHIDynamicBuffer transformBuffer = p.TransformBuffer;
-				PrimitiveResource* primitive = p.Primitive;
-				queue.PushDrawCall([cameraBuffer, transformBuffer, primitive](RHICommandBuffer* cmd) {
+		if(result.Primitives.Size()) {
+			renderingQueue.PushDrawCall([pso](RHICommandBuffer* cmd) {cmd->BindGraphicsPipeline(pso); });
+			for (uint32 primitiveIndex : result.Primitives) {
+				const PrimitiveCache& cache = m_PrimitiveCaches[primitiveIndex];
+				const RHIDynamicBuffer& transformBuffer = result.TransformBuffers[cache.TransformIndex];
+				CHECK(transformBuffer.IsValid());
+				PrimitiveResource* primitive = cache.Primitive;
+				renderingQueue.PushDrawCall([transformBuffer, primitive, cameraBuffer](RHICommandBuffer* cmd) {
 					cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(cameraBuffer));
 					cmd->SetShaderParam(1, 0, RHIShaderParam::UniformBuffer(transformBuffer));
 					cmd->BindVertexBuffer(primitive->VertexBuffer.Get(), 0, 0);
-					cmd->BindIndexBuffer(primitive->IndexBuffer, 0);
+					cmd->BindIndexBuffer(primitive->IndexBuffer.Get(), 0);
 					cmd->DrawIndexed(primitive->IndexCount, 1, 0, 0, 0);
 				});
 			}
 		}
 
 		// instances
-		{
-			queue.PushDrawCall([pso = m_StaticPSOInstanced](RHICommandBuffer* cmd) { cmd->BindGraphicsPipeline(pso); });
-			for (auto& p : m_InstancedBatchPrimitives) {
-				const RHIDynamicBuffer& instanceBuffer = p.InstanceBuffer;
-				PrimitiveResource* primitive = p.Primitive;
-				uint32 instanceCount = p.InstanceCount;
-				queue.PushDrawCall([cameraBuffer, instanceBuffer, primitive, instanceCount](RHICommandBuffer* cmd) {
+		if(result.InstancedPrimitives.Size()) {
+			renderingQueue.PushDrawCall([instancedPSO](RHICommandBuffer* cmd) {cmd->BindGraphicsPipeline(instancedPSO); });
+			for (auto [primitiveIndex, instanceCount] : result.InstancedPrimitives) {
+				const InstancedPrimitiveCache& cache = m_InstancedPrimitiveCaches[primitiveIndex];
+				RHIDynamicBuffer& instanceBuffer = result.InstanceBuffers[cache.InstanceDataIndex];
+				PrimitiveResource* primitive = cache.Primitive;
+				renderingQueue.PushDrawCall([cameraBuffer, instanceBuffer, primitive, instanceCount = instanceCount](RHICommandBuffer* cmd) {
 					cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(cameraBuffer));
 					cmd->BindVertexBuffer(primitive->VertexBuffer, 0, 0);
 					cmd->BindVertexBuffer(instanceBuffer, 1, 0);
@@ -268,8 +222,55 @@ namespace Object {
 		}
 	}
 
-	void DirectionalLightMehRenderer::Reset() {
-		m_BatchPrimitives.Reset();
-		m_InstancedBatchPrimitives.Reset();
+	void PrimitiveRendererCPUDriven::Clean() {
+		m_Transforms.Reset();
+		m_PrimitiveAABBs.Reset();
+		m_PrimitiveCaches.Reset();
+		m_InstanceDataMgrs.Reset();
+		m_InstancedPrimitiveCaches.Reset();
+		m_MaterialPSOCache->Clean();
+	}
+
+	void PrimitiveRendererCPUDriven::CorrectPrimitiveMaterialIndex(PrimitiveRenderData2* primitive) {
+		uint32& materialIndexRef = primitive->MaterialIndex;
+		// never added, or retired, new
+		if (INVALID_INDEX == materialIndexRef ||
+			m_MaterialPSOCache->GetMaterial(materialIndexRef) != primitive->Material) {
+			materialIndexRef = m_MaterialPSOCache->FindOrAddMaterial(primitive->Material);
+		}
+	}
+
+	void PrimitiveRendererCPUDriven::FrustumCull(const Math::Frustum& frustum, PrimitiveCullResult& outResult) {
+		outResult.Primitives.Reserve(m_PrimitiveCaches.Size());
+		outResult.TransformBuffers.Resize(m_Transforms.Size());
+		const uint32 primitiveCount = m_PrimitiveCaches.Size();
+		for (uint32 i = 0; i < primitiveCount; ++i) {
+			const PrimitiveCache& cache = m_PrimitiveCaches[i];
+			const Math::AABB3& aabb = m_PrimitiveAABBs[i];
+			if (frustum.TestAABBSimple(aabb)) {
+				RHIDynamicBuffer& transformBuffer = outResult.TransformBuffers[cache.TransformIndex];
+				if (!transformBuffer.IsValid()) {
+					const ObjectTransformData& transformData = m_Transforms[cache.TransformIndex];
+					transformBuffer = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(transformData), &transformData, 0);
+				}
+				outResult.Primitives.PushBack(i);
+			}
+		}
+
+		outResult.InstancedPrimitives.Reserve(m_InstancedPrimitiveCaches.Size());
+		outResult.InstanceBuffers.Resize(m_InstanceDataMgrs.Size());
+		TArray<uint32> instanceCounts(m_InstanceDataMgrs.Size(), UINT32_MAX);
+		for (uint32 i = 0; i < m_InstancedPrimitiveCaches.Size(); ++i) {
+			const InstancedPrimitiveCache& cache = m_InstancedPrimitiveCaches[i];
+			const uint32 instanceDataIndex = cache.InstanceDataIndex;
+			if (UINT32_MAX == instanceCounts[instanceDataIndex]) {
+				InstanceDataMgr* instanceDataMgr = m_InstanceDataMgrs[instanceDataIndex];
+				TArray<InstanceData> instances;
+				instanceDataMgr->GenerateInstanceData(frustum, instances);
+				instanceCounts[instanceDataIndex] = instances.Size();
+				outResult.InstanceBuffers[instanceDataIndex] = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Vertex, instances.ByteSize(), instances.Data(), sizeof(InstanceData));
+			}
+			outResult.InstancedPrimitives.PushBack({ i, instanceCounts[instanceDataIndex] });
+		}
 	}
 }

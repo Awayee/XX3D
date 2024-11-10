@@ -4,13 +4,13 @@
 #include "Core/Public/Defines.h"
 #include "RHI/Public/RHI.h"
 #include "Render/Public/Renderer.h"
-#include "Objects/Public/Material.h"
 #include "Render/Public/HZBBuilder.h"
 
 namespace Object {
 	class RenderCamera;
 	class DirectionalLight;
-	class MeshRenderer2;
+	class PrimitiveRenderer;
+	class MaterialPSOCache;
 
 	class RenderScene: public ECSScene{
 	public:
@@ -21,9 +21,8 @@ namespace Object {
 		~RenderScene();
 		RenderCamera* GetMainCamera() { return m_Camera.Get(); }
 		DirectionalLight* GetDirectionalLight() { return m_DirectionalLight.Get(); }
-		MaterialContainer& GetMaterialContainer() { return m_MaterialContainer; }
-		MeshRenderer2* GetMeshRenderer2() { return m_MeshRenderer2.Get(); }
-		Render::DrawCallQueue& GetBasePasDrawCallQueue() { return m_BasePassDrawCallQueue; }
+		PrimitiveRenderer* GetPrimitiveRenderer() { return m_PrimitiveRenderer.Get(); }
+		Render::DrawCallQueue& GetBasePassDrawCallQueue() { return m_BasePassDrawCallQueue; }
 		Render::DrawCallQueue& GetLightingPassDrawCallQueue() { return m_LightingPassDrawCallQueue; }
 		void Update();
 		void Render(Render::RenderGraph& rg, Render::RGTextureNode* targetNode);
@@ -37,8 +36,9 @@ namespace Object {
 		static TUniquePtr<RenderScene> s_Default;
 		TUniquePtr<DirectionalLight> m_DirectionalLight;
 		TUniquePtr<RenderCamera> m_Camera;
-		TUniquePtr<MeshRenderer2> m_MeshRenderer2;
-		MaterialContainer m_MaterialContainer;
+		TUniquePtr<MaterialPSOCache> m_MaterialCacheMgr;
+		TUniquePtr<PrimitiveRenderer> m_PrimitiveRenderer;
+		Render::DrawCallQueue m_BasePassCullingQueue;
 		Render::DrawCallQueue m_BasePassDrawCallQueue;
 		Render::DrawCallQueue m_LightingPassDrawCallQueue;
 		// fo gBuffer

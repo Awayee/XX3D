@@ -74,7 +74,9 @@ namespace Object {
         m_DirectionalLight.Reset(new DirectionalLight);
         m_Camera.Reset(new RenderCamera());
         m_Camera->SetView({ { 0, 4, -4 }, { 0, 2, 0 }, { 0, 1, 0 } });
-        m_MeshRenderer2.Reset(new MeshRenderer2(&m_MaterialContainer));
+        // primitive renderer
+        m_MaterialCacheMgr.Reset(new MaterialPSOCache());
+        m_PrimitiveRenderer.Reset(new PrimitiveRendererCPUDriven(m_MaterialCacheMgr.Get()));
     }
 
     RenderScene::~RenderScene() {
@@ -82,14 +84,32 @@ namespace Object {
 
     void RenderScene::Update() {
         // clear draw calls
-        m_Camera->UpdateBuffer();
-        m_DirectionalLight->Update(m_Camera);
+        m_BasePassCullingQueue.Reset();
         m_BasePassDrawCallQueue.Reset();
         m_LightingPassDrawCallQueue.Reset();
+        // create deferred lighting draw call firstly
         CreateDeferredLightingDrawCall();
+
+        // update ecs systems for collecting primitives
         SystemUpdate();
-        m_MeshRenderer2->GenerateDrawCall(m_Camera->GetUniformBuffer(), m_BasePassDrawCallQueue);
-        m_MeshRenderer2->Reset();
+
+        // camera and light
+        m_Camera->UpdateBuffer();
+        m_DirectionalLight->Update(m_Camera);
+
+        // create draw call for base pass and shadow pass
+        m_PrimitiveRenderer->GenerateBasePassDrawCall(m_Camera->GetFrustum(), m_Camera->GetUniformBuffer(), m_BasePassCullingQueue, m_BasePassDrawCallQueue);
+
+        for(uint32 i=0; i<m_DirectionalLight->GetCascadeNum(); ++i) {
+            m_PrimitiveRenderer->GenerateDirectionalShadowDrawCall(m_DirectionalLight->GetFrustum(i),
+                m_DirectionalLight->GetShadowUniform(i),
+                m_DirectionalLight->GetCullingDrawCallQueue(i),
+                m_DirectionalLight->GetRenderingDrawCallQueue(i),
+                m_DirectionalLight->GetCSMRenderingPSO(),
+                m_DirectionalLight->GetCSMInstancedRenderingPSO());
+        }
+
+        m_PrimitiveRenderer->Clean();
     }
 
     void RenderScene::Render(Render::RenderGraph& rg, Render::RGTextureNode* targetNode) {
@@ -117,7 +137,7 @@ namespace Object {
         gBufferNode->WriteColorTarget(albedoNode, 1);
         gBufferNode->WriteDepthTarget(depthNode);
         gBufferNode->SetTask([this](RHICommandBuffer* cmd) {
-            GetBasePasDrawCallQueue().Execute(cmd);
+            GetBasePassDrawCallQueue().Execute(cmd);
         });
 
         // copy depth texture
@@ -139,7 +159,7 @@ namespace Object {
             csmNode->SetRenderArea(shadowArea);
             csmNode->WriteDepthTarget(shadowMapNode, dsmDesc.GetSubRes2D((uint16)i, ETextureViewFlags::DepthStencil));
             csmNode->SetTask([this, i](RHICommandBuffer* cmd) {
-                m_DirectionalLight->GetDrawCallQueue(i).Execute(cmd);
+                m_DirectionalLight->GetRenderingDrawCallQueue(i).Execute(cmd);
             });
         }
 
