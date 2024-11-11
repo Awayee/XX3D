@@ -50,6 +50,7 @@ namespace Object {
 
 	void MeshComponent::OnAdd() {
 		MeshECSComponent* ecsCom = GetScene()->AddComponent<MeshECSComponent>(GetEntityID());
+		ecsCom->RenderFlags.AddFlag(ERenderPassType::BasePass);
 	}
 
 	void MeshComponent::OnRemove() {
@@ -81,7 +82,6 @@ namespace Object {
 				component->AABB = {};
 			}
 			// set cast shadow
-			component->RenderFlags.AddFlag(ERenderPassType::BasePass);
 			if(m_CastShadow) {
 				component->RenderFlags.AddFlag(ERenderPassType::DirectionalShadow);
 			}

@@ -75,8 +75,7 @@ namespace Object {
         m_Camera.Reset(new RenderCamera());
         m_Camera->SetView({ { 0, 4, -4 }, { 0, 2, 0 }, { 0, 1, 0 } });
         // primitive renderer
-        m_MaterialCacheMgr.Reset(new MaterialPSOCache());
-        m_PrimitiveRenderer.Reset(new PrimitiveRendererCPUDriven(m_MaterialCacheMgr.Get()));
+        m_PrimitiveMgr.Reset(new PrimitiveMgr());
     }
 
     RenderScene::~RenderScene() {
@@ -98,10 +97,10 @@ namespace Object {
         m_DirectionalLight->Update(m_Camera);
 
         // create draw call for base pass and shadow pass
-        m_PrimitiveRenderer->GenerateBasePassDrawCall(m_Camera->GetFrustum(), m_Camera->GetUniformBuffer(), m_BasePassCullingQueue, m_BasePassDrawCallQueue);
+        m_PrimitiveMgr->GenerateBasePassDrawCall(m_Camera->GetFrustum(), m_Camera->GetUniformBuffer(), m_BasePassCullingQueue, m_BasePassDrawCallQueue);
 
         for(uint32 i=0; i<m_DirectionalLight->GetCascadeNum(); ++i) {
-            m_PrimitiveRenderer->GenerateDirectionalShadowDrawCall(m_DirectionalLight->GetFrustum(i),
+            m_PrimitiveMgr->GenerateDirectionalShadowDrawCall(m_DirectionalLight->GetFrustum(i),
                 m_DirectionalLight->GetShadowUniform(i),
                 m_DirectionalLight->GetCullingDrawCallQueue(i),
                 m_DirectionalLight->GetRenderingDrawCallQueue(i),
@@ -109,7 +108,7 @@ namespace Object {
                 m_DirectionalLight->GetCSMInstancedRenderingPSO());
         }
 
-        m_PrimitiveRenderer->Clean();
+        m_PrimitiveMgr->Clean();
     }
 
     void RenderScene::Render(Render::RenderGraph& rg, Render::RGTextureNode* targetNode) {

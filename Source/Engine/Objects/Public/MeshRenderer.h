@@ -9,8 +9,10 @@
 
 
 namespace Object {
+	class PrimitiveRendererBase;
+	class PrimitiveInstancedRendererBase;
 
-	enum class ERenderPassType {
+	enum class ERenderPassType : uint32 {
 		PrePass = 0,
 		BasePass,
 		DirectionalShadow,
@@ -23,7 +25,7 @@ namespace Object {
 		void SetTransform(const Math::FTransform& transform);
 	};
 
-	struct PrimitiveRenderData2 {
+	struct PrimitiveRenderData {
 		PrimitiveResource* Primitive;
 		MaterialInterface* Material;
 		uint32 MaterialIndex{ INVALID_INDEX };
@@ -31,7 +33,7 @@ namespace Object {
 
 	// static mesh
 	struct MeshECSComponent {
-		TArray<PrimitiveRenderData2> Primitives;
+		TArray<PrimitiveRenderData> Primitives;
 		Math::AABB3 AABB;
 		TEnumFlag<ERenderPassType> RenderFlags;
 		REGISTER_ECS_COMPONENT(MeshECSComponent);
@@ -64,12 +66,12 @@ namespace Object {
 	};
 
 	// Manage all materials and pipeline states with reference counter, the pso with no reference will be removed.
-	class MaterialPSOCache {
+	class PrimitiveMaterialPSOCache {
 	public:
 		uint32 FindOrAddMaterial(MaterialInterface* material);
 		MaterialInterface* GetMaterial(uint32 materialIndex) const;
-		uint32 GetPSOIndex(uint32 materialIndex, bool bInstanced);
 		RHIGraphicsPipelineState* GetPSO(uint32 materialIndex, bool bInstanced);
+		uint32 GetMaterialSize() const;
 		// Reset all data
 		void Reset();
 		// clean materials and pipelines with no reference, and reset counter. called after rendering.
@@ -93,14 +95,33 @@ namespace Object {
 		TMap<MaterialInterface*, uint32> m_MapMaterialIndex;
 	};
 
-	// Collects all primitives in a render scene with all passes
-	class PrimitiveRenderer {
+	class PrimitiveMgr {
 	public:
-		PrimitiveRenderer(MaterialPSOCache* materialPSOCache) : m_MaterialPSOCache(materialPSOCache) {}
-		virtual ~PrimitiveRenderer() = default;
-		virtual void AddPrimitive(const ObjectTransformData& transform, TArrayView<PrimitiveRenderData2> primitives, TEnumFlag<ERenderPassType> passFlag) = 0;
-		virtual void AddInstancedPrimitive(InstanceDataMgr* instanceDataMgr, TArrayView<PrimitiveRenderData2> primitives, TEnumFlag<ERenderPassType> passFlag) = 0;
+		PrimitiveMgr();
+		~PrimitiveMgr() = default;
+		void AddPrimitive(const ObjectTransformData& transform, TArrayView<PrimitiveRenderData> primitives, TEnumFlag<ERenderPassType> passFlag);
+		void AddInstancedPrimitive(InstanceDataMgr* instanceDataMgr, TArrayView<PrimitiveRenderData> primitives, TEnumFlag<ERenderPassType> passFlag);
 
+		void GenerateBasePassDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer,
+			Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue);
+
+		void GenerateDirectionalShadowDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer,
+			Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue,
+			RHIGraphicsPipelineState* pso, RHIGraphicsPipelineState* instancedPSO);
+
+		void Clean();
+	protected:
+		TUniquePtr<PrimitiveMaterialPSOCache> m_MaterialPSOCache;
+		TUniquePtr<PrimitiveRendererBase> m_PrimitiveRenderer;
+		TUniquePtr<PrimitiveInstancedRendererBase> m_PrimitiveInstancedRenderer;
+		// get the corrected index of material in primitive
+		void CorrectPrimitiveMaterialIndex(PrimitiveRenderData* primitive);
+	};
+
+	class IPrimitiveRendererBase {
+	public:
+		IPrimitiveRendererBase(PrimitiveMaterialPSOCache* materialPSOCache) : m_MaterialPSOCache(materialPSOCache) {}
+		virtual ~IPrimitiveRendererBase() = default;
 		virtual void GenerateBasePassDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer,
 			Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue) = 0;
 
@@ -108,59 +129,78 @@ namespace Object {
 			Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue,
 			RHIGraphicsPipelineState* pso, RHIGraphicsPipelineState* instancedPSO) = 0;
 
-		virtual void Clean() = 0;
 	protected:
-		MaterialPSOCache* m_MaterialPSOCache;
+		PrimitiveMaterialPSOCache* m_MaterialPSOCache;
 	};
 
-	class PrimitiveRendererCPUDriven: public PrimitiveRenderer {
+	// primitive renderer for separated objects
+	class PrimitiveRendererBase : public IPrimitiveRendererBase {
 	public:
-		using PrimitiveRenderer::PrimitiveRenderer;
+		using IPrimitiveRendererBase::IPrimitiveRendererBase;
+		virtual void Add(const ObjectTransformData& transform, TArrayView<PrimitiveRenderData> primitives, TEnumFlag<ERenderPassType> passFlag) = 0;
+		virtual void Reset() = 0;
+	};
+
+	// primitive renderer for instanced objects
+	class PrimitiveInstancedRendererBase : public IPrimitiveRendererBase {
+	public:
+		using IPrimitiveRendererBase::IPrimitiveRendererBase;
+		virtual void Add(InstanceDataMgr* instanceDataMgr, TArrayView<PrimitiveRenderData> primitives, TEnumFlag<ERenderPassType> passFlag) = 0;
+		virtual void Reset() = 0;
+	};
+
+	class PrimitiveRendererCPUDriven : public PrimitiveRendererBase {
+	public:
+		using PrimitiveRendererBase::PrimitiveRendererBase;
 		~PrimitiveRendererCPUDriven() override = default;
-		void AddPrimitive(const ObjectTransformData& transform, TArrayView<PrimitiveRenderData2> primitives, TEnumFlag<ERenderPassType> passFlag) override;
-		void AddInstancedPrimitive(InstanceDataMgr* instanceDataMgr, TArrayView<PrimitiveRenderData2> primitives, TEnumFlag<ERenderPassType> passFlag) override;
-
-		void GenerateBasePassDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer,
-			Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue) override;
-
-		void GenerateDirectionalShadowDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer,
-			Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue,
-			RHIGraphicsPipelineState* pso, RHIGraphicsPipelineState* instancedPSO) override;
-
-		void Clean() override;
+		void Add(const ObjectTransformData& transform, TArrayView<PrimitiveRenderData> primitives, TEnumFlag<ERenderPassType> passFlag) override;
+		void Reset() override;
+		void GenerateBasePassDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer, Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue) override;
+		void GenerateDirectionalShadowDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer, Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue, RHIGraphicsPipelineState* pso, RHIGraphicsPipelineState* instancedPSO) override;
 	private:
-		// may multi primitives share one transform or one instanced data mgr.
+		// Multi primitives can share with one transform 
 		TArray<ObjectTransformData> m_Transforms;
-		TArray<InstanceDataMgr*> m_InstanceDataMgrs;
 
+		// aabbs of primitives
+		TArray<Math::AABB3> m_PrimitiveAABBs;
 		// unbatched primitives
 		struct PrimitiveCache {
 			PrimitiveResource* Primitive;
 			uint32 MaterialIndex;
 			uint32 TransformIndex;
+			uint32 AABBIndex;
 		};
-		TArray<PrimitiveCache> m_PrimitiveCaches;
-		// aabbs of primitives
-		TArray<Math::AABB3> m_PrimitiveAABBs;
+		TStaticArray<TArray<PrimitiveCache>, EnumCast(ERenderPassType::MaxNum)> m_PrimitiveCacheArrays;
+		// frustum cull, and generate transform buffer for primitives
+		struct PrimitiveCullResult {
+			TArray<uint32> Primitives;
+			TArray<RHIDynamicBuffer> TransformBuffers;
+		};
+		void FrustumCull(const Math::Frustum& frustum, PrimitiveCullResult& outResult, ERenderPassType pass);
+	};
 
+	class PrimitiveInstancedRendererCPUDriven : public PrimitiveInstancedRendererBase {
+	public:
+		using PrimitiveInstancedRendererBase::PrimitiveInstancedRendererBase;
+		~PrimitiveInstancedRendererCPUDriven() override = default;
+		void Add(InstanceDataMgr* instanceDataMgr, TArrayView<PrimitiveRenderData> primitives, TEnumFlag<ERenderPassType> passFlag) override;
+		void Reset() override;
+		void GenerateBasePassDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer, Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue) override;
+		void GenerateDirectionalShadowDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer, Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue, RHIGraphicsPipelineState* pso, RHIGraphicsPipelineState* instancedPSO) override;
+	private:
+		TArray<InstanceDataMgr*> m_InstanceDataMgrs;
 		// instanced primitives
 		struct InstancedPrimitiveCache {
 			PrimitiveResource* Primitive;
 			uint32 MaterialIndex;
 			uint32 InstanceDataIndex;
 		};
-		TArray<InstancedPrimitiveCache> m_InstancedPrimitiveCaches;
+		TStaticArray<TArray<InstancedPrimitiveCache>, EnumCast(ERenderPassType::MaxNum)> m_InstancedPrimitiveCacheArrays;
 
-		// get the corrected index of material in primitive
-		void CorrectPrimitiveMaterialIndex(PrimitiveRenderData2* primitive);
-
-		// frustum cull, and generate transform buffer for primitives
 		struct PrimitiveCullResult {
-			TArray<uint32> Primitives;
-			TArray<RHIDynamicBuffer> TransformBuffers;
 			TArray<TPair<uint32, uint32>> InstancedPrimitives; // the indices and counts of primitives
 			TArray<RHIDynamicBuffer> InstanceBuffers;
 		};
-		void FrustumCull(const Math::Frustum& frustum, PrimitiveCullResult& outResult);
+		void FrustumCull(const Math::Frustum& frustum, PrimitiveCullResult& outResult, ERenderPassType pass);
 	};
 }

@@ -9,8 +9,7 @@
 namespace Object {
 	class RenderCamera;
 	class DirectionalLight;
-	class PrimitiveRenderer;
-	class MaterialPSOCache;
+	class PrimitiveMgr;
 
 	class RenderScene: public ECSScene{
 	public:
@@ -21,7 +20,7 @@ namespace Object {
 		~RenderScene();
 		RenderCamera* GetMainCamera() { return m_Camera.Get(); }
 		DirectionalLight* GetDirectionalLight() { return m_DirectionalLight.Get(); }
-		PrimitiveRenderer* GetPrimitiveRenderer() { return m_PrimitiveRenderer.Get(); }
+		PrimitiveMgr* GetPrimitiveMgr() { return m_PrimitiveMgr.Get(); }
 		Render::DrawCallQueue& GetBasePassDrawCallQueue() { return m_BasePassDrawCallQueue; }
 		Render::DrawCallQueue& GetLightingPassDrawCallQueue() { return m_LightingPassDrawCallQueue; }
 		void Update();
@@ -36,8 +35,7 @@ namespace Object {
 		static TUniquePtr<RenderScene> s_Default;
 		TUniquePtr<DirectionalLight> m_DirectionalLight;
 		TUniquePtr<RenderCamera> m_Camera;
-		TUniquePtr<MaterialPSOCache> m_MaterialCacheMgr;
-		TUniquePtr<PrimitiveRenderer> m_PrimitiveRenderer;
+		TUniquePtr<PrimitiveMgr> m_PrimitiveMgr;
 		Render::DrawCallQueue m_BasePassCullingQueue;
 		Render::DrawCallQueue m_BasePassDrawCallQueue;
 		Render::DrawCallQueue m_LightingPassDrawCallQueue;
