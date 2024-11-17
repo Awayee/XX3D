@@ -56,9 +56,9 @@ You can also switch to `Runtime` to lauch your game.
 
 
 # Future Supportings
-- Task Graph
+- Deferred texturing
+- Multi thread and task graph
 - True PBR
-- GPU Driven
+- Ray tracing
 - Script system
 - Physical simulation
-- Ray tracing
