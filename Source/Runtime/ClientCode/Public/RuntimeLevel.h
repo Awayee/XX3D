@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/Public/Defines.h"
 #include "Objects/Public/Level.h"
+#include "Objects/Public/LevelComponents.h"
 
 namespace Runtime {
 	class RuntimeLevelMgr {
