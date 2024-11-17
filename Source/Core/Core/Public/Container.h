@@ -8,25 +8,6 @@
 #include "Defines.h"
 #include "TList.h"
 
-
-struct cmp {
-	bool operator()(const char* s1, const char* s2) const {
-		return std::strcmp(s1, s2) == 0;
-	}
-};
-
-struct hs {
-	uint64 operator()(const char* s) const {
-		unsigned long n = 0;
-		for (; *s; s++) {
-			n = 5 * n + *s;
-		}
-		return (uint64)n;
-	}
-};
-template<class T>
-using TStrMap = std::unordered_map<const char*, T, hs, cmp>;
-
 //template<class T>
 //using TArray =  std::vector<T>;
 
@@ -90,10 +71,6 @@ public:
 	uint32 Allocate() {
 		uint32 idx = m_FreeIDs.Allocate(1);
 		if(INVALID == idx) {
-			idx = m_Data.Size();
-			m_Data.EmplaceBack();
-		}
-		if(m_FreeIDs.IsEmpty()) {
 			idx = m_Data.Size();
 			m_Data.EmplaceBack();
 		}

@@ -3,6 +3,7 @@
 #include "Core/Public/String.h"
 #include "Core/Public/Container.h"
 #include "Asset/Public/AssetLoader.h"
+#include "Math/Public/Transform.h"
 
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_STB_IMAGE_WRITE
@@ -40,6 +41,26 @@ uint32 GetPrimitiveCount(const tinygltf::Model& model, const tinygltf::Node& nod
 void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TArray<MeshPrimitiveTemp>& primitives, uint32& index, float uniformScale) {
 	if (node.mesh > -1) {
 		const tinygltf::Mesh& mesh = model.meshes[node.mesh];
+		Math::FTransform transform;
+		if(node.translation.size()) {
+			transform.Position = Math::FVector3((float)node.translation[0], (float)node.translation[1], (float)node.translation[2]);
+			transform.Position *= uniformScale;
+		}
+		if(node.rotation.size()) {
+			transform.Rotation = Math::FQuaternion((float)node.rotation[0], (float)node.rotation[1], (float)node.rotation[2], (float)node.translation[3]);
+		}
+		if(node.scale.size()) {
+			transform.Scale = Math::FVector3((float)node.scale[0], (float)node.scale[1], (float)node.scale[2]);
+		}
+		// apply transform
+		bool bHasTransform = !transform.IsIdentity();
+		bool bHasRotOrScale = transform.Rotation != Math::FQuaternion::IDENTITY || transform.Scale != Math::FVector3::ONE;
+		Math::FMatrix4x4 transformMat = bHasTransform ? transform.ToMatrix() : Math::FMatrix4x4::IDENTITY;
+		Math::FMatrix3x3 invTransposeMat = Math::FMatrix3x3::IDENTITY;
+		if(bHasRotOrScale) {
+			transformMat.ExtractMatrix3x3(invTransposeMat);
+			invTransposeMat = invTransposeMat.Inverse().Transpose();
+		}
 		for (uint32 i = 0; i < mesh.primitives.size(); i++) {
 			const tinygltf::Primitive& primitive = mesh.primitives[i];
 			//vertices
@@ -82,9 +103,15 @@ void LoadGLTFNode(const tinygltf::Model& model, const tinygltf::Node& node, TArr
 				vertices[v].Position.X = uniformScale * bufferPos[v * posByteStride];
 				vertices[v].Position.Y = uniformScale * bufferPos[v * posByteStride + 1];
 				vertices[v].Position.Z = uniformScale * bufferPos[v * posByteStride + 2];
+				if(bHasTransform) {
+					vertices[v].Position = transformMat.TransformCoord(vertices[v].Position);
+				}
 				vertices[v].Normal.X = bufferNormals[v * normByteStride];
 				vertices[v].Normal.Y = bufferNormals[v * normByteStride + 1];
 				vertices[v].Normal.Z = bufferNormals[v * normByteStride + 2];
+				if(bHasRotOrScale) {
+					vertices[v].Normal = invTransposeMat * vertices[v].Normal;
+				}
 				vertices[v].UV.X = bufferTexCoordSet0[v * uv0ByteStride];
 				vertices[v].UV.Y = bufferTexCoordSet0[v * uv0ByteStride + 1];
 			}
@@ -357,21 +384,27 @@ bool ImportMeshAsset(const XString& srcFile, const XString& dstFile, float unifo
 	// save primitives
 	const File::FPath savePath(saveFile.c_str());
 	TSet<XString> usedNames;
-	asset.Primitives.Resize(primitives.Size());
-	for (uint32 i = 0; i < asset.Primitives.Size(); ++i) {
-		auto& primitive = asset.Primitives[i];
-		auto& srcPrimitive = primitives[i];
+	asset.Primitives.Reset();
+	asset.Primitives.Reserve(primitives.Size());
+	uint32 nameSuffix = 0;
+	for(auto& srcPrimitive : primitives){
+		auto& primitiveName = srcPrimitive.Name;
 		//generate name if empty)
-		if (srcPrimitive.Name.empty() || usedNames.find(primitive.Name) != usedNames.end()) {
-			primitive.Name = savePath.stem().filename().string() + ToString<uint32>(i);
+		if (primitiveName.empty() || usedNames.find(primitiveName) != usedNames.end()) {
+			primitiveName = savePath.stem().filename().string() + ToString<uint32>(nameSuffix);
 		}
-		XString primitiveFile = savePath.parent_path().append(primitive.Name).replace_extension(".primitive").string();
+		XString primitiveFile = savePath.parent_path().append(primitiveName).replace_extension(".primitive").string();
 		std::replace(primitiveFile.begin(), primitiveFile.end(), '\\', '/');
 		Asset::PrimitiveAsset primitiveAsset;
 		primitiveAsset.Vertices.Swap(srcPrimitive.Vertices);
 		primitiveAsset.Indices.Swap(srcPrimitive.Indices);
-		Asset::AssetLoader::SaveProjectAsset(&primitiveAsset, primitiveFile.c_str());
-		primitive.BinaryFile.swap(primitiveFile);
+		if(Asset::AssetLoader::SaveProjectAsset(&primitiveAsset, primitiveFile.c_str())) {
+			auto& primitive = asset.Primitives.EmplaceBack();
+			primitive.Name = primitiveName;
+			primitive.BinaryFile.swap(primitiveFile);
+			usedNames.insert(primitiveName);
+			++nameSuffix;
+		}
 	}
 	// save mesh
 	r |= Asset::AssetLoader::SaveProjectAsset(&asset, saveFile.c_str());

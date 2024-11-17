@@ -52,4 +52,12 @@ struct TEnumFlag {
 	bool HasFlag(Enum e) {
 		return (Value & (1 << (UnderlyingType)e)) != 0;
 	}
+
+	bool operator == (TEnumFlag rhs) const {
+		return Value == rhs.Value;
+	}
+
+	bool operator != (TEnumFlag rhs) const {
+		return Value != rhs.Value;
+	}
 };

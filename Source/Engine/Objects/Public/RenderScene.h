@@ -21,7 +21,6 @@ namespace Object {
 		RenderCamera* GetMainCamera() { return m_Camera.Get(); }
 		DirectionalLight* GetDirectionalLight() { return m_DirectionalLight.Get(); }
 		PrimitiveMgr* GetPrimitiveMgr() { return m_PrimitiveMgr.Get(); }
-		Render::DrawCallQueue& GetBasePassDrawCallQueue() { return m_BasePassDrawCallQueue; }
 		Render::DrawCallQueue& GetLightingPassDrawCallQueue() { return m_LightingPassDrawCallQueue; }
 		void Update();
 		void Render(Render::RenderGraph& rg, Render::RGTextureNode* targetNode);
@@ -36,8 +35,6 @@ namespace Object {
 		TUniquePtr<DirectionalLight> m_DirectionalLight;
 		TUniquePtr<RenderCamera> m_Camera;
 		TUniquePtr<PrimitiveMgr> m_PrimitiveMgr;
-		Render::DrawCallQueue m_BasePassCullingQueue;
-		Render::DrawCallQueue m_BasePassDrawCallQueue;
 		Render::DrawCallQueue m_LightingPassDrawCallQueue;
 		// fo gBuffer
 		USize2D m_TargetSize;

@@ -71,7 +71,10 @@ inline void CreateDynamicBufferView(D3D12DynamicBufferAllocator* allocator, cons
 	case EBindingType::UniformBuffer: {
 		allocator->CreateCBV(dBuffer, descriptorHandle);
 	} break;
-	case EBindingType::StorageBuffer: {
+	case EBindingType::StructuredBuffer: {
+		allocator->CreateSRV(dBuffer, descriptorHandle);
+	} break;
+	case EBindingType::RWStructuredBuffer: {
 		allocator->CreateUAV(dBuffer, descriptorHandle);
 	}break;
 	default: break;
@@ -83,11 +86,15 @@ inline D3D12_CPU_DESCRIPTOR_HANDLE GetParameterStaticDescriptor(const RHIShaderP
 	switch (param.Type) {
 	case EBindingType::UniformBuffer: {
 		D3D12BufferImpl* buffer = (D3D12BufferImpl*)param.Data.Buffer;
-		srcHandle = buffer->GetCBV();
+		srcHandle = buffer->GetCBV(param.Data.Offset, param.Data.Size);
 	}break;
-	case EBindingType::StorageBuffer: {
+	case EBindingType::StructuredBuffer:{
 		D3D12BufferImpl* buffer = (D3D12BufferImpl*)param.Data.Buffer;
-		srcHandle = buffer->GetUAV();
+		srcHandle = buffer->GetSRV(param.Data.Offset, param.Data.Size);
+	}break;
+	case EBindingType::RWStructuredBuffer: {
+		D3D12BufferImpl* buffer = (D3D12BufferImpl*)param.Data.Buffer;
+		srcHandle = buffer->GetUAV(param.Data.Offset, param.Data.Size);
 	}break;
 	case EBindingType::Texture: {
 		D3D12Texture* texture = (D3D12Texture*)param.Data.Texture;
@@ -276,7 +283,7 @@ D3D12GraphicsPipelineState::D3D12GraphicsPipelineState(const RHIGraphicsPipeline
 	m_PrimitiveTopology = ToD3D12PrimitiveTopology(desc.PrimitiveTopology);
 }
 
-void D3D12GraphicsPipelineState::SetName(const char* name) {
+void D3D12GraphicsPipelineState::SetNameInternal(const char* name) {
 	XWString nameW = String2WString(name);
 	m_Pipeline->SetName(nameW.c_str());
 }

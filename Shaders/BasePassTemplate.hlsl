@@ -6,26 +6,6 @@ struct VSInput {
     [[vk::location(1)]] float3 inNormal : NORMAL0;
     [[vk::location(2)]] float3 inTangent: TANGENT0;
     [[vk::location(3)]] float2 inUV: TEXCOORD0;
-#if defined(INSTANCED)
-    [[vk::location(4)]] half4 t0 : INSTANCE_TRANSFORM0;
-    [[vk::location(5)]] half4 t1 : INSTANCE_TRANSFORM1;
-    [[vk::location(6)]] half4 t2 : INSTANCE_TRANSFORM2;
-    [[vk::location(7)]] half4 t3 : INSTANCE_TRANSFORM3;
-
-	half4x4 GetInstanceTransform() {
-        return half4x4(
-        t0.x, t1.x, t2.x, t3.x,
-        t0.y, t1.y, t2.y, t3.y,
-        t0.z, t1.z, t2.z, t3.z,
-        t0.w, t1.w, t2.w, t3.w);
-    }
-    half3x3 GetInstanceNormalTransform() {
-        return half3x3(
-        t0.x, t1.x, t2.x,
-        t0.y, t1.y, t2.y,
-        t0.z, t1.z, t2.z);
-    }
-#endif
 };
 
 struct VSOutput{
@@ -44,8 +24,28 @@ struct CameraUBO{
 [[vk::binding(0, 0)]] cbuffer uCamera { CameraUBO uCamera; };
 
 #if defined(INSTANCED)
-#define CoordTransform (vIn.GetInstanceTransform())
-#define NormalTransform ((float3x3)vIn.GetInstanceTransform())
+struct InstanceData {
+#if defined(INSTANCE_HALF_FLOAT)
+    half4x4 TransformMat;
+#else
+	float4x4 TransformMat;
+#endif
+};
+
+float3x3 GetNormalTransform(float4x4 t)
+{
+    return float3x3(
+		t[0][0], t[0][1], t[0][2],
+		t[1][0], t[1][1], t[1][2],
+		t[2][0], t[2][1], t[2][2]
+    );
+}
+
+[[vk::binding(0, 1)]] StructuredBuffer<InstanceData> uInstanceData;
+[[vk::binding(1, 1)]] StructuredBuffer<uint> uInstanceID;
+
+#define CoordTransform (uInstanceData[uInstanceID[instanceID]].TransformMat)
+#define NormalTransform (GetNormalTransform(uInstanceData[uInstanceID[instanceID]].TransformMat))
 #else
 struct ModelUBO {
     float4x4 ModelMat;
@@ -56,7 +56,7 @@ struct ModelUBO {
 #define NormalTransform transpose((float3x3)uModel.ModelInvMat)
 #endif
 
-VSOutput MainVS(VSInput vIn, uint vertexID: SV_VERTEXID) {
+VSOutput MainVS(VSInput vIn, uint vertexID: SV_VERTEXID, uint instanceID: SV_InstanceID) {
     VSOutput output;
     output.Position = mul(uCamera.VP, mul(CoordTransform, float4(vIn.inPosition.xyz, 1.0)));
     output.WorldNormal = mul(NormalTransform, vIn.inNormal);

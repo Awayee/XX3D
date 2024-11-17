@@ -1,5 +1,5 @@
 #include "Objects/Public/Camera.h"
-#include "Window/Public/EngineWindow.h"
+
 namespace Object {
 	Math::FMatrix4x4 CameraView::GetViewMatrix() const {
 		return Math::FMatrix4x4::LookAtMatrix(Eye, At, Up);
@@ -41,53 +41,6 @@ namespace Object {
 		}
 		else {
 			return Math::FMatrix4x4::OrthographicMatrix(Left, Right, Bottom, Top, Near, Far);
-		}
-	}
-
-	void Camera::SetView(const CameraView& view) {
-		View = view;
-		UpdateFrustum();
-	}
-
-	void Camera::SetProjection(const CameraProjection& projection) {
-		Projection = projection;
-		UpdateFrustum();
-	}
-
-	void Camera::Set(const CameraView& view, const CameraProjection& projection) {
-		View = view;
-		Projection = projection;
-		UpdateFrustum();
-	}
-
-	Math::FMatrix4x4 Camera::GetViewProjectMatrix() const {
-		return Projection.GetProjectMatrix() * View.GetViewMatrix();
-	}
-
-	void Camera::UpdateFrustum() {
-		Math::FVector3 cameraPos = View.Eye;
-		Math::FVector3 cameraRight, cameraUp, cameraFront;
-		View.CalcAxis(cameraRight, cameraUp, cameraFront);
-		if (Projection.ProjType == EProjType::Perspective) {
-			const float halfHeight = Projection.Far * Math::Tan(Projection.Fov * 0.5f);
-			const float halfWidth = halfHeight * Projection.Aspect;
-			const Math::FVector3 frontVec = cameraFront * Projection.Far;
-			const Math::FVector3 rightVec = cameraRight * halfWidth;
-			const Math::FVector3 upVec = cameraUp * halfHeight;
-			Frustum.Near = { cameraPos + cameraFront * Projection.Near, cameraFront };
-			Frustum.Far = { cameraPos + frontVec, -cameraFront };
-			Frustum.Left = { cameraPos, cameraUp.Cross((frontVec - rightVec).Normalize()) };
-			Frustum.Right = { cameraPos, (frontVec + rightVec).Normalize().Cross(cameraUp) };
-			Frustum.Bottom = { cameraPos, (frontVec - upVec).Normalize().Cross(cameraRight) };
-			Frustum.Top = { cameraPos, cameraRight.Cross((frontVec + upVec).Normalize()) };
-		}
-		else if (Projection.ProjType == EProjType::Ortho) {
-			Frustum.Near = { cameraPos + cameraFront * Projection.Near, cameraFront };
-			Frustum.Far = { cameraPos + cameraFront * Projection.Far, -cameraFront };
-			Frustum.Left = { cameraPos + cameraRight * Projection.Left, cameraRight };
-			Frustum.Right = { cameraPos + cameraRight * Projection.Right, -cameraRight };
-			Frustum.Bottom = { cameraPos + cameraUp * Projection.Bottom, cameraUp };
-			Frustum.Top = { cameraPos + cameraUp * Projection.Top, -cameraUp };
 		}
 	}
 
@@ -161,70 +114,50 @@ namespace Object {
 		out.RightTopFar = RightTopNear + f * rtDir;
 	}
 
-	struct CameraUBO {
-		Math::FMatrix4x4 View;
-		Math::FMatrix4x4 Proj;
-		Math::FMatrix4x4 VP;
-		Math::FMatrix4x4 InvVP;
-		Math::FVector3 CamPos;
-	};
-
-	RenderCamera::RenderCamera() {
-		// get window size for aspect
-		m_ViewMatrix = Math::FMatrix4x4::IDENTITY;
-		USize2D size = Engine::EngineWindow::Instance()->GetWindowSize();
-		SetAspect((float)size.w / (float)size.h);
+	void Camera::SetView(const CameraView& view) {
+		View = view;
+		UpdateFrustum();
 	}
 
-	void RenderCamera::SetView(const CameraView& view) {
-		m_Camera.SetView(view);
-		m_ViewMatrix = m_Camera.View.GetViewMatrix();
-		m_ViewProjectMatrix = m_ProjectMatrix * m_ViewMatrix;
-		m_InvViewProjectMatrix = m_ViewProjectMatrix.Inverse();
+	void Camera::SetProjection(const CameraProjection& projection) {
+		Projection = projection;
+		UpdateFrustum();
 	}
 
-	void RenderCamera::SetProjection(const CameraProjection& projection) {
-		m_Camera.SetProjection(projection);
-		UpdateProjectMatrix();
+	void Camera::Set(const CameraView& view, const CameraProjection& projection) {
+		View = view;
+		Projection = projection;
+		UpdateFrustum();
 	}
 
-	void RenderCamera::SetAspect(float aspect) {
-		m_Aspect = aspect;
-		UpdateProjection();
-		UpdateProjectMatrix();
+	Math::FMatrix4x4 Camera::GetViewProjectMatrix() const {
+		return Projection.GetProjectMatrix() * View.GetViewMatrix();
 	}
 
-	void RenderCamera::UpdateBuffer() {
-		CameraUBO cameraUBO;
-		cameraUBO.View = GetViewMatrix();
-		cameraUBO.Proj = GetProjectMatrix();
-		cameraUBO.VP = GetViewProjectMatrix();
-		cameraUBO.InvVP = GetInvViewProjectMatrix();
-		cameraUBO.CamPos = GetView().Eye;
-		m_Uniform = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(CameraUBO), &cameraUBO, 0);
-	}
-
-	const RHIDynamicBuffer& RenderCamera::GetUniformBuffer() const {
-		return m_Uniform;
-	}
-
-	RenderCamera::~RenderCamera(){}
-
-	void RenderCamera::UpdateProjection() {
-		const CameraProjection& data = m_Camera.Projection;
-		if (EProjType::Ortho == data.ProjType) {
-			const float halfHeight = (data.Top - data.Bottom) * 0.5f;
-			const float halfWidth = halfHeight * m_Aspect;
-			m_Camera.SetProjection(CameraProjection::Orthographic(-halfWidth, halfWidth, -halfHeight, halfHeight, data.Near, data.Far));
+	void Camera::UpdateFrustum() {
+		Math::FVector3 cameraPos = View.Eye;
+		Math::FVector3 cameraRight, cameraUp, cameraFront;
+		View.CalcAxis(cameraRight, cameraUp, cameraFront);
+		if (Projection.ProjType == EProjType::Perspective) {
+			const float halfHeight = Projection.Far * Math::Tan(Projection.Fov * 0.5f);
+			const float halfWidth = halfHeight * Projection.Aspect;
+			const Math::FVector3 frontVec = cameraFront * Projection.Far;
+			const Math::FVector3 rightVec = cameraRight * halfWidth;
+			const Math::FVector3 upVec = cameraUp * halfHeight;
+			Frustum.Near = { cameraPos + cameraFront * Projection.Near, cameraFront };
+			Frustum.Far = { cameraPos + frontVec, -cameraFront };
+			Frustum.Left = { cameraPos, cameraUp.Cross((frontVec - rightVec).Normalize()) };
+			Frustum.Right = { cameraPos, (frontVec + rightVec).Normalize().Cross(cameraUp) };
+			Frustum.Bottom = { cameraPos, (frontVec - upVec).Normalize().Cross(cameraRight) };
+			Frustum.Top = { cameraPos, cameraRight.Cross((frontVec + upVec).Normalize()) };
 		}
-		else if (EProjType::Perspective == data.ProjType) {
-			m_Camera.SetProjection(CameraProjection::Perspective(data.Fov, m_Aspect, data.Near, data.Far));
+		else if (Projection.ProjType == EProjType::Ortho) {
+			Frustum.Near = { cameraPos + cameraFront * Projection.Near, cameraFront };
+			Frustum.Far = { cameraPos + cameraFront * Projection.Far, -cameraFront };
+			Frustum.Left = { cameraPos + cameraRight * Projection.Left, cameraRight };
+			Frustum.Right = { cameraPos + cameraRight * Projection.Right, -cameraRight };
+			Frustum.Bottom = { cameraPos + cameraUp * Projection.Bottom, cameraUp };
+			Frustum.Top = { cameraPos + cameraUp * Projection.Top, -cameraUp };
 		}
-	}
-
-	void RenderCamera::UpdateProjectMatrix(){
-		m_ProjectMatrix = m_Camera.Projection.GetProjectMatrix();
-		m_ViewProjectMatrix = m_ProjectMatrix * m_ViewMatrix;
-		m_InvViewProjectMatrix = m_ViewProjectMatrix.Inverse();
 	}
 }

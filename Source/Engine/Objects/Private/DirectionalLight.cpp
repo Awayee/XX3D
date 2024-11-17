@@ -2,8 +2,7 @@
 #include "Asset/Public/AssetCommon.h"
 #include "System/Public/Configuration.h"
 #include "Render/Public/GlobalShader.h"
-#include "Objects/Public/RenderResource.h"
-#include "Objects/Public/MeshRenderer.h"
+#include "Objects/Public/RenderCamera.h"
 
 namespace {
 	class DirectionalShadowVS : public Render::GlobalShader {
@@ -62,6 +61,9 @@ namespace Object {
 	DirectionalLight::DirectionalLight() {
 		// load shadow map size
 		m_ShadowConfig.ShadowMapSize = Engine::ProjectConfig::Instance().DefaultShadowMapSize;
+		for(uint32 i=0; i<CASCADE_NUM; ++i) {
+			m_CascadeCameras[i].Reset(new ShadowCamera());
+		}
 	}
 
 	void DirectionalLight::SetRotation(const Math::FVector3& euler) {
@@ -70,26 +72,12 @@ namespace Object {
 		m_LightEuler = euler;
 	}
 
-	Render::DrawCallQueue& DirectionalLight::GetRenderingDrawCallQueue(uint32 i) {
+	ShadowCamera* DirectionalLight::GetShadowCamera(uint32 i) {
 		CHECK(i < CASCADE_NUM);
-		return m_RenderingDrawCallQueues[i];
-	}
-
-	Render::DrawCallQueue& DirectionalLight::GetCullingDrawCallQueue(uint32 i) {
-		CHECK(i < CASCADE_NUM);
-		return m_CullingDrawCallQueues[i];
-	}
-
-	const Math::Frustum& DirectionalLight::GetFrustum(uint32 i) {
-		CHECK(i < CASCADE_NUM);
-		return m_CascadeCameras[i].Frustum;
+		return m_CascadeCameras[i].Get();
 	}
 
 	void DirectionalLight::Update(Object::RenderCamera* renderCamera) {
-		// clear draw call
-		for (auto& queue : m_RenderingDrawCallQueues) {
-			queue.Reset();
-		}
 		// split the frustum of render camera
 		UpdateCascadeSplits(renderCamera);
 
@@ -101,8 +89,8 @@ namespace Object {
 			ubo.ShadowDebug.X = m_ShadowConfig.EnableDebug ? 1.0f : 0.0f;
 			for (uint32 i = 0; i < CASCADE_NUM; ++i) {
 				ubo.FarDistances[i] = m_FarDistances[i];
-				ubo.VPMats[i] = m_VPMats[i];
-				m_ShadowUniforms[i] = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(Math::FMatrix4x4), &ubo.VPMats[i], 0);
+				ubo.VPMats[i] = m_CascadeCameras[i]->GetViewProjectMatrix();
+				m_CascadeCameras[i]->UpdateBuffer();
 			}
 		}
 		m_Uniform = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(ubo), &ubo, 0);
@@ -179,22 +167,20 @@ namespace Object {
 		desc.VertexShader = globalShaderMap->GetShader<DirectionalShadowVS>(vsp)->GetRHI();
 		DirectionalShadowPS::ShaderPermutation psp; psp.INSTANCED = true;
 		desc.PixelShader = globalShaderMap->GetShader<DirectionalShadowPS>(psp)->GetRHI();
-		// layout
-		desc.Layout = { { {EBindingType::UniformBuffer, EShaderStageFlags::Vertex} } };// camera
+		desc.Layout.Resize(2);
+		// camera
+		desc.Layout[0] = { {EBindingType::UniformBuffer, EShaderStageFlags::Vertex} };
+		// object
+		desc.Layout[1] = {
+			{EBindingType::StructuredBuffer, EShaderStageFlags::Vertex},
+			{EBindingType::StructuredBuffer, EShaderStageFlags::Vertex},
+		};
 		// vertex input
-		const ERHIFormat instanceRowFormat = Object::GetInstanceDataRowFormat();
-		const uint32 instanceRowSize = GetRHIFormatPixelSize(instanceRowFormat);
 		auto& vi = desc.VertexInput;
-		vi.Bindings = {
-			{0, sizeof(Asset::AssetVertex), false},
-			{1, instanceRowSize * 4, true} };
+		vi.Bindings = { {0, sizeof(Asset::AssetVertex), false} };
 		vi.Attributes = {
 			{POSITION(0), 0, 0, ERHIFormat::R32G32B32_SFLOAT, 0},
-			// instance transform
-			{INSTANCE_TRANSFORM(0), 0, 1, instanceRowFormat, 0 },
-			{INSTANCE_TRANSFORM(1), 1, 1, instanceRowFormat, instanceRowSize},
-			{INSTANCE_TRANSFORM(2), 2, 1, instanceRowFormat, instanceRowSize * 2},
-			{INSTANCE_TRANSFORM(3), 3, 1, instanceRowFormat, instanceRowSize * 3}, };
+		};
 
 		desc.BlendDesc.BlendStates = { {false}, {false} };
 		desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Back, false, m_ShadowConfig.ShadowBiasConstant, m_ShadowConfig.ShadowBiasSlope };
@@ -236,10 +222,8 @@ namespace Object {
 			}
 			// build projection matrix by min and max.
 			const Object::CameraProjection lightCameraProj = Object::CameraProjection::Orthographic(min.X, max.X, min.Y, max.Y, min.Z, max.Z);
-			Math::FMatrix4x4 lightCameraProjMat = lightCameraProj.GetProjectMatrix();
-			m_CascadeCameras[i].Set(lightCameraView, lightCameraProj);
+			m_CascadeCameras[i]->SetViewProjection(lightCameraView, lightCameraProj);
 			m_FarDistances[i] = cascadeFar;
-			m_VPMats[i] = lightCameraProjMat * lightCameraViewMat;
 		}
 	}
 }

@@ -1,5 +1,4 @@
 #include "Render/Public/HZBBuilder.h"
-#include "Math/Public/Math.h"
 #include "Render/Public/GlobalShader.h"
 #include "Render/Public/DefaultResource.h"
 
@@ -19,7 +18,7 @@ namespace {
 
 	static constexpr uint32 THREAD_ROW_NUM = 16; // num of threads per thread group
 	static constexpr uint32 PER_GROUP_OUTPUT_ROW = THREAD_ROW_NUM * 2; // num of output pixels per thread group
-	static constexpr uint32 MIN_DEPTH_SIZE = 4;
+	static constexpr uint32 MIN_DEPTH_SIZE = 1;
 }
 
 namespace Render {
@@ -33,17 +32,44 @@ namespace Render {
 		CreateBlitPSO();
 	}
 
-	RGTextureNode* HZBBuilder::BuildFurthest(RHITexture* depth, Render::RGTextureNode* depthNode, Render::RenderGraph& rg) {
-		// calculate target texture size
-		const auto& desc = depth->GetDesc();
-		uint32 dstSize = GetHZBSize(desc.Width, desc.Height);
-		// too small to build hzb
-		if(dstSize <= MIN_DEPTH_SIZE) {
-			return nullptr;
+	void HZBBuilder::Update(uint32 srcWidth, uint32 srcHeight, const Math::FMatrix4x4& generatedByMatrix) {
+		m_ViewProjectMatrix = generatedByMatrix;
+		if(srcWidth ==0 || srcHeight == 0) {
+			return;
 		}
-		if(!m_HZB || dstSize != m_HZB->GetDesc().Width) {
+		const uint32 dstSize = GetHZBSize(srcWidth, srcHeight);
+		if (dstSize <= MIN_DEPTH_SIZE) {
+			return;
+		}
+		// recreate texture
+		if (!m_HZB || dstSize != m_HZB->GetDesc().Width) {
 			CreateOutputTexture(dstSize);
 		}
+		// calculate hzb actual size
+		const float srcAspect = (float)srcWidth / (float)srcHeight;
+		const float hzbAspect = (float)m_ActualWidth / (float)m_ActualHeight;
+		if(!Math::FloatEqual(hzbAspect, srcAspect)) {
+			// aspect ratio < 1.0f
+			if (srcWidth < srcHeight) {
+				m_ActualHeight = dstSize;
+				m_ActualWidth = (uint32)Math::Ceil((float)m_ActualHeight * srcAspect);
+			}
+			else {
+				m_ActualWidth = dstSize;
+				m_ActualHeight = (uint32)Math::Ceil((float)m_ActualWidth / srcAspect);
+			}
+		}
+	}
+
+	RGTextureNode* HZBBuilder::BuildFurthest(RHITexture* depth, Render::RGTextureNode* depthNode, Render::RenderGraph& rg) {
+		if(!m_HZB) {
+			return nullptr;
+		}
+		// calculate target texture size
+		const auto& srcDesc = depth->GetDesc();
+		const uint32 srcWidth = srcDesc.Width;
+		const uint32 srcHeight = srcDesc.Height;
+		uint32 dstSize = m_HZB->GetDesc().Width;
 		// get pso
 		HZBPSOFlags psoFlags;
 		psoFlags.Closest = false;
@@ -51,7 +77,7 @@ namespace Render {
 		psoFlags.Output2x2 = true;
 
 		// config render graph
-		RGTextureNode* hzbNode = rg.CreateTextureNode(m_HZB, "HZB0");
+		RGTextureNode* hzbNode = rg.CreateTextureNode(m_HZB, "HZB");
 		// generate mip 0 firstly
 		{
 			RGComputeNode* buildHZBMip0 = rg.CreateComputeNode("BuildHZBMip0");
@@ -61,14 +87,11 @@ namespace Render {
 			buildHZBMip0->WriteUAV(hzbNode, dstSubRes);
 
 			// calculate thread group size
-			// fit width
-			float widthScale = (float)dstSize / (float)desc.Width;
-			uint32 heightSize = (uint32)Math::Ceil(widthScale * (float)desc.Height);
-			uint32 groupX = Math::Max(1u, (dstSize + PER_GROUP_OUTPUT_ROW) / PER_GROUP_OUTPUT_ROW);
-			uint32 groupY = Math::Max(1u, (heightSize + PER_GROUP_OUTPUT_ROW - 1) / PER_GROUP_OUTPUT_ROW);
+			uint32 groupX = Math::Max(1u, (m_ActualWidth + PER_GROUP_OUTPUT_ROW - 1) / PER_GROUP_OUTPUT_ROW);
+			uint32 groupY = Math::Max(1u, (m_ActualHeight + PER_GROUP_OUTPUT_ROW - 1) / PER_GROUP_OUTPUT_ROW);
 
 			// size buffer
-			Math::FVector4 sizeInfo = { (float)dstSize, (float)heightSize, (float)desc.Width, (float)desc.Height};
+			Math::FVector4 sizeInfo = { (float)m_ActualWidth, (float)m_ActualHeight, (float)srcWidth, (float)srcHeight};
 			RHIDynamicBuffer sizeBuffer = RHI::Instance()->AllocateDynamicBuffer(EBufferFlags::Uniform, sizeof(sizeInfo), &sizeInfo, 0);
 
 			buildHZBMip0->SetTask([this, depth, dstSubRes, sizeBuffer, groupX, groupY](RHICommandBuffer* cmd) {
@@ -95,8 +118,8 @@ namespace Render {
 			const RHITextureSubRes dstSubRes = RHITextureSubRes{ 0, 1, i, 1, ETextureDimension::Tex2D, ETextureViewFlags::Color };
 			buildHZBMip->WriteUAV(hzbNode, dstSubRes);
 			// calculate thread group num
-			float widthScale = (float)dstSize / (float)desc.Width;
-			uint32 heightSize = (uint32)Math::Ceil(widthScale * (float)desc.Height);
+			float widthScale = (float)dstSize / (float)srcWidth;
+			uint32 heightSize = (uint32)Math::Ceil(widthScale * (float)srcHeight);
 			uint32 groupX = Math::Max(1u, (dstSize + PER_GROUP_OUTPUT_ROW - 1) / PER_GROUP_OUTPUT_ROW);
 			uint32 groupY = Math::Max(1u, (heightSize + PER_GROUP_OUTPUT_ROW - 1) / PER_GROUP_OUTPUT_ROW);
 			Math::IVector4 sizeInfo = { (int)dstSize };
@@ -162,12 +185,13 @@ namespace Render {
 		desc.Format = ERHIFormat::R32_SFLOAT;
 		// calc mip size, min tex size is (MIN_DEPTH_SIZE x MIN_DEPTH_SIZE)
 		uint8 mipSize = 0;
-		while(dstSize >= MIN_DEPTH_SIZE) {
+		while (dstSize >= MIN_DEPTH_SIZE) {
 			++mipSize;
 			dstSize >>= 1;
 		}
 		desc.MipSize = mipSize;
 		desc.ArraySize = 1;
 		m_HZB = RHI::Instance()->CreateTexture(desc);
+		m_HZB->SetName("HZB");
 	}
 }

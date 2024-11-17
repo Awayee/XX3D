@@ -1,6 +1,6 @@
 #include "Objects/Public/LevelComponents.h"
 #include "Objects/Public/DirectionalLight.h"
-#include "Objects/Public/Camera.h"
+#include "Objects/Public/RenderCamera.h"
 #include "System/Public/Configuration.h"
 
 namespace Object {

@@ -1,9 +1,10 @@
 #pragma once
 #include "RHI/Public/RHI.h"
-#include "Render/Public/DrawCall.h"
-#include "Objects/Public/Camera.h"
+#include "Math/Public/Math.h"
 
 namespace Object {
+	class ShadowCamera;
+	class RenderCamera;
 	class MeshRenderInterface;
 
 	struct DirectionalShadowConfig {
@@ -29,14 +30,11 @@ namespace Object {
 		void SetShadowConfig(const DirectionalShadowConfig& config) { m_ShadowConfig = config; }
 		bool GetEnableShadow() const { return m_ShadowConfig.EnableShadow; }
 		RHITexture* GetShadowMap() { return m_ShadowMapTexture.Get(); }
-		Render::DrawCallQueue& GetRenderingDrawCallQueue(uint32 i);
-		Render::DrawCallQueue& GetCullingDrawCallQueue(uint32 i);
-		const Math::Frustum& GetFrustum(uint32 i);
-		void Update(Object::RenderCamera* renderCamera);
 		static uint32 GetCascadeNum() { return CASCADE_NUM; }
 		// for scene rendering
 		const RHIDynamicBuffer& GetLightingUniform() { return m_Uniform; }
-		const RHIDynamicBuffer& GetShadowUniform(uint32 cascade) { return m_ShadowUniforms[cascade]; }
+		ShadowCamera* GetShadowCamera(uint32 i);
+		void Update(Object::RenderCamera* renderCamera);
 		// lazy load pso
 		RHIGraphicsPipelineState* GetCSMRenderingPSO();
 		RHIGraphicsPipelineState* GetCSMInstancedRenderingPSO();
@@ -56,12 +54,8 @@ namespace Object {
 		RHITexturePtr m_ShadowMapTexture; // lazy create
 		RHIGraphicsPipelineStatePtr m_CSMRenderingPSO;// lazy create
 		RHIGraphicsPipelineStatePtr m_CSMInstancedRenderPSO;// lazy create
-		TStaticArray<Object::Camera, CASCADE_NUM> m_CascadeCameras;
-		TStaticArray<Render::DrawCallQueue, CASCADE_NUM> m_RenderingDrawCallQueues;
-		TStaticArray<Render::DrawCallQueue, CASCADE_NUM> m_CullingDrawCallQueues;
+		TStaticArray<TUniquePtr<ShadowCamera>, CASCADE_NUM> m_CascadeCameras;
 		TStaticArray<float, CASCADE_NUM> m_FarDistances;
-		TStaticArray<Math::FMatrix4x4, CASCADE_NUM> m_VPMats;
-		TStaticArray<RHIDynamicBuffer, CASCADE_NUM> m_ShadowUniforms;// for shadow map
 
 		void CreateShadowMapTexture();
 		void CreateCSMRenderingPSO();

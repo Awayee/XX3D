@@ -40,7 +40,7 @@ class VulkanRHIGraphicsPipelineState : public RHIGraphicsPipelineState {
 public:
 	explicit VulkanRHIGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc, VulkanDevice* device);
 	~VulkanRHIGraphicsPipelineState() override;
-	void SetName(const char* name) override;
+	void SetNameInternal(const char* name) override;
 	VkPipeline GetPipelineHandle() const { return m_Pipeline; }
 	const VulkanPipelineLayout* GetPipelineLayout()const { return &m_PipelineLayout; }
 private:
@@ -54,7 +54,7 @@ class VulkanRHIComputePipelineState : public RHIComputePipelineState {
 public:
 	explicit VulkanRHIComputePipelineState(const RHIComputePipelineStateDesc& desc, VulkanDevice* device);
 	~VulkanRHIComputePipelineState() override;
-	void SetName(const char* name) override;
+	void SetNameInternal(const char* name) override;
 	VkPipeline GetPipelineHandle() const { return m_Pipeline; }
 	const VulkanPipelineLayout* GetPipelineLayout()const { return &m_PipelineLayout; }
 private:

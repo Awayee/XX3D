@@ -3,6 +3,7 @@
 #include "Asset/Public/AssetLoader.h"
 #include "Render/Public/GlobalShader.h"
 #include "Asset/Public/TextureAsset.h"
+#include "Objects/Public/RenderCamera.h"
 #include "Objects/Public/RenderResource.h"
 #include "Render/Public/DefaultResource.h"
 
@@ -107,7 +108,7 @@ namespace Object {
 			cmd->BindGraphicsPipeline(pso);
 			cmd->BindVertexBuffer(primitive->VertexBuffer, 0, 0);
 			cmd->BindIndexBuffer(primitive->IndexBuffer, 0);
-			cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(renderScene->GetMainCamera()->GetUniformBuffer()));
+			cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(renderScene->GetMainCamera()->GetBuffer()));
 			cmd->SetShaderParam(0, 1, RHIShaderParam::Texture(cubemap));
 			auto sampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp);
 			cmd->SetShaderParam(0, 2, RHIShaderParam::Sampler(sampler));

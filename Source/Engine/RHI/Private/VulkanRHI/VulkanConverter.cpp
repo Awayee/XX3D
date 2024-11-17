@@ -69,7 +69,7 @@ VkFormat ToVkFormat(ERHIFormat f) {
 	if (EnumHasAnyFlags(flags, EBufferFlags::Vertex)) {
 		usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 	}
-	if (EnumHasAnyFlags(flags, EBufferFlags::Storage)) {
+	if (EnumHasAnyFlags(flags, EBufferFlags::UAV | EBufferFlags::SRV)) {
 		usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 	}
 	if (EnumHasAnyFlags(flags, EBufferFlags::IndirectDraw)) {
@@ -79,10 +79,10 @@ VkFormat ToVkFormat(ERHIFormat f) {
 }
 
  VkMemoryPropertyFlags ToBufferMemoryProperty(EBufferFlags flags) {
-	if (EnumHasAnyFlags(flags, EBufferFlags::CopySrc | EBufferFlags::Uniform | EBufferFlags::Storage)) {
+	if (EnumHasAnyFlags(flags, EBufferFlags::CopySrc | EBufferFlags::Uniform | EBufferFlags::UAV)) {
 		return VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 	}
-	if (EnumHasAnyFlags(flags, EBufferFlags::Index | EBufferFlags::Vertex)) {
+	if (EnumHasAnyFlags(flags, EBufferFlags::Index | EBufferFlags::Vertex | EBufferFlags::SRV)) {
 		return VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 	}
 	return 0;
@@ -221,7 +221,8 @@ VkDescriptorType ToVkDescriptorType(EBindingType type) {
 	case EBindingType::Sampler: return VK_DESCRIPTOR_TYPE_SAMPLER;
 	case EBindingType::StorageTexture: return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 	case EBindingType::UniformBuffer: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	case EBindingType::StorageBuffer: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	case EBindingType::RWStructuredBuffer:
+	case EBindingType::StructuredBuffer: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	}
 	return VK_DESCRIPTOR_TYPE_MAX_ENUM;
 }

@@ -20,7 +20,7 @@ D3D12Viewport::D3D12Viewport(IDXGIFactory4* factory, D3D12Device* device, Window
 	m_DXGIFactory(factory), m_Device(device), m_Window(window), m_SwapchainExtent(windowSize), m_EnableVSync(cfg.EnableVSync), m_EnableMsaa(cfg.EnableMSAA) {
 	// create fence for present complete
 	m_PresentFence.Reset(new D3D12Fence(m_Device->GetDevice()));
-	m_PresentFence->SetName("PresentComplete");
+	m_PresentFence->SetNameInternal("PresentComplete");
 	// get graphics queue to present
 	m_Queue = m_Device->GetCommandMgr()->GetQueue(EQueueType::Graphics);
 	CreateSwapchain();

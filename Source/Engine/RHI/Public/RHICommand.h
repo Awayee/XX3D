@@ -22,11 +22,14 @@ public:
 	virtual void Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ) = 0;
 	virtual void DrawIndirect(const RHIDynamicBuffer& buffer, uint32 drawCount) = 0;
 	virtual void DrawIndexedIndirect(const RHIDynamicBuffer& buffer, uint32 drawCount) = 0;
+	virtual void DrawIndirect(RHIBuffer* buffer, uint32 bufferOffset, uint32 drawCount) = 0;
+	virtual void DrawIndexedIndirect(RHIBuffer* buffer, uint32 bufferOffset, uint32 drawCount) = 0;
 	virtual void ClearColorTarget(uint32 targetIndex, const float* color, const IRect& rect) = 0;
 	virtual void CopyBufferToTexture(RHIBuffer* buffer, RHITexture* texture, RHITextureSubRes dstSubRes, IOffset3D dstOffset) = 0;
 	virtual void CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RHITextureCopyRegion& region) = 0;
 	virtual void CopyBufferToBuffer(RHIBuffer* srcBuffer, RHIBuffer* dstBuffer, uint32 srcOffset, uint32 dstOffset, uint32 byteSize) = 0;
 	virtual void TransitionTextureState(RHITexture* texture, EResourceState stateBefore, EResourceState stateAfter, RHITextureSubRes subDesc={}) = 0;
+	virtual void TransitionBufferState(RHIBuffer* buffer, EResourceState stateBefore, EResourceState stateAfter) = 0;
 	virtual void GenerateMipmap(RHITexture* texture, uint8 mipSize, uint16 arrayIndex, uint16 arraySize, ETextureViewFlags viewFlags) = 0;
 
 	virtual void BeginDebugLabel(const char* msg, const float* color) = 0;

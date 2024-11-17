@@ -162,6 +162,7 @@ namespace {
 				ImGui::TreePop();
 			}
 			if (instances.Size()) {
+				m_InstanceEditIndex = Math::Min(m_InstanceEditIndex, (int)instances.Size() - 1);
 				ImGui::SliderInt("Instance Edit Index", &m_InstanceEditIndex, 0, (int)instances.Size() - 1);
 				Math::FTransform& transform = instances[m_InstanceEditIndex];
 				ImGui::DragFloat3("Position", transform.Position.Data(), 0.1f);

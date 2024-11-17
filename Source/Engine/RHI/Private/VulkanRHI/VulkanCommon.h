@@ -4,9 +4,13 @@
 #include "Core/Public/Defines.h"
 #include "Core/Public/Log.h"
 
-#define VK_ASSERT(x, s) ASSERT(VK_SUCCESS == (x), s)
+#define VK_ASSERT(x, s) do{\
+	VkResult result = (x);\
+	ASSERT(VK_SUCCESS == result, s);} while(false)
 
-#define VK_CHECK(x) CHECK(VK_SUCCESS == (x))
+#define VK_CHECK(x) do{\
+	VkResult result = (x);\
+	CHECK(VK_SUCCESS == result);} while(false)
 
 
 #define VK_SET_OBJECT_NAME(type, handle, name) do{\

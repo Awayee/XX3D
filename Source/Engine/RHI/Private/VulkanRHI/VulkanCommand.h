@@ -52,11 +52,14 @@ public:
 	void Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ) override;
 	void DrawIndirect(const RHIDynamicBuffer& buffer, uint32 drawCount) override;
 	void DrawIndexedIndirect(const RHIDynamicBuffer& buffer, uint32 drawCount) override;
+	void DrawIndirect(RHIBuffer* buffer, uint32 bufferOffset, uint32 drawCount) override;
+	void DrawIndexedIndirect(RHIBuffer* buffer, uint32 bufferOffset, uint32 drawCount) override;
 	void ClearColorTarget(uint32 targetIndex, const float* color, const IRect& rect) override;
 	void CopyBufferToBuffer(RHIBuffer* srcBuffer, RHIBuffer* dstBuffer, uint32 srcOffset, uint32 dstOffset, uint32 byteSize) override;
 	void CopyBufferToTexture(RHIBuffer* buffer, RHITexture* texture, RHITextureSubRes dstSubRes, IOffset3D dstOffset) override;
 	void CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RHITextureCopyRegion& region) override;
 	void TransitionTextureState(RHITexture* texture, EResourceState stateBefore, EResourceState stateAfter, RHITextureSubRes subRes) override;
+	void TransitionBufferState(RHIBuffer* buffer, EResourceState stateBefore, EResourceState stateAfter) override;
 	void GenerateMipmap(RHITexture* texture, uint8 mipSize, uint16 arrayIndex, uint16 arraySize, ETextureViewFlags viewFlags) override;
 	void BeginDebugLabel(const char* msg, const float* color) override;
 	void EndDebugLabel() override;

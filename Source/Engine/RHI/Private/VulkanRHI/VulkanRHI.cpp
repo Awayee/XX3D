@@ -8,6 +8,7 @@
 #include "VulkanViewport.h"
 
 static constexpr uint32 MIN_API_VERSION{ VK_VERSION_1_2 };
+static constexpr EBufferFlags DYNAMIC_BUFFER_FLAGS = EBufferFlags::Uniform | EBufferFlags::IndirectDraw | EBufferFlags::CopySrc | EBufferFlags::Vertex | EBufferFlags::SRV;
 
 VulkanRHI::VulkanRHI(WindowHandle wnd, USize2D extent, const RHIInitConfig& cfg) {
 
@@ -31,7 +32,6 @@ VulkanRHI::~VulkanRHI() {
 }
 
 void VulkanRHI::BeginFrame() {
-	m_Device->GetCommandContext()->BeginFrame();
 	m_Device->GetUploader()->BeginFrame();
 	m_Device->GetDescriptorMgr()->BeginFrame();
 	// If last frame was not rendered, clear dynamic buffer here.
@@ -42,6 +42,7 @@ void VulkanRHI::BeginRendering() {
 	// Reset dynamic buffers.
 	m_Device->GetDynamicBufferAllocator()->GC();
 	m_Device->GetDynamicBufferAllocator()->UnmapAllocations();
+	m_Device->GetCommandContext()->BeginFrame();
 }
 
 ERHIFormat VulkanRHI::GetDepthFormat() {
@@ -55,6 +56,10 @@ ERHIFormat VulkanRHI::GetDepthFormat() {
 	default:
 		return ERHIFormat::Undefined;
 	}
+}
+
+uint32 VulkanRHI::GetBufferAlignment(EBufferFlags bufferFlags) {
+	return m_Device->GetBufferAlignment(bufferFlags);
 }
 
 RHIViewport* VulkanRHI::GetViewport() {
@@ -136,6 +141,6 @@ void VulkanRHI::SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, EQueueT
 }
 
 RHIDynamicBuffer VulkanRHI::AllocateDynamicBuffer(EBufferFlags bufferFlags, uint32 bufferSize, const void* bufferData, uint32 stride) {
-	auto a = m_Device->GetDynamicBufferAllocator()->Allocate(ToBufferUsage(bufferFlags), bufferSize, bufferData);
+	auto a = m_Device->GetDynamicBufferAllocator()->Allocate(bufferFlags, bufferSize, bufferData);
 	return RHIDynamicBuffer{ a.BufferIndex, a.Offset, a.Size, stride};
 }

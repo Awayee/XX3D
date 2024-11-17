@@ -189,7 +189,11 @@ public:
 	TStaticArray(const TStaticArray& rhs) {
 		memcpy(m_Data, rhs.m_Data, ByteSize());
 	}
-	TStaticArray(TStaticArray&& rhs) noexcept = delete;
+	TStaticArray(TStaticArray&& rhs) noexcept {
+		for(uint32 i=0; i<L; ++i) {
+			m_Data[i] = MoveTemp(rhs.m_Data[i]);
+		}
+	}
 
 	TStaticArray(std::initializer_list<T> params) {
 		memcpy(m_Data, params.begin(), params.size() * sizeof(T));
@@ -205,7 +209,12 @@ public:
 		return *this;
 	}
 
-	TStaticArray& operator=(TStaticArray&& rhs) noexcept = delete;
+	TStaticArray& operator=(TStaticArray&& rhs) noexcept {
+		for (uint32 i = 0; i < L; ++i) {
+			m_Data[i] = MoveTemp(rhs.m_Data[i]);
+		}
+		return *this;
+	}
 
 	TStaticArray& operator=(std::initializer_list<T> params) {
 		memcpy(m_Data, params.begin(), params.size() * sizeof(T));

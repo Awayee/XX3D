@@ -37,6 +37,7 @@ public:
 	static void Release();
 	virtual ERHIFormat GetDepthFormat() = 0;
 	virtual RHIViewport* GetViewport() = 0;
+	virtual uint32 GetBufferAlignment(EBufferFlags bufferFlags) = 0;
 	virtual void BeginFrame() = 0;
 	virtual void BeginRendering() = 0;
 	virtual RHIBufferPtr CreateBuffer(const RHIBufferDesc& desc) = 0;

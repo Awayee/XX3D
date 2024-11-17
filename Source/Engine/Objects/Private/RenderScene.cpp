@@ -1,11 +1,10 @@
 #include "Objects/Public/RenderScene.h"
 #include "Core/Public/Concurrency.h"
-#include "Objects/Public/Camera.h"
+#include "Objects/Public/RenderCamera.h"
 #include "Objects/Public/DirectionalLight.h"
 #include "Objects/Public/SkyBox.h"
 #include "Window/Public/EngineWindow.h"
 #include "Render/public/DefaultResource.h"
-#include "Objects/Public/RenderResource.h"
 #include "Objects/Public/MeshRenderer.h"
 #include "Render/Public/GlobalShader.h"
 
@@ -82,9 +81,9 @@ namespace Object {
     }
 
     void RenderScene::Update() {
+        // update hzb
+        m_HzbBuilder.Update(m_TargetSize.w, m_TargetSize.h, m_Camera->GetViewProjectMatrix());
         // clear draw calls
-        m_BasePassCullingQueue.Reset();
-        m_BasePassDrawCallQueue.Reset();
         m_LightingPassDrawCallQueue.Reset();
         // create deferred lighting draw call firstly
         CreateDeferredLightingDrawCall();
@@ -93,19 +92,23 @@ namespace Object {
         SystemUpdate();
 
         // camera and light
+        m_Camera->GetRenderContext().Reset(&m_HzbBuilder);
         m_Camera->UpdateBuffer();
         m_DirectionalLight->Update(m_Camera);
 
-        // create draw call for base pass and shadow pass
-        m_PrimitiveMgr->GenerateBasePassDrawCall(m_Camera->GetFrustum(), m_Camera->GetUniformBuffer(), m_BasePassCullingQueue, m_BasePassDrawCallQueue);
+        m_PrimitiveMgr->PreDrawCall();
 
-        for(uint32 i=0; i<m_DirectionalLight->GetCascadeNum(); ++i) {
-            m_PrimitiveMgr->GenerateDirectionalShadowDrawCall(m_DirectionalLight->GetFrustum(i),
-                m_DirectionalLight->GetShadowUniform(i),
-                m_DirectionalLight->GetCullingDrawCallQueue(i),
-                m_DirectionalLight->GetRenderingDrawCallQueue(i),
-                m_DirectionalLight->GetCSMRenderingPSO(),
-                m_DirectionalLight->GetCSMInstancedRenderingPSO());
+        // create draw call for base pass and shadow pass
+        m_PrimitiveMgr->GenerateBasePassDrawCall(m_Camera.Get());
+        for (uint32 i = 0; i < m_DirectionalLight->GetCascadeNum(); ++i) {
+            Object::ShadowCamera* shadowCamera = m_DirectionalLight->GetShadowCamera(i);
+            shadowCamera->GetRenderContext().Reset(&m_HzbBuilder);
+            if (m_DirectionalLight->GetEnableShadow()) {
+                m_PrimitiveMgr->GenerateDirectionalShadowDrawCall(
+                    shadowCamera,
+                    m_DirectionalLight->GetCSMRenderingPSO(),
+                    m_DirectionalLight->GetCSMInstancedRenderingPSO());
+            }
         }
 
         m_PrimitiveMgr->Clean();
@@ -128,15 +131,31 @@ namespace Object {
 
         // ========= create pass nodes ==============
         // TODO parallel run directionalShadow and gBuffer
+        auto& renderContext = m_Camera->GetRenderContext();
         // gBuffer node
         const Rect renderArea = { 0, 0, m_TargetSize.w, m_TargetSize.h };
-        Render::RGRenderNode* gBufferNode = rg.CreateRenderNode("GBufferPass");
-        gBufferNode->SetRenderArea(renderArea);
-        gBufferNode->WriteColorTarget(normalNode, 0);
-        gBufferNode->WriteColorTarget(albedoNode, 1);
-        gBufferNode->WriteDepthTarget(depthNode);
-        gBufferNode->SetTask([this](RHICommandBuffer* cmd) {
-            GetBasePassDrawCallQueue().Execute(cmd);
+        Render::RGRenderNode* basePassNode = rg.CreateRenderNode("BasePass");
+        basePassNode->SetRenderArea(renderArea);
+        basePassNode->WriteColorTarget(normalNode, 0);
+        basePassNode->WriteColorTarget(albedoNode, 1);
+        basePassNode->WriteDepthTarget(depthNode);
+        // GPU culling
+        if(!renderContext.CullingQueue.IsEmpty()) {
+            Render::RGBufferNode* cullingResultBuffer = rg.CreateBufferNode(renderContext.CullResultBuffer, "CullResult");
+            Render::RGComputeNode* cullingNode = rg.CreateComputeNode("BasePassCulling");
+            cullingNode->WriteUAV(cullingResultBuffer);
+            basePassNode->ReadSRV(cullingResultBuffer);
+            RHITexture* hzb = renderContext.HZB ? renderContext.HZB->GetTexture() : nullptr;
+            if(hzb) {
+                Render::RGTextureNode* hzbNode = rg.CreateTextureNode(hzb, "HZB");
+                cullingNode->ReadSRV(hzbNode);
+            }
+            cullingNode->SetTask([&cullingQueue=renderContext.CullingQueue](RHICommandBuffer* cmd) {
+            	cullingQueue.Execute(cmd);
+            });
+        }
+        basePassNode->SetTask([this](RHICommandBuffer* cmd) {
+            m_Camera->GetRenderContext().RenderingQueue.Execute(cmd);
         });
 
         // copy depth texture
@@ -154,11 +173,27 @@ namespace Object {
         const auto& dsmDesc = directionalShadowMap->GetDesc();
         const Rect shadowArea = { 0, 0, dsmDesc.Width, dsmDesc.Height };
         for (uint32 i = 0; i < m_DirectionalLight->GetCascadeNum(); ++i) {
+            RenderContext& shadowRenderContext = m_DirectionalLight->GetShadowCamera(i)->GetRenderContext();
             Render::RGRenderNode* csmNode = rg.CreateRenderNode(StringFormat("CSM%u", i));
+            // gpu culling
+            if (!shadowRenderContext.CullingQueue.IsEmpty()) {
+                Render::RGBufferNode* cullingResultBuffer = rg.CreateBufferNode(shadowRenderContext.CullResultBuffer, StringFormat("CullResultCSM%u", i));
+                Render::RGComputeNode* cullingNode = rg.CreateComputeNode(StringFormat("CSM%uCulling", i));
+                cullingNode->WriteUAV(cullingResultBuffer);
+                csmNode->ReadSRV(cullingResultBuffer);
+                RHITexture* hzb = shadowRenderContext.HZB ? shadowRenderContext.HZB->GetTexture() : nullptr;
+            	if (hzb) {
+                    Render::RGTextureNode* hzbNode = rg.CreateTextureNode(hzb, StringFormat("HZBCSM%u", i));
+                    cullingNode->ReadSRV(hzbNode);
+                }
+                cullingNode->SetTask([&cullingQueue = shadowRenderContext.CullingQueue](RHICommandBuffer* cmd) {
+                    cullingQueue.Execute(cmd);
+                });
+            }
             csmNode->SetRenderArea(shadowArea);
             csmNode->WriteDepthTarget(shadowMapNode, dsmDesc.GetSubRes2D((uint16)i, ETextureViewFlags::DepthStencil));
-            csmNode->SetTask([this, i](RHICommandBuffer* cmd) {
-                m_DirectionalLight->GetRenderingDrawCallQueue(i).Execute(cmd);
+            csmNode->SetTask([this, &shadowRenderContext](RHICommandBuffer* cmd) {
+                shadowRenderContext.RenderingQueue.Execute(cmd);
             });
         }
 
@@ -195,7 +230,7 @@ namespace Object {
         // deferred lighting
         GetLightingPassDrawCallQueue().PushDrawCall([this](RHICommandBuffer* cmd) {
             cmd->BindGraphicsPipeline(m_DeferredLightingPSO);
-            cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(m_Camera->GetUniformBuffer()));
+            cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(m_Camera->GetBuffer()));
             cmd->SetShaderParam(0, 1, RHIShaderParam::UniformBuffer(m_DirectionalLight->GetLightingUniform()));
             RHITexture* directionalShadowMap = m_DirectionalLight->GetShadowMap();
             const RHITextureSubRes directionalShadowMapSubRes = directionalShadowMap->GetDesc().GetSubRes2DArray(ETextureViewFlags::Depth);

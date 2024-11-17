@@ -12,6 +12,7 @@ public:
 	RHIDynamicBuffer Allocate(EBufferFlags flags, uint32 size, const void* data, uint32 stride);
 	ID3D12Resource* GetResource(uint32 bufferIndex);
 	void CreateCBV(const RHIDynamicBuffer& dBuffer, D3D12_CPU_DESCRIPTOR_HANDLE descriptorHandle);
+	void CreateSRV(const RHIDynamicBuffer& dBuffer, D3D12_CPU_DESCRIPTOR_HANDLE descriptorHandle);
 	void CreateUAV(const RHIDynamicBuffer& dBuffer, D3D12_CPU_DESCRIPTOR_HANDLE descriptorHandle);
 	D3D12_VERTEX_BUFFER_VIEW CreateVertexBufferView(const RHIDynamicBuffer& dBuffer);
 	void UnmapAllocations();
@@ -23,6 +24,7 @@ private:
 		uint32 AllocatedSize;
 	};
 	TArray<BufferChunk> m_BufferChunks;
+	uint32 m_BufferAlignment;
 	uint32 m_PageSize;
 	uint32 m_AllocatedIndex;
 	uint32 AllocateChunk();

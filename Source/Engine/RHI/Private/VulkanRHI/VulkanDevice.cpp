@@ -4,6 +4,7 @@
 #include "VulkanMemory.h"
 #include "VulkanPipeline.h"
 #include "VulkanCommand.h"
+#include "Math/Public/Math.h"
 
 inline TArray<const char*> GetDeviceExtensions(const VulkanContext* context) {
 	TArray<const char*> extensions;
@@ -58,6 +59,17 @@ VulkanDevice::~VulkanDevice() {
 	m_DynamicBufferAllocator.Reset();
 	m_MemoryAllocator.Reset();
 	vkDestroyDevice(m_Device, nullptr);
+}
+
+uint32 VulkanDevice::GetBufferAlignment(EBufferFlags bufferFlags) const {
+	uint32 alignment = 1;
+	if(EnumHasAnyFlags(bufferFlags, EBufferFlags::Uniform)) {
+		alignment = Math::Max(alignment, (uint32)m_DeviceProperties.limits.minUniformBufferOffsetAlignment);
+	}
+	if(EnumHasAnyFlags(bufferFlags, EBufferFlags::SRV | EBufferFlags::UAV)) {
+		alignment = Math::Max(alignment, (uint32)m_DeviceProperties.limits.minStorageBufferOffsetAlignment);
+	}
+	return alignment;
 }
 
 const VulkanQueue* VulkanDevice::FindPresentQueue(VkSurfaceKHR surface) const {

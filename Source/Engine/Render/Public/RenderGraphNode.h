@@ -26,16 +26,6 @@ namespace Render {
 		virtual void Reserve(EQueueType queue, uint32 size) = 0;
 	};
 
-	class NodeCmdCollector {
-	public:
-		NodeCmdCollector() = default;
-		~NodeCmdCollector() = default;
-		void AddCommand(EQueueType queue, RHICommandBuffer* cmd);
-	private:
-		friend RenderGraph;
-		TStaticArray<TArray<RHICommandBuffer*>, EnumCast(EQueueType::Count)> m_CmdArrays;
-	};
-
 	class RGNode {
 	public:
 		RGNode(RGNodeID nodeID) : m_NodeID(nodeID), m_RefCount(0) {}
@@ -73,6 +63,7 @@ namespace Render {
 		RGRenderNode(uint32 nodeID): RGPassNode(nodeID) {}
 		~RGRenderNode() override = default;
 		void ReadSRV(RGTextureNode* node);
+		void ReadSRV(RGBufferNode* node);
 		void ReadColorTarget(RGTextureNode* node, uint32 i, RHITextureSubRes subRes, bool bClear=false); // keep content written by previous pass (without clear)
 		void ReadColorTarget(RGTextureNode* node, uint32 i, bool bClear=false); // default subres
 		void WriteColorTarget(RGTextureNode* node, uint32 i, RHITextureSubRes subRes, bool bClear=true); // write new targets
@@ -107,8 +98,10 @@ namespace Render {
 		~RGComputeNode() override = default;
 		void ReadSRV(RGTextureNode* node, RHITextureSubRes subRes);
 		void ReadSRV(RGTextureNode* node);
+		void ReadSRV(RGBufferNode* node);
 		void WriteUAV(RGTextureNode* node, RHITextureSubRes subRes);
 		void WriteUAV(RGTextureNode* node);
+		void WriteUAV(RGBufferNode* node);
 		void SetTask(ComputeTask&& f) { m_Task = MoveTemp(f); }
 	private:
 		struct TextureResInfo {
@@ -117,6 +110,8 @@ namespace Render {
 		};
 		TArray<TextureResInfo> m_SRVs;
 		TArray<TextureResInfo> m_UAVs;
+		TArray<RGBufferNode*> m_SRVBuffers;
+		TArray<RGBufferNode*> m_UAVBuffers;
 		ComputeTask m_Task;
 		EQueueType GetQueue() const override { return EQueueType::Graphics; }  // TODO Compute queue is preferred, but transition state must in graphics queue
 		void Run(RHICommandBuffer* cmd) override;
@@ -177,12 +172,14 @@ namespace Render {
 
 	class RGBufferNode : public RGResourceNode {
 	public:
-		RGBufferNode(RGNodeID nodeID, const RHIBufferDesc& desc) : RGResourceNode(nodeID), m_Desc(desc), m_RHI(nullptr) {}
-		explicit RGBufferNode(uint32 nodeID, RHIBuffer* buffer) : RGResourceNode(nodeID), m_Desc(buffer->GetDesc()), m_RHI(buffer) {}
-		RHIBuffer* GetRHI();
+		RGBufferNode(RGNodeID nodeID, RHIBuffer* buffer) : RGResourceNode(nodeID), m_Buffer(buffer) {}
+		void SetTargetState(EResourceState state);
+		void TransitionToState(RHICommandBuffer* cmd, EResourceState state);
+		EResourceState GetTargetState() const;
 	private:
-		RHIBufferDesc m_Desc;
-		RHIBuffer* m_RHI;
+		RHIBuffer* m_Buffer;
+		EResourceState m_CurrentState{ EResourceState::Unknown };
+		EResourceState m_TargetState{ EResourceState::Unknown }; // the state at next pass input
 	};
 
 	class RGTextureNode : public RGResourceNode {

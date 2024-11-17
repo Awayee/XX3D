@@ -6,6 +6,7 @@
 #include "D3D12Pipeline.h"
 #include "D3D12Resources.h"
 #include "System/Public/Configuration.h"
+#include "Math/Public/Math.h"
 
 inline IDXGIAdapter* ChooseAdapter(IDXGIFactory4* factory) {
 	uint32 i = 0;
@@ -94,6 +95,10 @@ void D3D12RHI::BeginRendering() {
 
 ERHIFormat D3D12RHI::GetDepthFormat() {
 	return m_DepthFormat;
+}
+
+uint32 D3D12RHI::GetBufferAlignment(EBufferFlags bufferFlags) {
+	return ::GetBufferAlignment(bufferFlags);
 }
 
 RHIViewport* D3D12RHI::GetViewport() {

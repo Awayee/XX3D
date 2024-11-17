@@ -25,6 +25,7 @@ class VulkanDevice {
 public:
 	explicit VulkanDevice(const VulkanContext* context, VkPhysicalDevice physicalDevice);
 	~VulkanDevice();
+	uint32 GetBufferAlignment(EBufferFlags bufferFlags) const;
 	VkDevice GetDevice() const { return m_Device; }
 	VkPhysicalDevice GetPhysicalDevice() const { return m_PhysicalDevice; }
 	const VkPhysicalDeviceProperties& GetProperties() const  { return m_DeviceProperties; }

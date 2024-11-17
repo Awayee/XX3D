@@ -1,20 +1,7 @@
 //vs
+//#define INSTANCE_HALF_FLOAT
 struct VSInput {
     [[vk::location(0)]] float3 inPosition : POSITION0;
-#if defined(INSTANCED)
-    [[vk::location(1)]] half4 t0 : INSTANCE_TRANSFORM0;
-    [[vk::location(2)]] half4 t1 : INSTANCE_TRANSFORM1;
-    [[vk::location(3)]] half4 t2 : INSTANCE_TRANSFORM2;
-    [[vk::location(4)]] half4 t3 : INSTANCE_TRANSFORM3;
-
-    half4x4 GetInstanceTransform() {
-        return half4x4(
-        t0.x, t1.x, t2.x, t3.x,
-        t0.y, t1.y, t2.y, t3.y,
-        t0.z, t1.z, t2.z, t3.z,
-        t0.w, t1.w, t2.w, t3.w);
-    }
-#endif
 };
 
 struct VSOutput{
@@ -27,7 +14,19 @@ struct ShadowCameraUBO {
 [[vk::binding(0, 0)]] cbuffer uShadowCamera { ShadowCameraUBO uShadowCamera; };
 
 #if defined(INSTANCED)
-#define CoordTransform (vIn.GetInstanceTransform())
+struct InstanceData {
+#ifdef INSTANCE_HALF_FLOAT
+    half4x4 TransformMat;
+#else
+	float4x4 TransformMat;
+#endif
+};
+
+[[vk::binding(0, 1)]] StructuredBuffer<InstanceData> uInstanceData;
+[[vk::binding(1, 1)]] StructuredBuffer<uint> uInstanceID;
+
+#define CoordTransform (uInstanceData[uInstanceID[instanceID]].TransformMat)
+
 #else
 struct ModelUBO {
     float4x4 ModelMat;
@@ -37,7 +36,7 @@ struct ModelUBO {
 #define CoordTransform uModel.ModelMat
 #endif
 
-VSOutput MainVS(VSInput vIn, uint vertexID: SV_VERTEXID) {
+VSOutput MainVS(VSInput vIn, uint vertexID: SV_VERTEXID, uint instanceID: SV_InstanceID) {
     VSOutput output;
     output.Position = mul(uShadowCamera.VP, mul(CoordTransform, float4(vIn.inPosition.xyz, 1.0)));
     return output;

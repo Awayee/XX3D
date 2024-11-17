@@ -14,7 +14,7 @@ VulkanBuffer::~VulkanBuffer() {
 	m_Device->GetMemoryAllocator()->FreeBufferMemory(m_Allocation);
 }
 
-void VulkanBuffer::SetName(const char* name) {
+void VulkanBuffer::SetNameInternal(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_BUFFER, GetBuffer(), name);
 }
 
@@ -26,7 +26,7 @@ void VulkanBuffer::UpdateData(const void* data, uint32 byteSize, uint32 offset) 
 
 void VulkanBufferImpl::UpdateData(const void* data, uint32 byteSize, uint32 offset) {
 	const EBufferFlags bufferFlags = GetDesc().Flags;
-	if(EnumHasAnyFlags(bufferFlags, EBufferFlags::Uniform)) {
+	if(EnumHasAnyFlags(bufferFlags, EBufferFlags::Uniform | EBufferFlags::CopySrc)) {
 		VulkanBuffer::UpdateData(data, byteSize, offset);
 	}
 	else {
@@ -83,7 +83,7 @@ VkImageView VulkanTextureImpl::GetView(RHITextureSubRes subRes) {
 	return imageView;
 }
 
-void VulkanTextureImpl::SetName(const char* name) {
+void VulkanTextureImpl::SetNameInternal(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_IMAGE, m_Image, name);
 }
 
@@ -115,7 +115,7 @@ VulkanRHISampler::~VulkanRHISampler() {
 	vkDestroySampler(m_Device->GetDevice(), m_Sampler, nullptr);
 }
 
-void VulkanRHISampler::SetName(const char* name) {
+void VulkanRHISampler::SetNameInternal(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_SAMPLER, m_Sampler, name);
 }
 
@@ -135,7 +135,7 @@ void VulkanRHIFence::Reset() {
 	vkResetFences(m_Device->GetDevice(), 1, &m_Handle);
 }
 
-void VulkanRHIFence::SetName(const char* name) {
+void VulkanRHIFence::SetNameInternal(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_FENCE, m_Handle, name);
 }
 
@@ -149,7 +149,7 @@ VulkanRHIShader::~VulkanRHIShader() {
 	vkDestroyShaderModule(m_Device->GetDevice(), m_ShaderModule, nullptr);
 }
 
-void VulkanRHIShader::SetName(const char* name) {
+void VulkanRHIShader::SetNameInternal(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_SHADER_MODULE, m_ShaderModule, name);
 }
 

@@ -29,14 +29,18 @@ namespace Render {
 	}
 
 	RGBufferNode* RenderGraph::CreateBufferNode(RHIBuffer* buffer, XString&& name) {
-		buffer->SetName(name.c_str());
+		if (!buffer->GetName()) {
+			buffer->SetName(name.c_str());
+		}
 		RGBufferNode* node = (RGBufferNode*)m_Nodes.EmplaceBack(new RGBufferNode(m_Nodes.Size(), buffer)).Get();
 		node->SetName(MoveTemp(name));
 		return node;
 	}
 
 	RGTextureNode* RenderGraph::CreateTextureNode(RHITexture* texture, XString&& name) {
-		texture->SetName(name.c_str());
+		if(!texture->GetName()) {
+			texture->SetName(name.c_str());
+		}
 		RGTextureNode* node = (RGTextureNode*)m_Nodes.EmplaceBack(new RGTextureNode(m_Nodes.Size(), texture)).Get();
 		node->SetName(MoveTemp(name));
 		return node;
@@ -141,7 +145,6 @@ namespace Render {
 				CHECK(ERGNodeType::Pass == m_Nodes[prevPassID]->GetNodeType());
 				RGPassNode* prevPassNode = (RGPassNode*)m_Nodes[prevPassID].Get();
 				RecursivelyRunPrevNodes(prevPassNode, cmdAlloc);
-				NodeCmdCollector cmdCollector;
 				const EQueueType queueType = prevPassNode->GetQueue();
 				RHICommandBuffer* cmd = cmdAlloc->GetCmd(queueType);
 				prevPassNode->Run(cmd);

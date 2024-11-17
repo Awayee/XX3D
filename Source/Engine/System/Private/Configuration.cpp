@@ -103,5 +103,6 @@ namespace Engine {
 		MSAASampleCount = StringToNum<uint8>(configMap["MSAA"].c_str());
 		UseIntegratedGPU = StringToNum<bool>(configMap["UseIntegratedGPU"].c_str());
 		EnableRenderDoc = StringToNum<bool>(configMap["EnableRenderDoc"].c_str());
+		EnableGPUDriven = StringToNum<bool>(configMap["EnableGPUDriven"].c_str());
 	}
 }

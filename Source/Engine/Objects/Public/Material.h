@@ -84,7 +84,7 @@ namespace Object {
 
 	class MaterialHandle {
 	private:
-		friend class MaterailMgr;
+		friend class MaterialMgr;
 		uint32 MaterialIndex : 31;
 		uint32 IsTemplate : 1;
 	};
@@ -95,13 +95,15 @@ namespace Object {
 		MaterialTemplate* GetMaterialTemplate(const XString& filename);
 		MaterialInstance* GetMaterialInstance(const XString& filename);
 		MaterialInterface* GetMaterialInterface(const XString& filename);
+		MaterialInterface* GetDefaultMaterial();
 		// EDITOR reload interface
 		void ReloadMaterialTemplate(const XString& filename, const Asset::MaterialTemplateAsset& asset);
 		void ReloadMaterialInstance(const XString& filename, const Asset::MaterialAsset& asset);
 	private:
 		TMap<XString, MaterialTemplate> m_MaterialTemplates;
 		TMap<XString, MaterialInstance> m_MaterialInstances;
-		MaterialMgr() = default;
+		TUniquePtr<MaterialInterface> m_DefaultMaterial;
+		MaterialMgr();
 		~MaterialMgr() = default;
 	};
 

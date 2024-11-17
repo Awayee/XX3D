@@ -10,7 +10,7 @@ class VulkanBuffer: public RHIBuffer {
 public:
 	VulkanBuffer(const RHIBufferDesc& desc, VulkanDevice* device);
 	~VulkanBuffer() override;
-	void SetName(const char* name) override;
+	void SetNameInternal(const char* name) override;
 	void UpdateData(const void* data, uint32 byteSize, uint32 offset) override;
 	VkBuffer GetBuffer() const { return m_Allocation.GetBuffer(); }
 protected:
@@ -38,7 +38,7 @@ public:
 	~VulkanTextureImpl() override;
 	VkImage GetImage() override { return m_Image; }
 	VkImageView GetView(RHITextureSubRes subRes) override;
-	void SetName(const char* name) override;
+	void SetNameInternal(const char* name) override;
 	void UpdateData(const void* data, uint32 byteSize, RHITextureSubRes subRes, IOffset3D offset) override;
 protected:
 	VulkanDevice* m_Device;
@@ -63,7 +63,7 @@ public:
 	VulkanRHISampler(const RHISamplerDesc& desc, VulkanDevice* device, VkSampler sampler);
 	~VulkanRHISampler()override;
 	VkSampler GetSampler() { return m_Sampler; }
-	void SetName(const char* name) override;
+	void SetNameInternal(const char* name) override;
 };
 
 class VulkanRHIFence : public RHIFence {
@@ -72,7 +72,7 @@ public:
 	~VulkanRHIFence() override;
 	void Wait() override;
 	void Reset() override;
-	void SetName(const char* name) override;
+	void SetNameInternal(const char* name) override;
 	VkFence GetFence() const { return m_Handle; }
 private:
 	VulkanDevice* m_Device;
@@ -83,7 +83,7 @@ class VulkanRHIShader: public RHIShader {
 public:
 	VulkanRHIShader(EShaderStageFlags type, const char* code, uint32 codeSize, const XString& entryFunc, VulkanDevice* device);
 	~VulkanRHIShader() override;
-	void SetName(const char* name) override;
+	void SetNameInternal(const char* name) override;
 	VkPipelineShaderStageCreateInfo GetShaderStageInfo() const;
 private:
 	XString m_EntryName;

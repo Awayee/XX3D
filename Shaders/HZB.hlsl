@@ -1,20 +1,5 @@
 #define THREAD_ROW_NUM 16
-
-float FurtherDepth(float a, float b) {
-    return max(a, b);
-}
-
-float CloserDepth(float a, float b) {
-    return min(a, b);
-}
-
-float4 FurtherDepth(float4 a, float4 b) {
-    return max(a, b);
-}
-
-float4 CloserDepth(float4 a, float4 b) {
-    return min(a, b);
-}
+#include "Common.hlsli"
 
 [[vk::binding(0, 0)]] Texture2D<float> inDepth;
 [[vk::binding(1, 0)]] cbuffer uSizeInfo{int4 uSizeInfo;}

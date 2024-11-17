@@ -13,7 +13,8 @@ inline uint64 GetLayoutHash(const RHIShaderParamSetLayout& bindingLayout) {
 
 inline bool BindingIsBuffer(EBindingType type) {
 	return type == EBindingType::UniformBuffer ||
-		type == EBindingType::StorageBuffer;
+		type == EBindingType::StructuredBuffer ||
+		type == EBindingType::RWStructuredBuffer;
 }
 
 inline bool BindingIsImage(EBindingType type) {
@@ -118,13 +119,21 @@ void VulkanDescriptorSetMgr::BeginFrame() {
 void VulkanDescriptorSetMgr::CreatePool(VkDescriptorPool* poolPtr) {
 	VkDescriptorPoolCreateInfo info{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, nullptr };
 	info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-	constexpr uint8 bindingCount = static_cast<uint8>(EBindingType::MaxNum);
-	static const uint32 s_CountPerType[bindingCount] = { 32, 128, 64, 128, 64 };
+	constexpr auto bindingCount = EnumCast(EBindingType::MaxNum);
+
+	TStaticArray<uint32, bindingCount> countPerType{ 32 };
+	countPerType[EnumCast(EBindingType::Sampler)] = 32;
+	countPerType[EnumCast(EBindingType::Texture)] = 64;
+	countPerType[EnumCast(EBindingType::StorageTexture)] = 32;
+	countPerType[EnumCast(EBindingType::UniformBuffer)] = 128;
+	countPerType[EnumCast(EBindingType::StructuredBuffer)] = 64;
+	countPerType[EnumCast(EBindingType::RWStructuredBuffer)] = 64;
+
 	VkDescriptorPoolSize sizes[bindingCount];
 	uint32 allCount = 0;
 	for (uint8 i = 0; i < static_cast<uint8>(EBindingType::MaxNum); ++i) {
 		sizes[i].type = ToVkDescriptorType(static_cast<EBindingType>(i));
-		sizes[i].descriptorCount = s_CountPerType[i];
+		sizes[i].descriptorCount = countPerType[i];
 		allCount += sizes[i].descriptorCount;
 	}
 	info.poolSizeCount = bindingCount;
@@ -284,7 +293,7 @@ VulkanRHIGraphicsPipelineState::~VulkanRHIGraphicsPipelineState() {
 	vkDestroyPipeline(m_Device->GetDevice(), m_Pipeline, nullptr);
 }
 
-void VulkanRHIGraphicsPipelineState::SetName(const char* name) {
+void VulkanRHIGraphicsPipelineState::SetNameInternal(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_PIPELINE, m_Pipeline, name);
 }
 
@@ -310,7 +319,7 @@ VulkanRHIComputePipelineState::~VulkanRHIComputePipelineState() {
 	vkDestroyPipeline(m_Device->GetDevice(), m_Pipeline, nullptr);
 }
 
-void VulkanRHIComputePipelineState::SetName(const char* name) {
+void VulkanRHIComputePipelineState::SetNameInternal(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_PIPELINE, m_Pipeline, name);
 }
 
@@ -357,7 +366,8 @@ bool VulkanDescriptorSetParamCache::SetParam(const VulkanDynamicBufferAllocator*
 	auto& write = m_Writes[bindIndex];
 	switch (param.Type) {
 	case EBindingType::UniformBuffer:
-	case EBindingType::StorageBuffer: {
+	case EBindingType::StructuredBuffer:
+	case EBindingType::RWStructuredBuffer: {
 		auto& bufferInfo = const_cast<VkDescriptorBufferInfo*>(write.pBufferInfo)[param.ArrayIndex];
 		VkBuffer bufferHandle;
 		uint32 offset, range;

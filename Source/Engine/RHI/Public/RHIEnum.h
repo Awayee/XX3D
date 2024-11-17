@@ -7,7 +7,7 @@ enum : uint32 {
     RHI_COLOR_TARGET_MAX = 8,
     RHI_TEXTURE_ARRAY_MAX = 1024,
     RHI_TEXTURE_MIP_MAX = 32,
-    RHI_DYNAMIC_BUFFER_PAGE = 2 << 20,
+    RHI_DYNAMIC_BUFFER_PAGE = 8 << 20,
 };
 
 enum class ERHIFormat: uint8 {
@@ -64,9 +64,10 @@ enum class EBufferFlags {
     Uniform = 1u << 2,
     Index = 1u << 3,
     Vertex = 1u << 4,
-    Storage = 1u << 5,
-    IndirectDraw = 1u << 6,
-    Readback = 1u << 7
+    UAV = 1u << 5,
+    SRV = 1u << 6,
+    IndirectDraw = 1u << 7,
+    Readback = 1u << 8
 };
 ENUM_CLASS_FLAGS(EBufferFlags);
 
@@ -149,7 +150,8 @@ enum class EBindingType : uint8 {
     Texture,
     StorageTexture,
     UniformBuffer,
-    StorageBuffer,
+    StructuredBuffer,
+    RWStructuredBuffer,
     MaxNum
 };
 
@@ -230,6 +232,7 @@ enum class EResourceState : uint8 {
     UnorderedAccessView,
     TransferSrc,
     TransferDst,
+    IndirectDrawBuffer,
     Present
 };
 

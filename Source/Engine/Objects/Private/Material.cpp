@@ -9,6 +9,12 @@
 #include "Asset/Public/AssetLoader.h"
 
 #define BASE_PASS_TEMPLATE_SHADER "BasePassTemplate.hlsl"
+enum EMaterialShaderParamSet : uint32{
+	MATERIAL_PARAM_SET_SCENE = 0,
+	MATERIAL_PARAM_SET_OBJECT = 1,
+	MATERIAL_PARAM_SET_MATERIAL = 2,
+	MATERIAL_PARAM_SET_COUNT
+};
 
 namespace Object {
 
@@ -33,10 +39,6 @@ namespace Object {
 		CHECK(0);
 	}
 
-	inline uint32 GetMaterialSetIndex(bool bInstanced) {
-		return bInstanced ? 1 : 2;
-	}
-
 	MaterialTemplate::MaterialTemplate(const Asset::MaterialTemplateAsset& asset) : m_Hash(0) {
 		Reload(asset);
 	}
@@ -57,20 +59,25 @@ namespace Object {
 		desc.VertexShader = shader.VS.Get();
 		desc.PixelShader = shader.PS.Get();
 		// layout
-		const uint32 materialSetIdx = GetMaterialSetIndex(bInstanced);
-		desc.Layout.Resize(materialSetIdx + 1);
+		desc.Layout.Resize(MATERIAL_PARAM_SET_COUNT);
 		// scene set
-		desc.Layout[0] = {
+		desc.Layout[MATERIAL_PARAM_SET_SCENE] = {
 			{EBindingType::UniformBuffer, EShaderStageFlags::Vertex},
 		};
-		// object set if not instanced
-		if(!bInstanced) {
-			desc.Layout[1] = {
+		// object set
+		if(bInstanced) {
+			desc.Layout[MATERIAL_PARAM_SET_OBJECT] = {
+				{EBindingType::StructuredBuffer, EShaderStageFlags::Vertex},
+				{EBindingType::StructuredBuffer, EShaderStageFlags::Vertex},
+			};
+		}
+		else {
+			desc.Layout[MATERIAL_PARAM_SET_OBJECT] = {
 				{EBindingType::UniformBuffer, EShaderStageFlags::Vertex}
 			};
 		}
 		// material set
-		auto& materialSet = desc.Layout[materialSetIdx];
+		auto& materialSet = desc.Layout[MATERIAL_PARAM_SET_MATERIAL];
 		const uint32 bindingSize = 1 + m_Textures.Size() + m_Samplers.Size();
 		materialSet.Reserve(bindingSize);
 		if (m_Vectors.Size()) {
@@ -87,32 +94,13 @@ namespace Object {
 		}
 		// vertex input;
 		auto& vi = desc.VertexInput;
-		if(bInstanced){
-			const ERHIFormat instanceRowFormat = Object::GetInstanceDataRowFormat();
-			const uint32 instanceRowSize = GetRHIFormatPixelSize(instanceRowFormat);
-			vi.Bindings = {
-				{0, sizeof(Asset::AssetVertex), false},
-				{1, instanceRowSize * 4, true} };
-			vi.Attributes = {
-				{POSITION(0), 0, 0, ERHIFormat::R32G32B32_SFLOAT, 0},// position
-				{NORMAL(0), 1, 0, ERHIFormat::R32G32B32_SFLOAT, offsetof(Asset::AssetVertex, Normal)},//normal
-				{TANGENT(0), 2, 0, ERHIFormat::R32G32B32_SFLOAT, offsetof(Asset::AssetVertex, Tangent)},//tangent
-				{TEXCOORD(0), 3, 0, ERHIFormat::R32G32_SFLOAT, offsetof(Asset::AssetVertex, UV)},// uv
-				// instance transform
-				{INSTANCE_TRANSFORM(0), 0, 1, instanceRowFormat, 0},
-				{INSTANCE_TRANSFORM(1), 0, 1, instanceRowFormat, instanceRowSize},
-				{INSTANCE_TRANSFORM(2), 0, 1, instanceRowFormat, instanceRowSize * 2},
-				{INSTANCE_TRANSFORM(3), 0, 1, instanceRowFormat, instanceRowSize * 3}, };
-		}
-		else {
-			vi.Bindings = { {0, sizeof(Asset::AssetVertex), false} };
-			vi.Attributes = {
-				{POSITION(0), 0, 0, ERHIFormat::R32G32B32_SFLOAT, 0},// position
-				{NORMAL(0), 1, 0, ERHIFormat::R32G32B32_SFLOAT, offsetof(Asset::AssetVertex, Normal)},//normal
-				{TANGENT(0), 2, 0, ERHIFormat::R32G32B32_SFLOAT, offsetof(Asset::AssetVertex, Tangent)},//tangent
-				{TEXCOORD(0), 3, 0, ERHIFormat::R32G32_SFLOAT, offsetof(Asset::AssetVertex, UV)},// uv
-			};
-		}
+		vi.Bindings = { {0, sizeof(Asset::AssetVertex), false} };
+		vi.Attributes = {
+			{POSITION(0), 0, 0, ERHIFormat::R32G32B32_SFLOAT, 0},// position
+			{NORMAL(0), 1, 0, ERHIFormat::R32G32B32_SFLOAT, offsetof(Asset::AssetVertex, Normal)},//normal
+			{TANGENT(0), 2, 0, ERHIFormat::R32G32B32_SFLOAT, offsetof(Asset::AssetVertex, Tangent)},//tangent
+			{TEXCOORD(0), 3, 0, ERHIFormat::R32G32_SFLOAT, offsetof(Asset::AssetVertex, UV)},// uv
+		};
 		// others
 		desc.BlendDesc.BlendStates = { {false}, {false} };
 		desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Back };
@@ -121,7 +109,7 @@ namespace Object {
 	}
 
 	void MaterialTemplate::BindBasePassShaderPrams(RHICommandBuffer* cmd, bool bInstanced) {
-		const uint32 materialSetIdx = GetMaterialSetIndex(bInstanced);
+		const uint32 materialSetIdx = MATERIAL_PARAM_SET_MATERIAL;
 		uint32 bindingIdx = 0;
 		// uniform
 		if(m_Vectors.Size()) {
@@ -215,7 +203,7 @@ namespace Object {
 				TArray<int8> compiledCode;
 				if (!ShaderCompiler::LoadCompiledShader(compiledFile, compiledCode)) {
 					if (shaderSourceCode.empty()) {
-						GenerateShaderCode(GetMaterialSetIndex(bInstanced), shaderSourceCode);
+						GenerateShaderCode(MATERIAL_PARAM_SET_MATERIAL, shaderSourceCode);
 					}
 					TArray<ShaderCompiler::Macro> macros;
 					if (bInstanced) {
@@ -225,6 +213,12 @@ namespace Object {
 					if (!ShaderCompiler::LoadCompiledShader(compiledFile, compiledCode)) {
 						LOG_ERROR("Failed to load material shader! %s", compiledFile.c_str());
 						return nullptr;
+					}
+					else {
+						for(auto& macro: macros) {
+							LOG_DEBUG("#define %s %s", macro.Name.c_str(), macro.Value.c_str());
+						}
+						LOG_DEBUG("Material shader compiled %s %s", entry.c_str(), compiledFile.c_str());
 					}
 				}
 				return RHI::Instance()->CreateShader(stage, compiledCode.Data(), compiledCode.Size(), entry);
@@ -304,7 +298,7 @@ namespace Object {
 	void MaterialInstance::BindBasePassShaderPrams(RHICommandBuffer* cmd, bool bInstanced) {
 		// check cache hash and fix
 		CheckAndFixParameters();
-		const uint32 materialSetIdx = GetMaterialSetIndex(bInstanced);
+		const uint32 materialSetIdx = MATERIAL_PARAM_SET_MATERIAL;
 		uint32 bindingIdx = 0;
 		// uniform
 		if (m_VectorOverrides.Size()) {
@@ -422,7 +416,12 @@ namespace Object {
 		else if(StrEndsWith(filename.c_str(), ".matt")) {
 			return GetMaterialTemplate(filename);
 		}
-		return nullptr;
+		LOG_ERROR("Failed to load material: %s", filename.c_str());
+		return GetDefaultMaterial();
+	}
+
+	MaterialInterface* MaterialMgr::GetDefaultMaterial() {
+		return m_DefaultMaterial.Get();
 	}
 
 	void MaterialMgr::ReloadMaterialTemplate(const XString& filename, const Asset::MaterialTemplateAsset& asset) {
@@ -437,6 +436,12 @@ namespace Object {
 				material->Reload(asset, materialTemplate);
 			}
 		}
+	}
+
+	MaterialMgr::MaterialMgr() {
+		Asset::MaterialTemplateAsset asset;
+		Asset::MaterialTemplateAsset::InitDefault(asset);
+		m_DefaultMaterial.Reset(new MaterialTemplate(asset));
 	}
 
 	uint32 MaterialContainer::FindOrCreateMaterial(const XString& filename) {

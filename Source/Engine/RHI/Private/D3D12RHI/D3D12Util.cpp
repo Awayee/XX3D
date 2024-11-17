@@ -1,6 +1,7 @@
 #include "D3D12Util.h"
 #include "Core/Public/Log.h"
 #include "Core/Public/String.h"
+#include "Math/Public/Math.h"
 
 void WINAPI DXTraceW(_In_z_ const WCHAR* strFile, _In_ DWORD dwLine, _In_ HRESULT hr, _In_opt_ const WCHAR* strMsg) {
     XString strMsg0 = WString2String(strMsg);
@@ -84,6 +85,13 @@ D3D12_HEAP_TYPE ToD3D12HeapTypeBuffer(EBufferFlags flags) {
     return D3D12_HEAP_TYPE_DEFAULT;
 }
 
+D3D12_RESOURCE_FLAGS ToD3D12ResourceFlags(EBufferFlags flags) {
+    D3D12_RESOURCE_FLAGS dstFlags = D3D12_RESOURCE_FLAG_NONE;
+    if(EnumHasAnyFlags(flags, EBufferFlags::UAV)) {
+        dstFlags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+    }
+    return dstFlags;
+}
 
 D3D12_HEAP_TYPE ToD3D12HeapTypeTexture(ETextureFlags flags) {
     if (EnumHasAnyFlags(flags, ETextureFlags::CopySrc)) {
@@ -311,11 +319,13 @@ D3D12_PRIMITIVE_TOPOLOGY ToD3D12PrimitiveTopology(EPrimitiveTopology topology) {
 D3D12_DESCRIPTOR_RANGE_TYPE ToD3D12DescriptorRangeType(EBindingType type) {
     switch (type) {
     case EBindingType::UniformBuffer: return D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-    case EBindingType::Texture: return D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    case EBindingType::StorageTexture: return D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    case EBindingType::Texture:
+    case EBindingType::StructuredBuffer: return D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    case EBindingType::StorageTexture:
+    case EBindingType::RWStructuredBuffer: return D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
     case EBindingType::Sampler: return D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
     }
-    return D3D12_DESCRIPTOR_RANGE_TYPE_CBV; // error
+    CHECK(0); // error
 }
 
 D3D12_RESOURCE_STATES ToD3D12ResourceState(EResourceState state) {
@@ -327,6 +337,7 @@ D3D12_RESOURCE_STATES ToD3D12ResourceState(EResourceState state) {
     case EResourceState::TransferSrc:  return D3D12_RESOURCE_STATE_COPY_SOURCE;
     case EResourceState::TransferDst: return D3D12_RESOURCE_STATE_COPY_DEST;
     case EResourceState::Present: return D3D12_RESOURCE_STATE_PRESENT;
+    case EResourceState::IndirectDrawBuffer: return D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
     }
     return D3D12_RESOURCE_STATE_COMMON;
 }
@@ -334,12 +345,21 @@ D3D12_RESOURCE_STATES ToD3D12ResourceState(EResourceState state) {
 D3D12_DESCRIPTOR_HEAP_TYPE ToD3D12DescriptorHeapType(EBindingType type) {
     switch (type) {
     case EBindingType::UniformBuffer:
-    case EBindingType::StorageBuffer:
+    case EBindingType::StructuredBuffer:
+    case EBindingType::RWStructuredBuffer:
     case EBindingType::Texture:
     case EBindingType::StorageTexture: return D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     case EBindingType::Sampler: return D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
     }
     return D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
+}
+
+uint32 GetBufferAlignment(EBufferFlags bufferFlags) {
+    uint32 alignment = 1;
+    if (EnumHasAnyFlags(bufferFlags, EBufferFlags::Uniform)) {
+        alignment = Math::Max(alignment, (uint32)D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+    }
+    return alignment;
 }
 
 uint32 AlignConstantBufferSize(uint32 byteSize) {

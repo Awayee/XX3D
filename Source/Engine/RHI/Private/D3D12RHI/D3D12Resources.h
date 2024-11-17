@@ -17,12 +17,15 @@ class D3D12Buffer: public RHIBuffer {
 public:
 	D3D12Buffer(const RHIBufferDesc& desc, ID3D12Device* device);
 	~D3D12Buffer() override = default;
-	void SetName(const char* name) override;
+	void SetNameInternal(const char* name) override;
 	void UpdateData(const void* data, uint32 byteSize, uint32 offset) override;
 	void UpdateData(Func<void(void*)>&& f);
 	ID3D12Resource* GetResource() { return m_Resource.Get(); }
+	D3D12_RESOURCE_STATES GetState() const { return m_ResState; }
+	void SetState(D3D12_RESOURCE_STATES state) { m_ResState = state; }
 protected:
 	TDXPtr<ID3D12Resource> m_Resource;
+	D3D12_RESOURCE_STATES m_ResState;
 };
 
 // buffer with descriptors
@@ -33,13 +36,16 @@ public:
 	void UpdateData(const void* data, uint32 byteSize, uint32 offset) override;
 	D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView();
 	D3D12_INDEX_BUFFER_VIEW GetIndexBufferView();
-	D3D12_CPU_DESCRIPTOR_HANDLE GetCBV();
-	D3D12_CPU_DESCRIPTOR_HANDLE GetUAV();
+	D3D12_CPU_DESCRIPTOR_HANDLE GetCBV(uint32 offset, uint32 size);
+	D3D12_CPU_DESCRIPTOR_HANDLE GetSRV(uint32 offset, uint32 size);
+	D3D12_CPU_DESCRIPTOR_HANDLE GetUAV(uint32 offset, uint32 size);
 
 private:
 	D3D12Device* m_Device;
-	StaticDescriptorHandle m_CBV;
-	StaticDescriptorHandle m_UAV;
+	TUnorderedMap<uint32, StaticDescriptorHandle> m_DescriptorHandles;
+
+	StaticDescriptorHandle FindDescriptor(EBufferFlags flags, uint32 offset, uint32 size);
+	void InsertDescriptor(EBufferFlags flags, uint32 offset, uint32 size, StaticDescriptorHandle handle);
 };
 
 class ResourceState {
@@ -71,7 +77,7 @@ public:
 	D3D12TextureImpl(const RHITextureDesc& desc, D3D12Device* device);
 	~D3D12TextureImpl() override;
 	void UpdateData(const void* data, uint32 byteSize, RHITextureSubRes subRes, IOffset3D offset) override;
-	void SetName(const char* name) override;
+	void SetNameInternal(const char* name) override;
 	ID3D12Resource* GetResource() override { return m_Resource.Get(); }
 	D3D12_CPU_DESCRIPTOR_HANDLE GetDescriptor(ETexDescriptorType type, RHITextureSubRes subRes) override;
 private:
@@ -102,7 +108,7 @@ class D3D12Fence: public RHIFence {
 public:
 	explicit D3D12Fence(ID3D12Device* device);
 	~D3D12Fence()override = default;
-	void SetName(const char* name) override;
+	void SetNameInternal(const char* name) override;
 	void Wait() override;
 	void Reset() override;
 	void ResetValue(uint64 val);

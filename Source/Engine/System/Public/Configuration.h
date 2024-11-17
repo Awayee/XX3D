@@ -40,6 +40,7 @@ namespace Engine {
 		uint8    MSAASampleCount{ 1 };
 		bool     EnableRenderDoc {false};
 		bool     UseIntegratedGPU{false};
+		bool     EnableGPUDriven {false};
 		static const ProjectConfig& Instance();
 		static void Initialize();
 	private:

@@ -1,14 +1,18 @@
 #pragma once
 #include "Core/Public/BaseStructs.h"
 #include "Core/Public/TArray.h"
-#include "Core/Public/Log.h"
+#include "Core/Public/String.h"
 #include "RHIEnum.h"
 
 class RHIResource {
 public:
-	RHIResource& operator=(const RHIResource&) = delete;
-	virtual void SetName(const char* name) {}
 	virtual ~RHIResource() = default;
+	RHIResource& operator=(const RHIResource&) = delete;
+	void SetName(const char* name);
+	const char* GetName() const;
+protected:
+	virtual void SetNameInternal(const char* name) {/*Do nothing*/}
+	XString m_Name;
 };
 
 uint32 GetRHIFormatPixelSize(ERHIFormat format);
@@ -28,7 +32,7 @@ public:
 struct RHIBufferDesc {
 	EBufferFlags Flags;
 	uint32 ByteSize;
-	uint32 Stride {0}; // for vertex buffer
+	uint32 Stride {0}; // for vertex buffer / structured buffer
 	ERHIFormat IndexFormat{ ERHIFormat::R32_UINT }; // for index buffer
 };
 
@@ -51,6 +55,7 @@ struct RHIDynamicBuffer {
 	RHIDynamicBuffer(const RHIDynamicBuffer& rhs) = default;
 	bool operator==(const RHIDynamicBuffer& rhs) const;
 	bool IsValid() const;
+	RHIDynamicBuffer SubBuffer(uint32 offset, uint32 size) const;
 };
 
 // texture sub resource
@@ -335,12 +340,31 @@ struct RHIShaderParam {
 	bool operator==(const RHIShaderParam& rhs) const;
 	bool operator!=(const RHIShaderParam& rhs) const;
 	static RHIShaderParam UniformBuffer(RHIBuffer* buffer, uint32 offset, uint32 size);
-	static RHIShaderParam UniformBuffer(RHIBuffer* buffer) { return UniformBuffer(buffer, 0, buffer->GetDesc().ByteSize); }
-	static RHIShaderParam StorageBuffer(RHIBuffer* buffer, uint32 offset, uint32 size);
+	static RHIShaderParam UniformBuffer(RHIBuffer* buffer);
 	static RHIShaderParam UniformBuffer(const RHIDynamicBuffer& dynamicBuffer);
-	static RHIShaderParam StorageBuffer(const RHIDynamicBuffer& dynamicBuffer);
+	static RHIShaderParam StructuredBuffer(RHIBuffer* buffer, uint32 offset, uint32 size);
+	static RHIShaderParam StructuredBuffer(RHIBuffer* buffer);
+	static RHIShaderParam StructuredBuffer(const RHIDynamicBuffer& dynamicBuffer);
+	static RHIShaderParam RWStructuredBuffer(RHIBuffer* buffer, uint32 offset, uint32 size);
+	static RHIShaderParam RWStructuredBuffer(RHIBuffer* buffer);
+	static RHIShaderParam RWStructuredBuffer(const RHIDynamicBuffer& dynamicBuffer);
 	static RHIShaderParam Texture(RHITexture* texture, RHITextureSubRes textureSub);
 	static RHIShaderParam TextureUAV(RHITexture* texture, RHITextureSubRes textureSub);
 	static RHIShaderParam Texture(RHITexture* texture);
 	static RHIShaderParam Sampler(RHISampler* sampler);
+};
+
+struct DrawIndirectCommand {
+	uint32 VertexCount;
+	uint32 InstanceCount;
+	uint32 FirstVertex;
+	uint32 FirstInstance;
+};
+
+struct DrawIndexedIndirectCommand {
+	uint32 IndexCount;
+	uint32 InstanceCount;
+	uint32 FirstIndex;
+	int32  FirstVertex;
+	uint32 FirstInstance;
 };

@@ -45,13 +45,16 @@ public:
 	void Draw(uint32 vertexCount, uint32 instanceCount, uint32 firstIndex, uint32 firstInstance) override;
 	void DrawIndexed(uint32 indexCount, uint32 instanceCount, uint32 firstIndex, uint32 vertexOffset, uint32 firstInstance) override;
 	void Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 groupCountZ) override;
-	void DrawIndirect(const RHIDynamicBuffer& buffer, uint32 drawCount) override {/* TODO */ }
-	void DrawIndexedIndirect(const RHIDynamicBuffer& buffer, uint32 drawCount) override {/* TODO*/ }
+	void DrawIndirect(const RHIDynamicBuffer& buffer, uint32 drawCount) override;
+	void DrawIndexedIndirect(const RHIDynamicBuffer& buffer, uint32 drawCount) override;
+	void DrawIndirect(RHIBuffer* buffer, uint32 bufferOffset, uint32 drawCount) override;
+	void DrawIndexedIndirect(RHIBuffer* buffer, uint32 bufferOffset, uint32 drawCount) override;
 	void ClearColorTarget(uint32 targetIndex, const float* color, const IRect& rect) override;
 	void CopyBufferToTexture(RHIBuffer* buffer, RHITexture* texture, RHITextureSubRes dstSubRes, IOffset3D dstOffset) override;
 	void CopyTextureToTexture(RHITexture* srcTex, RHITexture* dstTex, const RHITextureCopyRegion& region) override;
 	void CopyBufferToBuffer(RHIBuffer* srcBuffer, RHIBuffer* dstBuffer, uint32 srcOffset, uint32 dstOffset, uint32 byteSize) override;
 	void TransitionTextureState(RHITexture* texture, EResourceState stateBefore, EResourceState stateAfter, RHITextureSubRes subRes) override;
+	void TransitionBufferState(RHIBuffer* buffer, EResourceState stateBefore, EResourceState stateAfter) override;
 	void GenerateMipmap(RHITexture* texture, uint8 mipSize, uint16 arrayIndex, uint16 arraySize, ETextureViewFlags viewFlags) override;
 	void BeginDebugLabel(const char* msg, const float* color) override;
 	void EndDebugLabel() override;
@@ -67,7 +70,7 @@ private:
 	TUniquePtr<D3D12PipelineDescriptorCache> m_DescriptorCache;
 	bool m_IsRecording;
 	// call before draw/dispatch
-	TMap<D3D12Texture*, ResourceState> m_ResStates;
+	TUnorderedMap<D3D12Texture*, ResourceState> m_ResStates;
 	void PreDraw();
 };
 
@@ -98,7 +101,11 @@ public:
 	~D3D12CommandMgr() = default;
 	void BeginFrame();
 	D3D12Queue* GetQueue(EQueueType type);
+	ID3D12CommandSignature* GetDrawIndirectSignature();
+	ID3D12CommandSignature* GetDrawIndexedIndirectSignature();
 private:
 	D3D12Device* m_Device;
 	TStaticArray<D3D12Queue, EnumCast(EQueueType::Count)> m_Queues;
+	TDXPtr<ID3D12CommandSignature> m_DrawIndirectSignature;
+	TDXPtr<ID3D12CommandSignature> m_DrawIndexedIndirectSignature;
 };

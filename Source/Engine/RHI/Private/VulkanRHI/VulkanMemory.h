@@ -1,5 +1,6 @@
 #pragma once
 #include "VulkanContext.h"
+#include "RHI/Public/RHIEnum.h"
 #include <vk_mem_alloc.h>
 
 class VulkanDevice;
@@ -71,7 +72,7 @@ public:
 	NON_MOVEABLE(VulkanDynamicBufferAllocator);
 	VulkanDynamicBufferAllocator(VulkanMemoryAllocator* allocator, const VulkanDevice* device, uint32 pageSize);
 	~VulkanDynamicBufferAllocator();
-	Allocation Allocate(VkBufferUsageFlags usage, uint32 size, const void* data);
+	Allocation Allocate(EBufferFlags flags, uint32 size, const void* data);
 	VkBuffer GetBufferHandle(uint32 bufferIndex) const;
 	void UnmapAllocations();
 	void GC();
@@ -84,7 +85,7 @@ private:
 	};
 	TArray<BufferChunk> m_BufferChunks; // TODO TL
 	uint32 m_AllocatedIndex{ VK_INVALID_INDEX };
-	uint32 m_UniformAlignment{ 256 };
+	uint32 m_BufferAlignment{ 256 };
 	uint32 m_PageSize{ 1024 };
 	uint32 PrepareChunk(uint32 requiredSize);
 };

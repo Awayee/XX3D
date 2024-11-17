@@ -44,6 +44,10 @@ namespace Math {
 			Scale *= rhs.Scale;
 			Position += rhs.Position;
 		}
+
+		bool IsIdentity() const {
+			return Position == Vector3<T>::ZERO && Scale == Vector3<T>::ONE && Rotation == Quaternion<T>::IDENTITY;
+		}
 	};
 
 	template<typename T> const Transform<T> Transform<T>::IDENTITY{};

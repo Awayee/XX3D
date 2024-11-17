@@ -17,6 +17,7 @@ public:
 	const VulkanContext* GetContext();
 	VulkanDevice* GetDevice();
 	ERHIFormat GetDepthFormat() override;
+	uint32 GetBufferAlignment(EBufferFlags bufferFlags) override;
 	RHIViewport* GetViewport() override;
 	RHIBufferPtr CreateBuffer(const RHIBufferDesc& desc) override;
 	RHITexturePtr CreateTexture(const RHITextureDesc& desc) override;

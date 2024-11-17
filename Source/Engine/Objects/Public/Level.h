@@ -1,6 +1,5 @@
 #pragma once
 #include "Objects/Public/RenderScene.h"
-#include "Objects/Public/Camera.h"
 #include "Core/Public/Json.h"
 
 namespace Object {

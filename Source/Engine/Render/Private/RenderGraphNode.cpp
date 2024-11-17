@@ -3,10 +3,6 @@
 
 namespace Render {
 
-	void NodeCmdCollector::AddCommand(EQueueType queue, RHICommandBuffer* cmd) {
-		m_CmdArrays[EnumCast(queue)].PushBack(cmd);
-	}
-
 	void RGNode::Connect(RGNode* prevNode, RGNode* nextNode) {
 		++prevNode->m_RefCount;
 		++nextNode->m_RefCount;
@@ -16,6 +12,11 @@ namespace Render {
 
 	void RGRenderNode::ReadSRV(RGTextureNode* node) {
 		m_SRVs.PushBack(node);
+		node->SetTargetState(EResourceState::ShaderResourceView);
+		RGNode::Connect(node, this);
+	}
+
+	void RGRenderNode::ReadSRV(RGBufferNode* node) {
 		node->SetTargetState(EResourceState::ShaderResourceView);
 		RGNode::Connect(node, this);
 	}
@@ -142,6 +143,12 @@ namespace Render {
 		ReadSRV(node, node->GetDesc().GetDefaultSubRes());
 	}
 
+	void RGComputeNode::ReadSRV(RGBufferNode* node) {
+		m_SRVBuffers.PushBack(node);
+		node->SetTargetState(EResourceState::ShaderResourceView);
+		RGNode::Connect(node, this);
+	}
+
 	void RGComputeNode::WriteUAV(RGTextureNode* node, RHITextureSubRes subRes) {
 		const uint8 subResIdx = node->RegisterSubRes(subRes);
 		m_UAVs.PushBack({ node, subResIdx });
@@ -151,6 +158,12 @@ namespace Render {
 
 	void RGComputeNode::WriteUAV(RGTextureNode* node) {
 		WriteUAV(node, node->GetDesc().GetDefaultSubRes());
+	}
+
+	void RGComputeNode::WriteUAV(RGBufferNode* node) {
+		m_UAVBuffers.PushBack(node);
+		node->SetTargetState(EResourceState::UnorderedAccessView);
+		RGNode::Connect(this, node);
 	}
 
 	void RGComputeNode::Run(RHICommandBuffer* cmd) {
@@ -165,17 +178,23 @@ namespace Render {
 			for (auto& uav : m_UAVs) {
 				uav.Node->TransitionSubResToState(cmd, EResourceState::UnorderedAccessView, uav.SubResIndex);
 			}
+			for (RGBufferNode* srv: m_SRVBuffers) {
+				srv->TransitionToState(cmd, EResourceState::ShaderResourceView);
+			}
+			for (RGBufferNode* uav : m_UAVBuffers) {
+				uav->TransitionToState(cmd, EResourceState::UnorderedAccessView);
+			}
 		}
 		if (m_Task) {
 			m_Task(cmd);
 		}
 		// state transition after dispatch
 		{
-			for (auto& srv : m_SRVs) {
-				srv.Node->TransitionSubResToTargetState(cmd, srv.SubResIndex);
-			}
 			for (auto& uav : m_UAVs) {
 				uav.Node->TransitionSubResToTargetState(cmd, uav.SubResIndex);
+			}
+			for (auto& uav: m_UAVBuffers) {
+				uav->TransitionToState(cmd, uav->GetTargetState());
 			}
 		}
 		if (!m_Name.empty()) {
@@ -226,19 +245,28 @@ namespace Render {
 		RHI::Instance()->GetViewport()->Present();
 	}
 
-	RHIBuffer* RGBufferNode::GetRHI() {
-		if(!m_RHI) {
-			m_RHI = RHI::Instance()->CreateBuffer(m_Desc);
-		}
-		return m_RHI;
-	}
-
 	RHITexture* RGTextureNode::GetRHI() {
 		if(!m_RHI) {
 			m_RHI = RHI::Instance()->CreateTexture(m_Desc);
 		}
 		return m_RHI;
 	}
+
+	void RGBufferNode::SetTargetState(EResourceState state) {
+		m_TargetState = state;
+	}
+
+	void RGBufferNode::TransitionToState(RHICommandBuffer* cmd, EResourceState state) {
+		if(EResourceState::Unknown != state && state != m_CurrentState) {
+			cmd->TransitionBufferState(m_Buffer, m_CurrentState, state);
+			m_CurrentState = state;
+		}
+	}
+
+	EResourceState RGBufferNode::GetTargetState() const {
+		return m_TargetState;
+	}
+
 
 	void RGTextureNode::SetTargetState(EResourceState targetState) {
 		m_TargetState = targetState;

@@ -223,7 +223,7 @@ VulkanUploader::~VulkanUploader() {
 
 VulkanStagingBuffer* VulkanUploader::AcquireBuffer(uint32 bufferSize) {
 	auto& bufferPtr = m_StagingBuffers.EmplaceBack(new VulkanStagingBuffer(bufferSize, m_Device));
-	bufferPtr->SetName("UploadBuffer");
+	bufferPtr->SetNameInternal("UploadBuffer");
 	return bufferPtr.Get();
 }
 
@@ -386,6 +386,18 @@ void VulkanCommandBuffer::DrawIndexedIndirect(const RHIDynamicBuffer& buffer, ui
 	vkCmdDrawIndexedIndirect(m_Handle, vkBuffer, buffer.Offset, drawCount, buffer.Stride);
 }
 
+void VulkanCommandBuffer::DrawIndirect(RHIBuffer* buffer, uint32 bufferOffset, uint32 drawCount) {
+	PrepareDraw();
+	VkBuffer vkBuffer = ((VulkanBuffer*)buffer)->GetBuffer();
+	vkCmdDrawIndirect(m_Handle, vkBuffer, bufferOffset, drawCount, buffer->GetDesc().Stride);
+}
+
+void VulkanCommandBuffer::DrawIndexedIndirect(RHIBuffer* buffer, uint32 bufferOffset, uint32 drawCount) {
+	PrepareDraw();
+	VkBuffer vkBuffer = ((VulkanBuffer*)buffer)->GetBuffer();
+	vkCmdDrawIndexedIndirect(m_Handle, vkBuffer, bufferOffset, drawCount, buffer->GetDesc().Stride);
+}
+
 void VulkanCommandBuffer::ClearColorTarget(uint32 targetIndex, const float* color, const IRect& rect) {
 	VkClearAttachment clearAttachment;
 	clearAttachment.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -449,6 +461,10 @@ void VulkanCommandBuffer::TransitionTextureState(RHITexture* texture, EResourceS
 	VkPipelineStageFlags dstStage;
 	GetPipelineBarrierStage(barrier.oldLayout, barrier.newLayout, barrier.srcAccessMask, barrier.dstAccessMask, srcStage, dstStage);
 	vkCmdPipelineBarrier(m_Handle, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+}
+
+void VulkanCommandBuffer::TransitionBufferState(RHIBuffer* buffer, EResourceState stateBefore, EResourceState stateAfter) {
+	// TODO
 }
 
 void VulkanCommandBuffer::GenerateMipmap(RHITexture* texture, uint8 mipSize, uint16 arrayIndex, uint16 arraySize, ETextureViewFlags viewFlags) {

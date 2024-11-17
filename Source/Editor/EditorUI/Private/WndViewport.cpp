@@ -6,6 +6,7 @@
 #include "System/Public/Timer.h"
 #include "Window/Public/EngineWindow.h"
 #include "Objects/Public/LevelComponents.h"
+#include "Objects/Public/RenderCamera.h"
 
 namespace Editor {
 

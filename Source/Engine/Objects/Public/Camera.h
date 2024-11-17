@@ -1,7 +1,7 @@
 #pragma once
 #include "Math/Public/Math.h"
 #include "Math/Public/Geometry.h"
-#include "RHI/Public/RHI.h"
+#include "Core/Public/TArray.h"
 
 namespace Object {
 	enum class EProjType : int{
@@ -31,19 +31,6 @@ namespace Object {
 		Math::FMatrix4x4 GetProjectMatrix() const;
 	};
 
-	struct Camera {
-	public:
-		CameraView View;
-		CameraProjection Projection;
-		Math::Frustum Frustum;
-		void SetView(const CameraView& view);
-		void SetProjection(const CameraProjection& projection);
-		void Set(const CameraView& view, const CameraProjection& projection);
-		Math::FMatrix4x4 GetViewProjectMatrix() const;
-	private:
-		void UpdateFrustum();
-	};
-
 	struct FrustumCorner {
 		union {
 			struct {
@@ -61,35 +48,16 @@ namespace Object {
 		void GetSubFrustumCorner(float n, float f, FrustumCorner& out) const; // n and f is in range [0, 1]
 	};
 
-	// cached the matices for rendering
-	class RenderCamera {
+	struct Camera {
 	public:
-		RenderCamera();
-		RenderCamera(const RenderCamera&) = default;
-		RenderCamera(RenderCamera&&) noexcept = default;
-		const Camera& GetCamera() const { return m_Camera; }
-		void  SetView(const CameraView& view);
-		const CameraView& GetView() const { return m_Camera.View; }
-		void  SetProjection(const CameraProjection& projection);
-		const CameraProjection& GetProjection() const { return m_Camera.Projection; }
-		void  SetAspect(float aspect);
-		const Math::Frustum& GetFrustum()const { return m_Camera.Frustum; }
-		const Math::FMatrix4x4& GetViewMatrix() { return m_ViewMatrix; }
-		const Math::FMatrix4x4& GetProjectMatrix() { return m_ProjectMatrix; }
-		const Math::FMatrix4x4& GetViewProjectMatrix() { return m_ViewProjectMatrix; }
-		const Math::FMatrix4x4& GetInvViewProjectMatrix() { return m_InvViewProjectMatrix; }
-		void UpdateBuffer();
-		const RHIDynamicBuffer& GetUniformBuffer() const;
-		~RenderCamera();
+		CameraView View;
+		CameraProjection Projection;
+		Math::Frustum Frustum;
+		void SetView(const CameraView& view);
+		void SetProjection(const CameraProjection& projection);
+		void Set(const CameraView& view, const CameraProjection& projection);
+		Math::FMatrix4x4 GetViewProjectMatrix() const;
 	private:
-		float m_Aspect;
-		Camera m_Camera;
-		Math::FMatrix4x4 m_ViewMatrix;
-		Math::FMatrix4x4 m_ProjectMatrix;
-		Math::FMatrix4x4 m_ViewProjectMatrix;
-		Math::FMatrix4x4 m_InvViewProjectMatrix;
-		RHIDynamicBuffer m_Uniform;
-		void UpdateProjection();
-		void UpdateProjectMatrix();
+		void UpdateFrustum();
 	};
 }

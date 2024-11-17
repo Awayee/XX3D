@@ -25,16 +25,24 @@ inline D3D12_DESCRIPTOR_HEAP_TYPE DescriptorTypeToHeapType(ETexDescriptorType ty
 	}
 }
 
+inline uint32 GetBufferDescriptorHash(EBufferFlags flags, uint32 offset, uint32 size) {
+	uint32 hash = GetTypeHash32(flags);
+	hash = GetTypeHash32BasedOn(offset, hash);
+	hash = GetTypeHash32BasedOn(size, hash);
+	return hash;
+}
+
 D3D12Buffer::D3D12Buffer(const RHIBufferDesc& desc, ID3D12Device* device) : RHIBuffer(desc){
 	EBufferFlags flags = desc.Flags;
 	uint32 bufferSize = desc.ByteSize;
 	if (EnumHasAnyFlags(flags, EBufferFlags::Uniform)) {
 		bufferSize = AlignConstantBufferSize(bufferSize);
 	}
-	auto d3d12Desc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
+	D3D12_RESOURCE_FLAGS dstFlags = ToD3D12ResourceFlags(flags);
+	m_ResState = D3D12_RESOURCE_STATE_COMMON;
+	auto d3d12Desc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize, dstFlags);
 	CD3DX12_HEAP_PROPERTIES heapProperties(ToD3D12HeapTypeBuffer(flags));
-	D3D12_RESOURCE_STATES initialState = D3D12_RESOURCE_STATE_COMMON;
-	DX_CHECK(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &d3d12Desc, initialState, nullptr, IID_PPV_ARGS(m_Resource.Address())));
+	DX_CHECK(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &d3d12Desc, m_ResState, nullptr, IID_PPV_ARGS(m_Resource.Address())));
 }
 
 void D3D12Buffer::UpdateData(const void* data, uint32 byteSize, uint32 offset) {
@@ -51,46 +59,26 @@ void D3D12Buffer::UpdateData(Func<void(void*)>&& f) {
 	m_Resource->Unmap(0, nullptr);
 }
 
-void D3D12Buffer::SetName(const char* name) {
+void D3D12Buffer::SetNameInternal(const char* name) {
 	XWString nameW = String2WString(name);
 	m_Resource->SetName(nameW.c_str());
 }
 
-D3D12BufferImpl::D3D12BufferImpl(const RHIBufferDesc& desc, D3D12Device* device): D3D12Buffer(desc, device->GetDevice()), m_Device(device) {
-	EBufferFlags flags = desc.Flags;
-	// create descriptor
-	StaticDescriptorAllocator* allocator = m_Device->GetDescriptorMgr()->GetStaticAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-	if(EnumHasAnyFlags(flags, EBufferFlags::Uniform)) {
-		m_CBV = allocator->AllocateDescriptorSlot();
-		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = allocator->GetCPUHandle(m_CBV);
-		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
-		cbvDesc.BufferLocation = m_Resource->GetGPUVirtualAddress();
-		cbvDesc.SizeInBytes = AlignConstantBufferSize(m_Desc.ByteSize);
-		m_Device->GetDevice()->CreateConstantBufferView(&cbvDesc, cpuHandle);
-	}
-	if(EnumHasAnyFlags(flags, EBufferFlags::Storage)) {
-		m_UAV = allocator->AllocateDescriptorSlot();
-		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = allocator->GetCPUHandle(m_UAV);
-		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc;
-		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-		uavDesc.Buffer.FirstElement = 0;
-		uavDesc.Buffer.StructureByteStride = Math::Max<uint32>(1, GetDesc().Stride);
-		uavDesc.Buffer.NumElements = GetDesc().ByteSize / uavDesc.Buffer.StructureByteStride;
-		uavDesc.Buffer.CounterOffsetInBytes = 0;
-		m_Device->GetDevice()->CreateUnorderedAccessView(m_Resource, nullptr, &uavDesc, cpuHandle);
-	}
-}
+D3D12BufferImpl::D3D12BufferImpl(const RHIBufferDesc& desc, D3D12Device* device):
+D3D12Buffer(desc, device->GetDevice()),
+m_Device(device) {}
 
 D3D12BufferImpl::~D3D12BufferImpl() {
 	StaticDescriptorAllocator* allocator = m_Device->GetDescriptorMgr()->GetStaticAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	allocator->FreeDescriptorSlot(m_CBV);
-	allocator->FreeDescriptorSlot(m_UAV);
+	for(auto& iter: m_DescriptorHandles) {
+		allocator->FreeDescriptorSlot(iter.second);
+	}
+	m_DescriptorHandles.clear();
 }
 
 void D3D12BufferImpl::UpdateData(const void* data, uint32 byteSize, uint32 offset) {
 	EBufferFlags flags = m_Desc.Flags;
-	if(EnumHasAnyFlags(flags, EBufferFlags::Uniform)) {
+	if(EnumHasAnyFlags(flags, EBufferFlags::Uniform | EBufferFlags::CopySrc)) {
 		D3D12Buffer::UpdateData(data, byteSize, offset);
 	}
 	else {
@@ -122,16 +110,84 @@ D3D12_INDEX_BUFFER_VIEW D3D12BufferImpl::GetIndexBufferView() {
 	return ibv;
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE D3D12BufferImpl::GetCBV() {
-	CHECK(EnumHasAnyFlags(GetDesc().Flags, EBufferFlags::Uniform));
+D3D12_CPU_DESCRIPTOR_HANDLE D3D12BufferImpl::GetCBV(uint32 offset, uint32 size) {
+	offset = AlignConstantBufferSize(offset);
+	size = AlignConstantBufferSize(size);
 	StaticDescriptorAllocator* allocator = m_Device->GetDescriptorMgr()->GetStaticAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	return allocator->GetCPUHandle(m_CBV);
+	StaticDescriptorHandle handle = FindDescriptor(EBufferFlags::Uniform, offset, size);
+	if(handle.IsValid()) {
+		return allocator->GetCPUHandle(handle);
+	}
+
+	handle = allocator->AllocateDescriptorSlot();
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = allocator->GetCPUHandle(handle);
+	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
+	cbvDesc.BufferLocation = m_Resource->GetGPUVirtualAddress() + offset;
+	cbvDesc.SizeInBytes = size;
+	m_Device->GetDevice()->CreateConstantBufferView(&cbvDesc, cpuHandle);
+	InsertDescriptor(EBufferFlags::Uniform, offset, size, handle);
+	return cpuHandle;
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE D3D12BufferImpl::GetUAV() {
-	CHECK(EnumHasAnyFlags(GetDesc().Flags, EBufferFlags::Storage));
+D3D12_CPU_DESCRIPTOR_HANDLE D3D12BufferImpl::GetSRV(uint32 offset, uint32 size) {
 	StaticDescriptorAllocator* allocator = m_Device->GetDescriptorMgr()->GetStaticAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	return allocator->GetCPUHandle(m_UAV);
+	StaticDescriptorHandle handle = FindDescriptor(EBufferFlags::SRV, offset, size);
+	if(handle.IsValid()) {
+		return allocator->GetCPUHandle(handle);
+	}
+
+	handle = allocator->AllocateDescriptorSlot();
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = allocator->GetCPUHandle(handle);
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+	const uint32 stride = Math::Max<uint32>(1, GetDesc().Stride);
+	const uint32 numElements = size / stride;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+	srvDesc.Buffer.FirstElement = offset / stride;
+	srvDesc.Buffer.NumElements = numElements;
+	srvDesc.Buffer.StructureByteStride = stride;
+	srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	m_Device->GetDevice()->CreateShaderResourceView(m_Resource, &srvDesc, cpuHandle);
+	InsertDescriptor(EBufferFlags::SRV, offset, size, handle);
+	return cpuHandle;
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE D3D12BufferImpl::GetUAV(uint32 offset, uint32 size) {
+	CHECK(EnumHasAnyFlags(GetDesc().Flags, EBufferFlags::UAV));
+	StaticDescriptorAllocator* allocator = m_Device->GetDescriptorMgr()->GetStaticAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	StaticDescriptorHandle handle = FindDescriptor(EBufferFlags::UAV, offset, size);
+	if(handle.IsValid()) {
+		return allocator->GetCPUHandle(handle);
+	}
+
+	handle = allocator->AllocateDescriptorSlot();
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = allocator->GetCPUHandle(handle);
+	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
+	uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+	const uint32 stride = Math::Max<uint32>(1, GetDesc().Stride);
+	uavDesc.Buffer.StructureByteStride = stride;
+	uavDesc.Buffer.FirstElement = offset / stride;
+	uavDesc.Buffer.NumElements = size / stride;
+	uavDesc.Buffer.CounterOffsetInBytes = 0;
+	uavDesc.Format = DXGI_FORMAT_UNKNOWN;
+	m_Device->GetDevice()->CreateUnorderedAccessView(m_Resource, nullptr, &uavDesc, cpuHandle);
+	InsertDescriptor(EBufferFlags::UAV, offset, size, handle);
+	return cpuHandle;
+}
+
+StaticDescriptorHandle D3D12BufferImpl::FindDescriptor(EBufferFlags flags, uint32 offset, uint32 size) {
+	CHECK(EnumHasAnyFlags(GetDesc().Flags, flags));
+	CHECK(offset < GetDesc().ByteSize);
+	const uint32 hash = GetBufferDescriptorHash(flags, offset, size);
+	if(auto iter = m_DescriptorHandles.find(hash); iter!= m_DescriptorHandles.end()) {
+		return iter->second;
+	}
+	return StaticDescriptorHandle::InValidHandle();
+}
+
+void D3D12BufferImpl::InsertDescriptor(EBufferFlags flags, uint32 offset, uint32 size, StaticDescriptorHandle handle) {
+	const uint32 hash = GetBufferDescriptorHash(flags, offset, size);
+	m_DescriptorHandles.try_emplace(hash, handle);
 }
 
 void ResourceState::Initialize(uint32 subResCount) {
@@ -282,7 +338,7 @@ void D3D12TextureImpl::UpdateData(const void* data, uint32 byteSize, RHITextureS
 	uploadCmd->TransitionTextureState(this, EResourceState::TransferDst, GetTargetState(desc.Flags), subRes);
 }
 
-void D3D12TextureImpl::SetName(const char* name) {
+void D3D12TextureImpl::SetNameInternal(const char* name) {
 	XWString nameW = String2WString(name);
 	m_Resource->SetName(nameW.c_str());
 }
@@ -476,7 +532,7 @@ D3D12Fence::D3D12Fence(ID3D12Device* device): m_TargetValue(0){
 	device->CreateFence(m_TargetValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(m_Fence.Address()));
 }
 
-void D3D12Fence::SetName(const char* name) {
+void D3D12Fence::SetNameInternal(const char* name) {
 	const auto nameW = String2WString(name);
 	m_Fence->SetName(nameW.c_str());
 }

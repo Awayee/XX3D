@@ -15,6 +15,7 @@ namespace Object {
 		using ClusterNode = InstanceDataMgr::ClusterNode;
 	public:
 		TArray<ClusterNode> ClusterNodes;
+		uint32 ClusterSize;
 		ClusterTreeBuilder(TArray<InstanceData>& transforms, TArray<Math::AABB3>& aabbs): m_RefInstances(transforms), m_RefAABBs(aabbs) {
 			ASSERT(m_RefInstances.Size() == m_RefAABBs.Size(), "transforms is not matches aabbs!");
 			if(transforms.IsEmpty()) {
@@ -102,6 +103,7 @@ namespace Object {
 				root.InstanceEnd = Math::Max(root.InstanceEnd, childNode.InstanceEnd);
 				root.AABB.Union(childNode.AABB);
 			}
+			ClusterSize = treeLayers[0].Size();
 			//  add children
 			for(; treeLayers.Size(); treeLayers.PopBack()) {
 				ClusterNodes.PushBack(treeLayers.Back());
@@ -192,16 +194,22 @@ namespace Object {
 		return INVALID_INDEX != ChildStart && INVALID_INDEX != ChildEnd;
 	}
 
-	InstanceDataMgr::InstanceDataMgr(InstanceDataMgr&& rhs) noexcept: m_InstanceBuffer(MoveTemp(rhs.m_InstanceBuffer)),
-	m_Instances(MoveTemp(rhs.m_Instances)),
-	m_AABBs(MoveTemp(rhs.m_AABBs)),
-	m_ClusterNodes(MoveTemp(rhs.m_ClusterNodes)){}
+	InstanceDataMgr::InstanceDataMgr() : m_ClusterSize(0) {
+	}
+
+	InstanceDataMgr::InstanceDataMgr(InstanceDataMgr&& rhs) noexcept:
+		m_InstanceBuffer(MoveTemp(rhs.m_InstanceBuffer)),
+		m_Instances(MoveTemp(rhs.m_Instances)),
+		m_AABBs(MoveTemp(rhs.m_AABBs)),
+		m_ClusterNodes(MoveTemp(rhs.m_ClusterNodes)),
+		m_ClusterSize(rhs.m_ClusterSize){}
 
 	InstanceDataMgr& InstanceDataMgr::operator=(InstanceDataMgr&& rhs) noexcept {
 		m_InstanceBuffer = MoveTemp(rhs.m_InstanceBuffer);
 		m_Instances = MoveTemp(rhs.m_Instances);
 		m_AABBs = MoveTemp(rhs.m_AABBs);
 		m_ClusterNodes = MoveTemp(rhs.m_ClusterNodes);
+		m_ClusterSize = rhs.m_ClusterSize;
 		return *this;
 	}
 
@@ -210,10 +218,14 @@ namespace Object {
 		m_AABBs.Reset();
 		m_ClusterNodes.Reset();
 		m_InstanceBuffer.Reset();
+		m_ClusterSize = 0;
 	}
 
 	void InstanceDataMgr::Build(const Math::AABB3& resAABB, const TArray<Math::FTransform>& transforms) {
 		Reset();
+		if(!transforms.Size()) {
+			return;
+		}
 		m_AABBs.Reserve(transforms.Size());
 		m_Instances.Reserve(transforms.Size());
 		for(auto& transform: transforms) {
@@ -227,7 +239,8 @@ namespace Object {
 		}
 		ClusterTreeBuilder clusterTreeBuilder(m_Instances, m_AABBs);
 		m_ClusterNodes.Swap(clusterTreeBuilder.ClusterNodes);
-		RHIBufferDesc desc{ EBufferFlags::Vertex | EBufferFlags::CopyDst, m_Instances.ByteSize(), sizeof(InstanceData) };
+		m_ClusterSize = clusterTreeBuilder.ClusterSize;
+		RHIBufferDesc desc{ EBufferFlags::SRV | EBufferFlags::CopyDst, m_Instances.ByteSize(), sizeof(InstanceData) };
 		m_InstanceBuffer = RHI::Instance()->CreateBuffer(desc);
 		m_InstanceBuffer->UpdateData(m_Instances.Data(), m_Instances.ByteSize(), 0);
 	}
@@ -236,29 +249,50 @@ namespace Object {
 		return m_InstanceBuffer.Get();
 	}
 
-	void InstanceDataMgr::GenerateInstanceData(const Math::Frustum& frustum, TArray<InstanceData>& outData) {
-		RecursivelyGenerateInstanceData(0, frustum, outData);
+	TConstArrayView<InstanceData> InstanceDataMgr::GetInstances() const {
+		return m_Instances;
+	}
+
+	TConstArrayView<Math::AABB3> InstanceDataMgr::GetInstanceAABBs() const {
+		return m_AABBs;
+	}
+
+	TConstArrayView<InstanceDataMgr::ClusterNode> InstanceDataMgr::GetClusters() const {
+		if(m_ClusterNodes.Size()) {
+			const uint32 clusterStart = m_ClusterNodes.Size() - m_ClusterSize;
+			return { &m_ClusterNodes[clusterStart], m_ClusterSize };
+		}
+		return {};
+	}
+
+	bool InstanceDataMgr::IsEmpty() const {
+		return m_Instances.IsEmpty();
+	}
+
+	void InstanceDataMgr::GenerateInstanceID(const Math::Frustum& frustum, TArray<uint32>& outInstanceIDs) {
+		outInstanceIDs.Reserve(m_Instances.Size());
+		RecursivelyGenerateInstanceID(0, frustum, outInstanceIDs);
 	}
 
 	void InstanceDataMgr::GenerateDrawRanges(const Math::Frustum& frustum, TArray<InstanceDrawRange>& ranges) {
 		RecursivelyGenerateDrawRanges(0, frustum, ranges);
 	}
 
-	void InstanceDataMgr::RecursivelyGenerateInstanceData(uint32 nodeIndex, const Math::Frustum& frustum, TArray<InstanceData>& outData) {
+	void InstanceDataMgr::RecursivelyGenerateInstanceID(uint32 nodeIndex, const Math::Frustum& frustum, TArray<uint32>& outInstanceIDs) {
 		if(nodeIndex < m_ClusterNodes.Size()) {
 			auto& node = m_ClusterNodes[nodeIndex];
 			const Math::EGeometryTest testResult = frustum.TestAABB(node.AABB);
-			if (Math::EGeometryTest::Outer == testResult) {
+			if(Math::EGeometryTest::Outer == testResult) {
 				return;
 			}
-			if (Math::EGeometryTest::Inner == testResult || !node.HasChild()) {
+			if(Math::EGeometryTest::Inner == testResult || !node.HasChild()) {
 				for(uint32 i=node.InstanceStart; i<node.InstanceEnd; ++i) {
-					outData.PushBack(m_Instances[i]);
+					outInstanceIDs.PushBack(i);
 				}
 			}
 			else {
-				for (uint32 i = node.ChildStart; i < node.ChildEnd; ++i) {
-					RecursivelyGenerateInstanceData(i, frustum, outData);
+				for(uint32 i=node.ChildStart; i<node.ChildEnd; ++i) {
+					RecursivelyGenerateInstanceID(i, frustum, outInstanceIDs);
 				}
 			}
 		}

@@ -156,6 +156,34 @@ void D3D12CommandList::Dispatch(uint32 groupCountX, uint32 groupCountY, uint32 g
 	m_CommandList->Dispatch(groupCountX, groupCountY, groupCountZ);
 }
 
+void D3D12CommandList::DrawIndirect(const RHIDynamicBuffer& buffer, uint32 drawCount) {
+	PreDraw();
+	ID3D12Resource* d3dBuffer = m_Device->GetDynamicMemoryAllocator()->GetResource(buffer.BufferIndex);
+	auto* signature = m_Device->GetCommandMgr()->GetDrawIndirectSignature();
+	m_CommandList->ExecuteIndirect(signature, drawCount, d3dBuffer, buffer.Offset, nullptr, 0);
+}
+
+void D3D12CommandList::DrawIndexedIndirect(const RHIDynamicBuffer& buffer, uint32 drawCount) {
+	PreDraw();
+	ID3D12Resource* d3dBuffer = m_Device->GetDynamicMemoryAllocator()->GetResource(buffer.BufferIndex);
+	auto* signature = m_Device->GetCommandMgr()->GetDrawIndexedIndirectSignature();
+	m_CommandList->ExecuteIndirect(signature, drawCount, d3dBuffer, buffer.Offset, nullptr, 0);
+}
+
+void D3D12CommandList::DrawIndirect(RHIBuffer* buffer, uint32 bufferOffset, uint32 drawCount) {
+	PreDraw();
+	ID3D12Resource* d3dBuffer = ((D3D12Buffer*)buffer)->GetResource();
+	auto* signature = m_Device->GetCommandMgr()->GetDrawIndirectSignature();
+	m_CommandList->ExecuteIndirect(signature, drawCount, d3dBuffer, bufferOffset, nullptr, 0);
+}
+
+void D3D12CommandList::DrawIndexedIndirect(RHIBuffer* buffer, uint32 bufferOffset, uint32 drawCount) {
+	PreDraw();
+	ID3D12Resource* d3dBuffer = ((D3D12Buffer*)buffer)->GetResource();
+	auto* signature = m_Device->GetCommandMgr()->GetDrawIndexedIndirectSignature();
+	m_CommandList->ExecuteIndirect(signature, drawCount, d3dBuffer, bufferOffset, nullptr, 0);
+}
+
 void D3D12CommandList::ClearColorTarget(uint32 targetIndex, const float* color, const IRect& rect) {
 	// TODO
 }
@@ -268,6 +296,17 @@ void D3D12CommandList::TransitionTextureState(RHITexture* texture, EResourceStat
 	}
 }
 
+void D3D12CommandList::TransitionBufferState(RHIBuffer* buffer, EResourceState stateBefore, EResourceState stateAfter) {
+	D3D12Buffer* d3d12Buffer = (D3D12Buffer*)buffer;
+	ID3D12Resource* resource = d3d12Buffer->GetResource();
+	const D3D12_RESOURCE_STATES d3d12StateBefore = d3d12Buffer->GetState();
+	//const D3D12_RESOURCE_STATES d3d12StateBefore = ToD3D12ResourceState(stateBefore);
+	const D3D12_RESOURCE_STATES d3d12StateAfter = ToD3D12ResourceState(stateAfter);
+	const D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(resource, d3d12StateBefore, d3d12StateAfter, 0);
+	m_CommandList->ResourceBarrier(1, &barrier);
+	d3d12Buffer->SetState(d3d12StateAfter);
+}
+
 void D3D12CommandList::GenerateMipmap(RHITexture* texture, uint8 mipSize, uint16 arrayIndex, uint16 arraySize, ETextureViewFlags viewFlags) {
 }
 
@@ -375,6 +414,26 @@ D3D12CommandMgr::D3D12CommandMgr(D3D12Device* device) : m_Device(device){
 	for(uint32 i=0; i<m_Queues.Size(); ++i) {
 		m_Queues[i].Initialize(m_Device, (EQueueType)i);
 	}
+	// create indirect command signatures
+	// DrawIndexed
+	{
+		D3D12_INDIRECT_ARGUMENT_DESC arg{};
+		arg.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
+		D3D12_COMMAND_SIGNATURE_DESC desc{};
+		desc.ByteStride = sizeof(D3D12_DRAW_ARGUMENTS);
+		desc.NumArgumentDescs = 1;
+		desc.pArgumentDescs = &arg;
+		DX_CHECK(m_Device->GetDevice()->CreateCommandSignature(&desc, nullptr, IID_PPV_ARGS(m_DrawIndirectSignature.Address())));
+	}
+	{
+		D3D12_INDIRECT_ARGUMENT_DESC arg{};
+		arg.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
+		D3D12_COMMAND_SIGNATURE_DESC desc{};
+		desc.ByteStride = sizeof(D3D12_DRAW_INDEXED_ARGUMENTS);
+		desc.NumArgumentDescs = 1;
+		desc.pArgumentDescs = &arg;
+		DX_CHECK(m_Device->GetDevice()->CreateCommandSignature(&desc, nullptr, IID_PPV_ARGS(m_DrawIndexedIndirectSignature.Address())));
+	}
 }
 
 void D3D12CommandMgr::BeginFrame() {
@@ -385,5 +444,13 @@ void D3D12CommandMgr::BeginFrame() {
 
 D3D12Queue* D3D12CommandMgr::GetQueue(EQueueType type) {
 	return &m_Queues[EnumCast(type)];
+}
+
+ID3D12CommandSignature* D3D12CommandMgr::GetDrawIndirectSignature() {
+	return m_DrawIndirectSignature.Get();
+}
+
+ID3D12CommandSignature* D3D12CommandMgr::GetDrawIndexedIndirectSignature() {
+	return m_DrawIndexedIndirectSignature.Get();
 }
 

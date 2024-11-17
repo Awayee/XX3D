@@ -5,7 +5,8 @@ constexpr uint32 UNIFORM_PAGE_SAGE = 64;
 EDynamicDescriptorType ToDynamicDescriptorType(EBindingType type) {
 	switch (type) {
 	case EBindingType::UniformBuffer:
-	case EBindingType::StorageBuffer:
+	case EBindingType::StructuredBuffer:
+	case EBindingType::RWStructuredBuffer:
 	case EBindingType::StorageTexture:
 	case EBindingType::Texture: return EDynamicDescriptorType::CbvSrvUav;
 	case EBindingType::Sampler: return EDynamicDescriptorType::Sampler;

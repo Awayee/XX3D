@@ -9,10 +9,16 @@
 
 
 namespace Object {
+	struct RenderContext;
+	class RenderCameraBase;
+	class RenderCamera;
+	class ShadowCamera;
 	class PrimitiveRendererBase;
 	class PrimitiveInstancedRendererBase;
 
-	enum class ERenderPassType : uint32 {
+	// TODO Discard mesh and instance components in ECS, storage all mesh data in PrimitiveMgr.
+
+	enum class ERenderPassType: uint32 {
 		PrePass = 0,
 		BasePass,
 		DirectionalShadow,
@@ -28,7 +34,6 @@ namespace Object {
 	struct PrimitiveRenderData {
 		PrimitiveResource* Primitive;
 		MaterialInterface* Material;
-		uint32 MaterialIndex{ INVALID_INDEX };
 	};
 
 	// static mesh
@@ -42,7 +47,7 @@ namespace Object {
 	// transform
 	struct TransformECSComponent {
 		ObjectTransformData TransformData;
-		Math::FTransform Transform;
+		uint32 CacheIndex{ INVALID_INDEX };
 		void SetTransform(const Math::FTransform& transform);
 		REGISTER_ECS_COMPONENT(TransformECSComponent);
 	};
@@ -50,6 +55,7 @@ namespace Object {
 	// instanced static mesh
 	struct InstancedDataECSComponent {
 		InstanceDataMgr InstanceData;
+		uint32 CacheIndex{INVALID_INDEX};
 		REGISTER_ECS_COMPONENT(InstancedDataECSComponent);
 	};
 
@@ -68,9 +74,13 @@ namespace Object {
 	// Manage all materials and pipeline states with reference counter, the pso with no reference will be removed.
 	class PrimitiveMaterialPSOCache {
 	public:
-		uint32 FindOrAddMaterial(MaterialInterface* material);
-		MaterialInterface* GetMaterial(uint32 materialIndex) const;
-		RHIGraphicsPipelineState* GetPSO(uint32 materialIndex, bool bInstanced);
+		struct MaterialChild {
+			MaterialInterface* Material;
+			uint32 MaterialIndex;
+		};
+		RHIGraphicsPipelineState* GetPSO(MaterialChild* handle, bool bInstanced);
+		void AddMaterialRef(MaterialChild* handle);
+		void RemoveMaterialRef(MaterialChild* handle);
 		uint32 GetMaterialSize() const;
 		// Reset all data
 		void Reset();
@@ -93,114 +103,183 @@ namespace Object {
 		TIDMapContainer<PSOCache> m_PSOCaches;
 		TArray<MaterialCache> m_MaterialCaches;
 		TMap<MaterialInterface*, uint32> m_MapMaterialIndex;
+
+		uint32 FixMaterialIndex(const MaterialChild* handle);
+		uint32 FindOrAddMaterial(MaterialInterface* material);
+		MaterialInterface* GetMaterial(uint32 materialIndex) const;
+		RHIGraphicsPipelineState* FindOrAddPSO(uint32 materialIndex, bool bInstanced);
 	};
 
 	class PrimitiveMgr {
 	public:
 		PrimitiveMgr();
 		~PrimitiveMgr() = default;
-		void AddPrimitive(const ObjectTransformData& transform, TArrayView<PrimitiveRenderData> primitives, TEnumFlag<ERenderPassType> passFlag);
-		void AddInstancedPrimitive(InstanceDataMgr* instanceDataMgr, TArrayView<PrimitiveRenderData> primitives, TEnumFlag<ERenderPassType> passFlag);
 
-		void GenerateBasePassDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer,
-			Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue);
+		void AddPrimitive(MeshECSComponent* mesh, TransformECSComponent* transform);
 
-		void GenerateDirectionalShadowDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer,
-			Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue,
-			RHIGraphicsPipelineState* pso, RHIGraphicsPipelineState* instancedPSO);
+		void AddInstancedPrimitive(MeshECSComponent* mesh, InstancedDataECSComponent* instanceData);
+
+		void PreDrawCall();
+
+		void GenerateBasePassDrawCall(Object::RenderCamera* camera);
+
+		void GenerateDirectionalShadowDrawCall(Object::ShadowCamera* camera, RHIGraphicsPipelineState* pso, RHIGraphicsPipelineState* instancedPSO);
 
 		void Clean();
 	protected:
 		TUniquePtr<PrimitiveMaterialPSOCache> m_MaterialPSOCache;
 		TUniquePtr<PrimitiveRendererBase> m_PrimitiveRenderer;
 		TUniquePtr<PrimitiveInstancedRendererBase> m_PrimitiveInstancedRenderer;
-		// get the corrected index of material in primitive
-		void CorrectPrimitiveMaterialIndex(PrimitiveRenderData* primitive);
 	};
 
 	class IPrimitiveRendererBase {
 	public:
 		IPrimitiveRendererBase(PrimitiveMaterialPSOCache* materialPSOCache) : m_MaterialPSOCache(materialPSOCache) {}
 		virtual ~IPrimitiveRendererBase() = default;
-		virtual void GenerateBasePassDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer,
-			Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue) = 0;
-
-		virtual void GenerateDirectionalShadowDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer,
-			Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue,
-			RHIGraphicsPipelineState* pso, RHIGraphicsPipelineState* instancedPSO) = 0;
+		virtual void PreDrawCall() = 0;
+		virtual void GenerateBasePassDrawCall(Object::RenderCamera* camera) = 0;
+		virtual void GenerateDirectionalShadowDrawCall(Object::ShadowCamera* camera, RHIGraphicsPipelineState* pso) = 0;
 
 	protected:
 		PrimitiveMaterialPSOCache* m_MaterialPSOCache;
 	};
 
 	// primitive renderer for separated objects
-	class PrimitiveRendererBase : public IPrimitiveRendererBase {
+	class PrimitiveRendererBase: public IPrimitiveRendererBase {
 	public:
 		using IPrimitiveRendererBase::IPrimitiveRendererBase;
-		virtual void Add(const ObjectTransformData& transform, TArrayView<PrimitiveRenderData> primitives, TEnumFlag<ERenderPassType> passFlag) = 0;
+		virtual void Add(MeshECSComponent* mesh, TransformECSComponent* transform) = 0;
 		virtual void Reset() = 0;
 	};
 
 	// primitive renderer for instanced objects
-	class PrimitiveInstancedRendererBase : public IPrimitiveRendererBase {
+	class PrimitiveInstancedRendererBase: public IPrimitiveRendererBase {
 	public:
 		using IPrimitiveRendererBase::IPrimitiveRendererBase;
-		virtual void Add(InstanceDataMgr* instanceDataMgr, TArrayView<PrimitiveRenderData> primitives, TEnumFlag<ERenderPassType> passFlag) = 0;
+		virtual void Add(MeshECSComponent* mesh, InstancedDataECSComponent* instanceData) = 0;
 		virtual void Reset() = 0;
 	};
 
-	class PrimitiveRendererCPUDriven : public PrimitiveRendererBase {
+	class PrimitiveRendererCPUDriven: public PrimitiveRendererBase {
 	public:
 		using PrimitiveRendererBase::PrimitiveRendererBase;
 		~PrimitiveRendererCPUDriven() override = default;
-		void Add(const ObjectTransformData& transform, TArrayView<PrimitiveRenderData> primitives, TEnumFlag<ERenderPassType> passFlag) override;
+		void Add(MeshECSComponent* mesh, TransformECSComponent* transform) override;
 		void Reset() override;
-		void GenerateBasePassDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer, Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue) override;
-		void GenerateDirectionalShadowDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer, Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue, RHIGraphicsPipelineState* pso, RHIGraphicsPipelineState* instancedPSO) override;
+		void PreDrawCall() override {/*Do nothing*/ }
+		void GenerateBasePassDrawCall(Object::RenderCamera* camera) override;
+		void GenerateDirectionalShadowDrawCall(Object::ShadowCamera* camera, RHIGraphicsPipelineState* pso) override;
 	private:
-		// Multi primitives can share with one transform 
-		TArray<ObjectTransformData> m_Transforms;
-
-		// aabbs of primitives
-		TArray<Math::AABB3> m_PrimitiveAABBs;
-		// unbatched primitives
-		struct PrimitiveCache {
+		struct PrimitiveCache: PrimitiveMaterialPSOCache::MaterialChild{
 			PrimitiveResource* Primitive;
-			uint32 MaterialIndex;
-			uint32 TransformIndex;
-			uint32 AABBIndex;
+			Math::AABB3 AABB;
 		};
-		TStaticArray<TArray<PrimitiveCache>, EnumCast(ERenderPassType::MaxNum)> m_PrimitiveCacheArrays;
-		// frustum cull, and generate transform buffer for primitives
-		struct PrimitiveCullResult {
-			TArray<uint32> Primitives;
-			TArray<RHIDynamicBuffer> TransformBuffers;
+		struct PrimitiveCacheGroup {
+			ObjectTransformData Transform;
+			TArray<PrimitiveCache> PrimitiveCaches;
+			uint32 BufferIndex{ INVALID_INDEX }; // index of transform buffer
+			uint32 RefCount{ 0 };
+			bool IsValid() const { return PrimitiveCaches.Size(); }
 		};
-		void FrustumCull(const Math::Frustum& frustum, PrimitiveCullResult& outResult, ERenderPassType pass);
+		struct PCGDestructor {
+			void operator()(PrimitiveCacheGroup& p) const {
+				p.PrimitiveCaches.Reset();
+			}
+		};
+		// all primitives
+		TIDReuseArray<PrimitiveCacheGroup, PCGDestructor> m_PrimitiveStorage;
+		// primitives indices in per pass
+		TStaticArray<TArray<uint32>, EnumCast(ERenderPassType::MaxNum)> m_RenderingCacheArray;
+		// dynamic buffer of per primitive group.
+		TArray<RHIDynamicBuffer> m_TransformBuffers;
+		const RHIDynamicBuffer& GetTransformBuffer(uint32 groupIndex);
 	};
 
-	class PrimitiveInstancedRendererCPUDriven : public PrimitiveInstancedRendererBase {
+	class PrimitiveInstancedRendererCPUDriven: public PrimitiveInstancedRendererBase {
 	public:
 		using PrimitiveInstancedRendererBase::PrimitiveInstancedRendererBase;
 		~PrimitiveInstancedRendererCPUDriven() override = default;
-		void Add(InstanceDataMgr* instanceDataMgr, TArrayView<PrimitiveRenderData> primitives, TEnumFlag<ERenderPassType> passFlag) override;
+		void Add(MeshECSComponent* mesh, InstancedDataECSComponent* instanceData) override;
 		void Reset() override;
-		void GenerateBasePassDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer, Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue) override;
-		void GenerateDirectionalShadowDrawCall(const Math::Frustum& frustum, const RHIDynamicBuffer& cameraBuffer, Render::DrawCallQueue& cullingQueue, Render::DrawCallQueue& renderingQueue, RHIGraphicsPipelineState* pso, RHIGraphicsPipelineState* instancedPSO) override;
+		void PreDrawCall() override {/*Do nothing*/ }
+		void GenerateBasePassDrawCall(Object::RenderCamera* camera) override;
+		void GenerateDirectionalShadowDrawCall(Object::ShadowCamera* camera, RHIGraphicsPipelineState* pso) override;
 	private:
-		TArray<InstanceDataMgr*> m_InstanceDataMgrs;
-		// instanced primitives
-		struct InstancedPrimitiveCache {
+		struct InstancedPrimitiveCache : PrimitiveMaterialPSOCache::MaterialChild {
 			PrimitiveResource* Primitive;
-			uint32 MaterialIndex;
-			uint32 InstanceDataIndex;
 		};
-		TStaticArray<TArray<InstancedPrimitiveCache>, EnumCast(ERenderPassType::MaxNum)> m_InstancedPrimitiveCacheArrays;
+		struct InstancedPrimitiveCacheGroup {
+			InstanceDataMgr* DataMgr;
+			TArray<InstancedPrimitiveCache> PrimitiveCaches;
+			uint32 RefCount;
+			bool IsValid()const { return PrimitiveCaches.Size(); }
+		};
+		struct IPCGDestructor {
+			void operator()(InstancedPrimitiveCacheGroup& p) const {
+				p.PrimitiveCaches.Reset();
+			}
+		};
+		// all primitives
+		TIDReuseArray<InstancedPrimitiveCacheGroup, IPCGDestructor> m_PrimitiveStorage;
+		// primitives indices in per pass
+		TStaticArray<TArray<uint32>, EnumCast(ERenderPassType::MaxNum)> m_RenderingCacheArray;
+	};
 
-		struct PrimitiveCullResult {
-			TArray<TPair<uint32, uint32>> InstancedPrimitives; // the indices and counts of primitives
-			TArray<RHIDynamicBuffer> InstanceBuffers;
+	// GPU driven instanced
+	class PrimitiveInstancedRendererGPUDriven: public PrimitiveInstancedRendererBase {
+	public:
+		PrimitiveInstancedRendererGPUDriven(PrimitiveMaterialPSOCache* cache);
+		~PrimitiveInstancedRendererGPUDriven() override = default;
+		void Add(MeshECSComponent* mesh, InstancedDataECSComponent* instanceData) override;
+		void Reset() override;
+		void PreDrawCall() override;
+		void GenerateBasePassDrawCall(Object::RenderCamera* camera) override;
+		void GenerateDirectionalShadowDrawCall(Object::ShadowCamera* camera, RHIGraphicsPipelineState* pso) override;
+	private:
+		struct InstancedPrimitiveCache: PrimitiveMaterialPSOCache::MaterialChild {
+			PrimitiveResource* Primitive;
 		};
-		void FrustumCull(const Math::Frustum& frustum, PrimitiveCullResult& outResult, ERenderPassType pass);
+		struct InstancedPrimitiveCacheGroup {
+			InstanceDataMgr* DataMgr;
+			RHIBuffer* CacheInstanceBuffer; // check if buffer retired
+			TArray<InstancedPrimitiveCache> PrimitiveCaches;
+			TEnumFlag<ERenderPassType> RenderFlag;
+			uint32 RefCount;
+			bool IsValid()const { return PrimitiveCaches.Size(); }
+		};
+		struct IPCGDestructor {
+			void operator()(InstancedPrimitiveCacheGroup& p) const {
+				p.PrimitiveCaches.Reset();
+			}
+		};
+		// all primitives
+		TIDReuseArray<InstancedPrimitiveCacheGroup, IPCGDestructor> m_PrimitiveStorage;
+		// global GPU data
+		RHIBufferPtr m_InstanceAABBBuffer;
+		RHIBufferPtr m_ClusterAABBBuffer;
+		// per pass GPU data
+		struct PassBuffers {
+			RHIBufferPtr IndirectCmd; // raw indirect cmd buffer, copied to per camera when culling
+			RHIBufferPtr Cluster;
+			uint32 ClusterSize;
+			uint32 AlignedInstanceSize; // all instance size aligned by 4
+			uint32 PrimitiveSize;
+		};
+		TStaticArray<PassBuffers, EnumCast(ERenderPassType::MaxNum)> m_PassBuffersArray;
+		TStaticArray<TArray<uint32>, EnumCast(ERenderPassType::MaxNum)> m_RenderingCacheArray;
+		// pso
+		RHIComputePipelineStatePtr m_CullingPSOWithOcclusionTest;
+		RHIComputePipelineStatePtr m_CullingPSO;
+		uint32 m_SRVAlignment;
+		bool m_IsBufferDirty;
+		bool m_EnableOcclusionTest;
+
+		bool CheckBufferRetired(); // check if need update buffer, called before UpdateGPUBuffers
+
+		void UpdateGPUBuffers(); // update when instances modified
+
+		void GPUCulling(Object::RenderCameraBase* camera, RenderContext& context, ERenderPassType pass);
+
+		uint32 AlignInstanceSize(uint32 size) const;
 	};
 }

@@ -1,5 +1,6 @@
 #define CASCADE_NUM 4
 #define SHADOW_VAL 0.2
+#include "Common.hlsli"
 
 
 float2 GetTexelSize2D(Texture2DArray<float> tex){
@@ -62,11 +63,6 @@ float2 PoissonDisk25(uint num){
 //    };
 //    return Values[num];
 //}
-
-// return 1.0 if a is closer than b else 0.0
-float IsDepthCloser(float a, float b){
-    return step(a, b);
-}
 
 float CalcShadowVal(Texture2DArray<float> inShadowMap, SamplerState inSampler, uint cascade, float2 uv, float z){
     float closestZ = inShadowMap.Sample(inSampler, float3(uv, (float) cascade)).r;

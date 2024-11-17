@@ -2,6 +2,17 @@
 #include "Math/Public/Math.h"
 
 
+void RHIResource::SetName(const char* name) {
+    if(m_Name != name) {
+        SetNameInternal(name);
+        m_Name = name;
+    }
+}
+
+const char* RHIResource::GetName() const {
+    return m_Name.c_str();
+}
+
 uint32 GetRHIFormatPixelSize(ERHIFormat format) {
     struct FormatTexelInfo {
         ERHIFormat Format;
@@ -198,6 +209,11 @@ bool RHIDynamicBuffer::IsValid() const {
     return INVALID_INDEX != BufferIndex;
 }
 
+RHIDynamicBuffer RHIDynamicBuffer::SubBuffer(uint32 offset, uint32 size) const {
+    CHECK(offset + size <= Size);
+    return RHIDynamicBuffer{ BufferIndex, Offset + offset, size, Stride };
+}
+
 RHIDynamicBuffer::RHIDynamicBuffer(): BufferIndex(INVALID_INDEX), Offset(0), Size(0), Stride(0) {}
 
 RHIDynamicBuffer::RHIDynamicBuffer(uint32 bufferIndex, uint32 offset, uint32 size, uint32 stride): BufferIndex(bufferIndex), Offset(offset), Size(size), Stride(stride){}
@@ -229,7 +245,8 @@ bool RHIShaderParam::operator==(const RHIShaderParam& rhs) const {
         return false;
     }
     switch(Type) {
-    case EBindingType::StorageBuffer:
+    case EBindingType::StructuredBuffer:
+    case EBindingType::RWStructuredBuffer:
     case EBindingType::UniformBuffer:
         if(IsDynamicBuffer != rhs.IsDynamicBuffer) {
             return false;
@@ -256,13 +273,8 @@ RHIShaderParam RHIShaderParam::UniformBuffer(RHIBuffer* buffer, uint32 offset, u
     return parameter;
 }
 
-RHIShaderParam RHIShaderParam::StorageBuffer(RHIBuffer* buffer, uint32 offset, uint32 size) {
-    RHIShaderParam parameter{};
-    parameter.Type = EBindingType::StorageBuffer;
-    parameter.Data.Buffer = buffer;
-    parameter.Data.Offset = offset;
-    parameter.Data.Size = size;
-    return parameter;
+RHIShaderParam RHIShaderParam::UniformBuffer(RHIBuffer* buffer) {
+    return UniformBuffer(buffer, 0, buffer->GetDesc().ByteSize);
 }
 
 RHIShaderParam RHIShaderParam::UniformBuffer(const RHIDynamicBuffer& dynamicBuffer) {
@@ -273,9 +285,43 @@ RHIShaderParam RHIShaderParam::UniformBuffer(const RHIDynamicBuffer& dynamicBuff
     return parameter;
 }
 
-RHIShaderParam RHIShaderParam::StorageBuffer(const RHIDynamicBuffer& dynamicBuffer) {
+RHIShaderParam RHIShaderParam::StructuredBuffer(RHIBuffer* buffer, uint32 offset, uint32 size) {
     RHIShaderParam parameter{};
-    parameter.Type = EBindingType::StorageBuffer;
+    parameter.Type = EBindingType::StructuredBuffer;
+    parameter.Data.Buffer = buffer;
+    parameter.Data.Offset = offset;
+    parameter.Data.Size = size;
+    return parameter;
+}
+
+RHIShaderParam RHIShaderParam::StructuredBuffer(RHIBuffer* buffer) {
+    return StructuredBuffer(buffer, 0, buffer->GetDesc().ByteSize);
+}
+
+RHIShaderParam RHIShaderParam::StructuredBuffer(const RHIDynamicBuffer& dynamicBuffer) {
+    RHIShaderParam parameter{};
+    parameter.Type = EBindingType::StructuredBuffer;
+    parameter.IsDynamicBuffer = true;
+    parameter.Data.DynamicBuffer = dynamicBuffer;
+    return parameter;
+}
+
+RHIShaderParam RHIShaderParam::RWStructuredBuffer(RHIBuffer* buffer, uint32 offset, uint32 size) {
+    RHIShaderParam parameter{};
+    parameter.Type = EBindingType::RWStructuredBuffer;
+    parameter.Data.Buffer = buffer;
+    parameter.Data.Offset = offset;
+    parameter.Data.Size = size;
+    return parameter;
+}
+
+RHIShaderParam RHIShaderParam::RWStructuredBuffer(RHIBuffer* buffer) {
+    return RWStructuredBuffer(buffer, 0, buffer->GetDesc().ByteSize);
+}
+
+RHIShaderParam RHIShaderParam::RWStructuredBuffer(const RHIDynamicBuffer& dynamicBuffer) {
+    RHIShaderParam parameter{};
+    parameter.Type = EBindingType::RWStructuredBuffer;
     parameter.IsDynamicBuffer = true;
     parameter.Data.DynamicBuffer = dynamicBuffer;
     return parameter;

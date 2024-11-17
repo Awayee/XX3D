@@ -12,6 +12,7 @@ public:
 	void BeginFrame() override;
 	void BeginRendering() override;
 	ERHIFormat GetDepthFormat() override;
+	uint32 GetBufferAlignment(EBufferFlags bufferFlags) override;
 	RHIViewport* GetViewport() override;
 	RHIBufferPtr CreateBuffer(const RHIBufferDesc& desc) override;
 	RHITexturePtr CreateTexture(const RHITextureDesc& desc) override;

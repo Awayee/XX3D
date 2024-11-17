@@ -1,9 +1,10 @@
 #include "VulkanMemory.h"
 #include "VulkanDevice.h"
+#include "VulkanConverter.h"
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 
-constexpr uint32 DYNAMIC_PAGE_SIZE = 16 << 10;
+static constexpr EBufferFlags DYNAMIC_BUFFER_FLAGS = EBufferFlags::Uniform | EBufferFlags::SRV | EBufferFlags::IndirectDraw | EBufferFlags::CopySrc | EBufferFlags::Vertex;
 
 inline VmaMemoryUsage ConvertVmaMemoryUsage(EMemoryType type) {
 	switch (type) {
@@ -139,8 +140,9 @@ void VulkanMemoryAllocator::FreeImageMemory(ImageAllocation& allocation) {
 
 VulkanDynamicBufferAllocator::VulkanDynamicBufferAllocator(VulkanMemoryAllocator* allocator, const VulkanDevice* device, uint32 pageSize) :
 	m_Allocator(allocator),
-	m_UniformAlignment((uint32)device->GetProperties().limits.minUniformBufferOffsetAlignment),
-	m_PageSize(pageSize) {}
+	m_PageSize(pageSize) {
+	m_BufferAlignment = device->GetBufferAlignment(DYNAMIC_BUFFER_FLAGS);
+}
 
 VulkanDynamicBufferAllocator::~VulkanDynamicBufferAllocator() {
 	for(BufferChunk& chunk: m_BufferChunks) {
@@ -148,18 +150,21 @@ VulkanDynamicBufferAllocator::~VulkanDynamicBufferAllocator() {
 	}
 }
 
-VulkanDynamicBufferAllocator::Allocation VulkanDynamicBufferAllocator::Allocate(VkBufferUsageFlags usage, uint32 size, const void* data) {
-	size = Aligned(size, m_UniformAlignment);
+VulkanDynamicBufferAllocator::Allocation VulkanDynamicBufferAllocator::Allocate(EBufferFlags flags, uint32 size, const void* data) {
+	CHECK(EnumHasAnyFlags(DYNAMIC_BUFFER_FLAGS, flags));
+	size = Aligned(size, m_BufferAlignment);
 	ASSERT(size <= m_PageSize, "Dynamic allocation size is greater than page size!");
 	const uint32 chunkIdx = PrepareChunk(size);
 	BufferChunk& chunk = m_BufferChunks[chunkIdx];
 	const uint32 offset = chunk.AllocatedSize;
 	chunk.AllocatedSize += size;
-	if(!chunk.MappedData) {
-		chunk.MappedData = chunk.Allocation.Map();
+	if(data) {
+		if (!chunk.MappedData) {
+			chunk.MappedData = chunk.Allocation.Map();
+		}
+		uint8* mappedPointer = (uint8*)chunk.MappedData + offset;
+		memcpy(mappedPointer, data, size);
 	}
-	uint8* mappedPointer = (uint8*)chunk.MappedData + offset;
-	memcpy(mappedPointer, data, size);
 	return { chunkIdx, offset, size };
 }
 
@@ -199,8 +204,9 @@ uint32 VulkanDynamicBufferAllocator::PrepareChunk(uint32 requiredSize) {
 	// allocate
 	m_AllocatedIndex = m_BufferChunks.Size();
 	auto& chunk = m_BufferChunks.EmplaceBack();
+	const VkBufferUsageFlags bufferFlags = ToBufferUsage(DYNAMIC_BUFFER_FLAGS);
 	m_Allocator->AllocateBufferMemory(chunk.Allocation, m_PageSize,
-		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
+		bufferFlags,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	chunk.AllocatedSize = 0;
 	chunk.MappedData = nullptr;

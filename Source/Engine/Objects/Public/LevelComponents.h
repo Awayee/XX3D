@@ -1,5 +1,6 @@
 #pragma once
-#include "Level.h"
+#include "Objects/Public/Camera.h"
+#include "Objects/Public/Level.h"
 #include "Math/Public/Vector.h"
 namespace Object {
 	class CameraComponent: public LevelComponent {

@@ -17,6 +17,14 @@ namespace Math {
 			return &X;
 		}
 
+		bool operator==(const Quaternion<T>& rhs) const {
+			return X == rhs.X && Y == rhs.Y && Z == rhs.Z && W == rhs.W;
+		}
+
+		bool operator!=(const Quaternion<T>& rhs) const {
+			return !(operator==(rhs));
+		}
+
         static Quaternion<T> AngleAxis(T a, const Vector3<T>& axis) {
 			Quaternion<T> q;
 			T hanfA = (T)0.5f * a;
