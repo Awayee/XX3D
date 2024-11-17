@@ -1,0 +1,13 @@
+{
+    "Name": "",
+    "Primitives": [
+        {
+            "Material": "Plants/shrub.matt",
+            "BinaryFile": "Plants/shrub_010.primitive"
+        },
+        {
+            "Material": "Plants/shrub.matt",
+            "BinaryFile": "Plants/shrub_011.primitive"
+        }
+    ]
+}

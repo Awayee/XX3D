@@ -1,0 +1,17 @@
+{
+    "Name": "",
+    "Primitives": [
+        {
+            "Material": "Plants/rock.matt",
+            "BinaryFile": "Plants/rock_moss_set_010.primitive"
+        },
+        {
+            "Material": "Plants/rock.matt",
+            "BinaryFile": "Plants/rock_moss_set_011.primitive"
+        },
+        {
+            "Material": "Plants/rock.matt",
+            "BinaryFile": "Plants/rock_moss_set_012.primitive"
+        }
+    ]
+}

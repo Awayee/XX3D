@@ -1,0 +1,9 @@
+{
+    "Name": "",
+    "Primitives": [
+        {
+            "Material": "Plants/grass_medium_01.matt",
+            "BinaryFile": "Plants/grass_medium_01_large_a_LOD10.primitive"
+        }
+    ]
+}

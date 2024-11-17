@@ -3,14 +3,14 @@
         {
             "Name": "CameraComponent",
             "Eye": [
-                65.12092590332031,
-                1.4501644372940063,
-                66.91993713378906
+                64.24977111816406,
+                0.7192224860191345,
+                68.13865661621094
             ],
             "At": [
-                65.2017822265625,
-                1.2527216672897339,
-                65.94296264648438
+                64.3172836303711,
+                0.8664296269416809,
+                67.15185546875
             ],
             "Up": [
                 0.0,
@@ -83,6 +83,34 @@
             ]
         },
         {
+            "Name": "Cube",
+            "Components": [
+                {
+                    "Name": "MeshComponent",
+                    "MeshFile": "Meshes/Cube.mesh",
+                    "CastShadow": true
+                },
+                {
+                    "Name": "TransformComponent",
+                    "Position": [
+                        62.29999923706055,
+                        0.8999999761581421,
+                        64.0
+                    ],
+                    "Scale": [
+                        2.0,
+                        2.0,
+                        2.0
+                    ],
+                    "Rotation": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                }
+            ]
+        },
+        {
             "Name": "Keqing0",
             "Components": [
                 {
@@ -139,34 +167,6 @@
             ]
         },
         {
-            "Name": "Keqing2",
-            "Components": [
-                {
-                    "Name": "TransformComponent",
-                    "Position": [
-                        66.0,
-                        0.0,
-                        64.0
-                    ],
-                    "Scale": [
-                        1.0,
-                        1.0,
-                        1.0
-                    ],
-                    "Rotation": [
-                        0.0,
-                        -0.0,
-                        0.0
-                    ]
-                },
-                {
-                    "Name": "MeshComponent",
-                    "MeshFile": "keqing/keqing.mesh",
-                    "CastShadow": true
-                }
-            ]
-        },
-        {
             "Name": "Sphere",
             "Components": [
                 {
@@ -195,16 +195,72 @@
             ]
         },
         {
+            "Name": "Keqing2",
+            "Components": [
+                {
+                    "Name": "TransformComponent",
+                    "Position": [
+                        66.0,
+                        0.0,
+                        64.0
+                    ],
+                    "Scale": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "Rotation": [
+                        0.0,
+                        -0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "Name": "MeshComponent",
+                    "MeshFile": "keqing/keqing.mesh",
+                    "CastShadow": true
+                }
+            ]
+        },
+        {
             "Name": "Grass",
             "Components": [
                 {
                     "Name": "MeshComponent",
-                    "MeshFile": "Plants/grass_medium_01_large_a_LOD0.mesh",
+                    "MeshFile": "Plants/grass_medium_01_large_a_LOD1.mesh",
                     "CastShadow": true
                 },
                 {
                     "Name": "InstanceDataComponent",
-                    "InstanceFile": "Plants/grass_instances_10k.instd"
+                    "InstanceFile": "Plants/grass_instances_100k.instd"
+                }
+            ]
+        },
+        {
+            "Name": "Rock",
+            "Components": [
+                {
+                    "Name": "MeshComponent",
+                    "MeshFile": "Plants/rock_moss_set_01.mesh",
+                    "CastShadow": true
+                },
+                {
+                    "Name": "InstanceDataComponent",
+                    "InstanceFile": "Plants\\rock_instances_400.instd"
+                }
+            ]
+        },
+        {
+            "Name": "Shrub",
+            "Components": [
+                {
+                    "Name": "MeshComponent",
+                    "MeshFile": "Plants/shrub_01.mesh",
+                    "CastShadow": true
+                },
+                {
+                    "Name": "InstanceDataComponent",
+                    "InstanceFile": "Plants/shrub_instances_1k.instd"
                 }
             ]
         }
