@@ -39,6 +39,7 @@ You can also switch to `Runtime` to lauch your game.
 
 # Current Features Overview
 - RHI supported with D3D12 and Vulkan, configurated by `RHIType` in `ProjectConfig.ini` in your project directory.
+- Component system derived from ECS: combine components to determin the feature of an actor.
 - Asset manager, with importing, creating.
   ![image](https://github.com/user-attachments/assets/69995458-f29e-418b-a1b8-72792db7dff0)
   Just drag your mesh file or image file to Mesh Importer or Texture Importer, and "Import"
@@ -48,11 +49,11 @@ You can also switch to `Runtime` to lauch your game.
   ![image](https://github.com/user-attachments/assets/d35a59d9-4009-4927-ab19-6c1e14b9154e)
 - Directional light shadow and debug.
   ![image](https://github.com/user-attachments/assets/2860950f-88df-46ed-bda6-c8be10d9739a)
-- Foliage renering system with massive instances.
-  ![image](https://github.com/user-attachments/assets/3b28116b-957d-4838-a9e0-b892c03183ca)
 - Materail system with material template and material instance.
   ![image](https://github.com/user-attachments/assets/dc4bd0ed-fe28-4324-9287-724c452c6bb8)
-- A ECS drived omponent system: combine components to determin the feature of an actor.
+- GPU driven pipeline for maintaining high performance when rendering massive objects.
+- ![image](https://github.com/user-attachments/assets/711c5bf6-21c7-4f98-aa4f-ea66d8485af4)
+
 
 # Future Supportings
 - Task Graph
