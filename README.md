@@ -51,8 +51,8 @@ You can also switch to `Runtime` to lauch your game.
   ![image](https://github.com/user-attachments/assets/2860950f-88df-46ed-bda6-c8be10d9739a)
 - Materail system with material template and material instance.
   ![image](https://github.com/user-attachments/assets/dc4bd0ed-fe28-4324-9287-724c452c6bb8)
-- GPU driven pipeline for maintaining high performance when rendering massive objects.
-- ![image](https://github.com/user-attachments/assets/711c5bf6-21c7-4f98-aa4f-ea66d8485af4)
+- GPU driven pipeline for maintaining high performance when rendering massive amount of objects.
+  ![image](https://github.com/user-attachments/assets/711c5bf6-21c7-4f98-aa4f-ea66d8485af4)
 
 
 # Future Supportings
