@@ -1,38 +1,32 @@
 #pragma once
 #include <string>
-#include <cwchar>
+#include <string_view>
+#include <charconv>
 
 typedef std::string XString;
 typedef std::wstring XWString;
+typedef std::string_view XStringView;
+typedef std::wstring_view XWStringView;
 
 XWString String2WString(const XString& str);
 
 XString WString2String(const XWString& wStr);
 
-inline bool StrStartsWith(const char* str, const char* sign) {
-	if (!str || !sign) {
-		return false;
-	}
-	auto strLen = strlen(str);
-	auto signLen = strlen(sign);
-	if (strLen < signLen) {
-		return false;
-	}
-	return strncmp(str, sign, signLen) == 0;
-};
+bool StrStartsWith(XStringView Str, XStringView Sign);
 
-inline bool StrEndsWith(const char* str, const char* sign) {
-	if (!str || !sign) {
-		return false;
-	}
+bool StrStartsWith(XStringView Str, char Ch);
 
-	auto strLen = strlen(str);
-	auto signLen = strlen(sign);
-	if (strLen < signLen) {
-		return false;
-	}
-	return strncmp(str + (strLen - signLen), sign, signLen) == 0;
-};
+bool StrEndsWith(XStringView Str, XStringView Sign);
+
+bool StrEndsWith(XStringView Str, char Ch);
+
+inline bool StrStartsWith(const char* Str, const char* Sign) {
+	return StrStartsWith(XStringView{ Str }, XStringView{ Sign });
+}
+
+inline bool StrEndsWith(const char* Str, const char* Sign) {
+	return StrEndsWith(XStringView{ Str }, XStringView{ Sign });
+}
 
 inline bool StrEqual(const char* s0, const char* s1) {
 	return strcmp(s0, s1) == 0;
@@ -62,16 +56,28 @@ inline XString ToString(T val) {
 }
 
 template<typename T>
-inline T StringToNum(const char* str) {
-	return (T)std::atoi(str);
+inline T StringToNum(XStringView str) {
+	T Value;
+	std::from_chars(str.data(), str.data() + str.size(), Value);
+	return Value;
 }
 
-template<> inline float StringToNum(const char* str) {
-	return (float)std::atof(str);
+template<> inline float StringToNum(XStringView str) {
+	float Value;
+	std::from_chars(str.data(), str.data() + str.size(), Value);
+	return Value;
 }
 
-template<> inline double StringToNum(const char* str) {
-	return (double)std::atof(str);
+template<> inline double StringToNum(XStringView str) {
+	double Value;
+	std::from_chars(str.data(), str.data() + str.size(), Value);
+	return Value;
+}
+
+template<> inline bool StringToNum(XStringView str) {
+	int Value;
+	std::from_chars(str.data(), str.data() + str.size(), Value);
+	return (bool)Value;
 }
 
 inline void StrCopy(char* dst, const char* src) {

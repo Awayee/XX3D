@@ -9,7 +9,7 @@
 #include "WndLevelSetting.h"
 #include "WndDebugView.h"
 #include "WndRenderGraph.h"
-#include "System/Public/Configuration.h"
+#include "System/Public/ConfigManager.h"
 
 namespace Editor {
 	void SetImGuiStyle() {
@@ -101,7 +101,7 @@ namespace Editor {
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 		io.ConfigWindowsMoveFromTitleBarOnly = true;
 
-		const XString fontFile = Engine::EngineConfig::Instance().GetEngineAssetDir().append(Engine::EngineConfig::Instance().GetDefaultFont()).string();
+		const XString fontFile = File::CombinePathStr(Engine::ConfigMgr::Instance().GetEngineAssetDir(), Engine::ConfigMgr::Instance().GetDefaultFont());
 		io.Fonts->AddFontFromFileTTF(fontFile.c_str(), contentScale * 16, nullptr, nullptr);
 		ASSERT(io.Fonts->Build(), "Failed to build fonts");
 		io.IniFilename = nullptr; // Do not save settings

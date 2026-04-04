@@ -3,7 +3,7 @@
 #include "Objects/Public/SkyBox.h"
 #include "Objects/Public/StaticMesh.h"
 #include "Objects/Public/LevelComponents.h"
-#include "System/Public/Configuration.h"
+#include "System/Public/ConfigManager.h"
 
 namespace Editor {
 
@@ -146,7 +146,7 @@ namespace Editor {
 		// initialize type info
 		LevelComponentEditProxyFactory::Instance().Initialize();
 		m_Level.Reset(new EditorLevel(Object::RenderScene::GetDefaultScene()));
-		File::FPath path = Engine::ProjectConfig::Instance().StartLevel;
+		File::FPath path = Engine::ConfigMgr::Instance().GetProjectConfig().StartLevel;
 		if (auto node = ProjectAssetMgr::Instance()->GetFileNode(path)) {
 			LoadLevel(node->GetPathStr().c_str());
 		}

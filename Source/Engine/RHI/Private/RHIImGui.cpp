@@ -1,7 +1,7 @@
 #include "RHI/Public/RHIImGui.h"
 #include "VulkanRHI/VulkanImGui.h"
 #include "D3D12RHI/D3D12ImGui.h"
-#include "System/Public/Configuration.h"
+#include "System/Public/ConfigManager.h"
 #include <imnodes.h>
 
 TUniquePtr<RHIImGui> RHIImGui::s_Instance;
@@ -11,7 +11,7 @@ RHIImGui* RHIImGui::Instance() {
 }
 
 void RHIImGui::Initialize(void(*configInitializer)()) {
-	const Engine::ERHIType rhiType = Engine::ProjectConfig::Instance().RHIType;
+	const Engine::ERHIType rhiType = Engine::ConfigMgr::Instance().GetProjectConfig().RHIType;
 	if(Engine::ERHIType::Vulkan == rhiType) {
 		s_Instance.Reset(new VulkanImGui(configInitializer));
 	}

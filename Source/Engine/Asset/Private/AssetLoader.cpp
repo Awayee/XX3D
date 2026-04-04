@@ -1,5 +1,5 @@
 #include "Asset/Public/AssetLoader.h"
-#include "System/Public/Configuration.h"
+#include "System/Public/ConfigManager.h"
 #include "Core/Public/Log.h"
 
 namespace Asset {
@@ -12,15 +12,15 @@ namespace Asset {
 	}
 
 	File::FPath AssetLoader::AssetPath() {
-		return Engine::EngineConfig::Instance().GetProjectAssetDir();
+		return Engine::ConfigMgr::Instance().GetProjectAssetDir();
 	}
 
 	File::FPath AssetLoader::GetRelativePath(File::PathStr fullPath) {
-		return File::RelativePath(fullPath, Engine::EngineConfig::Instance().GetProjectAssetDir());
+		return File::RelativePath(fullPath, AssetPath());
 	}
 
 	File::FPath AssetLoader::GetAbsolutePath(File::PathStr filePath) {
-		return Engine::EngineConfig::Instance().GetProjectAssetDir().append(filePath);
+		return AssetPath().append(filePath);
 	}
 
 	bool AssetLoader::LoadProjectAsset(AssetBase* asset, File::PathStr filePath) {
@@ -33,7 +33,7 @@ namespace Asset {
 	}
 
 	bool AssetLoader::LoadEngineAsset(AssetBase* asset, File::PathStr filePath) {
-		const XString fullPath = Engine::EngineConfig::Instance().GetEngineAssetDir().append(filePath).string();
+		const XString fullPath = AssetPath().append(filePath).string();
 		if (!asset->Load(fullPath.c_str())) {
 			LOG_WARNING("[AssetLoader::LoadEngineAsset] Failed to load file: %s", filePath);
 			return false;

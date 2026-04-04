@@ -1,6 +1,7 @@
 #pragma once
 #include "VulkanContext.h"
 #include "RHI/Public/RHIEnum.h"
+#include "Core/Public/TArray.h"
 #include <vk_mem_alloc.h>
 
 class VulkanDevice;

@@ -1,8 +1,8 @@
 #include "Objects/Public/DirectionalLight.h"
 #include "Asset/Public/AssetCommon.h"
-#include "System/Public/Configuration.h"
 #include "Render/Public/GlobalShader.h"
 #include "Objects/Public/RenderCamera.h"
+#include "System/Public/ConfigManager.h"
 
 namespace {
 	class DirectionalShadowVS : public Render::GlobalShader {
@@ -60,7 +60,7 @@ namespace Object {
 
 	DirectionalLight::DirectionalLight() {
 		// load shadow map size
-		m_ShadowConfig.ShadowMapSize = Engine::ProjectConfig::Instance().DefaultShadowMapSize;
+		m_ShadowConfig.ShadowMapSize = Engine::ConfigMgr::Instance().GetProjectConfig().DefaultShadowMapSize;
 		for(uint32 i=0; i<CASCADE_NUM; ++i) {
 			m_CascadeCameras[i].Reset(new ShadowCamera());
 		}

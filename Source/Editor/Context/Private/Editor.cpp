@@ -6,7 +6,7 @@
 #include "Functions/Public/AssetManager.h"
 #include "Functions/Public/EditorLevel.h"
 #include "RHI/Public/RHIImGui.h"
-#include "System/Public/Configuration.h"
+#include "System/Public/ConfigManager.h"
 #include "Window/Public/EngineWindow.h"
 
 namespace Editor {
@@ -60,7 +60,7 @@ namespace Editor {
 			info.Title = StringFormat("%s XXEditor", info.Title.c_str());
 		});
 		//clear all compiled shader cache, to recompile them.
-		File::RemoveDir(Engine::EngineConfig::Instance().GetCompiledShaderDir());
+		File::RemoveDir(Engine::ConfigMgr::Instance().GetCompiledShaderDir());
 	}
 
 	XXEditor::XXEditor(): XXEngine() {

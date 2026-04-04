@@ -4,7 +4,7 @@
 #include "Core/Public/String.h"
 #include "Functions/Public/AssetImporter.h"
 #include "Math/Public/Math.h"
-#include "System/Public/Configuration.h"
+#include "System/Public/ConfigManager.h"
 
 
 namespace {
@@ -412,7 +412,7 @@ namespace Editor {
 		m_Folders[m_Root].m_Name = m_RootPath.parent_path().stem().string();
 	}
 
-	EngineAssetMgr::EngineAssetMgr() : AssetManager(Engine::EngineConfig::Instance().GetEngineAssetDir()) {}
+	EngineAssetMgr::EngineAssetMgr() : AssetManager(Engine::ConfigMgr::Instance().GetEngineAssetDir()) {}
 
-	ProjectAssetMgr::ProjectAssetMgr() : AssetManager(Engine::EngineConfig::Instance().GetProjectAssetDir()) {}
+	ProjectAssetMgr::ProjectAssetMgr() : AssetManager(Asset::AssetLoader::AssetPath()) {}
 }

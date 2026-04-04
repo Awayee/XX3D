@@ -1,7 +1,7 @@
 #include "Objects/Public/LevelComponents.h"
 #include "Objects/Public/DirectionalLight.h"
 #include "Objects/Public/RenderCamera.h"
-#include "System/Public/Configuration.h"
+#include "System/Public/ConfigManager.h"
 
 namespace Object {
 
@@ -80,7 +80,7 @@ namespace Object {
 		Color = { 1.0f, 1.0f, 1.0f, 3.0f };
 		EnableShadow = true;
 		ShadowDebug = false;
-		ShadowMapSize = Engine::ProjectConfig::Instance().DefaultShadowMapSize;
+		ShadowMapSize = Engine::ConfigMgr::Instance().GetProjectConfig().DefaultShadowMapSize;
 		ShadowDistance = 128.0f;
 		ShadowLogDistribution = 0.9f;
 		ShadowBiasConst = 3.0f;

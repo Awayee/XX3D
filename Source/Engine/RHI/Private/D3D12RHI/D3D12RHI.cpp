@@ -5,13 +5,13 @@
 #include "D3D12Device.h"
 #include "D3D12Pipeline.h"
 #include "D3D12Resources.h"
-#include "System/Public/Configuration.h"
+#include "System/Public/ConfigManager.h"
 #include "Math/Public/Math.h"
 
 inline IDXGIAdapter* ChooseAdapter(IDXGIFactory4* factory) {
 	uint32 i = 0;
 	IDXGIAdapter* adapter = nullptr;
-	const bool useIntegratedGPU = Engine::ProjectConfig::Instance().UseIntegratedGPU;
+	const bool useIntegratedGPU = Engine::ConfigMgr::Instance().GetProjectConfig().UseIntegratedGPU;
 	while(factory->EnumAdapters(i, &adapter) != DXGI_ERROR_NOT_FOUND) {
 		DXGI_ADAPTER_DESC desc;
 		adapter->GetDesc(&desc);

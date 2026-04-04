@@ -1,9 +1,11 @@
 #include "Functions/Public/EditorConfig.h"
-#include "System/Public/Configuration.h"
+#include "Core/Public/File.h"
+#include "System/Public/ConfigManager.h"
+
 namespace Editor {
 	EditorConfig EditorConfig::s_Instance{};
 
 	XString EditorConfig::GetImGuiConfigSavePath() {
-		return Engine::EngineConfig::Instance().GetProjectDir().append("imgui.ini").string();
+		return File::CombinePathStr(Engine::ConfigMgr::Instance().GetProjectDir(), "imgui.ini");
 	}
 }

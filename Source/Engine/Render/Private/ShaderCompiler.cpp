@@ -2,7 +2,7 @@
 #include "Core/Public/File.h"
 #include "Core/Public/Container.h"
 #include "Core/Public/TUniquePtr.h"
-#include "System/Public/Configuration.h"
+#include "System/Public/ConfigManager.h"
 #include <combaseapi.h>
 #include <dxcapi.h>
 
@@ -39,7 +39,7 @@ namespace {
 	}
 
 	inline XString GetShaderFullPath(const XString& shaderFile) {
-		return Engine::EngineConfig::Instance().GetShaderDir().append(shaderFile).string();
+		return File::CombinePathStr(Engine::ConfigMgr::Instance().GetShaderDir(), shaderFile);
 	}
 
 	static DxcCreateInstanceProc GetDXCCreateInstanceProc() {
@@ -83,7 +83,7 @@ namespace {
 			_In_z_ LPCWSTR pFilename,                                 // Candidate filename.
 			_COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource  // Resultant source object for included file, nullptr if not found.
 		) override {
-			XWString fullPath = Engine::EngineConfig::Instance().GetShaderDir().append(pFilename);
+			XWString fullPath = File::FPath{ Engine::ConfigMgr::Instance().GetShaderDir() }.append(pFilename);
 			uint32_t codePage = DXC_CP_ACP;
 			TDXCPtr<IDxcBlobEncoding> code;
 			HRESULT r = m_Utils->LoadFile(fullPath.c_str(), &codePage, code.Address());
@@ -128,7 +128,7 @@ namespace {
 				return;
 			}
 
-			const auto rhiType = Engine::ProjectConfig::Instance().RHIType;
+			const auto rhiType = Engine::ConfigMgr::Instance().GetProjectConfig().RHIType;
 			if(Engine::ERHIType::D3D12 == rhiType) {
 				DxcCreateInstanceProc dxilCreateInstance = GetDXILCreateInstanceProc();
 				r = dxilCreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(m_Validator.Address()));
@@ -149,7 +149,7 @@ namespace {
 			m_CompileSucceed = Compile(buffer, entryPoint, stage, macros);
 		}
 		DXCompiler(const XString& hlslFile, const XString& entryPoint, EShaderStageFlags stage, TConstArrayView<ShaderCompiler::Macro> macros) : DXCompiler() {
-			XWString hlslFileW = Engine::EngineConfig::Instance().GetShaderDir().append(hlslFile).wstring();
+			XWString hlslFileW = File::FPath{Engine::ConfigMgr::Instance().GetShaderDir()}.append(hlslFile).wstring();
 			// Load the HLSL text shader from disk
 			uint32_t codePage = DXC_CP_ACP;
 			TDXCPtr<IDxcBlobEncoding> srcCode;
@@ -192,7 +192,7 @@ namespace {
 			if(!SignCode(blob)) {
 				return false;
 			}
-			File::FPath fullPath = Engine::EngineConfig::Instance().GetCompiledShaderDir().append(file).string();
+			File::FPath fullPath = File::FPath{Engine::ConfigMgr::Instance().GetCompiledShaderDir()}.append(file).string();
 			{
 				File::FPath outputDirPath = fullPath.parent_path();
 				if (!File::Exist(outputDirPath)) {
@@ -341,14 +341,14 @@ namespace {
 namespace ShaderCompiler {
 
 	XString GetCompileOutputFile(const XString& hlslFile, const XString& entryPoint, uint32 permutationID) {
-		if(Engine::ProjectConfig::Instance().RHIType == Engine::ERHIType::D3D12) {
+		if(Engine::ConfigMgr::Instance().GetProjectConfig().RHIType == Engine::ERHIType::D3D12) {
 			return FixShaderFileName(hlslFile).append(entryPoint).append(ToString(permutationID)).append(SHADER_DXS_EXTENSION);
 		}
 		return FixShaderFileName(hlslFile).append(entryPoint).append(ToString(permutationID)).append(SHADER_SPV_EXTENSION);
 	}
 
 	bool LoadCompiledShader(const XString& compiledFile, TArray<int8>& outCode) {
-		const XString fullPath = Engine::EngineConfig::Instance().GetCompiledShaderDir().append(compiledFile).string();
+		const XString fullPath = File::CombinePathStr(Engine::ConfigMgr::Instance().GetCompiledShaderDir(), compiledFile);
 		if (File::ReadFileWithSize f(fullPath.c_str(), true); f.IsOpen()) {
 			outCode.Resize(f.ByteSize());
 			f.Read(outCode.Data(), f.ByteSize());
@@ -358,7 +358,7 @@ namespace ShaderCompiler {
 	}
 
 	bool LoadSourceShader(const XString& shaderFile, XString& outCode) {
-		const XString fullPath = Engine::EngineConfig::Instance().GetShaderDir().append(shaderFile).string();
+		const XString fullPath = File::CombinePathStr(Engine::ConfigMgr::Instance().GetShaderDir(), shaderFile);
 		if (File::ReadFileWithSize f(fullPath, false); f.IsOpen()) {
 			outCode.resize(f.ByteSize());
 			f.Read(outCode.data(), f.ByteSize());

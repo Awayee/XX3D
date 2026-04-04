@@ -14,3 +14,35 @@ XString WString2String(const XWString& wStr) {
     WideCharToMultiByte(CP_UTF8, 0, wStr.c_str(), (int)wStr.size(), &str[0], size_needed, NULL, NULL);
     return str;
 }
+
+bool StrStartsWith(XStringView Str, XStringView Sign) {
+	if (Str.empty() || Sign.empty()) {
+		return false;
+	}
+	size_t StrLen = Str.size();
+	size_t SignLen = Sign.size();
+	if (StrLen < SignLen) {
+		return false;
+	}
+	return strncmp(Str.data(), Sign.data(), SignLen) == 0;
+}
+
+bool StrStartsWith(XStringView Str, char Ch) {
+	return !Str.empty() && Str.back() == Ch;
+}
+
+bool StrEndsWith(XStringView Str, XStringView Sign) {
+	if (Str.empty() || Sign.empty()) {
+		return false;
+	}
+	size_t StrLen = Str.size();
+	size_t SignLen = Sign.size();
+	if (StrLen < SignLen) {
+		return false;
+	}
+	return strncmp(Str.data() + (StrLen - SignLen), Sign.data(), SignLen) == 0;
+}
+
+bool StrEndsWith(XStringView Str, char Ch) {
+	return !Str.empty() && Str[0] == Ch;
+}

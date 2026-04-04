@@ -1,6 +1,7 @@
 #include "VulkanContext.h"
 #include "Core/Public/String.h"
 #include "Core/Public/TArray.h"
+#include "System/Public/ConfigManager.h"
 #include <GLFW/glfw3.h>
 
 static const char* VALIDATION_LAYER_NAME = "VK_LAYER_KHRONOS_validation";
@@ -122,7 +123,7 @@ VkPhysicalDevice VulkanContext::PickPhysicalDevice() {
 		vkGetPhysicalDeviceProperties(info.PhysicalDevice, &info.Properties);
 	}
 
-	bool useIntegratedGPU = Engine::ProjectConfig::Instance().UseIntegratedGPU;
+	bool useIntegratedGPU = Engine::ConfigMgr::Instance().GetProjectConfig().UseIntegratedGPU;
 	deviceInfos.Sort([useIntegratedGPU](const PhysicalDeviceInfo& l, const PhysicalDeviceInfo& r)->bool {
 		if(l.Properties.deviceType == r.Properties.deviceType) {
 			return l.Order < r.Order;
@@ -173,7 +174,7 @@ void VulkanContext::CreateInstance(bool enableDebug) {
 	// app info
 	VkApplicationInfo appInfo{};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	appInfo.pApplicationName = Engine::ProjectConfig::Instance().ProjectName.c_str();
+	appInfo.pApplicationName = Engine::ConfigMgr::Instance().GetProjectConfig().ProjectName.c_str();
 	appInfo.applicationVersion = VK_MAKE_VERSION(0, 0, 0);
 	appInfo.pEngineName = ENGINE_NAME;
 	appInfo.engineVersion = VK_MAKE_VERSION(0, 0, 0);

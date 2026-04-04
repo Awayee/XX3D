@@ -563,4 +563,8 @@ public:
 			}
 		}
 	}
+
+	void Shrink() {
+		Base::shrink_to_fit();
+	}
 };

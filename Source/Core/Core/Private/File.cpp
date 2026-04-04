@@ -97,4 +97,17 @@ namespace File {
 		}
 	}
 
+	XString CombinePathStr(XStringView Base, XStringView Path) {
+		if(StrEndsWith(Base, '\\') || StrEndsWith(Base, '/')) {
+			Base = Base.substr(0, Base.size() - 1);
+		}
+		if(StrStartsWith(Path, '\\') || StrStartsWith(Path, '/')) {
+			Path = Path.substr(1, Path.size());
+		}
+		XString Result; Result.reserve(Base.size() + Path.size() + 1u);
+		Result.append(Base);
+		Result.push_back('/');
+		Result.append(Path);
+		return Result;
+	}
 }

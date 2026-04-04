@@ -100,5 +100,7 @@ namespace File {
 	inline FPath GetExecutablePath() {
 		return std::filesystem::current_path();
 	}
+
+	XString CombinePathStr(XStringView Base, XStringView Path);
 }
 

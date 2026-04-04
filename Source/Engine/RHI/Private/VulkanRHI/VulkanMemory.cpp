@@ -73,7 +73,7 @@ VulkanMemoryAllocator::VulkanMemoryAllocator(const VulkanContext* context, const
 	vulkanFunctions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
 	vulkanFunctions.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
 	VmaAllocatorCreateInfo allocatorCreateInfo = {};
-	allocatorCreateInfo.vulkanApiVersion = context->GetAPIVersion();
+	allocatorCreateInfo.vulkanApiVersion = 0u; // Specify version greater than 1.3 is not supported.
 	allocatorCreateInfo.instance = context->GetInstance();
 	allocatorCreateInfo.physicalDevice = device->GetPhysicalDevice();
 	allocatorCreateInfo.device = device->GetDevice();

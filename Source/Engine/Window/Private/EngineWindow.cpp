@@ -2,7 +2,7 @@
 #include "Core/Public/Concurrency.h"
 #include "Core/Public/Log.h"
 #include "Core/Public/TUniquePtr.h"
-#include "System/Public/Configuration.h"
+#include "System/Public/ConfigManager.h"
 #include "Window/Private/WindowGLFW/WindowSystemGLFW.h"
 #include "WIndow/Private/WindowWin32/WindowSystemWin32.h"
 
@@ -16,12 +16,12 @@ namespace Engine {
 	}
 
 	void EngineWindow::Initialize() {
-		const auto& configData = ProjectConfig::Instance();
+		const auto& configData = Engine::ConfigMgr::Instance().GetProjectConfig();
 		ERHIType rhiType = configData.RHIType;
 		WindowInitInfo windowInfo;
 		windowInfo.Width = configData.WindowWidth;
 		windowInfo.Height = configData.WindowHeight;
-		windowInfo.Title = Engine::ProjectConfig::Instance().ProjectName;
+		windowInfo.Title = Engine::ConfigMgr::Instance().GetProjectConfig().ProjectName;
 		if(s_InitSetup) {
 			s_InitSetup(windowInfo);
 		}

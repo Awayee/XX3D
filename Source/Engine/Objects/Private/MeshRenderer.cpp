@@ -4,7 +4,7 @@
 #include "Objects/Public/RenderScene.h"
 #include "Render/public/DefaultResource.h"
 #include "Render/Public/GlobalShader.h"
-#include "System/Public/Configuration.h"
+#include "System/Public/ConfigManager.h"
 
 namespace {
 	inline void FillScenePSORenderTargets(RHIGraphicsPipelineStateDesc& desc) {
@@ -155,7 +155,7 @@ namespace Object {
 	PrimitiveMgr::PrimitiveMgr() {
 		m_MaterialPSOCache.Reset(new PrimitiveMaterialPSOCache);
 		m_PrimitiveRenderer.Reset(new PrimitiveRendererCPUDriven(m_MaterialPSOCache.Get()));
-		const bool enableGPUDriven = Engine::ProjectConfig::Instance().EnableGPUDriven;
+		const bool enableGPUDriven = Engine::ConfigMgr::Instance().GetProjectConfig().EnableGPUDriven;
 		if(enableGPUDriven) {
 			m_PrimitiveInstancedRenderer.Reset(new PrimitiveInstancedRendererGPUDriven(m_MaterialPSOCache.Get()));
 		}

@@ -3,7 +3,6 @@
 #include "Core/Public/Json.h"
 #include "Math/Public/Math.h"
 #include "Core/Public/Log.h"
-#include "System/Public/Configuration.h"
 #include <lz4.h>
 
 namespace Asset {
