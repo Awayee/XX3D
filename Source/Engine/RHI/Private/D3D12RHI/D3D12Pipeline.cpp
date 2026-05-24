@@ -100,7 +100,7 @@ inline D3D12_CPU_DESCRIPTOR_HANDLE GetParameterStaticDescriptor(const RHIShaderP
 		D3D12Texture* texture = (D3D12Texture*)param.Data.Texture;
 		srcHandle = texture->GetDescriptor(ETexDescriptorType::SRV, param.Data.SubRes);
 	}break;
-	case EBindingType::StorageTexture: {
+	case EBindingType::RWTexture: {
 		D3D12Texture* texture = (D3D12Texture*)param.Data.Texture;
 		srcHandle = texture->GetDescriptor(ETexDescriptorType::UAV, param.Data.SubRes);
 	}break;
@@ -112,89 +112,113 @@ inline D3D12_CPU_DESCRIPTOR_HANDLE GetParameterStaticDescriptor(const RHIShaderP
 	return srcHandle;
 }
 
-bool D3D12PipelineLayout::InitLayout(const TArray<RHIShaderParamSetLayout>& layouts, ID3D12Device* device) {
+bool D3D12PipelineLayout::InitLayout(RHIShaderBindingSet& bindingSet, ID3D12Device* device) {
 	m_DescriptorCounts.Reset(0);
-	m_MapLayoutToHeap.Reset();
 	m_RootSignature.Reset();
 	m_DescriptorTables.Reset();
-
-	TArray<D3D12_ROOT_PARAMETER> rootParameters;
-	TArray<TArray<D3D12_DESCRIPTOR_RANGE>> descriptorRanges;
-	// ========== convert to d3d12 root parameters ================
+	m_DescriptorSlots.Reset();
+	m_BindingOffsets.Reset(0);
+	bindingSet.Sort();
+	// Fill slots
 	{
-		TStaticArray<uint32, EnumCast(EDynamicDescriptorType::Count)* EnumCast(EShaderVisibility::SVCount)> rootParameterIndexMap(DX_INVALID_INDEX); // map heap type and shader stage to root parameter index
-		TStaticArray<uint32, EnumCast(EShaderVisibility::SVCount)* DESCRIPTOR_RANGE_TYPE_COUNT> descriptorCounter(0); // count of per descriptors in different shader stages
-		m_MapLayoutToHeap.Reserve(layouts.Size());
-		m_DescriptorTables.Reserve(rootParameterIndexMap.Size());
-		for (const RHIShaderParamSetLayout& layoutBindings : layouts) {
-			auto& mapLayoutToSlotArray = m_MapLayoutToHeap.EmplaceBack();
-			mapLayoutToSlotArray.Reserve(layoutBindings.Size());
-			// check if contains only compute stage
-			bool hasComputeStage = false;
-			for (const RHIShaderBinding& binding : layoutBindings) {
-				// check "compute only"
-				if (!hasComputeStage) {
-					hasComputeStage = EnumHasAnyFlags(binding.StageFlags, EShaderStageFlags::Compute);
-				}
-				if (hasComputeStage && binding.StageFlags != EShaderStageFlags::Compute) {
-					LOG_ERROR("[RootParametersBuilder::Build] Shader bindings can not contain both Compute and other stages!");
-					return false;
-				}
-
-				// find heap
-				const EDynamicDescriptorType descriptorType = ToDynamicDescriptorType(binding.Type);
-				const uint32 heapIndex = EnumCast(descriptorType);
-				const uint32 slotIndex = m_DescriptorCounts[heapIndex];
-				mapLayoutToSlotArray.PushBack({ descriptorType, slotIndex });
-
-				// handle RootParameter and ranges of every shader stages
-				for (uint32 i = 0; i < EnumCast(EShaderVisibility::SVCount); ++i) {
-					if (!EnumHasAnyFlags(binding.StageFlags, ToShaderStageFlag((EShaderVisibility)i))) {
-						continue;
-					}
-					const uint32 mapIndex = GetRootParameterMapIndex((EShaderVisibility)i, descriptorType);
-					if (DX_INVALID_INDEX == rootParameterIndexMap[mapIndex]) {
-						// create new root parameter
-						rootParameterIndexMap[mapIndex] = descriptorRanges.Size();
-						m_DescriptorTables.PushBack(descriptorType);
-						descriptorRanges.EmplaceBack();
-						auto& rootParam = rootParameters.EmplaceBack();
-						rootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-						rootParam.ShaderVisibility = ToD3D12ShaderVisibility((EShaderVisibility)i);
-					}
-					const uint32 rootParamIndex = rootParameterIndexMap[mapIndex];
-					D3D12_DESCRIPTOR_RANGE& range = descriptorRanges[rootParamIndex].EmplaceBack();
-					range.RangeType = ToD3D12DescriptorRangeType(binding.Type);
-					range.NumDescriptors = binding.Count;
-					const uint32 counterIndex = GetDescriptorCounterIndex((EShaderVisibility)i, range.RangeType);
-					range.BaseShaderRegister = descriptorCounter[counterIndex]++;
-					range.RegisterSpace = 0;
-					range.OffsetInDescriptorsFromTableStart = slotIndex;
-				}
-
-				// increase descriptor count in heap
-				m_DescriptorCounts[heapIndex] += binding.Count;
+		uint32 numSets = 0;
+		for(uint32 i=0; i<bindingSet.GetNum(); ++i) {
+			const RHIShaderBinding binding = bindingSet.GetBinding(i);
+			if(binding.Set >= numSets) {
+				numSets = binding.Set + 1;
+			}
+			if(binding.Binding >= m_BindingOffsets[binding.Set]) {
+				m_BindingOffsets[binding.Set] = binding.Binding + 1;
 			}
 		}
-		for (uint32 i = 0; i < descriptorRanges.Size(); ++i) {
-			auto& ranges = descriptorRanges[i];
-			auto& parameter = rootParameters[i];
-			parameter.DescriptorTable.NumDescriptorRanges = ranges.Size();
-			parameter.DescriptorTable.pDescriptorRanges = ranges.Data();
+		uint32 numBindings = 0;// Num of bindings with out gaps
+		for(uint32 i=0; i<numSets; ++i) {
+			const uint32 idx = numBindings;
+			numBindings += m_BindingOffsets[i];
+			m_BindingOffsets[i] = idx;
 		}
+		m_DescriptorSlots.Resize(numBindings, DescriptorSlot{EDynamicDescriptorType::Count, INVALID_INDEX});
 	}
-	return CreateRootSignatureUtil(device, rootParameters, m_RootSignature.Address());
+
+	// ========== convert to d3d12 root parameters ================
+	TArray<D3D12_ROOT_PARAMETER> rootParameters;
+	TArray<TArray<D3D12_DESCRIPTOR_RANGE>> descriptorRanges;
+	TStaticArray<uint32, EnumCast(EDynamicDescriptorType::Count)* EnumCast(EShaderVisibility::SVCount)> rootParameterIndexMap(DX_INVALID_INDEX); // map heap type and shader stage to root parameter index
+	TStaticArray<uint32, EnumCast(EShaderVisibility::SVCount)* DESCRIPTOR_RANGE_TYPE_COUNT> descriptorCounter(0); // count of per descriptors in different shader stages
+
+	bool bHasComputeStage = false;
+	for(uint32 bindingIdx=0; bindingIdx<bindingSet.GetNum(); ++bindingIdx) {
+		const RHIShaderBinding srcBinding = bindingSet.GetBinding(bindingIdx);
+		const EShaderStageFlags srcStageFlags = bindingSet.GetShaderStage(bindingIdx);
+
+		// Check if contains only compute stage
+		if (!bHasComputeStage) {
+			bHasComputeStage = EnumHasAnyFlags(srcStageFlags, EShaderStageFlags::Compute);
+		}
+		if (bHasComputeStage && srcStageFlags != EShaderStageFlags::Compute) {
+			LOG_ERROR("[RootParametersBuilder::Build] Shader bindings can not contain both Compute and other stages!");
+			return false;
+		}
+
+		// Find heap
+		const EDynamicDescriptorType descriptorType = ToDynamicDescriptorType(srcBinding.Type);
+		const uint32 heapIndex = EnumCast(descriptorType);
+		const uint32 slotIndex = m_DescriptorCounts[heapIndex];
+		m_DescriptorSlots[m_BindingOffsets[srcBinding.Set] + srcBinding.Binding] = DescriptorSlot{ descriptorType, slotIndex };
+
+		// handle RootParameter and ranges of every shader stages
+		for (uint32 i = 0; i < EnumCast(EShaderVisibility::SVCount); ++i) {
+			if (!EnumHasAnyFlags(srcStageFlags, ToShaderStageFlag((EShaderVisibility)i))) {
+				continue;
+			}
+			const uint32 mapIndex = GetRootParameterMapIndex((EShaderVisibility)i, descriptorType);
+			if (DX_INVALID_INDEX == rootParameterIndexMap[mapIndex]) {
+				// create new root parameter
+				rootParameterIndexMap[mapIndex] = descriptorRanges.Size();
+				m_DescriptorTables.PushBack(descriptorType);
+				descriptorRanges.EmplaceBack();
+				auto& rootParam = rootParameters.EmplaceBack();
+				rootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+				rootParam.ShaderVisibility = ToD3D12ShaderVisibility((EShaderVisibility)i);
+			}
+			const uint32 rootParamIndex = rootParameterIndexMap[mapIndex];
+			D3D12_DESCRIPTOR_RANGE& range = descriptorRanges[rootParamIndex].EmplaceBack();
+			range.RangeType = ToD3D12DescriptorRangeType(srcBinding.Type);
+			range.NumDescriptors = srcBinding.NumElements;
+			const uint32 counterIndex = GetDescriptorCounterIndex((EShaderVisibility)i, range.RangeType);
+			range.BaseShaderRegister = descriptorCounter[counterIndex]++;
+			range.RegisterSpace = 0;
+			range.OffsetInDescriptorsFromTableStart = slotIndex;
+		}
+		// increase descriptor count in heap
+		m_DescriptorCounts[heapIndex] += srcBinding.NumElements;
+	}
+
+	for (uint32 i = 0; i < descriptorRanges.Size(); ++i) {
+		auto& ranges = descriptorRanges[i];
+		auto& parameter = rootParameters[i];
+		parameter.DescriptorTable.NumDescriptorRanges = ranges.Size();
+		parameter.DescriptorTable.pDescriptorRanges = ranges.Data();
+	}
+	return CreateRootSignatureUtil(device, rootParameters, m_RootSignature.Address());;
 }
 
 D3D12PipelineLayout::DescriptorSlot D3D12PipelineLayout::GetDescriptorSlot(uint32 set, uint32 binding) const {
-	CHECK(set < m_MapLayoutToHeap.Size());
-	CHECK(binding < m_MapLayoutToHeap[set].Size());
-	return m_MapLayoutToHeap[set][binding];
+	return m_DescriptorSlots[m_BindingOffsets[set] + binding];
 }
 
 D3D12GraphicsPipelineState::D3D12GraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc, D3D12Device* device) : RHIGraphicsPipelineState(desc){
 	// root signature
-	CHECK(m_Layout.InitLayout(desc.Layout, device->GetDevice()));
+	{
+		RHIShaderBindingSet bindingSet;
+		if(desc.VertexShader) {
+			desc.VertexShader->GetBindings(bindingSet);
+		}
+		if(desc.PixelShader) {
+			desc.PixelShader->GetBindings(bindingSet);
+		}
+		CHECK(m_Layout.InitLayout(bindingSet, device->GetDevice()));
+	}
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC d3d12Desc{};
 	d3d12Desc.pRootSignature = m_Layout.GetRootSignature();
@@ -288,11 +312,15 @@ void D3D12GraphicsPipelineState::SetNameInternal(const char* name) {
 	m_Pipeline->SetName(nameW.c_str());
 }
 
-D3D12ComputePipelineState::D3D12ComputePipelineState(const RHIComputePipelineStateDesc& desc, D3D12Device* device): RHIComputePipelineState(desc) {
-	CHECK(m_Layout.InitLayout(desc.Layout, device->GetDevice()));
+D3D12ComputePipelineState::D3D12ComputePipelineState(RHIShader* shader, D3D12Device* device): RHIComputePipelineState(shader) {
+	{
+		RHIShaderBindingSet bindingSet;
+		shader->GetBindings(bindingSet);
+		CHECK(m_Layout.InitLayout(bindingSet, device->GetDevice()));
+	}
 	D3D12_COMPUTE_PIPELINE_STATE_DESC d3d12Desc{};
 	d3d12Desc.pRootSignature = m_Layout.GetRootSignature();
-	auto bytes = ((D3D12Shader*)desc.Shader)->GetBytes();
+	auto bytes = ((D3D12Shader*)shader)->GetBytes();
 	d3d12Desc.CS = { bytes.Data(), bytes.Size() };
 	device->GetDevice()->CreateComputePipelineState(&d3d12Desc, IID_PPV_ARGS(m_Pipeline.Address()));
 }
