@@ -121,7 +121,7 @@ private:
 
 class D3D12Shader: public RHIShader {
 public:
-	D3D12Shader(EShaderStageFlags stage, const void* byteData, uint32 byteSize);
+	D3D12Shader(EShaderStageFlags stage, RHIShaderBindingInterface* bindingInterface, XStringView code);
 	~D3D12Shader() = default;
 	TConstArrayView<uint8> GetBytes();
 private:

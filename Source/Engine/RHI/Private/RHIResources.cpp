@@ -240,6 +240,99 @@ uint32 RHIRenderPassInfo::GetNumColorTargets() const {
     return RHI_COLOR_TARGET_MAX;
 }
 
+RHIShaderBinding::RHIShaderBinding() : Binding(0), Set(0), Type((EBindingType)0), NumElements(0){
+}
+
+RHIShaderBinding::RHIShaderBinding(uint32 binding, uint32 set, EBindingType type, uint32 numElements): Binding(binding), Set(set), Type(type), NumElements(numElements) {
+}
+
+void RHIShaderBindingSet::AddBinding(RHIShaderBinding binding, EShaderStageFlags stage) {
+    m_Bindings.Add(binding);
+    m_ShaderStages.Add(stage);
+}
+
+void RHIShaderBindingSet::Sort() {
+    // Get off set and size of per set
+    struct TempSetInfo {
+        uint8 Offset;
+        uint8 NumBindings;
+    };
+    TStaticArray<TempSetInfo, RHIShaderBinding::MAX_SET> tempSetInfos{TempSetInfo{0, 0}};
+    uint8 numSets = 0;
+    for(const RHIShaderBinding binding: m_Bindings) {
+        if(binding.Set >= numSets) {
+            numSets = binding.Set + 1;
+        }
+	    if(binding.Binding >= tempSetInfos[binding.Set].NumBindings) {
+            tempSetInfos[binding.Set].NumBindings = binding.Binding + 1;
+	    }
+    }
+    uint32 numBindings = 0;
+    for(uint8 i=0; i< tempSetInfos.Size(); ++i) {
+        tempSetInfos[i].Offset = numBindings;
+        numBindings += tempSetInfos[i].NumBindings;
+    }
+
+    // Merge bindings
+    struct TempBindingInfo {
+        EBindingType Type;
+        EShaderStageFlags StageFlags;
+        uint16 NumElements;
+
+    };
+    TFixedArray<TempBindingInfo> tempBindingInfos{ numBindings };
+    memset(tempBindingInfos.Data(), 0, (size_t)numBindings * sizeof(TempBindingInfo));
+    for(uint32 i=0; i<m_Bindings.Size(); ++i) {
+        const RHIShaderBinding srcBinding = m_Bindings[i];
+        const EShaderStageFlags srcStage = m_ShaderStages[i];
+        const uint32 index = tempSetInfos[srcBinding.Set].Offset + srcBinding.Binding;
+        // check
+        if(EnumCast(tempBindingInfos[index].StageFlags) != 0) {
+	        if(tempBindingInfos[index].Type != srcBinding.Type || tempBindingInfos[index].NumElements != srcBinding.NumElements) {
+                LOG_FATAL("Error binding type at (binding=%u, set=%u, type=%u, numEle=%u stage=%u", srcBinding.Binding, srcBinding.Set, srcBinding.Type, srcBinding.NumElements, srcStage);
+	        }
+        }
+        tempBindingInfos[index].Type = srcBinding.Type;
+        tempBindingInfos[index].StageFlags = srcStage;
+        tempBindingInfos[index].NumElements = srcBinding.NumElements;
+    }
+
+    // Rebuild array.
+    m_Bindings.Reset();
+    m_ShaderStages.Reset();
+    for(uint8 set=0; set<numSets; ++set) {
+        for(uint8 binding=0; binding<tempSetInfos[set].NumBindings; ++binding) {
+            const uint32 index = tempSetInfos[set].Offset + binding;
+            if(EnumCast(tempBindingInfos[index].StageFlags) != 0) {
+                m_Bindings.Add(RHIShaderBinding{ binding, set, tempBindingInfos[index].Type, tempBindingInfos[index].NumElements });
+                m_ShaderStages.Add(tempBindingInfos[index].StageFlags);
+            }
+        }
+    }
+}
+
+uint32 RHIShaderBindingSet::GetNum() const {
+    CHECK(m_Bindings.Size() == m_ShaderStages.Size());
+    return m_Bindings.Size();
+}
+
+RHIShaderBinding RHIShaderBindingSet::GetBinding(uint32 i) const {
+    CHECK(i < m_Bindings.Size());
+    return m_Bindings[i];
+}
+
+EShaderStageFlags RHIShaderBindingSet::GetShaderStage(uint32 i) const {
+    CHECK(i < m_ShaderStages.Size());
+    return m_ShaderStages[i];
+}
+
+RHIShader::RHIShader(EShaderStageFlags type, RHIShaderBindingInterface* bindingInterface) : m_Type(type), m_BindingInterface(bindingInterface){}
+
+void RHIShader::GetBindings(RHIShaderBindingSet& bindingSet) {
+    CHECK(m_BindingInterface);
+    return m_BindingInterface->GetBindings(bindingSet);
+}
+
 bool RHIShaderParam::operator==(const RHIShaderParam& rhs) const {
     if(Type != rhs.Type) {
         return false;
@@ -337,7 +430,7 @@ RHIShaderParam RHIShaderParam::Texture(RHITexture* texture, RHITextureSubRes tex
 
 RHIShaderParam RHIShaderParam::TextureUAV(RHITexture* texture, RHITextureSubRes textureSub) {
     RHIShaderParam parameter{};
-    parameter.Type = EBindingType::StorageTexture;
+    parameter.Type = EBindingType::RWTexture;
     parameter.Data.Texture = texture;
     parameter.Data.SubRes = textureSub;
     return parameter;

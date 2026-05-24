@@ -5,6 +5,7 @@
 #define SHADER_DIR_NAME "Shaders"
 #define ENGINE_CONFIG_FILENAME "EngineConfig.ini"
 #define PROJECT_CONFIG_FILENAME "ProjectConfig.ini"
+#define CACHE_NAME "Cache"
 
 namespace Engine {
 	ConfigMgr::ConfigMgr() {
@@ -17,6 +18,9 @@ namespace Engine {
 		EngineRoot = ParentPath.string();
 		ExecutableDir = ExecutablePath.string();
 		LOG_DEBUG("EngineRoot=%s", EngineRoot.c_str());
+		// Ensure cache dir exists
+		File::FPath EngineCachePath = ExecutablePath.append(CACHE_NAME);
+		EngineCacheDir = EngineCachePath.string();
 
 		// load EngineConfig.ini
 		const XString EngineConfigFile = File::FPath(ParentPath).append(ENGINE_CONFIG_FILENAME).string();
@@ -57,13 +61,5 @@ namespace Engine {
 
 	void ConfigMgr::Initialize() {
 		Instance();
-	}
-
-	XString ConfigMgr::GetCompiledShaderDir() const {
-		return File::CombinePathStr(GetExecutableDir(), SHADER_COMPILED_DIR_NAME);
-	}
-
-	XString ConfigMgr::GetProjectAssetDir() const {
-		return File::CombinePathStr(GetProjectDir(), ASSET_DIR_NAME);
 	}
 }

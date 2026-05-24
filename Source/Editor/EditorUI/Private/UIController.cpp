@@ -101,7 +101,7 @@ namespace Editor {
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 		io.ConfigWindowsMoveFromTitleBarOnly = true;
 
-		const XString fontFile = File::CombinePathStr(Engine::ConfigMgr::Instance().GetEngineAssetDir(), Engine::ConfigMgr::Instance().GetDefaultFont());
+		const XString fontFile = File::CombinePathStr(Engine::ConfigMgr::Instance().GetEngineAssetDir(), Engine::ConfigMgr::Instance().GetEngineConfig().DefaultFont);
 		io.Fonts->AddFontFromFileTTF(fontFile.c_str(), contentScale * 16, nullptr, nullptr);
 		ASSERT(io.Fonts->Build(), "Failed to build fonts");
 		io.IniFilename = nullptr; // Do not save settings

@@ -7,12 +7,13 @@
 
 namespace Render {
 
-	class GlobalShader{
+	class GlobalShader: public RHIShaderBindingInterface{
 	public:
-		GlobalShader(const XString& shaderFile, const XString& entry, EShaderStageFlags type, TConstArrayView<ShaderCompiler::Macro> macros, uint32 permutationID);
+		GlobalShader(XStringView shaderFile, XStringView entry, EShaderStageFlags type, TConstArrayView<ShaderCompiler::Macro> macros, uint32 permutationID);
 		~GlobalShader() = default;
 		RHIShader* GetRHI();
-	private:
+		virtual void GetBindings(RHIShaderBindingSet& bindingSet) override {};
+	protected:
 		RHIShaderPtr m_RHIShader;
 	};
 
@@ -20,17 +21,14 @@ namespace Render {
 		SINGLETON_INSTANCE(GlobalShaderMap);
 	public:
 		template<typename T> T* GetShader(const typename T::ShaderPermutation& p) {
-			TArray<ShaderCompiler::Macro> macros;
-			p.Apply(macros);
 			uint64 hash = T::Hash;
-			const uint32 permutationID = p.GetPermutationID();
-			hash = GetTypeHash64BasedOn(permutationID, hash);
+			hash = GetTypeHash64BasedOn(p.GetPermutationID(), hash);
 			GlobalShader* shader;
 			if (auto iter = m_ShaderMap.find(hash); iter != m_ShaderMap.end()) {
 				shader = iter->second.Get();
 			}
 			else {
-				shader = m_ShaderMap.emplace(hash, TUniquePtr<T>(new T(macros, permutationID))).first->second.Get();
+				shader = m_ShaderMap.emplace(hash, TUniquePtr<T>(new T(p))).first->second.Get();
 			}
 			return (T*)shader;
 		}
@@ -57,6 +55,9 @@ namespace Render {
 			Flag = flag;
 			return *this;
 		}
+		bool operator==(bool flag) const {
+			return Flag == flag;
+		}
 		static constexpr uint32 PermutationSize() { return 2; }
 		uint32 PermutationID() const { return Flag ? 1 : 0; }
 		void Apply(TArray<ShaderCompiler::Macro>& macros) const { if (Flag) { macros.PushBack({ Name, {} }); } }
@@ -76,6 +77,9 @@ namespace Render {
 			Value = value;
 			return *this;
 		}
+		bool operator==(int32 value) const {
+			return Value== value;
+		}
 		static constexpr uint32 PermutationSize() { return ValueCount; }
 		uint32 PermutationID() const { return Value - ValueStart; }
 		void Apply(TArray<ShaderCompiler::Macro>& macros) const { macros.PushBack({ Name, ToString(Value) }); }
@@ -87,44 +91,110 @@ namespace Render {
 		void Apply(TArray<ShaderCompiler::Macro>& macros) const {/*Do nothing*/ }
 	};
 
-#define SHADER_PERMUTATION_DEFINE_BEGIN(MemName)\
-		uint32 GetPermutationID() const { return MemName.PermutationID();}\
-		static uint32 GetPermutationSize() { return Render::MacroDefineSwitch::PermutationSize();}\
-		void Apply(TArray<ShaderCompiler::Macro>& macros) const{MemName.Apply(macros);}
+	template<typename T>
+	TArray<ShaderCompiler::Macro> GetPermutationMacros(T p) {
+		TArray<ShaderCompiler::Macro> macros;
+		p.Apply(macros);
+		return macros;
+	}
 
-#define SHADER_PERMUTATION_DEFINE_NEXT(MemName, PreMemName)\
-		uint32 GetPermutationID() const{return MemName.PermutationID() + MemName.PermutationSize() * ShaderPermutation##PreMemName::GetPermutationID();}\
-		static uint32 GetPermutationSize() {return Render::MacroDefineSwitch::PermutationSize() * ShaderPermutation##PreMemName::GetPermutationSize();}\
-		void Apply(TArray<ShaderCompiler::Macro>& macros) const{ShaderPermutation##PreMemName::Apply(macros); MemName.Apply(macros);}
+	// Shader permutation
+#define BEGIN_SHADER_PERMUTATION private:\
+		typedef Render::ShaderPermutationEmpty
 
-#define SHADER_PERMUTATION_BEGIN_SWITCH(MemName, DefaultValue)\
-	private: struct ShaderPermutation##MemName{\
-		Render::MacroDefineSwitch MemName{#MemName, DefaultValue};\
-		SHADER_PERMUTATION_DEFINE_BEGIN(MemName)\
-	}
-#define SHADER_PERMUTATION_NEXT_SWITCH(MemName, DefaultValue, PreMemName)\
-	private: struct ShaderPermutation##MemName: ShaderPermutation##PreMemName{\
-		Render::MacroDefineSwitch MemName{#MemName, DefaultValue};\
-		SHADER_PERMUTATION_DEFINE_NEXT(MemName, PreMemName)\
-	}
-#define SHADER_PERMUTATION_BEGIN_INT(MemName, ValueStart, ValueCount, DefaultValue)\
-	private: struct ShaderPermutation##MemName{\
-		Render::MacroDefineInt<ValueCount, ValueStart> MemName{#MemName, DefaultValue};\
-		SHADER_PERMUTATION_DEFINE_BEGIN(MemName)\
-	}
-#define SHADER_PERMUTATION_NEXT_INT(MemName, ValueStart, ValueCount, DefaultValue, PreMemName)\
-	private: struct ShaderPermutation##MemName: ShaderPermutation##PreMemName{\
-		Render::MacroDefineInt<ValueCount, ValueStart> MemName{#MemName, DefaultValue};\
-		SHADER_PERMUTATION_DEFINE_NEXT(MemName, PreMemName)\
-	}
-#define SHADER_PERMUTATION_END(PreMemName) public: typedef ShaderPermutation##PreMemName ShaderPermutation
+#define SHADER_PERMUTATION_SWITCH(name, defaultValue) PrevOfShaderPermutation##name;\
+		struct ShaderPermutation##name: PrevOfShaderPermutation##name{\
+			Render::MacroDefineSwitch name{#name, defaultValue};\
+			uint32 GetPermutationID() const{\
+				return name.PermutationID() + name.PermutationSize() * PrevOfShaderPermutation##name::GetPermutationID();\
+			}\
+			static uint32 GetPermutationSize() {\
+				return Render::MacroDefineSwitch::PermutationSize() * ShaderPermutation##name::GetPermutationSize();\
+			}\
+			void Apply(TArray<ShaderCompiler::Macro>& macros) const{\
+				PrevOfShaderPermutation##name::Apply(macros); name.Apply(macros);\
+			}\
+		}; typedef ShaderPermutation##name
+
+#define SHADER_PERMUTATION_INT(name, valueStart, valueCount, defaultValue) PrevOfShaderPermutation##name;\
+		struct ShaderPermutation##name: PrevOfShaderPermutation##name{\
+			Render::MacroDefineInt<valueCount, valueStart> name{#name, DefaultValue};\
+			uint32 GetPermutationID() const {\
+				return name.PermutationID() + name.PermutationSize() * PrevOfShaderPermutation##name::GetPermutationID();\
+			}\
+			static uint32 GetPermutationSize() {\
+				return Render::MacroDefineInt<valueCount, valueStart>::PermutationSize() * ShaderPermutation##name::GetPermutationSize();\
+			}\
+			void Apply(TArray<ShaderCompiler::Macro>& macros) const{\
+				PrevOfShaderPermutation##name::Apply(macros); name.Apply(macros);\
+			}\
+		}; typedef ShaderPermutation##name
+
+#define END_SHADER_PERMUTATION ShaderPermutationEnd;\
+		public: typedef ShaderPermutationEnd ShaderPermutation;
 
 #define SHADER_PERMUTATION_EMPTY() public: typedef Render::ShaderPermutationEmpty ShaderPermutation
 
+	// Shader binding
+#define BEGIN_SHADER_BINDING private:\
+		struct sShaderBindingBegin{\
+			inline static constexpr uint8 sBindingSet = 0;\
+			static void* GetBindings(RHIShaderBindingSet&, EShaderStageFlags, const ShaderPermutation&){return nullptr ;}\
+		}; typedef sShaderBindingBegin
+
+#define SHADER_BINDING_SET(set) PrevOfShaderBindingSet_##set;\
+		static_assert(set < RHIShaderBinding::MAX_SET);\
+		private:\
+		struct sShaderBindingSet_##set {\
+			inline static constexpr uint8 sBindingSet = set;\
+			static void* GetBindings(RHIShaderBindingSet&, EShaderStageFlags, const ShaderPermutation&){return PrevOfShaderBindingSet_##set::GetBindings;}\
+		}; typedef sShaderBindingSet_##set
+
+#define SHADER_BINDING(binding, type, name, numElements) PrefOfShaderBinding##name;\
+		static_assert(binding < RHIShaderBinding::MAX_BINDING);\
+		public:\
+		inline static RHIShaderBinding name{binding, PrefOfShaderBinding##name::sBindingSet, EBindingType::type, numElements};\
+		private:\
+		struct sShaderBinding##name{\
+			inline static constexpr uint8 sBindingSet=PrefOfShaderBinding##name::sBindingSet;\
+			static void* GetBindings(RHIShaderBindingSet& bindingSet, EShaderStageFlags stage, const ShaderPermutation& p) {\
+				bindingSet.AddBinding(name, stage);\
+				return PrefOfShaderBinding##name::GetBindings; \
+			}\
+		}; typedef sShaderBinding##name
+
+#define SHADER_BINDING_WITH_MACRO(binding, type, name, numElements, macro, macroValue) PrefOfShaderBinding##name;\
+		static_assert(binding < RHIShaderBinding::MAX_BINDING);\
+		public:\
+		inline static RHIShaderBinding name{binding, PrefOfShaderBinding##name::sBindingSet, EBindingType::type, numElements};\
+		private:\
+		struct sShaderBinding##name{\
+			inline static constexpr uint8 sBindingSet=PrefOfShaderBinding##name::sBindingSet;\
+			static void* GetBindings(RHIShaderBindingSet& bindingSet, EShaderStageFlags stage, const ShaderPermutation& p) {\
+				if(p.macro == macroValue) {bindingSet.AddBinding(name, stage); }\
+				return PrefOfShaderBinding##name::GetBindings; \
+			}\
+		};typedef sShaderBinding##name
+
+#define END_SHADER_BINDING sShaderBindingEnd;\
+		static void GetBindingsStatic(RHIShaderBindingSet& bindingSet, EShaderStageFlags stage, const ShaderPermutation& p) {\
+			typedef void*(*AppendBindingFunc)(RHIShaderBindingSet&, EShaderStageFlags, const ShaderPermutation&);\
+			AppendBindingFunc func = sShaderBindingEnd::GetBindings;\
+			do{ func = (AppendBindingFunc)func(bindingSet, stage, p);}\
+			while(func != nullptr);\
+		};
+
+#define SHADER_BINDING_EMPTY() static void GetBindingsStatic(RHIShaderBindingSet& bindingSet, EShaderStageFlags stage, const ShaderPermutation& p) {}
+
 #define GLOBAL_SHADER_IMPLEMENT(cls, fileName, entryName, type)\
 	public:\
-		cls(TConstArrayView<ShaderCompiler::Macro> macros, uint32 permutationID): Render::GlobalShader(fileName, entryName, type, macros, permutationID) {}\
-		inline static uint64 Hash{DataArrayHash64(entryName, StringSize(entryName), DataArrayHash64(fileName, StringSize(fileName)))}
+		inline static uint64 Hash{DataArrayHash64(entryName, StringSize(entryName), DataArrayHash64(fileName, StringSize(fileName)))};\
+		cls(const ShaderPermutation& p): Render::GlobalShader(fileName, entryName, type, GetPermutationMacros(p), p.GetPermutationID()), m_Permutation(p) {}\
+		virtual void GetBindings(RHIShaderBindingSet& bindingSet){\
+			GetBindingsStatic(bindingSet, m_RHIShader->GetStage(), m_Permutation);\
+		}\
+	private:\
+		ShaderPermutation m_Permutation
 }
 
 // example code

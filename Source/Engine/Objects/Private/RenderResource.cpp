@@ -70,6 +70,7 @@ namespace Object {
 			if (Asset::AssetLoader::LoadProjectAsset(&imageAsset, fileName.c_str())) {
 				RHITexturePtr texturePtr = CreateTextureFromAsset(imageAsset);
 				auto* texRHI = texturePtr.Get();
+				texRHI->SetName(fileName.c_str());
 				m_Textures.emplace(fileName, MoveTemp(texturePtr));
 				return texRHI;
 			}
@@ -139,9 +140,7 @@ namespace Object {
 		auto& computePSOs = GetComputePSOInitializers();
 		m_ComputePipelineStates.Reserve(computePSOs.Size());
 		for (auto& initializer : computePSOs) {
-			RHIComputePipelineStateDesc desc{};
-			initializer(desc);
-			m_ComputePipelineStates.PushBack(r->CreateComputePipelineState(desc));
+			m_ComputePipelineStates.PushBack(r->CreateComputePipelineState(initializer()));
 		}
 	}
 }

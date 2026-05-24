@@ -10,19 +10,40 @@
 static constexpr uint32 MIN_API_VERSION{ VK_VERSION_1_2 };
 static constexpr EBufferFlags DYNAMIC_BUFFER_FLAGS = EBufferFlags::Uniform | EBufferFlags::IndirectDraw | EBufferFlags::CopySrc | EBufferFlags::Vertex | EBufferFlags::SRV;
 
-VulkanRHI::VulkanRHI(WindowHandle wnd, USize2D extent, const RHIInitConfig& cfg) {
+inline ERHIFormat FindDepthFormat(VkPhysicalDevice physicalDevice) {
+	const TArray<ERHIFormat> Candidates{ ERHIFormat::D24_UNORM_S8_UINT, ERHIFormat::D32_SFLOAT, ERHIFormat::D16_UNORM };
+	VkImageTiling Tiling{ VK_IMAGE_TILING_OPTIMAL };
+	VkFormatFeatureFlags Features{ VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT };
+	for (ERHIFormat Format: Candidates) {
+		VkFormatProperties Properties;
+		VkFormat FormatVk = ToVkFormat(Format);
+		vkGetPhysicalDeviceFormatProperties(physicalDevice, FormatVk, &Properties);
+		if(Tiling == VK_IMAGE_TILING_LINEAR && (Properties.linearTilingFeatures & Features) == Features) {
+			return Format;
+		}
+		if(Tiling == VK_IMAGE_TILING_OPTIMAL && (Properties.optimalTilingFeatures & Features) == Features) {
+			return Format;
+		}
+	}
+	LOG_ERROR("Failed to find a depth format");
+	return ERHIFormat::Undefined;
+}
 
+VulkanRHI::VulkanRHI(WindowHandle wnd, USize2D extent, const RHIInitConfig& cfg) {
 	// initialize context
 	m_Context.Reset(new VulkanContext(cfg.EnableDebug, MIN_API_VERSION));
 	// Pick GPU
 	TArray<const char*> extensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 	VkPhysicalDevice physicalDevice = m_Context->PickPhysicalDevice();
 	ASSERT(physicalDevice != VK_NULL_HANDLE, "Failed to pick GPU!");
+	// Get GPU information
+	m_DepthFormat = FindDepthFormat(physicalDevice);
 	// Create logic device
 	m_Device.Reset(new VulkanDevice(m_Context.Get(), physicalDevice));
 	// Create viewport
 	m_Viewport.Reset(new VulkanViewport(m_Context.Get(), m_Device.Get(), wnd, extent, cfg));
-
+	// Get device features
+	m_Features = m_Device->GetRHIFeatures();
 	LOG_INFO("RHI: Vulkan initialized successfully!");
 }
 
@@ -43,19 +64,6 @@ void VulkanRHI::BeginRendering() {
 	m_Device->GetDynamicBufferAllocator()->GC();
 	m_Device->GetDynamicBufferAllocator()->UnmapAllocations();
 	m_Device->GetCommandContext()->BeginFrame();
-}
-
-ERHIFormat VulkanRHI::GetDepthFormat() {
-	switch (m_Device->GetFormats().DepthFormat) {
-	case(VK_FORMAT_D32_SFLOAT):
-		return ERHIFormat::D32_SFLOAT;
-	case(VK_FORMAT_D24_UNORM_S8_UINT):
-		return ERHIFormat::D24_UNORM_S8_UINT;
-	case(VK_FORMAT_D16_UNORM_S8_UINT):
-		return ERHIFormat::D16_UNORM;
-	default:
-		return ERHIFormat::Undefined;
-	}
 }
 
 uint32 VulkanRHI::GetBufferAlignment(EBufferFlags bufferFlags) {
@@ -117,16 +125,16 @@ RHIFencePtr VulkanRHI::CreateFence(bool sig) {
 	return nullptr;
 }
 
-RHIShaderPtr VulkanRHI::CreateShader(EShaderStageFlags type, const char* codeData, uint32 codeSize, const XString& entryFunc) {
-	return RHIShaderPtr(new VulkanRHIShader(type, codeData, codeSize, entryFunc, GetDevice()));
+RHIShaderPtr VulkanRHI::CreateShader(EShaderStageFlags type, XStringView code, XStringView entryName, RHIShaderBindingInterface* bindingInterface) {
+	return RHIShaderPtr(new VulkanRHIShader(type, bindingInterface, code, entryName, GetDevice()));
 }
 
 RHIGraphicsPipelineStatePtr VulkanRHI::CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) {
 	return RHIGraphicsPipelineStatePtr(new VulkanRHIGraphicsPipelineState(desc, GetDevice()));
 }
 
-RHIComputePipelineStatePtr VulkanRHI::CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) {
-	return RHIComputePipelineStatePtr(new VulkanRHIComputePipelineState(desc, GetDevice()));
+RHIComputePipelineStatePtr VulkanRHI::CreateComputePipelineState(RHIShader* shader) {
+	return RHIComputePipelineStatePtr(new VulkanRHIComputePipelineState(shader, GetDevice()));
 }
 
 RHICommandBufferPtr VulkanRHI::CreateCommandBuffer(EQueueType queue) {

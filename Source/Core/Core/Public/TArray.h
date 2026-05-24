@@ -24,6 +24,9 @@ public:
 	}
 	TFixedArray& operator=(const TFixedArray&) = delete;
 	TFixedArray& operator=(TFixedArray&& rhs) noexcept{
+		if (data) {
+			delete[] data;
+		}
 		data = rhs.data;
 		rhs.data = nullptr;
 		return *this;
@@ -492,6 +495,10 @@ public:
 	void PushBack(const TArray& rhs) {
 		Base::insert(Base::end(), rhs.begin(), rhs.end());
 	}
+
+	void Add(T&& ele) { Base::push_back(std::forward<T>(ele)); }
+
+	void Add(const T& ele) { Base::push_back(ele); }
 
 	template<typename ...Args>
 	T& EmplaceBack(Args&&...args) { return Base::emplace_back(std::forward<Args>(args)...); }

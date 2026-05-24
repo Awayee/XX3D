@@ -72,6 +72,8 @@ D3D12RHI::D3D12RHI(WindowHandle wnd, USize2D extent, const RHIInitConfig& cfg) {
 	}
 
 	m_Viewport.Reset(new D3D12Viewport(m_DXGIFactory, m_Device, wnd, extent, cfg));
+
+	m_DepthFormat = ERHIFormat::D24_UNORM_S8_UINT;
 }
 
 D3D12RHI::~D3D12RHI() {
@@ -91,10 +93,6 @@ void D3D12RHI::BeginFrame() {
 void D3D12RHI::BeginRendering() {
 	// Reset dynamic buffers.
 	m_Device->GetDynamicMemoryAllocator()->UnmapAllocations();
-}
-
-ERHIFormat D3D12RHI::GetDepthFormat() {
-	return m_DepthFormat;
 }
 
 uint32 D3D12RHI::GetBufferAlignment(EBufferFlags bufferFlags) {
@@ -121,16 +119,16 @@ RHIFencePtr D3D12RHI::CreateFence(bool isSignaled) {
 	return RHIFencePtr(new D3D12Fence(m_Device->GetDevice()));
 }
 
-RHIShaderPtr D3D12RHI::CreateShader(EShaderStageFlags type, const char* codeData, uint32 codeSize, const XString& entryFunc) {
-	return RHIShaderPtr(new D3D12Shader(type, codeData, codeSize));
+RHIShaderPtr D3D12RHI::CreateShader(EShaderStageFlags type, XStringView code, XStringView entryName, RHIShaderBindingInterface* bindingInterface) {
+	return RHIShaderPtr(new D3D12Shader(type, bindingInterface, code));
 }
 
 RHIGraphicsPipelineStatePtr D3D12RHI::CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) {
 	return RHIGraphicsPipelineStatePtr(new D3D12GraphicsPipelineState(desc, m_Device));
 }
 
-RHIComputePipelineStatePtr D3D12RHI::CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) {
-	return RHIComputePipelineStatePtr(new D3D12ComputePipelineState(desc, m_Device));
+RHIComputePipelineStatePtr D3D12RHI::CreateComputePipelineState(RHIShader* shader) {
+	return RHIComputePipelineStatePtr(new D3D12ComputePipelineState(shader, m_Device));
 }
 
 RHICommandBufferPtr D3D12RHI::CreateCommandBuffer(EQueueType queue) {
@@ -151,5 +149,5 @@ RHIDynamicBuffer D3D12RHI::AllocateDynamicBuffer(EBufferFlags bufferFlags, uint3
 }
 
 D3D12Device* D3D12RHI::GetDevice() {
-	return m_Device;
+	return m_Device.Get();
 }

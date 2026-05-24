@@ -161,15 +161,6 @@ public:
 	virtual void Reset() = 0; // reset the fence to unsignaled state
 };
 
-class RHIShader : public RHIResource {
-public:
-	RHIShader(EShaderStageFlags type) : m_Type(type) {}
-	virtual ~RHIShader() {}
-	XX_NODISCARD EShaderStageFlags GetStage() const { return m_Type; }
-protected:
-	EShaderStageFlags m_Type;
-};
-
 // render pass
 struct RHIRenderPassInfo {
 	struct ColorTargetInfo {
@@ -272,18 +263,57 @@ struct RHIDepthStencilState {
 
 // layout
 struct RHIShaderBinding {
-	EBindingType Type;
-	EShaderStageFlags StageFlags;
-	uint16 Count = 1;
+	inline static constexpr uint32 MAX_SET = 8;
+	inline static constexpr uint32 MAX_BINDING = 32;
+	uint32 Binding : 5;
+	uint32 Set : 3;
+	uint32 NumElements : 16;
+	EBindingType Type : 4;
+	RHIShaderBinding();
+	RHIShaderBinding(uint32 binding, uint32 set, EBindingType type, uint32 numElements);
 };
 
-typedef TArray<RHIShaderBinding> RHIShaderParamSetLayout;
+/* Container to collect shader bindings.
+ * valid usage:
+ * RHIShaderBindingSet bindingSet;
+ * shader0->GetBindings(bindingSet);
+ * shader1->GetBindings(bindingSet);
+ * bindingSet.Sort();
+ * for(uint32 i=0; i<bindingSet.GetNum(); ++i){bindingSet.GetBinding(i); ...}
+ */
+class RHIShaderBindingSet {
+public:
+	void AddBinding(RHIShaderBinding binding, EShaderStageFlags stage);
+	void Sort();
+	uint32 GetNum() const;
+	RHIShaderBinding GetBinding(uint32 i) const;
+	EShaderStageFlags GetShaderStage(uint32 i) const;
+private:
+	TArray<RHIShaderBinding> m_Bindings;
+	TArray<EShaderStageFlags> m_ShaderStages;
+};
+
+class RHIShaderBindingInterface {
+public:
+	virtual ~RHIShaderBindingInterface() = default;
+	virtual void GetBindings(RHIShaderBindingSet& bindingSet) = 0;
+};
+
+class RHIShader : public RHIResource {
+public:
+	RHIShader(EShaderStageFlags type, RHIShaderBindingInterface* bindingInterface);
+	virtual ~RHIShader() = default;
+	void GetBindings(RHIShaderBindingSet& bindingSet);
+	XX_NODISCARD EShaderStageFlags GetStage() const { return m_Type; }
+protected:
+	EShaderStageFlags m_Type;
+	RHIShaderBindingInterface* m_BindingInterface;
+};
 
 // pso
 struct RHIGraphicsPipelineStateDesc {
 	RHIShader* VertexShader;
 	RHIShader* PixelShader;
-	TArray<RHIShaderParamSetLayout> Layout;
 	RHIVertexInputInfo VertexInput;
 	RHIBlendDesc BlendDesc;
 	RHIRasterizerState RasterizerState;
@@ -303,18 +333,12 @@ protected:
 	RHIGraphicsPipelineStateDesc m_Desc;
 };
 
-// compute pipeline
-struct RHIComputePipelineStateDesc {
-	RHIShader* Shader;
-	TArray<RHIShaderParamSetLayout> Layout;
-};
-
 class RHIComputePipelineState: public RHIResource {
 public:
-	RHIComputePipelineState(const RHIComputePipelineStateDesc& desc) : m_Desc(desc) {}
-	XX_NODISCARD const RHIComputePipelineStateDesc& GetDesc() const { return m_Desc; }
+	RHIComputePipelineState(RHIShader* shader) : m_Shader(shader) {}
+	XX_NODISCARD RHIShader* GetShader() { return m_Shader; }
 protected:
-	RHIComputePipelineStateDesc m_Desc;
+	RHIShader* m_Shader;
 };
 
 struct RHIShaderParam {

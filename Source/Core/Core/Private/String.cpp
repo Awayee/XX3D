@@ -1,18 +1,32 @@
 #include "Core/Public/String.h"
+#if _WIN32
 #include "Windows.h"
+#else
+#include <codecvt>
+#endif
 
-XWString String2WString(const XString& str) {
-    int size_needed = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), NULL, 0);
+XWString String2WString(XStringView str) {
+#if _WIN32
+    int size_needed = MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.size(), NULL, 0);
     std::wstring wstr(size_needed, 0);
-    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), &wstr[0], size_needed);
+    MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.size(), &wstr[0], size_needed);
     return wstr;
+#else
+	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+	return converter.from_bytes(str.data(), str.data() + str.size());
+#endif
 }
 
-XString WString2String(const XWString& wStr) {
-    int size_needed = WideCharToMultiByte(CP_UTF8, 0, wStr.c_str(), (int)wStr.size(), NULL, 0, NULL, NULL);
+XString WString2String(XWStringView wStr) {
+#if _WIN32
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, wStr.data(), (int)wStr.size(), NULL, 0, NULL, NULL);
     std::string str(size_needed, 0);
-    WideCharToMultiByte(CP_UTF8, 0, wStr.c_str(), (int)wStr.size(), &str[0], size_needed, NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, wStr.data(), (int)wStr.size(), &str[0], size_needed, NULL, NULL);
     return str;
+#else
+	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+	return converter.to_bytes(wStr.data(), wStr.data() + wStr.size());
+#endif
 }
 
 bool StrStartsWith(XStringView Str, XStringView Sign) {

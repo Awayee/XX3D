@@ -5,15 +5,38 @@
 
 namespace Object {
 
+	class MaterialShader: public RHIShaderBindingInterface {
+	public:
+		static RHIShaderBinding uCamera;
+		static RHIShaderBinding uInstanceData;
+		static RHIShaderBinding uInstanceID;
+		static RHIShaderBinding uModel;
+		MaterialShader(EShaderStageFlags stage, XStringView code, XStringView entryName);
+		RHIShader* GetRHI();
+	protected:
+		RHIShaderPtr m_RHIShader;
+	};
+
 	union MaterialSamplerCode {
 		uint32 Code;
 		struct {
 			ESamplerFilter Filter;
 			ESamplerAddressMode AddressMode;
 		};
-		MaterialSamplerCode() : Code(0) {}
 		MaterialSamplerCode(uint32 code) : Code(code) {}
-		MaterialSamplerCode(ESamplerFilter filter, ESamplerAddressMode addressMode): Filter(filter), AddressMode(addressMode){}
+	};
+
+	struct MaterialDataLayout {
+		uint32 NumVectors : 8;
+		uint32 NumScalars : 8;
+		uint32 NumTextures: 8;
+		uint32 NumSamplers: 8;
+		bool operator==(const MaterialDataLayout& rhs)const;
+		uint32 GetNumMergedVectors() const;
+		uint32 GetNumUniformBuffers() const;
+		uint32 GetNumBindings() const;
+		uint32 GetBindingIndexOfTexture(uint32 i)const;
+		uint32 GetBindingIndexOfSampler(uint32 i)const;
 	};
 
 	class MaterialInterface {
@@ -29,42 +52,59 @@ namespace Object {
 	// A material template contains parameter layout of sub materials
 	class MaterialTemplate : public MaterialInterface{
 	public:
+		union BindingData {
+			struct {
+				RHIBuffer* Buffer;
+				uint32 BufferOffset;
+				uint32 BufferSize;
+			};
+			struct {
+				RHITexture* Texture;
+				uint32 TexSampleCode;
+			};
+			uint32 Sampler;
+		};
 		NON_COPYABLE(MaterialTemplate);
 		MaterialTemplate(const Asset::MaterialTemplateAsset& asset);
 		MaterialTemplate(MaterialTemplate&& rhs)noexcept;
 		void FillBasePassPSODesc(RHIGraphicsPipelineStateDesc& desc, bool bInstanced) override;
 		void BindBasePassShaderPrams(RHICommandBuffer* cmd, bool bInstanced) override;
 		uint32 GetHash(bool bInstanced) override;
+		uint32 GetTemplateHash() const;
 		void Reload(const Asset::MaterialTemplateAsset& asset);
-
+		MaterialDataLayout GetLayout() const;
+		TConstArrayView<MaterialTemplate::BindingData> GetBindingDatas();
+		const MaterialTemplate::BindingData& GetBindingData(uint32 binding);
 	private:
 		friend class MaterialInstance;
 		// default values
-		TArray<Math::FVector4> m_Vectors;
-		struct BindingTexture {
-			RHITexture* Texture;
-			MaterialSamplerCode SamplerCode;
-		};
-		TArray<BindingTexture> m_Textures;
-		TArray<MaterialSamplerCode> m_Samplers;
+		uint32 m_Hash;
+		MaterialDataLayout m_Layout;
+		TArray<BindingData> m_BindingDatas;
 		TArray<Asset::MaterialTemplateAsset::ParameterDesc> m_MaterialOutputs; // for generating code
 		// prepare shader for building pso
-		struct MaterialShader {
-			RHIShaderPtr VS;
-			RHIShaderPtr PS;
+		struct MaterialShaderSet {
+			TUniquePtr<MaterialShader> VS;
+			TUniquePtr<MaterialShader> PS;
 		};
-		MaterialShader m_Shader;
-		MaterialShader m_InstancedShader;
+		MaterialShaderSet m_Shader;
+		MaterialShaderSet m_InstancedShader;
 		// material constant buffer TODO static buffer memory allocator
 		RHIBufferPtr m_MaterialCB;
-		uint32 m_Hash;
-		MaterialShader& GetOrCreateShader(bool bInstanced);
-		void GenerateShaderCode(uint32 materialSet, XString& outCode);
+		MaterialShaderSet& GetOrCreateShader(bool bInstanced);
+		void GenerateShaderCode(XString& outCode);
 	};
 
 	// Material instances are sub objects of material templates, only contains values.
 	class MaterialInstance : public MaterialInterface {
 	public:
+		union OverrideData {
+			struct {
+				uint32 BufferOffset;
+				uint32 BufferSize;
+			};
+			RHITexture* Texture;
+		};
 		NON_COPYABLE(MaterialInstance);
 		MaterialInstance(const Asset::MaterialAsset& asset, MaterialTemplate* materialTemplate);
 		MaterialInstance(MaterialInstance&& rhs) noexcept;
@@ -75,10 +115,9 @@ namespace Object {
 		void Reload(const Asset::MaterialAsset& asset, MaterialTemplate* materialTemplate);
 	private:
 		MaterialTemplate* m_Template;
-		TArray<Math::FVector4> m_VectorOverrides;
-		TArray<RHITexture*> m_TextureOverrides;
+		TArray<OverrideData> m_Overrides;
 		RHIBufferPtr m_MaterialCB;
-		uint32 m_CacheHash;
+		MaterialDataLayout m_CacheLayout;
 		bool CheckAndFixParameters();
 	};
 

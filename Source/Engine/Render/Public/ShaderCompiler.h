@@ -11,20 +11,23 @@ namespace ShaderCompiler {
 		XString Value;
 	};
 	// Get shader output file by .hlsl file, entry func, and macros
-	XString GetCompileOutputFile(const XString& hlslFile, const XString& entryPoint, uint32 permutationID);
+	XString GetCompileOutputFile(XStringView hlslFile, XStringView entryPoint, uint32 permutationID);
 
 	// Load compiled shader code
-	bool LoadCompiledShader(const XString& compiledFile, TArray<int8>& outCode);
+	bool LoadCompiledShader(XStringView compiledFile, TArray<int8>& outCode);
 
 	// Load .hlsl shader code
-	bool LoadSourceShader(const XString& shaderFile, XString& outCode);
+	bool LoadSourceShader(XStringView shaderFile, XString& outCode);
 
 	// Compile .hlsl file
-	bool CompileSourceFileToFile(const XString& hlslFile, const XString& entryPoint, EShaderStageFlags stage, TConstArrayView<Macro> macros, uint32 permutationID);
+	bool CompileSourceFileToFile(XStringView hlslFile, XStringView entryPoint, EShaderStageFlags stage, TConstArrayView<Macro> macros, uint32 permutationID);
 
 	// Compile code
-	bool CompileCodeToFile(const XString& hlslCode, const XString& entryPoint, EShaderStageFlags stage, TConstArrayView<Macro> macros, const XString& outFile);
+	bool CompileCodeToFile(XStringView hlslCode, XStringView entryPoint, EShaderStageFlags stage, TConstArrayView<Macro> macros, XString& outFile);
 
 	// Compile code to byte code.
-	bool CompileCodeToBytes(const XString& hslCode, const XString& entryPoint, EShaderStageFlags stage, TConstArrayView<Macro> macros, TArray<int8>& outBytes);
+	bool CompileCodeToBytes(XStringView hslCode, XStringView entryPoint, EShaderStageFlags stage, TConstArrayView<Macro> macros, TArray<int8>& outBytes);
+
+	// Save compiled code
+	bool SaveCompiledBytesToFile(const TArray<int8>& bytes, XStringView compiledFile);
 }

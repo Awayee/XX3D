@@ -7,7 +7,7 @@ EDynamicDescriptorType ToDynamicDescriptorType(EBindingType type) {
 	case EBindingType::UniformBuffer:
 	case EBindingType::StructuredBuffer:
 	case EBindingType::RWStructuredBuffer:
-	case EBindingType::StorageTexture:
+	case EBindingType::RWTexture:
 	case EBindingType::Texture: return EDynamicDescriptorType::CbvSrvUav;
 	case EBindingType::Sampler: return EDynamicDescriptorType::Sampler;
 	default: return EDynamicDescriptorType::Count;

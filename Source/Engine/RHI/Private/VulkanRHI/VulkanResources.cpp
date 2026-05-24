@@ -139,10 +139,11 @@ void VulkanRHIFence::SetNameInternal(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_FENCE, m_Handle, name);
 }
 
-VulkanRHIShader::VulkanRHIShader(EShaderStageFlags type, const char* code, uint32 codeSize, const XString& entryFunc, VulkanDevice* device): RHIShader(type), m_Device(device) {
-	VkShaderModuleCreateInfo shaderInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, nullptr, 0, (size_t)codeSize, reinterpret_cast<const uint32*>(code)};
+VulkanRHIShader::VulkanRHIShader(EShaderStageFlags type, RHIShaderBindingInterface* bindingInterface, XStringView code, XStringView entryName, VulkanDevice* device):
+RHIShader(type, bindingInterface), m_Device(device) {
+	VkShaderModuleCreateInfo shaderInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, nullptr, 0, (size_t)code.size(), reinterpret_cast<const uint32*>(code.data())};
 	vkCreateShaderModule(m_Device->GetDevice(), &shaderInfo, nullptr, &m_ShaderModule);
-	m_EntryName = entryFunc;
+	m_EntryName = entryName;
 }
 
 VulkanRHIShader::~VulkanRHIShader() {

@@ -4,16 +4,29 @@
 
 namespace {
 	class HZBCS : public Render::GlobalShader {
+		BEGIN_SHADER_PERMUTATION
+		SHADER_PERMUTATION_SWITCH(CLOSEST, false)
+		SHADER_PERMUTATION_SWITCH(FURTHEST, true)
+		SHADER_PERMUTATION_SWITCH(OUTPUT2X2, true)
+		END_SHADER_PERMUTATION
+		BEGIN_SHADER_BINDING
+		SHADER_BINDING(0, Texture, inDepth, 1)
+		SHADER_BINDING(1, UniformBuffer, uSizeInfo,1)
+		SHADER_BINDING_WITH_MACRO(2, RWTexture, outFurthest, 1, FURTHEST, true)
+		SHADER_BINDING_WITH_MACRO(3, RWTexture, outClosest, 1, CLOSEST, true)
+		END_SHADER_BINDING
 		GLOBAL_SHADER_IMPLEMENT(HZBCS, "HZB.hlsl", "MainCS", EShaderStageFlags::Compute);
-		SHADER_PERMUTATION_BEGIN_SWITCH(CLOSEST, false);
-		SHADER_PERMUTATION_NEXT_SWITCH(FURTHEST, true, CLOSEST);
-		SHADER_PERMUTATION_NEXT_SWITCH(OUTPUT2X2, true, FURTHEST);
-		SHADER_PERMUTATION_END(OUTPUT2X2);
 	};
 
 	class TextureBlitCS : public Render::GlobalShader {
-		GLOBAL_SHADER_IMPLEMENT(TextureBlitCS, "TextureBlit.hlsl", "MainCS", EShaderStageFlags::Compute);
 		SHADER_PERMUTATION_EMPTY();
+		BEGIN_SHADER_BINDING
+		SHADER_BINDING(0, Texture, srcTex, 1)
+		SHADER_BINDING(1, RWTexture, dstTex, 1)
+		SHADER_BINDING(2, UniformBuffer, uSizeInfo, 1)
+		SHADER_BINDING(3, Sampler, inSampler, 1)
+		END_SHADER_BINDING
+		GLOBAL_SHADER_IMPLEMENT(TextureBlitCS, "TextureBlit.hlsl", "MainCS", EShaderStageFlags::Compute);
 	};
 
 	static constexpr uint32 THREAD_ROW_NUM = 16; // num of threads per thread group
@@ -96,11 +109,11 @@ namespace Render {
 
 			buildHZBMip0->SetTask([this, depth, dstSubRes, sizeBuffer, groupX, groupY](RHICommandBuffer* cmd) {
 				cmd->BindComputePipeline(m_BlitPSO.Get());
-				cmd->SetShaderParam(0, 0, RHIShaderParam::Texture(depth, RHITextureSubRes{ 0, 1, 0, 1, ETextureDimension::Tex2D, ETextureViewFlags::Depth }));
-				cmd->SetShaderParam(0, 1, RHIShaderParam::TextureUAV(m_HZB.Get(), dstSubRes));
-				cmd->SetShaderParam(0, 2, RHIShaderParam::UniformBuffer(sizeBuffer));
+				cmd->SetShaderParam(TextureBlitCS::srcTex, RHIShaderParam::Texture(depth, RHITextureSubRes{ 0, 1, 0, 1, ETextureDimension::Tex2D, ETextureViewFlags::Depth }));
+				cmd->SetShaderParam(TextureBlitCS::dstTex, RHIShaderParam::TextureUAV(m_HZB.Get(), dstSubRes));
+				cmd->SetShaderParam(TextureBlitCS::uSizeInfo, RHIShaderParam::UniformBuffer(sizeBuffer));
 				RHISampler* sampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Point, ESamplerAddressMode::Clamp);
-				cmd->SetShaderParam(0, 3, RHIShaderParam::Sampler(sampler));
+				cmd->SetShaderParam(TextureBlitCS::inSampler, RHIShaderParam::Sampler(sampler));
 				cmd->Dispatch(groupX, groupY, 1);
 			});
 		}
@@ -128,9 +141,9 @@ namespace Render {
 
 			buildHZBMip->SetTask([this, pso, srcSubRes, dstSubRes, groupX, groupY, sizeBuffer](RHICommandBuffer* cmd) {
 				cmd->BindComputePipeline(pso);
-				cmd->SetShaderParam(0, 0, RHIShaderParam::Texture(m_HZB.Get(), srcSubRes));
-				cmd->SetShaderParam(0, 1, RHIShaderParam::UniformBuffer(sizeBuffer));
-				cmd->SetShaderParam(0, 2, RHIShaderParam::TextureUAV(m_HZB.Get(), dstSubRes));
+				cmd->SetShaderParam(HZBCS::inDepth, RHIShaderParam::Texture(m_HZB.Get(), srcSubRes));
+				cmd->SetShaderParam(HZBCS::uSizeInfo, RHIShaderParam::UniformBuffer(sizeBuffer));
+				cmd->SetShaderParam(HZBCS::outFurthest, RHIShaderParam::TextureUAV(m_HZB.Get(), dstSubRes));
 				cmd->Dispatch(groupX, groupY, 1);
 			});
 		}
@@ -142,40 +155,19 @@ namespace Render {
 		const uint32 flagVal = flags.Val;
 		CHECK(flagVal < m_HZBPSOStorage.Size());
 		if(!m_HZBPSOStorage[flagVal]) {
-			RHIComputePipelineStateDesc desc;
-			desc.Layout.Resize(1);
-			auto& layout = desc.Layout[0];
-			layout.Reserve(4);
-			layout.PushBack({ EBindingType::Texture, EShaderStageFlags::Compute, 1 });
-			layout.PushBack({ EBindingType::UniformBuffer, EShaderStageFlags::Compute, 1 });
-			if(flags.Furthest) {
-				layout.PushBack({ EBindingType::StorageTexture, EShaderStageFlags::Compute, 1 });
-			}
-			if(flags.Closest) {
-				layout.PushBack({ EBindingType::StorageTexture, EShaderStageFlags::Compute, 1 });
-			}
 			HZBCS::ShaderPermutation csp;
 			csp.FURTHEST = flags.Furthest;
 			csp.CLOSEST = flags.Closest;
 			csp.OUTPUT2X2 = flags.Output2x2;
 			RHIShader* cs = GlobalShaderMap::Instance()->GetShader<HZBCS>(csp)->GetRHI();
-			desc.Shader = cs;
-			m_HZBPSOStorage[flagVal] = RHI::Instance()->CreateComputePipelineState(desc);
+			m_HZBPSOStorage[flagVal] = RHI::Instance()->CreateComputePipelineState(cs);
 		}
 		return m_HZBPSOStorage[flagVal].Get();
 	}
 
 	void HZBBuilder::CreateBlitPSO() {
-		RHIComputePipelineStateDesc desc;
-		desc.Layout = {{
-			{EBindingType::Texture, EShaderStageFlags::Compute, 1},
-			{EBindingType::StorageTexture, EShaderStageFlags::Compute, 1},
-			{EBindingType::UniformBuffer, EShaderStageFlags::Compute, 1},
-			{EBindingType::Sampler, EShaderStageFlags::Compute, 1}
-		}};
 		RHIShader* cs = GlobalShaderMap::Instance()->GetShader<TextureBlitCS>()->GetRHI();
-		desc.Shader = cs;
-		m_BlitPSO = RHI::Instance()->CreateComputePipelineState(desc);
+		m_BlitPSO = RHI::Instance()->CreateComputePipelineState(cs);
 	}
 
 	void HZBBuilder::CreateOutputTexture(uint32 dstSize) {

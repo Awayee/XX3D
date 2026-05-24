@@ -17,6 +17,9 @@ enum EMaterialShaderParamSet : uint32{
 };
 
 namespace Object {
+	static const ShaderCompiler::Macro sInstancedMacro{ "INSTANCED", "1" };
+	static const char* MainVS = "MainVS";
+	static const char* MainPS = "MainPS";
 
 	using EParameterType = Asset::EMaterialParamType;
 
@@ -39,14 +42,96 @@ namespace Object {
 		CHECK(0);
 	}
 
+	inline TConstArrayView<ShaderCompiler::Macro> GetMaterialShaderMacro(bool bInstanced) {
+		if(bInstanced) {
+			return TConstArrayView<ShaderCompiler::Macro>(&sInstancedMacro, 1);
+		}
+		return TConstArrayView<ShaderCompiler::Macro>();
+	}
+
+	RHIShaderBinding MaterialShader::uCamera{0, 0, EBindingType::UniformBuffer, 1};
+	RHIShaderBinding MaterialShader::uInstanceData{0, 1, EBindingType::StructuredBuffer, 1};
+	RHIShaderBinding MaterialShader::uInstanceID{1, 1, EBindingType::StructuredBuffer, 1};
+	RHIShaderBinding MaterialShader::uModel{0, 1, EBindingType::UniformBuffer, 1};
+
+	MaterialShader::MaterialShader(EShaderStageFlags stage, XStringView code, XStringView entryName) {
+		m_RHIShader = RHI::Instance()->CreateShader(stage, code, entryName, this);
+	}
+
+	RHIShader* MaterialShader::GetRHI() {
+		return m_RHIShader.Get();
+	}
+
+	template<bool bInstanced> class MaterialShaderVS : public MaterialShader{
+	public:
+		MaterialShaderVS(XStringView code, XStringView entryName): MaterialShader(EShaderStageFlags::Vertex, code, entryName) {}
+		void GetBindings(RHIShaderBindingSet& bindingSet) override {
+			const EShaderStageFlags stage = m_RHIShader->GetStage();
+			bindingSet.AddBinding(uCamera, stage);
+			if constexpr(bInstanced) {
+				bindingSet.AddBinding(uInstanceData, stage);
+				bindingSet.AddBinding(uInstanceID, stage);
+			}
+			else {
+				bindingSet.AddBinding(uModel, stage);
+			}
+		}
+	};
+
+	class MaterialShaderPS: public MaterialShader {
+	public:
+		MaterialShaderPS(XStringView code, XStringView entryName, MaterialDataLayout layout):
+		MaterialShader(EShaderStageFlags::Pixel, code, entryName),
+		m_Layout(layout){}
+
+		void GetBindings(RHIShaderBindingSet& bindingSet) override {
+			const EShaderStageFlags stage = m_RHIShader->GetStage();
+			uint32 binding = 0;
+			for(uint32 i=0; i<m_Layout.GetNumUniformBuffers(); ++i) {
+				bindingSet.AddBinding(RHIShaderBinding{ binding++, MATERIAL_PARAM_SET_MATERIAL, EBindingType::UniformBuffer, 1 }, stage);
+			}
+			for(uint32 i=0; i<m_Layout.NumTextures; ++i) {
+				bindingSet.AddBinding(RHIShaderBinding{ binding++, MATERIAL_PARAM_SET_MATERIAL, EBindingType::Texture, 1 }, stage);
+			}
+			for(uint32 i=0; i<m_Layout.NumSamplers; ++i) {
+				bindingSet.AddBinding(RHIShaderBinding{ binding++, MATERIAL_PARAM_SET_MATERIAL, EBindingType::Sampler, 1 }, stage);
+			}
+		}
+	private:
+		MaterialDataLayout m_Layout;
+	};
+
+	bool MaterialDataLayout::operator==(const MaterialDataLayout& rhs) const {
+		return (*reinterpret_cast<const uint32*>(this)) == (*reinterpret_cast<const uint32*>(&rhs));
+	}
+
+	uint32 MaterialDataLayout::GetNumMergedVectors() const {
+		return NumVectors + (NumScalars + 3) / 4;
+	}
+
+	uint32 MaterialDataLayout::GetNumUniformBuffers() const {
+		return (NumVectors + NumScalars > 0) ? 1 : 0;
+	}
+
+	uint32 MaterialDataLayout::GetNumBindings() const {
+		return GetNumUniformBuffers() + NumVectors + NumScalars;
+	}
+
+	uint32 MaterialDataLayout::GetBindingIndexOfTexture(uint32 i) const {
+		return GetNumUniformBuffers() + i;
+	}
+
+	uint32 MaterialDataLayout::GetBindingIndexOfSampler(uint32 i) const {
+		return GetNumUniformBuffers() + NumTextures + i;
+	}
+
 	MaterialTemplate::MaterialTemplate(const Asset::MaterialTemplateAsset& asset) : m_Hash(0) {
 		Reload(asset);
 	}
 
 	MaterialTemplate::MaterialTemplate(MaterialTemplate&& rhs) noexcept :
-	m_Vectors(MoveTemp(rhs.m_Vectors)),
-	m_Textures(MoveTemp(rhs.m_Textures)),
-	m_Samplers(MoveTemp(rhs.m_Samplers)),
+	m_Layout(rhs.m_Layout),
+	m_BindingDatas(MoveTemp(rhs.m_BindingDatas)),
 	m_MaterialOutputs(MoveTemp(rhs.m_MaterialOutputs)),
 	m_Shader(MoveTemp(rhs.m_Shader)),
 	m_InstancedShader(MoveTemp(rhs.m_InstancedShader)),
@@ -56,42 +141,8 @@ namespace Object {
 	void MaterialTemplate::FillBasePassPSODesc(RHIGraphicsPipelineStateDesc& desc, bool bInstanced) {
 		// shader
 		auto& shader = GetOrCreateShader(bInstanced);
-		desc.VertexShader = shader.VS.Get();
-		desc.PixelShader = shader.PS.Get();
-		// layout
-		desc.Layout.Resize(MATERIAL_PARAM_SET_COUNT);
-		// scene set
-		desc.Layout[MATERIAL_PARAM_SET_SCENE] = {
-			{EBindingType::UniformBuffer, EShaderStageFlags::Vertex},
-		};
-		// object set
-		if(bInstanced) {
-			desc.Layout[MATERIAL_PARAM_SET_OBJECT] = {
-				{EBindingType::StructuredBuffer, EShaderStageFlags::Vertex},
-				{EBindingType::StructuredBuffer, EShaderStageFlags::Vertex},
-			};
-		}
-		else {
-			desc.Layout[MATERIAL_PARAM_SET_OBJECT] = {
-				{EBindingType::UniformBuffer, EShaderStageFlags::Vertex}
-			};
-		}
-		// material set
-		auto& materialSet = desc.Layout[MATERIAL_PARAM_SET_MATERIAL];
-		const uint32 bindingSize = 1 + m_Textures.Size() + m_Samplers.Size();
-		materialSet.Reserve(bindingSize);
-		if (m_Vectors.Size()) {
-			auto& dst = materialSet.EmplaceBack();
-			dst.Type = EBindingType::UniformBuffer;
-			dst.StageFlags = EShaderStageFlags::Pixel;
-			dst.Count = 1;
-		}
-		for (auto& texInfo : m_Textures) {
-			materialSet.PushBack({ EBindingType::Texture, EShaderStageFlags::Pixel, 1 });
-		}
-		for (auto& sampler : m_Samplers) {
-			materialSet.PushBack({ EBindingType::Sampler, EShaderStageFlags::Pixel, 1 });
-		}
+		desc.VertexShader = shader.VS->GetRHI();
+		desc.PixelShader = shader.PS->GetRHI();
 		// vertex input;
 		auto& vi = desc.VertexInput;
 		vi.Bindings = { {0, sizeof(Asset::AssetVertex), false} };
@@ -109,19 +160,23 @@ namespace Object {
 	}
 
 	void MaterialTemplate::BindBasePassShaderPrams(RHICommandBuffer* cmd, bool bInstanced) {
-		const uint32 materialSetIdx = MATERIAL_PARAM_SET_MATERIAL;
-		uint32 bindingIdx = 0;
 		// uniform
-		if(m_Vectors.Size()) {
-			cmd->SetShaderParam(materialSetIdx, bindingIdx++, RHIShaderParam::UniformBuffer(m_MaterialCB));
+		if(m_Layout.GetNumUniformBuffers()) {
+			const BindingData& data = m_BindingDatas[0];
+			cmd->SetShaderParam(RHIShaderBinding{ 0, MATERIAL_PARAM_SET_MATERIAL, EBindingType::UniformBuffer, 1 },
+				RHIShaderParam::UniformBuffer(m_MaterialCB, data.BufferOffset, data.BufferSize));
 		}
-		for(auto& t: m_Textures) {
-			RHITexture* texture = t.Texture ? t.Texture : Render::DefaultResources::Instance()->GetDefaultTexture2D(Render::DefaultResources::TEX_WHITE);
-			cmd->SetShaderParam(materialSetIdx, bindingIdx++, RHIShaderParam::Texture(texture));
+		for(uint32 i=0; i<m_Layout.NumTextures; ++i) {
+			const uint32 binding = m_Layout.GetBindingIndexOfTexture(i);
+			RHITexture* t = m_BindingDatas[binding].Texture;
+			t = t ? t : Render::DefaultResources::Instance()->GetDefaultTexture2D(Render::DefaultResources::TEX_WHITE);
+			cmd->SetShaderParam(RHIShaderBinding{ binding, MATERIAL_PARAM_SET_MATERIAL, EBindingType::Texture, 1 }, RHIShaderParam::Texture(t));
 		}
-		for(auto& s : m_Samplers) {
-			RHISampler* sampler = Render::DefaultResources::Instance()->GetDefaultSampler(s.Filter, s.AddressMode);
-			cmd->SetShaderParam(materialSetIdx, bindingIdx++, RHIShaderParam::Sampler(sampler));
+		for(uint32 i=0; i<m_Layout.NumSamplers; ++i) {
+			const uint32 binding = m_Layout.GetBindingIndexOfSampler(i);
+			const MaterialSamplerCode sCode{ m_BindingDatas[binding].Sampler };
+			RHISampler* s = Render::DefaultResources::Instance()->GetDefaultSampler(sCode.Filter, sCode.AddressMode);
+			cmd->SetShaderParam(RHIShaderBinding{ binding, MATERIAL_PARAM_SET_MATERIAL, EBindingType::Sampler, 1 }, RHIShaderParam::Sampler(s));
 		}
 	}
 
@@ -129,37 +184,56 @@ namespace Object {
 		return GetTypeHash32BasedOn(bInstanced, m_Hash);
 	}
 
+	uint32 MaterialTemplate::GetTemplateHash() const {
+		return m_Hash;
+	}
+
 	void MaterialTemplate::Reload(const Asset::MaterialTemplateAsset& asset) {
 		// translate to shader binding
-		m_Vectors.Reset();
-		m_Textures.Reset();
-		m_Samplers.Reset();
+		MaterialDataLayout layout;
+		layout.NumVectors = asset.Vectors.Size();
+		layout.NumScalars = asset.Scalars.Size();
+		layout.NumTextures = asset.Textures.Size();
 		m_MaterialOutputs.Reset();
+		m_BindingDatas.Reset();
 		// combine vectors and scalars
-		const uint32 vectorSize = asset.Vectors.Size();
-		const uint32 combinedVectorSize = vectorSize + (asset.Scalars.Size() + 3) / 4;
-		m_Vectors.Resize(combinedVectorSize);
-		for (uint32 i = 0; i < vectorSize; ++i) {
-			m_Vectors[i] = asset.Vectors[i];
-		}
-		for (uint32 i = 0; i < asset.Scalars.Size(); ++i) {
-			const uint32 vectorIndex = vectorSize + i / 4;
-			const uint32 vectorOffset = i % 4;
-			m_Vectors[vectorIndex][vectorOffset] = asset.Scalars[i];
+		const uint32 numMergedVectors = layout.GetNumMergedVectors();
+		if(numMergedVectors) {
+			TFixedArray<Math::FVector4> vectors(numMergedVectors);
+			for(uint32 i=0; i<layout.NumVectors; ++i) {
+				vectors[i] = asset.Vectors[i];
+			}
+			for(uint32 i=0; i<layout.NumScalars; ++i) {
+				const uint32 vectorIndex = layout.NumVectors + i / 4;
+				const uint32 vectorOffset = i % 4;
+				vectors[vectorIndex][vectorOffset] = asset.Scalars[i];
+			}
+
+			// material constant buffer
+			const uint32 bufferSize = numMergedVectors * sizeof(Math::FVector4);
+			if (!m_MaterialCB || m_MaterialCB->GetDesc().ByteSize < bufferSize) {
+				m_MaterialCB = RHI::Instance()->CreateBuffer({ EBufferFlags::Uniform, bufferSize, 0 });
+			}
+			m_MaterialCB->UpdateData(vectors.Data(), bufferSize, 0);
+			BindingData& data = m_BindingDatas.EmplaceBack();
+			data.Buffer = m_MaterialCB.Get();
+			data.BufferOffset = 0;
+			data.BufferSize = bufferSize;
 		}
 		// textures
 		TSet<uint32> samplersCode;
-		m_Textures.Resize(asset.Textures.Size());
-		for (uint32 i = 0; i < m_Textures.Size(); ++i) {
-			const auto& srcTex = asset.Textures[i];
-			m_Textures[i].Texture = StaticResourceMgr::Instance()->GetTexture(srcTex.Texture);
-			m_Textures[i].SamplerCode = srcTex.SamplerCode;
+		for (uint32 i=0; i<layout.NumTextures; ++i) {
+			const Asset::MaterialTemplateAsset::TextureParameter& srcTex = asset.Textures[i];
+			BindingData& data = m_BindingDatas.EmplaceBack();
+			data.Texture = StaticResourceMgr::Instance()->GetTexture(srcTex.Texture);
+			data.TexSampleCode = srcTex.SamplerCode;
 			samplersCode.insert(srcTex.SamplerCode);
 		}
 		// samplers
-		m_Samplers.Reserve((uint32)samplersCode.size());
-		for (uint32 samplerCode : samplersCode) {
-			m_Samplers.PushBack(MaterialSamplerCode{ samplerCode });
+		layout.NumSamplers = samplersCode.size();
+		for (const uint32 samplerCode : samplersCode) {
+			BindingData& data = m_BindingDatas.EmplaceBack();
+			data.Sampler = samplerCode;
 		}
 
 		// outputs
@@ -167,22 +241,15 @@ namespace Object {
 			auto& dstParam = m_MaterialOutputs.EmplaceBack();
 			dstParam = srcParam;
 			if (dstParam.ParamType == EParameterType::Scalar) {
-				dstParam.Offset += 4 * vectorSize;
+				dstParam.Offset += 4 * layout.NumVectors;
 			}
 		}
 
-		// material constant buffer
-		if(!m_MaterialCB || m_MaterialCB->GetDesc().ByteSize < m_Vectors.ByteSize()) {
-			m_MaterialCB = RHI::Instance()->CreateBuffer({ EBufferFlags::Uniform, m_Vectors.ByteSize(), 0 });
-		}
-		m_MaterialCB->UpdateData(m_Vectors.Data(), m_Vectors.ByteSize(), 0);
-
-
 		// calculate hash
 		uint32 hash = 0;
-		hash = GetTypeHash32BasedOn(m_Textures.Size(), hash);
-		hash = GetTypeHash32BasedOn(m_Vectors.Size(), hash);
-		hash = GetTypeHash32BasedOn(m_Samplers.Size(), hash);
+		hash = GetTypeHash32BasedOn(numMergedVectors, hash);
+		hash = GetTypeHash32BasedOn(layout.NumTextures, hash);
+		hash = GetTypeHash32BasedOn(layout.NumSamplers, hash);
 		// need rebuild shader if hash modified
 		if(hash != m_Hash) {
 			m_Shader.PS.Reset();
@@ -191,61 +258,78 @@ namespace Object {
 			m_InstancedShader.VS.Reset();
 			m_Hash = hash;
 		}
+		m_Layout = layout;
 	}
 
-	MaterialTemplate::MaterialShader& MaterialTemplate::GetOrCreateShader(bool bInstanced) {
+	MaterialDataLayout MaterialTemplate::GetLayout() const {
+		return m_Layout;
+	}
+
+	TConstArrayView<MaterialTemplate::BindingData> MaterialTemplate::GetBindingDatas() {
+		return m_BindingDatas;
+	}
+
+	const MaterialTemplate::BindingData& MaterialTemplate::GetBindingData(uint32 binding) {
+		CHECK(binding < m_BindingDatas.Size());
+		return m_BindingDatas[binding];
+	}
+
+	MaterialTemplate::MaterialShaderSet& MaterialTemplate::GetOrCreateShader(bool bInstanced) {
 		auto& shader = bInstanced ? m_InstancedShader : m_Shader;
-		if(!shader.VS || !shader.PS) {
-			XString shaderSourceCode;
-			auto buildShader = [this, &shaderSourceCode, bInstanced](EShaderStageFlags stage, const XString& entry) -> RHIShaderPtr {
-				uint32 hash = GetTypeHash32BasedOn(bInstanced, m_Hash);
-				const XString compiledFile = ShaderCompiler::GetCompileOutputFile(BASE_PASS_TEMPLATE_SHADER, entry, hash);
-				TArray<int8> compiledCode;
-				if (!ShaderCompiler::LoadCompiledShader(compiledFile, compiledCode)) {
-					if (shaderSourceCode.empty()) {
-						GenerateShaderCode(MATERIAL_PARAM_SET_MATERIAL, shaderSourceCode);
-					}
-					TArray<ShaderCompiler::Macro> macros;
-					if (bInstanced) {
-						macros.PushBack({ "INSTANCED", "" });
-					}
-					ShaderCompiler::CompileCodeToFile(shaderSourceCode, entry, stage, macros, compiledFile);
-					if (!ShaderCompiler::LoadCompiledShader(compiledFile, compiledCode)) {
-						LOG_ERROR("Failed to load material shader! %s", compiledFile.c_str());
-						return nullptr;
-					}
-					else {
-						for(auto& macro: macros) {
-							LOG_DEBUG("#define %s %s", macro.Name.c_str(), macro.Value.c_str());
-						}
-						LOG_DEBUG("Material shader compiled %s %s", entry.c_str(), compiledFile.c_str());
-					}
+		XString shaderSourceCode;
+		TArray<int8> compiledCode;
+		auto buildShaderCode = [this, &shaderSourceCode, &compiledCode, bInstanced](EShaderStageFlags stage, const XStringView entry)->XStringView {
+			uint32 hash = GetTypeHash32BasedOn(bInstanced, m_Hash);
+			XString compiledFile = ShaderCompiler::GetCompileOutputFile(BASE_PASS_TEMPLATE_SHADER, entry, hash);
+			if (!ShaderCompiler::LoadCompiledShader(compiledFile, compiledCode)) {
+				if (shaderSourceCode.empty()) {
+					GenerateShaderCode(shaderSourceCode);
 				}
-				return RHI::Instance()->CreateShader(stage, compiledCode.Data(), compiledCode.Size(), entry);
-			};
-			shader.VS = buildShader(EShaderStageFlags::Vertex, "MainVS");
-			shader.PS = buildShader(EShaderStageFlags::Pixel, "MainPS");
+				if(!ShaderCompiler::CompileCodeToBytes(shaderSourceCode, entry, stage, GetMaterialShaderMacro(bInstanced), compiledCode)) {
+					LOG_ERROR("Failed to load material shader! %s", compiledFile.c_str());
+					return {};
+				}
+				ShaderCompiler::SaveCompiledBytesToFile(compiledCode, compiledFile);
+				LOG_DEBUG("Material shader compiled %s %s", XString{ entry }.c_str(), compiledFile.c_str());
+			}
+			return XStringView{compiledCode.Data(), compiledCode.Size()};
+		};
+		if(!shader.VS) {
+			if (XStringView code=buildShaderCode(EShaderStageFlags::Vertex, MainVS); !code.empty()) {
+				if(bInstanced) {
+					shader.VS.Reset(new MaterialShaderVS<true>(code, MainVS));
+				}
+				else {
+					shader.VS.Reset(new MaterialShaderVS<false>(code, MainVS));
+				}
+			}
+		}
+		if(!shader.PS) {
+			if(XStringView code = buildShaderCode(EShaderStageFlags::Pixel, MainPS); !code.empty()) {
+				shader.PS.Reset(new MaterialShaderPS(code, MainPS, m_Layout));
+			}
 		}
 		return shader;
 	}
 
-	void MaterialTemplate::GenerateShaderCode(uint32 materialSet, XString& outCode) {
+	void MaterialTemplate::GenerateShaderCode(XString& outCode) {
 		// generate shader code
 		XString shaderCode;
 		CHECK(ShaderCompiler::LoadSourceShader(BASE_PASS_TEMPLATE_SHADER, shaderCode));
 		XString layoutDeclareCode, psOutputCode;
+		const MaterialDataLayout layout = m_Layout;
 		// generate layout declares
-		uint32 bindingIdx = 0;
-		// vectors
-		const uint32 vectorSize = m_Vectors.Size();
-		layoutDeclareCode.append(StringFormat("[[vk::binding(%u, %u)]] cbuffer uVector{float4 uVectors[%u];};\n", bindingIdx++, materialSet, vectorSize));
-		// textures
-		for(uint32 i=0; i<m_Textures.Size(); ++i) {
-			layoutDeclareCode.append(StringFormat("[[vk::binding(%u, %u)]] Texture2D uTexture%u;\n", bindingIdx++, materialSet, i));
+		if(uint32 numMergedVectors = layout.GetNumMergedVectors()) {
+			layoutDeclareCode.append(StringFormat("[[vk::binding(%u, %u)]] cbuffer uVector{float4 uVectors[%u];};\n", 0, MATERIAL_PARAM_SET_MATERIAL, numMergedVectors));
 		}
-		// samplers
-		for(MaterialSamplerCode samplerCode: m_Samplers) {
-			layoutDeclareCode.append(StringFormat("[[vk::binding(%u, %u)]] SamplerState uSampler%u;\n", bindingIdx++, materialSet, samplerCode.Code));
+		for(uint32 i=0; i< layout.NumTextures; ++i) {
+			const uint32 binding = layout.GetBindingIndexOfTexture(i);
+			layoutDeclareCode.append(StringFormat("[[vk::binding(%u, %u)]] Texture2D uTexture%u;\n", binding, MATERIAL_PARAM_SET_MATERIAL, i));
+		}
+		for(uint32 i=0; i< layout.NumSamplers; ++i) {
+			const uint32 binding = layout.GetBindingIndexOfSampler(i);
+			uint32 samplerCode = m_BindingDatas[binding].Sampler;
+			layoutDeclareCode.append(StringFormat("[[vk::binding(%u, %u)]] SamplerState uSampler%u;\n", binding, MATERIAL_PARAM_SET_MATERIAL, samplerCode));
 		}
 		// generate pbr output defines // TODO more shading models.
 		for(auto& param: m_MaterialOutputs) {
@@ -267,8 +351,9 @@ namespace Object {
 				break;
 			}
 			case EParameterType::Texture: {
-				const MaterialSamplerCode samplerCode = m_Textures[param.Offset].SamplerCode;
-				valueF4 = StringFormat("uTexture%u.Sample(uSampler%u, pIn.UV)", param.Offset, samplerCode.Code);
+				const uint32 binding = layout.GetBindingIndexOfSampler(param.Offset);
+				const uint32 samplerCode = m_BindingDatas[binding].Sampler;
+				valueF4 = StringFormat("uTexture%u.Sample(uSampler%u, pIn.UV)", param.Offset, samplerCode);
 				break;
 			}
 			}
@@ -286,10 +371,9 @@ namespace Object {
 
 	MaterialInstance::MaterialInstance(MaterialInstance&& rhs) noexcept :
 	m_Template(rhs.m_Template),
-	m_VectorOverrides(MoveTemp(rhs.m_VectorOverrides)),
-	m_TextureOverrides(MoveTemp(rhs.m_TextureOverrides)),
+	m_Overrides(rhs.m_Overrides),
 	m_MaterialCB(MoveTemp(rhs.m_MaterialCB)),
-	m_CacheHash(rhs.m_CacheHash){}
+	m_CacheLayout(rhs.m_CacheLayout){}
 
 	void MaterialInstance::FillBasePassPSODesc(RHIGraphicsPipelineStateDesc& desc, bool bInstanced) {
 		m_Template->FillBasePassPSODesc(desc, bInstanced);
@@ -298,19 +382,32 @@ namespace Object {
 	void MaterialInstance::BindBasePassShaderPrams(RHICommandBuffer* cmd, bool bInstanced) {
 		// check cache hash and fix
 		CheckAndFixParameters();
-		const uint32 materialSetIdx = MATERIAL_PARAM_SET_MATERIAL;
-		uint32 bindingIdx = 0;
-		// uniform
-		if (m_VectorOverrides.Size()) {
-			cmd->SetShaderParam(materialSetIdx, bindingIdx++, RHIShaderParam::UniformBuffer(m_MaterialCB));
+		const MaterialDataLayout layout = m_Template->GetLayout();
+		if(layout.GetNumUniformBuffers()) {
+			RHIShaderParam param;
+			if(m_MaterialCB) {
+				const OverrideData& data = m_Overrides[0];
+				param = RHIShaderParam::UniformBuffer(m_MaterialCB.Get(), data.BufferOffset, data.BufferSize);
+			}
+			else {
+				const MaterialTemplate::BindingData& templateData = m_Template->GetBindingData(0);
+				param = RHIShaderParam::UniformBuffer(templateData.Buffer, templateData.BufferOffset, templateData.BufferSize);
+			}
+			cmd->SetShaderParam(RHIShaderBinding{ 0, MATERIAL_PARAM_SET_MATERIAL, EBindingType::UniformBuffer, 1 }, param);
 		}
-		for (auto& t : m_TextureOverrides) {
-			RHITexture* texture = t ? t : Render::DefaultResources::Instance()->GetDefaultTexture2D(Render::DefaultResources::TEX_WHITE);
-			cmd->SetShaderParam(materialSetIdx, bindingIdx++, RHIShaderParam::Texture(texture));
+		for(uint32 i=0; i<layout.NumTextures; ++i) {
+			const uint32 binding = layout.GetBindingIndexOfTexture(i);
+			RHITexture* t = m_Overrides[binding].Texture;
+			t = t ? t : Render::DefaultResources::Instance()->GetDefaultTexture2D(Render::DefaultResources::TEX_WHITE);
+			cmd->SetShaderParam(RHIShaderBinding{ binding, MATERIAL_PARAM_SET_MATERIAL, EBindingType::Texture, 1 },
+				RHIShaderParam::Texture(t));
 		}
-		for (auto& s : m_Template->m_Samplers) {
-			RHISampler* sampler = Render::DefaultResources::Instance()->GetDefaultSampler(s.Filter, s.AddressMode);
-			cmd->SetShaderParam(materialSetIdx, bindingIdx++, RHIShaderParam::Sampler(sampler));
+		for(uint32 i=0; i<layout.NumSamplers; ++i) {
+			const uint32 binding = layout.GetBindingIndexOfSampler(i);
+			MaterialSamplerCode sCode{ m_Template->GetBindingData(binding).Sampler };
+			RHISampler* s = Render::DefaultResources::Instance()->GetDefaultSampler(sCode.Filter, sCode.AddressMode);
+			cmd->SetShaderParam(RHIShaderBinding{ binding, MATERIAL_PARAM_SET_MATERIAL, EBindingType::Sampler, 1 },
+				RHIShaderParam::Sampler(s));
 		}
 	}
 
@@ -324,61 +421,68 @@ namespace Object {
 
 	void MaterialInstance::Reload(const Asset::MaterialAsset& asset, MaterialTemplate* materialTemplate) {
 		m_Template = materialTemplate;
-		// reserve parameters by template
-		{
-			m_VectorOverrides.Reset();
-			m_VectorOverrides = materialTemplate->m_Vectors;
-			m_TextureOverrides.Reset();
-			m_TextureOverrides.Reserve(materialTemplate->m_Textures.Size());
-			for(auto& tex: materialTemplate->m_Textures) {
-				m_TextureOverrides.PushBack(tex.Texture);
+		const MaterialDataLayout layout = materialTemplate->GetLayout();
+		m_Overrides.Reset();
+		m_Overrides.Reserve(layout.GetNumBindings());
+		// uniform buffer
+		if (const uint32 numMergedVectors = layout.GetNumMergedVectors()) {
+			TFixedArray<Math::FVector4> vectors(numMergedVectors);
+			for(uint32 i=0; i<layout.NumVectors; ++i) {
+				if(i < asset.VectorOverrides.Size()) {
+					vectors[i] = asset.VectorOverrides[i];
+				}
 			}
+			for(uint32 i=0; i<layout.NumScalars; ++i) {
+				if(i<asset.ScalarOverrides.Size()) {
+					((float*)vectors.Data())[i + layout.NumVectors * 4] = asset.ScalarOverrides[i];
+				}
+			}
+			// material buffer TODO support static buffer allocator.
+			const uint32 bufferSize = numMergedVectors * sizeof(Math::FVector4);
+			if(!m_MaterialCB || m_MaterialCB->GetDesc().ByteSize < bufferSize) {
+				m_MaterialCB = RHI::Instance()->CreateBuffer({ EBufferFlags::Uniform, bufferSize, 0 });
+			}
+			m_MaterialCB->UpdateData(vectors.Data(), bufferSize, 0);
+			OverrideData& data = m_Overrides.EmplaceBack();
+			data.BufferOffset = 0;
+			data.BufferSize = bufferSize;
 		}
-		// assign new parameters
-		{
-			const uint32 vectorSize = asset.VectorOverrides.Size();
-			const uint32 vectorOverrideSize = Math::Min(vectorSize, m_VectorOverrides.Size());
-			for(uint32 i=0; i<vectorOverrideSize; ++i) {
-				m_VectorOverrides[i] = asset.VectorOverrides[i];
-			}
-			const uint32 scalarSize = asset.ScalarOverrides.Size();
-			const uint32 scalarOffset = vectorSize * 4;
-			const uint32 scalarOverrideMax = Math::Min(scalarOffset + scalarSize, m_VectorOverrides.Size() * 4);
-			for(uint32 i=scalarOffset; i< scalarOverrideMax; ++i) {
-				((float*)m_VectorOverrides.Data())[i] = asset.ScalarOverrides[i - scalarOffset];
-			}
-			const uint32 textureSize = asset.TextureOverrides.Size();
-			const uint32 textureOverrideSize = Math::Min(textureSize, m_TextureOverrides.Size());
-			for(uint32 i=0; i<textureOverrideSize; ++i) {
-				m_TextureOverrides[i] = StaticResourceMgr::Instance()->GetTexture(asset.TextureOverrides[i]);
-			}
+		// textures
+		for(uint32 i=0; i<layout.NumTextures; ++i) {
+			OverrideData& data = m_Overrides.EmplaceBack();
+			data.Texture = i<asset.TextureOverrides.Size() ? StaticResourceMgr::Instance()->GetTexture(asset.TextureOverrides[i]) : nullptr;
 		}
-		// material buffer TODO support static buffer allocator.
-		m_MaterialCB = RHI::Instance()->CreateBuffer({ EBufferFlags::Uniform, m_VectorOverrides.ByteSize(), 0 });
-		m_MaterialCB->UpdateData(m_VectorOverrides.Data(), m_VectorOverrides.ByteSize(), 0);
-
-		m_CacheHash = materialTemplate->m_Hash;
+		m_CacheLayout = layout;
 	}
 
 	bool MaterialInstance::CheckAndFixParameters() {
-		if (m_CacheHash == m_Template->m_Hash) {
+		const MaterialDataLayout layout = m_Template->GetLayout();
+		if(m_CacheLayout == layout) {
 			return true;
 		}
-		const auto& templateVectors = m_Template->m_Vectors;
-		if (const uint32 targetSize = m_VectorOverrides.Size(); targetSize != templateVectors.Size()) {
-			m_VectorOverrides.Resize(templateVectors.Size());
-			for (uint32 i = targetSize; i < templateVectors.Size(); ++i) {
-				m_VectorOverrides[i] = templateVectors[i];
+		// buffer
+		TArray<OverrideData> newOverrides; newOverrides.Reserve(layout.GetNumBindings());
+		if(layout.NumTextures != m_CacheLayout.NumTextures || layout.NumScalars != m_CacheLayout.NumScalars) {
+			OverrideData& data = newOverrides.EmplaceBack();
+			data.BufferOffset = 0;
+			data.BufferSize = layout.GetNumMergedVectors() * sizeof(Math::FVector4);
+			m_MaterialCB.Reset();
+		}
+		// textures
+		if(layout.NumTextures != m_CacheLayout.NumTextures) {
+			for (uint32 i = 0; i < layout.NumTextures; ++i) {
+				OverrideData& data = newOverrides.EmplaceBack();
+				const MaterialTemplate::BindingData& srcData = m_Template->GetBindingData(layout.GetBindingIndexOfTexture(i));
+				data.Texture = srcData.Texture;
 			}
 		}
-		const auto& templateTextures = m_Template->m_Textures;
-		if (const uint32 targetSize = m_TextureOverrides.Size(); targetSize != templateTextures.Size()) {
-			m_TextureOverrides.Resize(templateTextures.Size());
-			for (uint32 i = targetSize; i < templateTextures.Size(); ++i) {
-				m_TextureOverrides[i] = templateTextures[i].Texture;
+		else {
+			for(uint32 i=0; i<layout.NumTextures; ++i) {
+				newOverrides.PushBack(m_Overrides[m_CacheLayout.GetBindingIndexOfTexture(i)]);
 			}
 		}
-		m_CacheHash = m_Template->m_Hash;
+		m_Overrides.Swap(newOverrides);
+		m_CacheLayout = layout;
 		return false;
 	}
 

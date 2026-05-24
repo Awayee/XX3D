@@ -16,16 +16,15 @@ public:
 	void BeginRendering() override;
 	const VulkanContext* GetContext();
 	VulkanDevice* GetDevice();
-	ERHIFormat GetDepthFormat() override;
 	uint32 GetBufferAlignment(EBufferFlags bufferFlags) override;
 	RHIViewport* GetViewport() override;
 	RHIBufferPtr CreateBuffer(const RHIBufferDesc& desc) override;
 	RHITexturePtr CreateTexture(const RHITextureDesc& desc) override;
 	RHISamplerPtr CreateSampler(const RHISamplerDesc& desc) override;
 	RHIFencePtr CreateFence(bool sig) override;
-	RHIShaderPtr CreateShader(EShaderStageFlags type, const char* codeData, uint32 codeSize, const XString& entryFunc) override;
+	RHIShaderPtr CreateShader(EShaderStageFlags type, XStringView code, XStringView entryName, RHIShaderBindingInterface* bindingInterface) override;
 	RHIGraphicsPipelineStatePtr CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) override;
-	RHIComputePipelineStatePtr CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) override;
+	RHIComputePipelineStatePtr CreateComputePipelineState(RHIShader* shader) override;
 	RHICommandBufferPtr CreateCommandBuffer(EQueueType queue) override;
 	void SubmitCommandBuffers(TArrayView<RHICommandBuffer*> cmds, EQueueType queue, RHIFence* fence, bool bPresent) override;
 	RHIDynamicBuffer AllocateDynamicBuffer(EBufferFlags bufferFlags, uint32 bufferSize, const void* bufferData, uint32 stride) override;

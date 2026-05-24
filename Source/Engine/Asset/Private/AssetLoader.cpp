@@ -12,7 +12,7 @@ namespace Asset {
 	}
 
 	File::FPath AssetLoader::AssetPath() {
-		return Engine::ConfigMgr::Instance().GetProjectAssetDir();
+		return File::FPath(File::CombinePathStr(Engine::ConfigMgr::Instance().GetProjectDir(), "Assets"));
 	}
 
 	File::FPath AssetLoader::GetRelativePath(File::PathStr fullPath) {

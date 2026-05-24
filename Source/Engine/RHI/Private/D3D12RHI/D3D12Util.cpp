@@ -321,7 +321,7 @@ D3D12_DESCRIPTOR_RANGE_TYPE ToD3D12DescriptorRangeType(EBindingType type) {
     case EBindingType::UniformBuffer: return D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
     case EBindingType::Texture:
     case EBindingType::StructuredBuffer: return D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    case EBindingType::StorageTexture:
+    case EBindingType::RWTexture:
     case EBindingType::RWStructuredBuffer: return D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
     case EBindingType::Sampler: return D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
     }
@@ -348,7 +348,7 @@ D3D12_DESCRIPTOR_HEAP_TYPE ToD3D12DescriptorHeapType(EBindingType type) {
     case EBindingType::StructuredBuffer:
     case EBindingType::RWStructuredBuffer:
     case EBindingType::Texture:
-    case EBindingType::StorageTexture: return D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    case EBindingType::RWTexture: return D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     case EBindingType::Sampler: return D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
     }
     return D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;

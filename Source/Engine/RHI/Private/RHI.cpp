@@ -49,6 +49,18 @@ static RENDERDOC_API_1_6_0* s_RenderDocAPI{ nullptr };
 TUniquePtr<RHI> RHI::s_Instance{ nullptr };
 RHIInitSetup RHI::s_InitSetup{ nullptr };
 
+RHIInitConfig::RHIInitConfig() :
+#ifdef _DEBUG
+	EnableDebug(true),
+#else
+	EnableDebug(false),
+#endif
+	EnableVSync(false),
+	EnableMSAA(false) {}
+
+RHIFeatures::RHIFeatures() :
+	BindlessSupported(false) {}
+
 void RHI::SetInitSetupFunc(RHIInitSetup f) {
 	s_InitSetup = f;
 }
@@ -91,6 +103,14 @@ void RHI::Initialize() {
 
 void RHI::Release() {
 	s_Instance.Reset();
+}
+
+ERHIFormat RHI::GetDepthFormat() const {
+	return m_DepthFormat;
+}
+
+const RHIFeatures& RHI::GetFeatures() const {
+	return m_Features;
 }
 
 void RHI::CaptureFrame() {

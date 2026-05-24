@@ -79,8 +79,20 @@ namespace File {
 		std::filesystem::remove_all(path);
 	}
 
-	inline void MakeDir(const FPath& path) {
-		std::filesystem::create_directory(path);
+	inline bool MakeDir(const FPath& path) {
+		std::error_code ErrorCode;
+		if(std::filesystem::create_directory(path, ErrorCode)) {
+			return true;
+		}
+		return false;
+	}
+
+	inline bool MakeDirRecursively(const FPath& path) {
+		std::error_code ErrorCode;
+		if(std::filesystem::create_directories(path, ErrorCode)) {
+			return true;
+		}
+		return false;
 	}
 
 	inline bool Rename(const FPath& path, const FPath& newPath) {

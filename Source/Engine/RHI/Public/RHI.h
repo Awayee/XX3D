@@ -4,11 +4,19 @@
 #include "Core/Public/String.h"
 #include "Core/Public/TUniquePtr.h"
 
-#ifdef _DEBUG
-#define ENABLE_RHI_DEBUG true
-#else
-#define ENABLE_RHI_DEBUG false
-#endif
+typedef void* WindowHandle;
+
+struct RHIInitConfig {
+	bool EnableDebug : 1;
+	bool EnableVSync : 1;
+	bool EnableMSAA : 1;
+	RHIInitConfig();
+};
+
+struct RHIFeatures {
+	bool BindlessSupported : 1;
+	RHIFeatures();
+};
 
 // type defines
 typedef TUniquePtr<RHICommandBuffer>             RHICommandBufferPtr;
@@ -19,14 +27,6 @@ typedef TUniquePtr<RHIFence>                     RHIFencePtr;
 typedef TUniquePtr<RHIShader>                    RHIShaderPtr;
 typedef TUniquePtr<RHIGraphicsPipelineState>     RHIGraphicsPipelineStatePtr;
 typedef TUniquePtr<RHIComputePipelineState>      RHIComputePipelineStatePtr;
-typedef void* WindowHandle;
-
-struct RHIInitConfig {
-	bool EnableDebug : 1;
-	bool EnableVSync : 1;
-	bool EnableMSAA  : 1;
-	RHIInitConfig() : EnableDebug(ENABLE_RHI_DEBUG), EnableVSync(false), EnableMSAA(false) {}
-};
 typedef void(*RHIInitSetup)(RHIInitConfig& cfg);
 
 class RHI{
@@ -35,18 +35,20 @@ public:
 	static RHI* Instance();
 	static void Initialize();
 	static void Release();
-	virtual ERHIFormat GetDepthFormat() = 0;
-	virtual RHIViewport* GetViewport() = 0;
+
+	ERHIFormat GetDepthFormat() const;
+	const RHIFeatures& GetFeatures() const;
 	virtual uint32 GetBufferAlignment(EBufferFlags bufferFlags) = 0;
+	virtual RHIViewport* GetViewport() = 0;
 	virtual void BeginFrame() = 0;
 	virtual void BeginRendering() = 0;
 	virtual RHIBufferPtr CreateBuffer(const RHIBufferDesc& desc) = 0;
 	virtual RHITexturePtr CreateTexture(const RHITextureDesc& desc) = 0;
 	virtual RHISamplerPtr CreateSampler(const RHISamplerDesc& desc) = 0;
 	virtual RHIFencePtr CreateFence(bool isSignaled = true) = 0;
-	virtual RHIShaderPtr CreateShader(EShaderStageFlags type, const char* codeData, uint32 codeSize, const XString& entryFunc) = 0;
+	virtual RHIShaderPtr CreateShader(EShaderStageFlags type, XStringView code, XStringView entryFunc, RHIShaderBindingInterface* bindingInterface) = 0;
 	virtual RHIGraphicsPipelineStatePtr CreateGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc) = 0;
-	virtual RHIComputePipelineStatePtr CreateComputePipelineState(const RHIComputePipelineStateDesc& desc) = 0;
+	virtual RHIComputePipelineStatePtr CreateComputePipelineState(RHIShader* Shader) = 0;
 	virtual RHICommandBufferPtr CreateCommandBuffer(EQueueType queue) = 0;
 	// Submit command buffer(s), multi command buffers in one call will execute in parallel.
 	// if bPresent is true, the command buffers will execute after viewport acquired back buffer.
@@ -58,6 +60,8 @@ protected:
 	friend TDefaultDeleter<RHI>;
 	static TUniquePtr<RHI> s_Instance;
 	static RHIInitSetup s_InitSetup;
+	RHIFeatures m_Features;
+	ERHIFormat m_DepthFormat;
 	RHI() = default;
 	NON_COPYABLE(RHI);
 	NON_MOVEABLE(RHI);

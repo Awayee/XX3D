@@ -16,15 +16,16 @@ public:
 	NON_MOVEABLE(D3D12PipelineLayout);
 	D3D12PipelineLayout() = default;
 	~D3D12PipelineLayout() = default;
-	bool InitLayout(const TArray<RHIShaderParamSetLayout>& layouts, ID3D12Device* device);
+	bool InitLayout(RHIShaderBindingSet& bindingSet, ID3D12Device* device);
 	DescriptorSlot GetDescriptorSlot(uint32 set, uint32 binding) const;
 	uint32 GetDescriptorCount(EDynamicDescriptorType heapType) const { return m_DescriptorCounts[EnumCast(heapType)]; }
 	const TArray<EDynamicDescriptorType>& GetDescriptorTables() const { return m_DescriptorTables; }
 	ID3D12RootSignature* GetRootSignature() { return m_RootSignature; }
 private:
 	TStaticArray<uint32, EnumCast(EDynamicDescriptorType::Count)> m_DescriptorCounts{ 0 };
+	TStaticArray<uint32, RHIShaderBinding::MAX_SET> m_BindingOffsets;
+	TArray<DescriptorSlot> m_DescriptorSlots;
 	TArray<EDynamicDescriptorType> m_DescriptorTables;
-	TArray<TArray<DescriptorSlot>> m_MapLayoutToHeap;
 	TDXPtr<ID3D12RootSignature> m_RootSignature;
 };
 
@@ -45,7 +46,7 @@ private:
 
 class D3D12ComputePipelineState: public RHIComputePipelineState {
 public:
-	D3D12ComputePipelineState(const RHIComputePipelineStateDesc& desc, D3D12Device* device);
+	D3D12ComputePipelineState(RHIShader* shader, D3D12Device* device);
 	~D3D12ComputePipelineState() override = default;
 	ID3D12RootSignature* GetRootSignature() { return m_Layout.GetRootSignature(); }
 	ID3D12PipelineState* GetPipelineState() { return m_Pipeline.Get(); }

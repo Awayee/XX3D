@@ -29,7 +29,7 @@ namespace Object {
 		PrimitiveResource* GetPrimitive(const XString& fileName);
 
 		// pipeline state
-		typedef void(*ComputePipelineInitializer)(RHIComputePipelineStateDesc&);
+		typedef RHIShader*(*ComputePipelineInitializer)();
 		typedef void(*GraphicsPipelineInitializer)(RHIGraphicsPipelineStateDesc& desc);
 		static uint32 RegisterPSOInitializer(GraphicsPipelineInitializer func);
 		static uint32 RegisterPSOInitializer(ComputePipelineInitializer func);

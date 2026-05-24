@@ -12,6 +12,7 @@ public:
 	virtual void BindGraphicsPipeline(RHIGraphicsPipelineState* pipeline) = 0;
 	virtual void BindComputePipeline(RHIComputePipelineState* pipeline) = 0;
 	virtual void SetShaderParam(uint32 setIndex, uint32 bindIndex, const RHIShaderParam& parameter) = 0;
+	virtual void SetShaderParam(RHIShaderBinding binding, const RHIShaderParam& param) = 0;
 	virtual void BindVertexBuffer(RHIBuffer* buffer, uint32 slot, uint64 offset) = 0;
 	virtual void BindVertexBuffer(const RHIDynamicBuffer& buffer, uint32 slot, uint32 offset) = 0;
 	virtual void BindIndexBuffer(RHIBuffer* buffer, uint64 offset) = 0;

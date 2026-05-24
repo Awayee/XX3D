@@ -116,6 +116,10 @@ void D3D12CommandList::SetShaderParam(uint32 setIndex, uint32 bindIndex, const R
 	m_DescriptorCache->SetShaderParam(setIndex, bindIndex, parameter);
 }
 
+void D3D12CommandList::SetShaderParam(RHIShaderBinding binding, const RHIShaderParam& param) {
+	m_DescriptorCache->SetShaderParam(binding.Set, binding.Binding, param);
+}
+
 void D3D12CommandList::BindVertexBuffer(RHIBuffer* buffer, uint32 slot, uint64 offset) {
 	D3D12_VERTEX_BUFFER_VIEW vb = ((D3D12BufferImpl*)buffer)->GetVertexBufferView();
 	m_CommandList->IASetVertexBuffers(slot, 1, &vb);

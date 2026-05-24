@@ -336,6 +336,10 @@ void VulkanCommandBuffer::SetShaderParam(uint32 setIndex, uint32 bindIndex, cons
 	m_PipelineDescriptorSetCache->SetParam(setIndex, bindIndex, parameter);
 }
 
+void VulkanCommandBuffer::SetShaderParam(RHIShaderBinding binding, const RHIShaderParam& param) {
+	m_PipelineDescriptorSetCache->SetParam(binding.Set, binding.Binding, param);
+}
+
 void VulkanCommandBuffer::BindVertexBuffer(RHIBuffer* buffer, uint32 slot, uint64 offset) {
 	VkBuffer vkBuffer = static_cast<VulkanBufferImpl*>(buffer)->GetBuffer();
 	vkCmdBindVertexBuffers(m_Handle, slot, 1, &vkBuffer, &offset);

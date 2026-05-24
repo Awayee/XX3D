@@ -17,12 +17,10 @@ struct VulkanQueue {
 	uint32 QueueIndex{ 0 };
 };
 
-struct VulkanFormats {
-	VkFormat DepthFormat = VK_FORMAT_UNDEFINED;
-};
-
 class VulkanDevice {
 public:
+	static RHIFeatures GetPhysicalDeviceRHIFeatures(VkPhysicalDevice PhysicalDevice);
+
 	explicit VulkanDevice(const VulkanContext* context, VkPhysicalDevice physicalDevice);
 	~VulkanDevice();
 	uint32 GetBufferAlignment(EBufferFlags bufferFlags) const;
@@ -30,25 +28,23 @@ public:
 	VkPhysicalDevice GetPhysicalDevice() const { return m_PhysicalDevice; }
 	const VkPhysicalDeviceProperties& GetProperties() const  { return m_DeviceProperties; }
 	const VulkanQueue& GetQueue(EQueueType queue) const { return m_Queues[EnumCast(queue)]; }
-	const VulkanFormats& GetFormats() const { return m_Formats; }
+	const RHIFeatures& GetRHIFeatures() const { return m_RHIFeatures; }
 	VulkanMemoryAllocator* GetMemoryAllocator() { return m_MemoryAllocator.Get(); }
 	VulkanDynamicBufferAllocator* GetDynamicBufferAllocator() { return m_DynamicBufferAllocator.Get(); }
 	VulkanDescriptorSetMgr* GetDescriptorMgr() { return m_DescriptorMgr.Get(); }
 	VulkanCommandContext* GetCommandContext() { return m_CommandContext.Get(); }
 	VulkanUploader* GetUploader() { return m_Uploader.Get(); }
-
 	const VulkanQueue* FindPresentQueue(VkSurfaceKHR surface) const;
 private:
 	VkPhysicalDevice m_PhysicalDevice{ VK_NULL_HANDLE };
 	VkDevice m_Device{ VK_NULL_HANDLE };
 	TStaticArray<VulkanQueue, EnumCast(EQueueType::Count)> m_Queues;
+	RHIFeatures m_RHIFeatures;
 	VkPhysicalDeviceProperties m_DeviceProperties{};
-	VulkanFormats m_Formats{};
 	TUniquePtr<VulkanMemoryAllocator> m_MemoryAllocator;
 	TUniquePtr<VulkanDynamicBufferAllocator> m_DynamicBufferAllocator;
 	TUniquePtr<VulkanDescriptorSetMgr> m_DescriptorMgr;
 	TUniquePtr<VulkanCommandContext> m_CommandContext;
 	TUniquePtr<VulkanUploader> m_Uploader;
-	void InitializeDeviceInfo();
-	void CreateDevice(const VulkanContext* context);
+	void CreateDevice(const VulkanContext* context, VkPhysicalDevice PhysicalDevice);
 };

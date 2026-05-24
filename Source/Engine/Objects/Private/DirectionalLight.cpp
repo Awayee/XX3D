@@ -6,15 +6,26 @@
 
 namespace {
 	class DirectionalShadowVS : public Render::GlobalShader {
+		BEGIN_SHADER_PERMUTATION
+		SHADER_PERMUTATION_SWITCH(INSTANCED, false)
+		END_SHADER_PERMUTATION
+
+		BEGIN_SHADER_BINDING
+		SHADER_BINDING_SET(0)
+		SHADER_BINDING(0, UniformBuffer, uCamera, 1)
+		SHADER_BINDING_SET(1)
+		SHADER_BINDING_WITH_MACRO(0, StructuredBuffer, uInstanceData, 1, INSTANCED, true)
+		SHADER_BINDING_WITH_MACRO(1, StructuredBuffer, uInstanceID, 1, INSTANCED, true)
+		SHADER_BINDING_WITH_MACRO(0, UniformBuffer, uModel, 1, INSTANCED, false)
+		END_SHADER_BINDING;
+
 		GLOBAL_SHADER_IMPLEMENT(DirectionalShadowVS, "DirectionalShadow.hlsl", "MainVS", EShaderStageFlags::Vertex);
-		SHADER_PERMUTATION_BEGIN_SWITCH(INSTANCED, false);
-		SHADER_PERMUTATION_END(INSTANCED);
 	};
 
 	class DirectionalShadowPS : public Render::GlobalShader {
+		SHADER_PERMUTATION_EMPTY();
+		SHADER_BINDING_EMPTY();
 		GLOBAL_SHADER_IMPLEMENT(DirectionalShadowPS, "DirectionalShadow.hlsl", "MainPS", EShaderStageFlags::Pixel);
-		SHADER_PERMUTATION_BEGIN_SWITCH(INSTANCED, false);
-		SHADER_PERMUTATION_END(INSTANCED);
 	};
 }
 
@@ -140,11 +151,6 @@ namespace Object {
 		Render::GlobalShaderMap* globalShaderMap = Render::GlobalShaderMap::Instance();
 		desc.VertexShader = globalShaderMap->GetShader<DirectionalShadowVS>()->GetRHI();
 		desc.PixelShader = globalShaderMap->GetShader<DirectionalShadowPS>()->GetRHI(); // TODO will report ERROR if nullptr
-		// layout
-		auto& layout = desc.Layout;
-		layout.Resize(2);
-		layout[0] = { {EBindingType::UniformBuffer, EShaderStageFlags::Vertex} };// camera
-		layout[1] = { {EBindingType::UniformBuffer, EShaderStageFlags::Vertex} };// mesh
 		// vertex input
 		auto& vi = desc.VertexInput;
 		vi.Bindings = { {0, sizeof(Asset::AssetVertex), false} };
@@ -165,17 +171,8 @@ namespace Object {
 		Render::GlobalShaderMap* globalShaderMap = Render::GlobalShaderMap::Instance();
 		DirectionalShadowVS::ShaderPermutation vsp; vsp.INSTANCED = true;
 		desc.VertexShader = globalShaderMap->GetShader<DirectionalShadowVS>(vsp)->GetRHI();
-		DirectionalShadowPS::ShaderPermutation psp; psp.INSTANCED = true;
+		DirectionalShadowPS::ShaderPermutation psp;
 		desc.PixelShader = globalShaderMap->GetShader<DirectionalShadowPS>(psp)->GetRHI();
-		desc.Layout.Resize(2);
-		// camera
-		desc.Layout[0] = { {EBindingType::UniformBuffer, EShaderStageFlags::Vertex} };
-		// object
-		desc.Layout[1] = {
-			{EBindingType::StructuredBuffer, EShaderStageFlags::Vertex},
-			{EBindingType::StructuredBuffer, EShaderStageFlags::Vertex},
-		};
-		// vertex input
 		auto& vi = desc.VertexInput;
 		vi.Bindings = { {0, sizeof(Asset::AssetVertex), false} };
 		vi.Attributes = {

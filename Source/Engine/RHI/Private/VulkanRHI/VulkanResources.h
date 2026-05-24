@@ -81,7 +81,7 @@ private:
 
 class VulkanRHIShader: public RHIShader {
 public:
-	VulkanRHIShader(EShaderStageFlags type, const char* code, uint32 codeSize, const XString& entryFunc, VulkanDevice* device);
+	VulkanRHIShader(EShaderStageFlags type, RHIShaderBindingInterface* bindingInterface, XStringView code, XStringView entryName, VulkanDevice* device);
 	~VulkanRHIShader() override;
 	void SetNameInternal(const char* name) override;
 	VkPipelineShaderStageCreateInfo GetShaderStageInfo() const;

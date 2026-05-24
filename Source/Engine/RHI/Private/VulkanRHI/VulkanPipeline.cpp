@@ -5,11 +5,7 @@
 #include "VulkanResources.h"
 #include "VulkanDevice.h"
 #include "VulkanMemory.h"
-
-inline uint64 GetLayoutHash(const RHIShaderParamSetLayout& bindingLayout) {
-	const uint32* dataU32 = reinterpret_cast<const uint32*>(bindingLayout.Data());
-	return DataArrayHash64(dataU32, bindingLayout.Size());
-}
+#include "System/Public/ConfigManager.h"
 
 inline bool BindingIsBuffer(EBindingType type) {
 	return type == EBindingType::UniformBuffer ||
@@ -19,10 +15,13 @@ inline bool BindingIsBuffer(EBindingType type) {
 
 inline bool BindingIsImage(EBindingType type) {
 	return type == EBindingType::Texture ||
-		type == EBindingType::StorageTexture ||
+		type == EBindingType::RWTexture ||
 		type == EBindingType::Sampler;
 }
 
+
+VulkanDescriptorInfo::VulkanDescriptorInfo(RHIShaderBinding binding, EShaderStageFlags stageFlags):
+Binding(binding.Binding), NumElements(binding.NumElements), Type(binding.Type), StageFlags(stageFlags){}
 
 VulkanDescriptorSetMgr::VulkanDescriptorSetMgr(VulkanDevice* device) : m_Device(device), m_ReservePool(VK_NULL_HANDLE), m_PoolMaxIndex(VK_INVALID_INDEX) {
 	AddPool();
@@ -41,22 +40,21 @@ VulkanDescriptorSetMgr::~VulkanDescriptorSetMgr() {
 	}
 }
 
-VkDescriptorSetLayout VulkanDescriptorSetMgr::GetLayoutHandle(const RHIShaderParamSetLayout& layout) {
-	uint64 hs = GetLayoutHash(layout);
+VkDescriptorSetLayout VulkanDescriptorSetMgr::GetLayoutHandle(TConstArrayView<VulkanDescriptorInfo> layout) {
+	uint64 hs = DataArrayHash64<VulkanDescriptorInfo>(layout.Data(), layout.Size());
 	auto iter = m_LayoutMap.find(hs);
-	if(iter!= m_LayoutMap.end()) {
+	if (iter != m_LayoutMap.end()) {
 		return iter->second;
 	}
-
 	VkDescriptorSetLayoutCreateInfo info{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0 };
 	uint32 bindingCount = layout.Size();
 	TFixedArray<VkDescriptorSetLayoutBinding> bindings(bindingCount);
-	for(uint32 i=0; i<bindingCount; ++i) {
+	for (uint32 i = 0; i < bindingCount; ++i) {
 		auto& binding = bindings[i];
 		binding = {};
-		binding.binding = i;
+		binding.binding =layout[i].Binding;
 		binding.descriptorType = ToVkDescriptorType(layout[i].Type);
-		binding.descriptorCount = layout[i].Count;
+		binding.descriptorCount = layout[i].NumElements;
 		binding.stageFlags = ToVkShaderStageFlags(layout[i].StageFlags);
 	}
 	info.bindingCount = bindingCount;
@@ -124,7 +122,7 @@ void VulkanDescriptorSetMgr::CreatePool(VkDescriptorPool* poolPtr) {
 	TStaticArray<uint32, bindingCount> countPerType{ 32 };
 	countPerType[EnumCast(EBindingType::Sampler)] = 32;
 	countPerType[EnumCast(EBindingType::Texture)] = 64;
-	countPerType[EnumCast(EBindingType::StorageTexture)] = 32;
+	countPerType[EnumCast(EBindingType::RWTexture)] = 32;
 	countPerType[EnumCast(EBindingType::UniformBuffer)] = 128;
 	countPerType[EnumCast(EBindingType::StructuredBuffer)] = 64;
 	countPerType[EnumCast(EBindingType::RWStructuredBuffer)] = 64;
@@ -153,24 +151,69 @@ void VulkanDescriptorSetMgr::AddPool() {
 	}
 }
 
-void VulkanPipelineLayout::Build(VulkanDevice* device, TConstArrayView<RHIShaderParamSetLayout> meta) {
-	CHECK(VK_NULL_HANDLE == Handle);
-	const uint32 layoutCount = meta.Size();
-	DescriptorSetLayouts.Resize(layoutCount);
-	for (uint32 i = 0; i < layoutCount; ++i) {
-		DescriptorSetLayouts[i] = device->GetDescriptorMgr()->GetLayoutHandle(meta[i]);
+void VulkanPipelineLayout::Build(VulkanDevice* device, RHIShaderBindingSet& bindingSet) {
+	ASSERT(VK_NULL_HANDLE == Handle, "Vulkan pipline has initialized!");
+	bindingSet.Sort();
+	if(bindingSet.GetNum() == 0) {
+		return;
+	}
+	// Save binding infos
+	BindingsMeta.Reserve(bindingSet.GetNum());
+	TArray<TPair<uint8, uint8>> dstRanges; // (Offset, Size)
+	{
+		uint32 lastSet = 0;
+		for (uint8 i = 0; i < bindingSet.GetNum(); ++i) {
+			const RHIShaderBinding binding = bindingSet.GetBinding(i);
+			BindingsMeta.Add(binding);
+			if (dstRanges.IsEmpty() || lastSet != binding.Set) {
+				dstRanges.PushBack({ i, 0 });
+			}
+			++dstRanges.Back().second;
+			lastSet = binding.Set;
+		}
+	}
+	// create descriptor set layouts
+	DescriptorSetLayouts.Reserve(RHIShaderBinding::MAX_SET);
+	TArray<VulkanDescriptorInfo> dsInfos; dsInfos.Reserve(bindingSet.GetNum());
+	uint32 setIndex = 0;
+	for(auto[offset, numBindings]: dstRanges) {
+		dsInfos.Reset();
+		for(uint8 i=0; i<numBindings; ++i) {
+			const uint32 binding = offset + i;
+			dsInfos.Add(VulkanDescriptorInfo{ bindingSet.GetBinding(binding), bindingSet.GetShaderStage(binding) });
+		}
+		BindingOffsets[setIndex++] = offset;
+		DescriptorSetLayouts.Add(device->GetDescriptorMgr()->GetLayoutHandle(dsInfos));
 	}
 	VkPipelineLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0 };
 	layoutInfo.setLayoutCount = DescriptorSetLayouts.Size();
 	layoutInfo.pSetLayouts = DescriptorSetLayouts.Data();
 	VK_ASSERT(vkCreatePipelineLayout(device->GetDevice(), &layoutInfo, nullptr, &Handle), "PipelineLayout");
-	PipelineLayoutMeta = meta;
+}
+
+RHIShaderBinding VulkanPipelineLayout::GetBindingMeta(uint32 set, uint32 binding) {
+	return BindingsMeta[BindingOffsets[set] + binding];
+}
+
+TConstArrayView<RHIShaderBinding> VulkanPipelineLayout::GetBindings(uint32 set) const {
+	const uint32 numSets = DescriptorSetLayouts.Size();
+	CHECK(set < numSets);
+	const uint32 offset = (uint32)BindingOffsets[set];
+	const uint32 numBindings = set + 1 < numSets ? ((uint32)BindingOffsets[set + 1] - offset) : BindingsMeta.Size() - offset;
+	return TConstArrayView<RHIShaderBinding>(&BindingsMeta[offset], numBindings);
 }
 
 VulkanRHIGraphicsPipelineState::VulkanRHIGraphicsPipelineState(const RHIGraphicsPipelineStateDesc& desc, VulkanDevice* device) :RHIGraphicsPipelineState(desc), m_Device(device) {
 	// Create pipeline layout
 	{
-		m_PipelineLayout.Build(m_Device, m_Desc.Layout);
+		RHIShaderBindingSet bindingSet;
+		if(desc.VertexShader) {
+			desc.VertexShader->GetBindings(bindingSet);
+		}
+		if(desc.PixelShader) {
+			desc.PixelShader->GetBindings(bindingSet);
+		}
+		m_PipelineLayout.Build(m_Device, bindingSet);
 	}
 
 	// Create pipeline handle
@@ -297,16 +340,18 @@ void VulkanRHIGraphicsPipelineState::SetNameInternal(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_PIPELINE, m_Pipeline, name);
 }
 
-VulkanRHIComputePipelineState::VulkanRHIComputePipelineState(const RHIComputePipelineStateDesc& desc, VulkanDevice* device) : RHIComputePipelineState(desc), m_Device(device) {
+VulkanRHIComputePipelineState::VulkanRHIComputePipelineState(RHIShader* shader, VulkanDevice* device) : RHIComputePipelineState(shader), m_Device(device) {
 	// Create pipeline layout
 	{
-		m_PipelineLayout.Build(m_Device, m_Desc.Layout);
+		RHIShaderBindingSet bindingSet;
+		shader->GetBindings(bindingSet);
+		m_PipelineLayout.Build(m_Device, bindingSet);
 	}
 
 	// create pipeline
 	{
 		VkComputePipelineCreateInfo pipelineInfo{ VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, nullptr, 0 };
-		pipelineInfo.stage = static_cast<VulkanRHIShader*>(m_Desc.Shader)->GetShaderStageInfo();
+		pipelineInfo.stage = static_cast<VulkanRHIShader*>(shader)->GetShaderStageInfo();
 		pipelineInfo.layout = m_PipelineLayout.Handle;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 		pipelineInfo.basePipelineIndex = 0;
@@ -323,46 +368,46 @@ void VulkanRHIComputePipelineState::SetNameInternal(const char* name) {
 	VK_SET_OBJECT_NAME(VK_OBJECT_TYPE_PIPELINE, m_Pipeline, name);
 }
 
-VulkanDescriptorSetParamCache::VulkanDescriptorSetParamCache(const RHIShaderParamSetLayout& layout) : m_LayoutRef(layout) {
+VulkanDescriptorSetParamCache::VulkanDescriptorSetParamCache(TConstArrayView<RHIShaderBinding> bindings):m_BindingsRef(bindings) {
 	// compile layout
 	uint32 bufferIndex = 0, imageIndex = 0;
-	for (auto& binding : m_LayoutRef) {
+	for (auto& binding : bindings) {
 		if (BindingIsBuffer(binding.Type)) {
-			bufferIndex += binding.Count;
+			bufferIndex += binding.NumElements;
 		}
 		else if (BindingIsImage(binding.Type)) {
-			imageIndex += binding.Count;
+			imageIndex += binding.NumElements;
 		}
 	}
 	m_WriteBuffers.Resize(bufferIndex, {});
 	m_WriteImages.Resize(imageIndex, {});
-	m_Writes.Resize(m_LayoutRef.Size(), {});
+	m_Writes.Resize(bindings.Size(), {});
 	// allocate descriptor writes
 	bufferIndex = 0;
 	imageIndex = 0;
-	for (uint32 i = 0; i < m_LayoutRef.Size(); ++i) {
-		auto& src = m_LayoutRef[i];
+	for (uint32 i = 0; i < bindings.Size(); ++i) {
+		const RHIShaderBinding srcBinding = bindings[i];
 		auto& write = m_Writes[i];
 		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		write.pNext = nullptr;
 		write.dstSet = VK_NULL_HANDLE;// update by outer objects
 		write.dstBinding = i;
 		write.dstArrayElement = 0;
-		write.descriptorCount = src.Count;
-		write.descriptorType = ToVkDescriptorType(src.Type);
-		if (BindingIsBuffer(src.Type)) {
+		write.descriptorCount = srcBinding.NumElements;
+		write.descriptorType = ToVkDescriptorType(srcBinding.Type);
+		if (BindingIsBuffer(srcBinding.Type)) {
 			write.pBufferInfo = &m_WriteBuffers[bufferIndex];
-			bufferIndex += src.Count;
+			bufferIndex += srcBinding.NumElements;
 		}
-		else if (BindingIsImage(src.Type)) {
+		else if (BindingIsImage(srcBinding.Type)) {
 			write.pImageInfo = &m_WriteImages[imageIndex];
-			imageIndex += src.Count;
+			imageIndex += srcBinding.NumElements;
 		}
 	}
 }
 
 bool VulkanDescriptorSetParamCache::SetParam(const VulkanDynamicBufferAllocator* allocator, uint32 bindIndex, const RHIShaderParam& param) {
-	CHECK(m_LayoutRef[bindIndex].Type == param.Type);
+	CHECK(m_BindingsRef[bindIndex].Type == param.Type);
 	auto& write = m_Writes[bindIndex];
 	switch (param.Type) {
 	case EBindingType::UniformBuffer:
@@ -402,7 +447,7 @@ bool VulkanDescriptorSetParamCache::SetParam(const VulkanDynamicBufferAllocator*
 		imageInfo.imageView = texture->GetView(param.Data.SubRes);
 		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	}break;
-	case EBindingType::StorageTexture: {
+	case EBindingType::RWTexture: {
 		VulkanRHITexture* texture = (VulkanRHITexture*)(param.Data.Texture);
 		auto& imageInfo = const_cast<VkDescriptorImageInfo*>(write.pImageInfo)[param.ArrayIndex];
 		VkImageView targetView = texture->GetView(param.Data.SubRes);
@@ -489,11 +534,12 @@ VkPipeline VulkanPipelineDescriptorSetCache::GetVkPipeline() {
 void VulkanPipelineDescriptorSetCache::SetupParameterLayout() {
 	m_ParamCaches.Reset();
 	if(const VulkanPipelineLayout* layout = GetLayout()) {
-		const uint32 setCount = layout->PipelineLayoutMeta.Size();
+		const uint32 setCount = layout->DescriptorSetLayouts.Size();
 		// create parameter caches
 		m_ParamCaches.Reserve(setCount);
-		for (auto& dsLayout : layout->PipelineLayoutMeta) {
-			m_ParamCaches.EmplaceBack(dsLayout);
+		for(uint32 i=0; i<setCount; ++i) {
+			TConstArrayView<RHIShaderBinding> bindings = layout->GetBindings(i);
+			m_ParamCaches.EmplaceBack(VulkanDescriptorSetParamCache{ bindings });
 		}
 		m_BindingSets.Resize(setCount, VK_NULL_HANDLE); // reserve null
 		m_DirtySets.Resize(setCount, true); // mark all ds dirty

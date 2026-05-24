@@ -19,9 +19,23 @@ namespace {
 	}
 
 	class InstanceCullingCS: public Render::GlobalShader {
+		BEGIN_SHADER_PERMUTATION
+		SHADER_PERMUTATION_SWITCH(OCCLUSION_TEST, false)
+		END_SHADER_PERMUTATION
+
+		BEGIN_SHADER_BINDING
+		SHADER_BINDING_SET(0)
+		SHADER_BINDING(0, UniformBuffer, uParams, 1)
+		SHADER_BINDING(1, StructuredBuffer, uInstanceAABBs, 1)
+		SHADER_BINDING(2, StructuredBuffer, uClusterAABBs, 1)
+		SHADER_BINDING(3, StructuredBuffer, uClusterData, 1)
+		SHADER_BINDING(4, RWStructuredBuffer, uIndirectDrawCmds, 1)
+		SHADER_BINDING(5, RWStructuredBuffer, uInstanceIDs, 1)
+		SHADER_BINDING_WITH_MACRO(6, Texture, uHZB, 1, OCCLUSION_TEST, true)
+		SHADER_BINDING_WITH_MACRO(7, Sampler, uSampler, 1, OCCLUSION_TEST, true)
+		END_SHADER_BINDING
+
 		GLOBAL_SHADER_IMPLEMENT(InstanceCullingCS, "InstanceCulling.hlsl", "MainCS", EShaderStageFlags::Compute);
-		SHADER_PERMUTATION_BEGIN_SWITCH(OCCLUSION_TEST, false);
-		SHADER_PERMUTATION_END(OCCLUSION_TEST);
 	};
 
 	inline bool CheckMeshComponentValid(Object::MeshECSComponent* com) {
@@ -260,8 +274,8 @@ namespace Object {
 					CHECK(pso);
 					queue.PushDrawCall([pso, transformBuffer, material, primitive = cache.Primitive, cameraBuffer = camera->GetBuffer()](RHICommandBuffer* cmd) {
 						cmd->BindGraphicsPipeline(pso);
-						cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(cameraBuffer));
-						cmd->SetShaderParam(1, 0, RHIShaderParam::UniformBuffer(transformBuffer));
+						cmd->SetShaderParam(MaterialShader::uCamera, RHIShaderParam::UniformBuffer(cameraBuffer));
+						cmd->SetShaderParam(MaterialShader::uModel, RHIShaderParam::UniformBuffer(transformBuffer));
 						material->BindBasePassShaderPrams(cmd, false);
 						cmd->BindVertexBuffer(primitive->VertexBuffer.Get(), 0, 0);
 						cmd->BindIndexBuffer(primitive->IndexBuffer.Get(), 0);
@@ -366,9 +380,9 @@ namespace Object {
 				RHIGraphicsPipelineState* pso = m_MaterialPSOCache->GetPSO(&cache, true);
 				queue.PushDrawCall([pso, instanceBuffer, instanceIDBuffer, material, instanceCount, primitive=cache.Primitive, cameraBuffer=camera->GetBuffer()](RHICommandBuffer* cmd) {
 					cmd->BindGraphicsPipeline(pso);
-					cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(cameraBuffer));
-					cmd->SetShaderParam(1, 0, RHIShaderParam::StructuredBuffer(instanceBuffer));
-					cmd->SetShaderParam(1, 1, RHIShaderParam::StructuredBuffer(instanceIDBuffer));
+					cmd->SetShaderParam(MaterialShader::uCamera, RHIShaderParam::UniformBuffer(cameraBuffer));
+					cmd->SetShaderParam(MaterialShader::uInstanceData, RHIShaderParam::StructuredBuffer(instanceBuffer));
+					cmd->SetShaderParam(MaterialShader::uInstanceID, RHIShaderParam::StructuredBuffer(instanceIDBuffer));
 					material->BindBasePassShaderPrams(cmd, true);
 					cmd->BindVertexBuffer(primitive->VertexBuffer, 0, 0);
 					cmd->BindIndexBuffer(primitive->IndexBuffer, 0);
@@ -439,41 +453,17 @@ namespace Object {
 	m_IsBufferDirty(false),
 	m_EnableOcclusionTest(true){
 		{
-			RHIComputePipelineStateDesc desc;
 			InstanceCullingCS::ShaderPermutation cp;
 			cp.OCCLUSION_TEST = true;
-			desc.Shader = Render::GlobalShaderMap::Instance()->GetShader<InstanceCullingCS>(cp)->GetRHI();
-			desc.Layout = {
-				{
-					{EBindingType::UniformBuffer, EShaderStageFlags::Compute, 1},
-					{EBindingType::StructuredBuffer, EShaderStageFlags::Compute, 1},
-					{EBindingType::StructuredBuffer, EShaderStageFlags::Compute, 1},
-					{EBindingType::StructuredBuffer, EShaderStageFlags::Compute, 1},
-					{EBindingType::RWStructuredBuffer, EShaderStageFlags::Compute, 1},
-					{EBindingType::RWStructuredBuffer, EShaderStageFlags::Compute, 1},
-					{EBindingType::Texture, EShaderStageFlags::Compute, 1},
-					{EBindingType::Sampler, EShaderStageFlags::Compute, 1},
-				}
-			};
-			m_CullingPSOWithOcclusionTest = RHI::Instance()->CreateComputePipelineState(desc);
+			RHIShader* cs = Render::GlobalShaderMap::Instance()->GetShader<InstanceCullingCS>(cp)->GetRHI();
+			m_CullingPSOWithOcclusionTest = RHI::Instance()->CreateComputePipelineState(cs);
 		}
 		// without occlusion test
 		{
-			RHIComputePipelineStateDesc desc;
 			InstanceCullingCS::ShaderPermutation cp;
 			cp.OCCLUSION_TEST = false;
-			desc.Shader = Render::GlobalShaderMap::Instance()->GetShader<InstanceCullingCS>(cp)->GetRHI();
-			desc.Layout = {
-				{
-					{EBindingType::UniformBuffer, EShaderStageFlags::Compute, 1},
-					{EBindingType::StructuredBuffer, EShaderStageFlags::Compute, 1},
-					{EBindingType::StructuredBuffer, EShaderStageFlags::Compute, 1},
-					{EBindingType::StructuredBuffer, EShaderStageFlags::Compute, 1},
-					{EBindingType::RWStructuredBuffer, EShaderStageFlags::Compute, 1},
-					{EBindingType::RWStructuredBuffer, EShaderStageFlags::Compute, 1},
-				}
-			};
-			m_CullingPSO = RHI::Instance()->CreateComputePipelineState(desc);
+			RHIShader* cs = Render::GlobalShaderMap::Instance()->GetShader<InstanceCullingCS>(cp)->GetRHI();
+			m_CullingPSO = RHI::Instance()->CreateComputePipelineState(cs);
 		}
 		m_SRVAlignment = RHI::Instance()->GetBufferAlignment(EBufferFlags::SRV);
 	}
@@ -549,9 +539,9 @@ namespace Object {
 				RHIGraphicsPipelineState* pso = m_MaterialPSOCache->GetPSO(&cache, true);
 				context.RenderingQueue.PushDrawCall([cameraBuffer, indirectCmdBuffer, primitiveIndex, instanceIDBuffer, instanceBuffer, pso, material, alignedInstanceOffset, alignedInstanceSize, primitive=cache.Primitive](RHICommandBuffer* cmd) {
 					cmd->BindGraphicsPipeline(pso);
-					cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(cameraBuffer));
-					cmd->SetShaderParam(1, 0, RHIShaderParam::StructuredBuffer(instanceBuffer));
-					cmd->SetShaderParam(1, 1, RHIShaderParam::StructuredBuffer(instanceIDBuffer,
+					cmd->SetShaderParam(MaterialShader::uCamera, RHIShaderParam::UniformBuffer(cameraBuffer));
+					cmd->SetShaderParam(MaterialShader::uInstanceData, RHIShaderParam::StructuredBuffer(instanceBuffer));
+					cmd->SetShaderParam(MaterialShader::uInstanceID, RHIShaderParam::StructuredBuffer(instanceIDBuffer,
 						alignedInstanceOffset * sizeof(uint32), alignedInstanceSize * sizeof(uint32)));
 					material->BindBasePassShaderPrams(cmd, true);
 					cmd->BindVertexBuffer(primitive->VertexBuffer, 0, 0);
@@ -797,16 +787,16 @@ namespace Object {
 			cmd->TransitionBufferState(indirectCmdBuffer, EResourceState::TransferDst, EResourceState::UnorderedAccessView);
 			RHIComputePipelineState* pso = bEnableOcclusionTest ? m_CullingPSOWithOcclusionTest.Get() : m_CullingPSO.Get();
 			cmd->BindComputePipeline(pso);
-			cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(paramBuffer));
-			cmd->SetShaderParam(0, 1, RHIShaderParam::StructuredBuffer(m_InstanceAABBBuffer.Get()));
-			cmd->SetShaderParam(0, 2, RHIShaderParam::StructuredBuffer(m_ClusterAABBBuffer.Get()));
-			cmd->SetShaderParam(0, 3, RHIShaderParam::StructuredBuffer(clusterDataBuffer));
-			cmd->SetShaderParam(0, 4, RHIShaderParam::RWStructuredBuffer(indirectCmdBuffer));
-			cmd->SetShaderParam(0, 5, RHIShaderParam::RWStructuredBuffer(cullResultBuffer));
+			cmd->SetShaderParam(InstanceCullingCS::uParams, RHIShaderParam::UniformBuffer(paramBuffer));
+			cmd->SetShaderParam(InstanceCullingCS::uInstanceAABBs, RHIShaderParam::StructuredBuffer(m_InstanceAABBBuffer.Get()));
+			cmd->SetShaderParam(InstanceCullingCS::uClusterAABBs, RHIShaderParam::StructuredBuffer(m_ClusterAABBBuffer.Get()));
+			cmd->SetShaderParam(InstanceCullingCS::uClusterData, RHIShaderParam::StructuredBuffer(clusterDataBuffer));
+			cmd->SetShaderParam(InstanceCullingCS::uIndirectDrawCmds, RHIShaderParam::RWStructuredBuffer(indirectCmdBuffer));
+			cmd->SetShaderParam(InstanceCullingCS::uInstanceIDs, RHIShaderParam::RWStructuredBuffer(cullResultBuffer));
 			if(bEnableOcclusionTest) {
-				cmd->SetShaderParam(0, 6, RHIShaderParam::Texture(hzb));
+				cmd->SetShaderParam(InstanceCullingCS::uHZB, RHIShaderParam::Texture(hzb));
 				RHISampler* sampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Point, ESamplerAddressMode::Clamp);
-				cmd->SetShaderParam(0, 7, RHIShaderParam::Sampler(sampler));
+				cmd->SetShaderParam(InstanceCullingCS::uSampler, RHIShaderParam::Sampler(sampler));
 			}
 			cmd->Dispatch(numThreadGroup, 1, 1);
 			cmd->TransitionBufferState(indirectCmdBuffer, EResourceState::UnorderedAccessView, EResourceState::IndirectDrawBuffer);

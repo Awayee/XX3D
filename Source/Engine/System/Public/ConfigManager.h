@@ -1,5 +1,5 @@
 #pragma once
-#include "Core/Public/ConfigProperty.h"
+#include "System/Public/ConfigProperty.h"
 
 namespace Engine{
 
@@ -13,6 +13,7 @@ namespace Engine{
 		CONFIG_PROPERTY_BEING(XXEngineConfig)
 		CONFIG_PROPERTY_STRING(Engine, DefaultFont, );
 		CONFIG_PROPERTY_STRING(Engine, ProjectPath, );
+		CONFIG_PROPERTY_BOOL(Engine, EnablePipelineCache, true);
 		CONFIG_PROPERTY_END(XXEngineConfig)
 	};
 
@@ -20,7 +21,6 @@ namespace Engine{
 		CONFIG_PROPERTY_BEING(XXProjectConfig)
 		CONFIG_PROPERTY_STRING(Project, ProjectName, );
 		CONFIG_PROPERTY_STRING(Project, StartLevel, );
-
 		CONFIG_PROPERTY_STRING(Rendering, DefaultFont, );
 		CONFIG_PROPERTY_UINT(Rendering, WindowWidth, 1280u);
 		CONFIG_PROPERTY_UINT(Rendering, WindowHeight, 720);
@@ -43,18 +43,17 @@ namespace Engine{
 		const XString& GetExecutableDir() const { return  ExecutableDir; }
 		const XString& GetEngineAssetDir() const { return  EngineAssetDir; }
 		const XString& GetShaderDir() const { return  ShaderDir; }
-		const XString& GetDefaultFont() const { return EngineConfig.DefaultFont; }
-		const XString& GetProjectDir() const { return EngineConfig.ProjectPath; }
+		const XXEngineConfig& GetEngineConfig() const { return EngineConfig; }
 		const XXProjectConfig& GetProjectConfig() { return  ProjectConfig; }
-		XString GetCompiledShaderDir() const;
-		XString GetProjectAssetDir() const;
+		const XString& GetProjectDir() const { return EngineConfig.ProjectPath; }
+		const XString& GetEngineCacheDir() const { return EngineCacheDir; }
     private:
 		XXEngineConfig EngineConfig;
 		XXProjectConfig ProjectConfig;
-
 		XString EngineRoot;
 		XString ExecutableDir;
 		XString ShaderDir;
 		XString EngineAssetDir;
+		XString EngineCacheDir;
     };
 }

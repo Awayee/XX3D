@@ -9,7 +9,6 @@ public:
 	uint32 GetAPIVersion() const { return m_APIVersion; }
 	VkInstance GetInstance() const { return m_Instance; }
 private:
-	friend class VulkanRHI;
 	uint32 m_APIVersion;
 	VkInstance m_Instance{VK_NULL_HANDLE};
 	VkDebugUtilsMessengerEXT m_DebugUtilsMessenger{VK_NULL_HANDLE};

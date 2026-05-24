@@ -148,7 +148,7 @@ ENUM_CLASS_FLAGS(EShaderStageFlags);
 enum class EBindingType : uint8 {
     Sampler,
     Texture,
-    StorageTexture,
+    RWTexture,
     UniformBuffer,
     StructuredBuffer,
     RWStructuredBuffer,

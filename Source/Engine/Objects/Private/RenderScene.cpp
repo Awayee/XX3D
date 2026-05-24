@@ -10,12 +10,23 @@
 
 namespace {
     class DeferredLightingVS : public Render::GlobalShader {
-        GLOBAL_SHADER_IMPLEMENT(DeferredLightingVS, "DeferredLightingPBR.hlsl", "MainVS", EShaderStageFlags::Vertex);
         SHADER_PERMUTATION_EMPTY();
+        SHADER_BINDING_EMPTY();
+        GLOBAL_SHADER_IMPLEMENT(DeferredLightingVS, "DeferredLightingPBR.hlsl", "MainVS", EShaderStageFlags::Vertex);
     };
     class DeferredLightingPS: public Render::GlobalShader {
-        GLOBAL_SHADER_IMPLEMENT(DeferredLightingPS, "DeferredLightingPBR.hlsl", "MainPS", EShaderStageFlags::Pixel);
         SHADER_PERMUTATION_EMPTY();
+        BEGIN_SHADER_BINDING
+    	SHADER_BINDING(0, UniformBuffer, uCamera, 1)
+        SHADER_BINDING(1, UniformBuffer, uLight, 1)
+        SHADER_BINDING(2, Texture, inShadowMap, 1)
+        SHADER_BINDING(3, Texture, inGBuffer0, 1)
+        SHADER_BINDING(4, Texture, inGBuffer1, 1)
+        SHADER_BINDING(5, Texture, inDepth, 1)
+        SHADER_BINDING(6, Sampler, inPointSampler, 1)
+        SHADER_BINDING(7, Sampler, inLinearSampler,1)
+        END_SHADER_BINDING
+        GLOBAL_SHADER_IMPLEMENT(DeferredLightingPS, "DeferredLightingPBR.hlsl", "MainPS", EShaderStageFlags::Pixel);
     };
 
     void InitializeDeferredLightingPipelineDesc(RHIGraphicsPipelineStateDesc& desc) {
@@ -24,18 +35,6 @@ namespace {
         ERHIFormat colorFormat = r->GetViewport()->GetBackBufferFormat();
         desc.VertexShader = globalShaderMap->GetShader<DeferredLightingVS>()->GetRHI();
         desc.PixelShader = globalShaderMap->GetShader<DeferredLightingPS>()->GetRHI();
-        auto& layout = desc.Layout;
-        layout.Resize(1);
-        layout[0] = {
-            {EBindingType::UniformBuffer, EShaderStageFlags::Pixel},// camera
-            {EBindingType::UniformBuffer, EShaderStageFlags::Pixel},// light uniform
-            {EBindingType::Texture, EShaderStageFlags::Pixel}, // shadow map
-            {EBindingType::Texture, EShaderStageFlags::Pixel},// normal tex
-            {EBindingType::Texture, EShaderStageFlags::Pixel},// albedo tex
-            {EBindingType::Texture, EShaderStageFlags::Pixel},// depth tex
-            {EBindingType::Sampler, EShaderStageFlags::Pixel},// point sampler
-            {EBindingType::Sampler, EShaderStageFlags::Pixel},// linear sampler
-        };
         desc.VertexInput = {};
         desc.BlendDesc.BlendStates = { {false} };
         desc.RasterizerState = { ERasterizerFill::Solid, ERasterizerCull::Back };
@@ -230,17 +229,17 @@ namespace Object {
         // deferred lighting
         GetLightingPassDrawCallQueue().PushDrawCall([this](RHICommandBuffer* cmd) {
             cmd->BindGraphicsPipeline(m_DeferredLightingPSO);
-            cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(m_Camera->GetBuffer()));
-            cmd->SetShaderParam(0, 1, RHIShaderParam::UniformBuffer(m_DirectionalLight->GetLightingUniform()));
+            cmd->SetShaderParam(DeferredLightingPS::uCamera, RHIShaderParam::UniformBuffer(m_Camera->GetBuffer()));
+            cmd->SetShaderParam(DeferredLightingPS::uLight, RHIShaderParam::UniformBuffer(m_DirectionalLight->GetLightingUniform()));
             RHITexture* directionalShadowMap = m_DirectionalLight->GetShadowMap();
             const RHITextureSubRes directionalShadowMapSubRes = directionalShadowMap->GetDesc().GetSubRes2DArray(ETextureViewFlags::Depth);
-            cmd->SetShaderParam(0, 2, RHIShaderParam::Texture(directionalShadowMap, directionalShadowMapSubRes));
-            cmd->SetShaderParam(0, 3, RHIShaderParam::Texture(m_GBufferNormal));
-            cmd->SetShaderParam(0, 4, RHIShaderParam::Texture(m_GBufferAlbedo));
+            cmd->SetShaderParam(DeferredLightingPS::inShadowMap, RHIShaderParam::Texture(directionalShadowMap, directionalShadowMapSubRes));
+            cmd->SetShaderParam(DeferredLightingPS::inGBuffer0, RHIShaderParam::Texture(m_GBufferNormal));
+            cmd->SetShaderParam(DeferredLightingPS::inGBuffer1, RHIShaderParam::Texture(m_GBufferAlbedo));
             const RHITextureSubRes depthSrvSubRes = m_Depth->GetDesc().GetSubRes2D(0, ETextureViewFlags::Depth);
-            cmd->SetShaderParam(0, 5, RHIShaderParam::Texture(m_DepthSRV, depthSrvSubRes));
-            cmd->SetShaderParam(0, 6, RHIShaderParam::Sampler(Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Point, ESamplerAddressMode::Clamp)));
-            cmd->SetShaderParam(0, 7, RHIShaderParam::Sampler(Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp)));
+            cmd->SetShaderParam(DeferredLightingPS::inDepth, RHIShaderParam::Texture(m_DepthSRV, depthSrvSubRes));
+            cmd->SetShaderParam(DeferredLightingPS::inPointSampler, RHIShaderParam::Sampler(Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Point, ESamplerAddressMode::Clamp)));
+            cmd->SetShaderParam(DeferredLightingPS::inLinearSampler, RHIShaderParam::Sampler(Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp)));
         	cmd->Draw(6, 1, 0, 0);
         });
     }

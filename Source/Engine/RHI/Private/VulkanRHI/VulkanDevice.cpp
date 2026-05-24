@@ -17,30 +17,19 @@ inline TArray<const char*> GetDeviceExtensions(const VulkanContext* context) {
 	return extensions;
 }
 
-inline VkFormat FindDepthFormat(VkPhysicalDevice physicalDevice) {
-	// find depth format
-	const TArray<VkFormat> candidates{ VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT };
-	VkImageTiling tiling{ VK_IMAGE_TILING_OPTIMAL };
-	VkFormatFeatureFlags features{ VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT };
-	for (VkFormat format : candidates){
-		VkFormatProperties props;
-		vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
-		if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features){
-			return format;
-		}
-		else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features){
-			return format;
-		}
-	}
-	LOG_ERROR("findSupportedFormat failed");
-	return VK_FORMAT_UNDEFINED;
+RHIFeatures VulkanDevice::GetPhysicalDeviceRHIFeatures(VkPhysicalDevice PhysicalDevice) {
+	RHIFeatures Features;
+	// Query bindless features
+	VkPhysicalDeviceDescriptorIndexingFeatures DescriptorIndexingFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES, nullptr };
+	VkPhysicalDeviceFeatures2 DeviceFeatures2{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, &DescriptorIndexingFeatures };
+	vkGetPhysicalDeviceFeatures2(PhysicalDevice, &DeviceFeatures2);
+	Features.BindlessSupported = DescriptorIndexingFeatures.descriptorBindingPartiallyBound && DescriptorIndexingFeatures.runtimeDescriptorArray;
+	return Features;
 }
 
-VulkanDevice::VulkanDevice(const VulkanContext* context, VkPhysicalDevice physicalDevice): m_PhysicalDevice(physicalDevice) {
-	// Get device properties
-	InitializeDeviceInfo();
+VulkanDevice::VulkanDevice(const VulkanContext* context, VkPhysicalDevice physicalDevice) {
 	// Create logical device
-	CreateDevice(context);
+	CreateDevice(context, physicalDevice);
 	// Create descriptor manager
 	m_DescriptorMgr.Reset(new VulkanDescriptorSetMgr(this));
 	// Create memory manager
@@ -87,12 +76,10 @@ const VulkanQueue* VulkanDevice::FindPresentQueue(VkSurfaceKHR surface) const {
 	return nullptr;
 }
 
-void VulkanDevice::InitializeDeviceInfo() {
-	vkGetPhysicalDeviceProperties(m_PhysicalDevice, &m_DeviceProperties);
-	m_Formats.DepthFormat = FindDepthFormat(m_PhysicalDevice);
-}
-
-void VulkanDevice::CreateDevice(const VulkanContext* context) {
+void VulkanDevice::CreateDevice(const VulkanContext* context, VkPhysicalDevice PhysicalDevice) {
+	m_PhysicalDevice = PhysicalDevice;
+	vkGetPhysicalDeviceProperties(PhysicalDevice, &m_DeviceProperties);
+	m_RHIFeatures = GetPhysicalDeviceRHIFeatures(PhysicalDevice);
 	// Get queue
 	uint32 queueFamilyCount;
 	vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queueFamilyCount, nullptr);
@@ -161,6 +148,11 @@ void VulkanDevice::CreateDevice(const VulkanContext* context) {
 	features.fragmentStoresAndAtomics = VK_TRUE;
 	features.independentBlend = VK_TRUE;
 
+	// bindless features
+	if(m_RHIFeatures.BindlessSupported) {
+		features12.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
+	}
+
 	// create device
 	VkDeviceCreateInfo deviceCreateInfo{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
 	deviceCreateInfo.flags = 0;
@@ -171,6 +163,7 @@ void VulkanDevice::CreateDevice(const VulkanContext* context) {
 	}
 	else {
 		features12.pNext = &features13;
+		features2.pNext = &features12;
 		deviceCreateInfo.pEnabledFeatures = nullptr;
 		deviceCreateInfo.pNext = &features2;
 	}
@@ -186,8 +179,8 @@ void VulkanDevice::CreateDevice(const VulkanContext* context) {
 	LoadDeviceFunctions(m_Device);
 	// compatible with vulkan 1.2
 	if(apiVersion < VK_VERSION_1_3) {
-		vkCmdBeginRendering = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>(vkGetDeviceProcAddr(m_Device, "vkCmdBeginRenderingKHR"));
-		vkCmdEndRendering = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(vkGetDeviceProcAddr(m_Device, "vkCmdEndRenderingKHR"));
+		vkCmdBeginRendering = (PFN_vkCmdBeginRenderingKHR)(vkGetDeviceProcAddr(m_Device, "vkCmdBeginRenderingKHR"));
+		vkCmdEndRendering = (PFN_vkCmdEndRenderingKHR)(vkGetDeviceProcAddr(m_Device, "vkCmdEndRenderingKHR"));
 	}
 
 	// get queues

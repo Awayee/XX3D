@@ -7,11 +7,19 @@ class VulkanDevice;
 struct VulkanPipelineLayout;
 class VulkanDynamicBufferAllocator;
 // descriptor set manager
+
+struct VulkanDescriptorInfo {
+	uint32 Binding : 5;
+	uint32 NumElements : 15;
+	EBindingType Type : 4;
+	EShaderStageFlags StageFlags : 8;
+	VulkanDescriptorInfo(RHIShaderBinding binding, EShaderStageFlags stageFlags);
+};
 class VulkanDescriptorSetMgr{
 public:
 	explicit VulkanDescriptorSetMgr(VulkanDevice* device);
 	~VulkanDescriptorSetMgr();
-	VkDescriptorSetLayout GetLayoutHandle(const RHIShaderParamSetLayout& layout);
+	VkDescriptorSetLayout GetLayoutHandle(TConstArrayView<VulkanDescriptorInfo> layout);
 	VkDescriptorPool GetPool();
 	VkDescriptorPool GetReservePool();
 	VkDescriptorSet AllocateDescriptorSet(VkDescriptorSetLayout layout);
@@ -30,9 +38,12 @@ private:
 // pipeline layout owned by pso
 struct VulkanPipelineLayout {
 	VkPipelineLayout Handle{ VK_NULL_HANDLE };
-	TArray<VkDescriptorSetLayout> DescriptorSetLayouts{ VK_NULL_HANDLE };
-	TConstArrayView<RHIShaderParamSetLayout> PipelineLayoutMeta;
-	void Build(VulkanDevice* device, TConstArrayView<RHIShaderParamSetLayout> meta);
+	TArray<VkDescriptorSetLayout> DescriptorSetLayouts;
+	TArray<RHIShaderBinding> BindingsMeta;
+	TStaticArray<uint8, RHIShaderBinding::MAX_SET> BindingOffsets;
+	void Build(VulkanDevice* device, RHIShaderBindingSet& bindingSet);
+	RHIShaderBinding GetBindingMeta(uint32 set, uint32 binding);
+	TConstArrayView<RHIShaderBinding> GetBindings(uint32 set) const;
 };
 
 // graphics PSO
@@ -52,7 +63,7 @@ private:
 // compute PSO
 class VulkanRHIComputePipelineState : public RHIComputePipelineState {
 public:
-	explicit VulkanRHIComputePipelineState(const RHIComputePipelineStateDesc& desc, VulkanDevice* device);
+	explicit VulkanRHIComputePipelineState(RHIShader* shader, VulkanDevice* device);
 	~VulkanRHIComputePipelineState() override;
 	void SetNameInternal(const char* name) override;
 	VkPipeline GetPipelineHandle() const { return m_Pipeline; }
@@ -67,13 +78,13 @@ private:
 class VulkanDescriptorSetParamCache {
 public:
 	NON_COPYABLE(VulkanDescriptorSetParamCache);
-	VulkanDescriptorSetParamCache(const RHIShaderParamSetLayout& layout);
+	VulkanDescriptorSetParamCache(TConstArrayView<RHIShaderBinding> bindings);
 	VulkanDescriptorSetParamCache(VulkanDescriptorSetParamCache&&)noexcept = default;
 	// Cache descriptor write info, if info is modified, return true
 	bool SetParam(const VulkanDynamicBufferAllocator* allocator, uint32 bindIndex, const RHIShaderParam& param);
 	TArray<VkWriteDescriptorSet>& GetWrites() { return m_Writes; }
 private:
-	const RHIShaderParamSetLayout& m_LayoutRef;
+	TConstArrayView<RHIShaderBinding> m_BindingsRef;
 	TArray<VkDescriptorBufferInfo> m_WriteBuffers;
 	TArray<VkDescriptorImageInfo> m_WriteImages;
 	TArray<VkWriteDescriptorSet> m_Writes;

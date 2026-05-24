@@ -26,7 +26,7 @@ namespace {
 		}
 	}
 	
-	inline XString FixShaderFileName(const XString& hlslFile) {
+	inline XString FixShaderFileName(XStringView hlslFile) {
 		XString result;
 		if (auto extIndex = hlslFile.rfind(".hlsl"); extIndex != hlslFile.npos) {
 			result = hlslFile.substr(0, extIndex);
@@ -38,8 +38,27 @@ namespace {
 		return result;
 	}
 
-	inline XString GetShaderFullPath(const XString& shaderFile) {
+	inline XString GetShaderFullPath(XStringView shaderFile) {
 		return File::CombinePathStr(Engine::ConfigMgr::Instance().GetShaderDir(), shaderFile);
+	}
+
+	inline XString GetCompiledShaderDir() {
+		return File::CombinePathStr(Engine::ConfigMgr::Instance().GetEngineCacheDir(), "Shaders");
+	}
+
+	inline bool SaveCompiledShader(const void* buffer, uint32 bufferSize, XStringView relativeFile) {
+		File::FPath fullPath = File::FPath{ GetCompiledShaderDir() }.append(relativeFile).string();
+		{
+			const File::FPath outputDirPath = fullPath.parent_path();
+			if (!File::Exist(outputDirPath)) {
+				File::MakeDirRecursively(outputDirPath);
+			}
+		}
+		if (File::WriteFile fOut(fullPath.string(), true); fOut.IsOpen()) {
+			fOut.Write(buffer, bufferSize);
+			return true;
+		}
+		return false;
 	}
 
 	static DxcCreateInstanceProc GetDXCCreateInstanceProc() {
@@ -141,21 +160,21 @@ namespace {
 				m_PreArgs.PushBack(L"-spirv");
 			}
 		}
-		DXCompiler(const char* code, uint32 byteSize, const XString& entryPoint, EShaderStageFlags stage, TConstArrayView<ShaderCompiler::Macro> macros): DXCompiler() {
+		DXCompiler(const char* code, uint32 byteSize, XStringView entryPoint, EShaderStageFlags stage, TConstArrayView<ShaderCompiler::Macro> macros): DXCompiler() {
 			DxcBuffer buffer;
 			buffer.Encoding = CP_UTF8;
 			buffer.Ptr = code;
 			buffer.Size = byteSize;
 			m_CompileSucceed = Compile(buffer, entryPoint, stage, macros);
 		}
-		DXCompiler(const XString& hlslFile, const XString& entryPoint, EShaderStageFlags stage, TConstArrayView<ShaderCompiler::Macro> macros) : DXCompiler() {
+		DXCompiler(XStringView hlslFile, XStringView entryPoint, EShaderStageFlags stage, TConstArrayView<ShaderCompiler::Macro> macros) : DXCompiler() {
 			XWString hlslFileW = File::FPath{Engine::ConfigMgr::Instance().GetShaderDir()}.append(hlslFile).wstring();
 			// Load the HLSL text shader from disk
 			uint32_t codePage = DXC_CP_ACP;
 			TDXCPtr<IDxcBlobEncoding> srcCode;
 			HRESULT r = m_Utils->LoadFile(hlslFileW.c_str(), &codePage, srcCode.Address());
 			if (FAILED(r)) {
-				LOG_ERROR("[HLSLCompiler] Could not load shader file: %s", hlslFile.c_str());
+				LOG_ERROR("[HLSLCompiler] Could not load shader file: %s", XString{hlslFile}.c_str());
 				return;
 			}
 
@@ -192,18 +211,19 @@ namespace {
 			if(!SignCode(blob)) {
 				return false;
 			}
-			File::FPath fullPath = File::FPath{Engine::ConfigMgr::Instance().GetCompiledShaderDir()}.append(file).string();
-			{
-				File::FPath outputDirPath = fullPath.parent_path();
-				if (!File::Exist(outputDirPath)) {
-					File::MakeDir(outputDirPath);
-				}
-			}
-			if(File::WriteFile fOut(fullPath.string(), true); fOut.IsOpen()) {
-				fOut.Write(blob->GetBufferPointer(), (uint32)blob->GetBufferSize());
-				return true;
-			}
-			return false;
+			//File::FPath fullPath = File::FPath{ GetCompiledShaderDir()}.append(file).string();
+			//{
+			//	const File::FPath outputDirPath = fullPath.parent_path();
+			//	if (!File::Exist(outputDirPath)) {
+			//		File::MakeDirRecursively(outputDirPath);
+			//	}
+			//}
+			//if(File::WriteFile fOut(fullPath.string(), true); fOut.IsOpen()) {
+			//	fOut.Write(blob->GetBufferPointer(), (uint32)blob->GetBufferSize());
+			//	return true;
+			//}
+			//return false;
+			return SaveCompiledShader(blob->GetBufferPointer(), blob->GetBufferSize(), file);
 		}
 
 	private:
@@ -219,7 +239,7 @@ namespace {
 		TArray<LPCWSTR> m_PreArgs;
 		bool m_CompileSucceed;
 
-		bool Compile(const DxcBuffer& codeBuffer, const XString& entryPoint, EShaderStageFlags stage, TConstArrayView<ShaderCompiler::Macro> macros) {
+		bool Compile(const DxcBuffer& codeBuffer, XStringView entryPoint, EShaderStageFlags stage, TConstArrayView<ShaderCompiler::Macro> macros) {
 			HRESULT r;
 			// parse macros
 			TArray<XWString> stringCache; stringCache.Reserve(macros.Size() * 2);
@@ -340,15 +360,15 @@ namespace {
 
 namespace ShaderCompiler {
 
-	XString GetCompileOutputFile(const XString& hlslFile, const XString& entryPoint, uint32 permutationID) {
+	XString GetCompileOutputFile(XStringView hlslFile, XStringView entryPoint, uint32 permutationID) {
 		if(Engine::ConfigMgr::Instance().GetProjectConfig().RHIType == Engine::ERHIType::D3D12) {
 			return FixShaderFileName(hlslFile).append(entryPoint).append(ToString(permutationID)).append(SHADER_DXS_EXTENSION);
 		}
 		return FixShaderFileName(hlslFile).append(entryPoint).append(ToString(permutationID)).append(SHADER_SPV_EXTENSION);
 	}
 
-	bool LoadCompiledShader(const XString& compiledFile, TArray<int8>& outCode) {
-		const XString fullPath = File::CombinePathStr(Engine::ConfigMgr::Instance().GetCompiledShaderDir(), compiledFile);
+	bool LoadCompiledShader(XStringView compiledFile, TArray<int8>& outCode) {
+		const XString fullPath = File::CombinePathStr(GetCompiledShaderDir(), compiledFile);
 		if (File::ReadFileWithSize f(fullPath.c_str(), true); f.IsOpen()) {
 			outCode.Resize(f.ByteSize());
 			f.Read(outCode.Data(), f.ByteSize());
@@ -357,7 +377,7 @@ namespace ShaderCompiler {
 		return false;
 	}
 
-	bool LoadSourceShader(const XString& shaderFile, XString& outCode) {
+	bool LoadSourceShader(XStringView shaderFile, XString& outCode) {
 		const XString fullPath = File::CombinePathStr(Engine::ConfigMgr::Instance().GetShaderDir(), shaderFile);
 		if (File::ReadFileWithSize f(fullPath, false); f.IsOpen()) {
 			outCode.resize(f.ByteSize());
@@ -367,19 +387,23 @@ namespace ShaderCompiler {
 		return false;
 	}
 
-	bool CompileSourceFileToFile(const XString& hlslFile, const XString& entryPoint, EShaderStageFlags stage, TConstArrayView<Macro> macros, uint32 permutationID) {
+	bool CompileSourceFileToFile(XStringView hlslFile, XStringView entryPoint, EShaderStageFlags stage, TConstArrayView<Macro> macros, uint32 permutationID) {
 		XString outFile = GetCompileOutputFile(hlslFile, entryPoint, permutationID);
 		DXCompiler compiler(hlslFile, entryPoint, stage, macros);
 		return compiler.SaveFile(outFile);
 	}
 
-	bool CompileCodeToFile(const XString& hlslCode, const XString& entryPoint, EShaderStageFlags stage, TConstArrayView<Macro> macros, const XString& outFile) {
+	bool CompileCodeToFile(XStringView hlslCode, XStringView entryPoint, EShaderStageFlags stage, TConstArrayView<Macro> macros, const XString& outFile) {
 		DXCompiler compiler(hlslCode.data(), (uint32)hlslCode.size(), entryPoint, stage, macros);
 		return compiler.SaveFile(outFile);
 	}
 
-	bool CompileCodeToBytes(const XString& hlslCode, const XString& entryPoint, EShaderStageFlags stage, TConstArrayView<Macro> macros, TArray<int8>& outBytes) {
+	bool CompileCodeToBytes(XStringView hlslCode, XStringView entryPoint, EShaderStageFlags stage, TConstArrayView<Macro> macros, TArray<int8>& outBytes) {
 		DXCompiler compiler(hlslCode.data(), (uint32)hlslCode.size(), entryPoint, stage, macros);
 		return compiler.GetResultCode(outBytes);
+	}
+
+	bool SaveCompiledBytesToFile(const TArray<int8>& bytes, XStringView compiledFile) {
+		return SaveCompiledShader(bytes.Data(), bytes.Size(), compiledFile);
 	}
 }

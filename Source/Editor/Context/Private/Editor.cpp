@@ -60,7 +60,7 @@ namespace Editor {
 			info.Title = StringFormat("%s XXEditor", info.Title.c_str());
 		});
 		//clear all compiled shader cache, to recompile them.
-		File::RemoveDir(Engine::ConfigMgr::Instance().GetCompiledShaderDir());
+		File::RemoveDir(Engine::ConfigMgr::Instance().GetEngineCacheDir());
 	}
 
 	XXEditor::XXEditor(): XXEngine() {

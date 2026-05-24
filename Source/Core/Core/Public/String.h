@@ -8,9 +8,9 @@ typedef std::wstring XWString;
 typedef std::string_view XStringView;
 typedef std::wstring_view XWStringView;
 
-XWString String2WString(const XString& str);
+XWString String2WString(XStringView str);
 
-XString WString2String(const XWString& wStr);
+XString WString2String(XWStringView wStr);
 
 bool StrStartsWith(XStringView Str, XStringView Sign);
 

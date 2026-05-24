@@ -560,9 +560,9 @@ ID3D12Fence* D3D12Fence::GetFence() {
 	return m_Fence.Get();
 }
 
-D3D12Shader::D3D12Shader(EShaderStageFlags stage, const void* byteData, uint32 byteSize): RHIShader(stage) {
-	m_Bytes.Resize(byteSize);
-	memcpy(m_Bytes.Data(), byteData, byteSize);
+D3D12Shader::D3D12Shader(EShaderStageFlags stage, RHIShaderBindingInterface* bindingInterface, XStringView code): RHIShader(stage, bindingInterface) {
+	m_Bytes.Resize(code.size());
+	memcpy(m_Bytes.Data(), code.data(), code.size());
 }
 
 TConstArrayView<uint8> D3D12Shader::GetBytes() {

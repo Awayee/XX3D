@@ -219,7 +219,7 @@ VkDescriptorType ToVkDescriptorType(EBindingType type) {
 	switch (type) {
 	case EBindingType::Texture: return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 	case EBindingType::Sampler: return VK_DESCRIPTOR_TYPE_SAMPLER;
-	case EBindingType::StorageTexture: return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	case EBindingType::RWTexture: return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 	case EBindingType::UniformBuffer: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	case EBindingType::RWStructuredBuffer:
 	case EBindingType::StructuredBuffer: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;

@@ -9,13 +9,20 @@
 
 namespace {
 	class SkyBoxVS: public Render::GlobalShader {
-		GLOBAL_SHADER_IMPLEMENT(SkyBoxVS, "SkyBox.hlsl", "MainVS", EShaderStageFlags::Vertex);
 		SHADER_PERMUTATION_EMPTY();
+		BEGIN_SHADER_BINDING
+		SHADER_BINDING(0, UniformBuffer, uCamera, 1)
+		END_SHADER_BINDING
+		GLOBAL_SHADER_IMPLEMENT(SkyBoxVS, "SkyBox.hlsl", "MainVS", EShaderStageFlags::Vertex);
 	};
 
 	class SkyBoxPS: public Render::GlobalShader {
-		GLOBAL_SHADER_IMPLEMENT(SkyBoxPS, "SkyBox.hlsl", "MainPS", EShaderStageFlags::Pixel);
 		SHADER_PERMUTATION_EMPTY();
+		BEGIN_SHADER_BINDING
+		SHADER_BINDING(1, Texture, inSkyBoxMap, 1)
+		SHADER_BINDING(2, Sampler, inSampler, 1)
+		END_SHADER_BINDING
+		GLOBAL_SHADER_IMPLEMENT(SkyBoxPS, "SkyBox.hlsl", "MainPS", EShaderStageFlags::Pixel);
 	};
 
 	void CreateSkyBoxPSO(RHIGraphicsPipelineStateDesc& desc) {
@@ -23,14 +30,6 @@ namespace {
 		Render::GlobalShaderMap* globalShaderMap = Render::GlobalShaderMap::Instance();
 		desc.VertexShader = globalShaderMap->GetShader<SkyBoxVS>()->GetRHI();
 		desc.PixelShader = globalShaderMap->GetShader<SkyBoxPS>()->GetRHI();
-		// ds layout
-		auto& layout = desc.Layout;
-		layout.Resize(1);
-		layout[0] = {
-			{EBindingType::UniformBuffer, EShaderStageFlags::Vertex}, // camera
-			{EBindingType::Texture, EShaderStageFlags::Pixel},// cube map
-			{EBindingType::Sampler, EShaderStageFlags::Pixel}
-		};
 		// vertex input
 		auto& vi = desc.VertexInput;
 		vi.Bindings = { {0, sizeof(Asset::AssetVertex), false} };
@@ -108,10 +107,10 @@ namespace Object {
 			cmd->BindGraphicsPipeline(pso);
 			cmd->BindVertexBuffer(primitive->VertexBuffer, 0, 0);
 			cmd->BindIndexBuffer(primitive->IndexBuffer, 0);
-			cmd->SetShaderParam(0, 0, RHIShaderParam::UniformBuffer(renderScene->GetMainCamera()->GetBuffer()));
-			cmd->SetShaderParam(0, 1, RHIShaderParam::Texture(cubemap));
+			cmd->SetShaderParam(SkyBoxVS::uCamera, RHIShaderParam::UniformBuffer(renderScene->GetMainCamera()->GetBuffer()));
+			cmd->SetShaderParam(SkyBoxPS::inSkyBoxMap, RHIShaderParam::Texture(cubemap));
 			auto sampler = Render::DefaultResources::Instance()->GetDefaultSampler(ESamplerFilter::Bilinear, ESamplerAddressMode::Clamp);
-			cmd->SetShaderParam(0, 2, RHIShaderParam::Sampler(sampler));
+			cmd->SetShaderParam(SkyBoxPS::inSampler, RHIShaderParam::Sampler(sampler));
 			cmd->DrawIndexed(primitive->IndexCount, 1, 0, 0, 0);
 		});
 	}
