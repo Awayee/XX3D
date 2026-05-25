@@ -19,7 +19,7 @@ public:
 	~D3D12Buffer() override = default;
 	void SetNameInternal(const char* name) override;
 	void UpdateData(const void* data, uint32 byteSize, uint32 offset) override;
-	void UpdateData(Func<void(void*)>&& f);
+	void UpdateData(XFunc<void, void*>&& f);
 	ID3D12Resource* GetResource() { return m_Resource.Get(); }
 	D3D12_RESOURCE_STATES GetState() const { return m_ResState; }
 	void SetState(D3D12_RESOURCE_STATES state) { m_ResState = state; }

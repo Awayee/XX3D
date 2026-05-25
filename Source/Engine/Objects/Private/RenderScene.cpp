@@ -48,14 +48,14 @@ namespace {
 }
 
 namespace Object {
-    TArray<Func<void(RenderScene*)>>& GetConstructFuncs() {
-        static TArray<Func<void(RenderScene*)>> s_ConstructFuncs {};
+    TArray<XFunc<void, RenderScene*>>& GetConstructFuncs() {
+        static TArray<XFunc<void, RenderScene*>> s_ConstructFuncs {};
         return s_ConstructFuncs;
     }
 
     TUniquePtr<RenderScene> RenderScene::s_Default;
 
-    void RenderScene::AddConstructFunc(Func<void(RenderScene*)>&& f) {
+    void RenderScene::AddConstructFunc(XFunc<void,RenderScene*>&& f) {
         GetConstructFuncs().PushBack(MoveTemp(f));
     }
 

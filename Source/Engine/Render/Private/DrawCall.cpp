@@ -9,7 +9,7 @@ namespace Render {
 		return *this;
 	}
 
-	void DrawCall::ResetFunc(Func<void(RHICommandBuffer*)>&& f) {
+	void DrawCall::ResetFunc(DrawCallFunc&& f) {
 		m_Func = MoveTemp(f);
 	}
 

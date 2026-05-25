@@ -93,7 +93,7 @@ namespace Render {
 
 	class RGComputeNode: public RGPassNode {
 	public:
-		typedef Func<void(RHICommandBuffer*)> ComputeTask;
+		typedef XFunction<void, RHICommandBuffer*> ComputeTask;
 		RGComputeNode(uint32 nodeID) :RGPassNode(nodeID) {}
 		~RGComputeNode() override = default;
 		void ReadSRV(RGTextureNode* node, RHITextureSubRes subRes);

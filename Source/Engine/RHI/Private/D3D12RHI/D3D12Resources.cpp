@@ -52,7 +52,7 @@ void D3D12Buffer::UpdateData(const void* data, uint32 byteSize, uint32 offset) {
 	m_Resource->Unmap(0, nullptr);
 }
 
-void D3D12Buffer::UpdateData(Func<void(void*)>&& f) {
+void D3D12Buffer::UpdateData(XFunction<void, void*>&& f) {
 	void* mappedData;
 	DX_CHECK(m_Resource->Map(0, nullptr, &mappedData));
 	f(mappedData);

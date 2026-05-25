@@ -6,7 +6,7 @@
 
 namespace Render {
 	// A draw call contains pipeline, layout and vb/ib provided by scene objects.
-	typedef Func<void(RHICommandBuffer*)> DrawCallFunc;
+	typedef XFunc<void, RHICommandBuffer*> DrawCallFunc;
 
 	class DrawCall {
 	public:

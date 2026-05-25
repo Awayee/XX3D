@@ -13,7 +13,7 @@ namespace Object {
 
 	class RenderScene: public ECSScene{
 	public:
-		static void AddConstructFunc(Func<void(RenderScene*)>&& f);
+		static void AddConstructFunc(XFunc<void, RenderScene*>&& f);
 		NON_COPYABLE(RenderScene);
 		NON_MOVEABLE(RenderScene);
 		RenderScene();

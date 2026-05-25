@@ -5,7 +5,7 @@
 #include "RHI/Public/RHI.h"
 #include "System/Public/ConfigManager.h"
 #include "Window/Public/EngineWindow.h"
-
+#include "Core/Public/File.h"
 
 namespace Runtime {
 	void RuntimeUIMgr::InitializeImGuiConfig() {
@@ -15,7 +15,7 @@ namespace Runtime {
 		// load font
 		const FSize2D scale = Engine::EngineWindow::Instance()->GetWindowContentScale();
 		const float contentScale = Math::Max(1.0f, Math::Max(scale.w, scale.h));
-		const XString fontFile = Engine::EngineConfig_Old::Instance().GetEngineAssetDir().append(Engine::EngineConfig_Old::Instance().GetDefaultFont()).string();
+		const XString fontFile = File::CombinePathStr(Engine::ConfigMgr::Instance().GetEngineAssetDir(), Engine::ConfigMgr::Instance().GetEngineConfig().DefaultFont);
 		io.Fonts->AddFontFromFileTTF(fontFile.c_str(), contentScale * 16, nullptr, nullptr);
 		ASSERT(io.Fonts->Build(), "Failed to build fonts");
 		io.IniFilename = nullptr; // Do not save settings
