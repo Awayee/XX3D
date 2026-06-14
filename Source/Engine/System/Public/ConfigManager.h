@@ -14,6 +14,7 @@ namespace Engine{
 		CONFIG_PROPERTY_STRING(Engine, DefaultFont, );
 		CONFIG_PROPERTY_STRING(Engine, ProjectPath, );
 		CONFIG_PROPERTY_BOOL(Engine, EnablePipelineCache, true);
+		CONFIG_PROPERTY_UINT(Engine, NumSubThreads, 0);
 		CONFIG_PROPERTY_END(XXEngineConfig)
 	};
 
@@ -28,7 +29,7 @@ namespace Engine{
 		CONFIG_PROPERTY_ENUM(Rendering, ERHIType, RHIType, ERHIType::Vulkan);
 		CONFIG_PROPERTY_INT(Rendering, MSAASampleCount, 1);
 		CONFIG_PROPERTY_BOOL(Rendering, EnableRenderDoc, false);
-		CONFIG_PROPERTY_INT(Rendering, UseIntegratedGPU, false);
+		CONFIG_PROPERTY_BOOL(Rendering, UseIntegratedGPU, false);
 		CONFIG_PROPERTY_BOOL(Rendering, EnableGPUDriven, false);
     	CONFIG_PROPERTY_END(XXProjectConfig)
     };

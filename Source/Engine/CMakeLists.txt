@@ -66,3 +66,6 @@ target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/RenderDoc)
 # WinPixEventRuntime
 target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/WinPixEventRuntime/Include)
 target_link_libraries(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/WinPixEventRuntime/bin/x64/WinPixEventRuntime.lib)
+
+# Concurrent queue
+target_include_directories(${TARGET_NAME} PRIVATE ${THIRD_PARTY}/concurrentqueue)

@@ -1,5 +1,6 @@
 #include "Engine/Public/Engine.h"
 #include "System/Public/ConfigManager.h"
+#include "System/Public/ThreadPool.h"
 #include "Window/Public/EngineWIndow.h"
 #include "RHI/Public/RHI.h"
 #include "RHI/Public/RHIImGui.h"
@@ -18,6 +19,7 @@ namespace Engine {
 	XXEngine::XXEngine(): m_Running(false) {
 		ASSERT(!s_RunningEngine, "Multi XXEngine object is Invalid!");
 		Engine::ConfigMgr::Initialize();
+		Engine::XXThreadPool::Initialize();
 		EngineWindow::Initialize();
 		RHI::Initialize();
 		Render::DefaultResources::Initialize();
@@ -40,6 +42,7 @@ namespace Engine {
 		RHIImGui::Release();
 		RHI::Release();
 		EngineWindow::Release();
+		Engine::XXThreadPool::Release();
 		s_RunningEngine = nullptr;
 	}
 

@@ -27,9 +27,14 @@ typedef unsigned long long	uint64;
 #define FLOAT_MAX        3.402823466e+38f
 #define FLOAT_MIN        (-FLOAT_MAX)
 
+#define NUM_MIN(a, b) (b < a ? b : a)
+#define NUM_MAX(a, b) (b > a ? b : a)
+
 #define XX_NODISCARD [[nodiscard]]
 
 #define MoveTemp(x) (std::move(x))
+
+#define ForwardTemp(x) (std::forward<decltype(x)>(x))
 
 
 #define NON_COPYABLE(cls)\

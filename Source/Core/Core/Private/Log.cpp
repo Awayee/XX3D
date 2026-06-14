@@ -1,6 +1,7 @@
 #include "Core/Public/Log.h"
 #include "Core/Public/Time.h"
 #include <cstdarg>
+#include <mutex>
 
 #define LOG_COLOR_RED     "\033[1;31m"
 #define LOG_COLOR_YELLOW  "\033[1;33m"
@@ -9,6 +10,8 @@
 constexpr int CHAR_BUFFER_NUM = 256;
 
 namespace Log {
+
+	std::mutex s_LogMutex;
 
 	inline const char* GetLogColor(ELogLevel level) {
 		switch (level) {
@@ -39,6 +42,7 @@ namespace Log {
 	}
 
 	void OutputWithTime(ELogLevel level, const char* fmt, ...) {
+		std::lock_guard<std::mutex> lockLog(s_LogMutex);
 		Duration duration = DurationSceneLaunch();
 		// get time format by xx:xx:xxx
 		const auto minutes = std::chrono::duration_cast<DurationMinutes<int>>(duration);

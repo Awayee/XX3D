@@ -6,6 +6,8 @@
 template<class T>
 class TQueue {
 public:
+	NON_COPYABLE(TQueue);
+	NON_MOVEABLE(TQueue);
 	TQueue(): m_Tail(nullptr), m_Head(nullptr), m_Size(0) {
 		m_Head = m_Tail = nullptr;
 	}
@@ -86,4 +88,52 @@ private:
 		}
 		++m_Size;
 	}
+};
+
+
+template<class T>
+class TRingQueue {
+public:
+	NON_COPYABLE(TRingQueue);
+	NON_MOVEABLE(TRingQueue);
+	TRingQueue(uint32 Capacity): m_Capacity((int32)Capacity), m_Head(0), m_Tail(0) {
+		m_Data = new T[Capacity];
+	}
+	~TRingQueue() {
+		delete[] m_Data;
+	}
+
+	bool IsEmpty() const {
+		return m_Head == m_Tail;
+	}
+
+	bool Enqueue(const T& Ele) {
+		const int32 NewHead = (m_Head + 1) % m_Capacity;
+		if(NewHead == m_Tail){
+			return false;
+		}
+		m_Data[m_Head] = Ele;
+		m_Head = NewHead;
+		return true;
+	}
+
+	bool Dequeue(T& OutEle) {
+		if(IsEmpty()) {
+			return false;
+		}
+
+		OutEle = m_Data[m_Tail];
+		m_Tail = (m_Tail + 1) % m_Capacity;
+		return true;
+	}
+
+	uint32 Size() const {
+		return (uint32)((m_Head - m_Tail + m_Capacity) % m_Capacity);
+	}
+
+private:
+	T* m_Data;
+	int32 m_Capacity;
+	int32 m_Head;
+	int32 m_Tail;
 };
