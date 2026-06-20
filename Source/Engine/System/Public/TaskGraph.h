@@ -20,22 +20,19 @@ namespace Engine {
 		friend class TaskGraph;
 		static constexpr TaskNodeIndex INVALID_NODE = UINT16_MAX;
 		XString Name;
-		TArray<TaskNodeIndex> LinkedIndices; // Enters: [0, 1, ..., NumEnters-1, ], Exits: [NumEnters, NumEnters+1, ...]
+		TArray<TaskNodeIndex> Exits; // Enters: [0, 1, ..., NumEnters-1, ], Exits: [NumEnters, NumEnters+1, ...]
 		TaskNodeIndex IndexInGraph;
 		TaskNodeIndex NumEnters;
 		std::atomic<TaskNodeIndex> NumEntersRest;
-		void AddEnter(TaskNodeIndex InIndex);
-		void AddExit(TaskNodeIndex InIndex);
-		TConstArrayView<uint16> GetExits() const;
 	};
 
-	using TaskFunc = XFunc<void>;
-	class TaskNodeFunc: public TaskNode{
+	template<class Lambda>
+	class TaskNodeLambda: public TaskNode {
 	public:
-		TaskNodeFunc(TaskFunc&& InFunc);
-		virtual void ExecuteTask() override;
+		TaskNodeLambda(Lambda&& InLambda): LambdaBody(MoveTemp(InLambda)){}
+		virtual void ExecuteTask() override { LambdaBody(); }
 	private:
-		TaskFunc Func;
+		Lambda LambdaBody;
 	};
 
 	class TaskGraph {
@@ -48,10 +45,13 @@ namespace Engine {
 		template<class T, class ...Args>
 		T* CreateNode(XStringView TaskName, Args&&... InArgs);
 
+		template<class Lambda>
+		TaskNode* CreateNodeLambda(XStringView TaskName, Lambda&& InLambda);
+
 		void AddNode(TUniquePtr<TaskNode>&& InNode);
-		void Link(TaskNode* Left, TaskNode* Right);
+		void Connect(TaskNode* Left, TaskNode* Right);
+		bool CheckCircle() const;
 		void WaitUntilComplete();
-		void WaitUntilComplete2();
 	private:
 		TArray<TUniquePtr<TaskNode>> TaskNodes;
 		std::atomic<TaskNodeIndex> NumPendingTasks;
@@ -65,5 +65,9 @@ namespace Engine {
 		Node->SetName(TaskName);
 		AddNode(MoveTemp(NodePtr));
 		return (T*)Node;
+	}
+
+	template <class Lambda> TaskNode* TaskGraph::CreateNodeLambda(XStringView TaskName, Lambda&& InLambda) {
+		return (TaskNode*)CreateNode<TaskNodeLambda<Lambda>>(TaskName, ForwardTemp(InLambda));
 	}
 }

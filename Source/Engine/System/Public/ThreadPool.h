@@ -69,4 +69,17 @@ namespace Engine{
     template<class Func> void EnqueueGameThreadTask(Func&& InFunc) {
         XXThreadPool::Instance()->EnqueueTaskPtr(ETaskType::GameThread, ThreadTaskPtr(new ThreadTaskFunc<Func>(ForwardTemp(InFunc))));
     }
+    template<class Func> void ParallelFor(Func&& InFunc, uint32 MaxNum) {
+        std::atomic<int32> NumRest = MaxNum;
+        for(uint32 i=0; i<MaxNum; ++i) {
+            XXThreadPool::Instance()->EnqueueTaskPtr(ETaskType::Worker, ThreadTaskPtr(new ThreadTaskFunc([FuncBody=MoveTemp(InFunc), i, &NumRest]() {
+                FuncBody(i);
+                NumRest.fetch_sub(1, std::memory_order_release);
+            })));
+        }
+        // Run in current thread if possible.
+        while (NumRest.load(std::memory_order_acquire) > 0) {
+            Engine::XXThreadPool::Instance()->ExecutePendingTask(ETaskType::Worker);
+        }
+    }
 }

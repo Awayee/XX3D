@@ -25,10 +25,9 @@ namespace Engine{
 
 	static thread_local uint32 GThreadIndex;
 	TStaticArray<moodycamel::ConcurrentQueue<ThreadTaskPtr>, EnumCast(ETaskType::MaxNum)> GPendingTasks;
-	std::mutex GWorkerMutex;
-	std::condition_variable GWorkerConditionVar;
 	moodycamel::LightweightSemaphore GWorkerSmp;
-	//ThreadFence GWorkerFence;
+	TArray<std::thread> AllThreads; // All threads except main thread
+	std::atomic_bool bRunning;
 
 	void SetCurrentThreadIndex(uint32 Index) {
 		GThreadIndex = Index;
@@ -71,7 +70,7 @@ namespace Engine{
 			LOG_WARNING("std::thread::hardware_concurrency returns 0!");
 		}
 		const uint32 NumThreadsConfig = ConfigMgr::Instance().GetEngineConfig().NumSubThreads;
-		const uint32 NumThreads = NUM_MIN(NumThreadsConfig, NumThreadsHardware);
+		const uint32 NumThreads = NUM_MIN(NumThreadsConfig, NumThreadsHardware - 1);
 
 		// Launch threads
 		bRunning.store(true, std::memory_order_release);
